@@ -1,0 +1,11 @@
+Date;Type;Ticker;Catégorie;Quantité;Prix Unitaire (€);Frais (€)
+2025-01-02;achat;AAPL;Action US;10;172.35;1.5
+2025-01-05;achat;MSFT;Action US;5;320.1;1.5
+2025-01-10;vente;AAPL;Action US;5;180.2;1.5
+2025-01-12;achat;BTC-ETF;ETF Crypto;2;41000.0;3.0
+2025-01-15;achat;LYXOR-EWLD;ETF World;8;26.75;1.0
+2025-01-20;vente;BTC-ETF;ETF Crypto;1;42500.0;3.0
+2025-02-05;achat;AMZN;Action US;3;145.0;1.5
+2025-02-10;achat;BNP;Action FR;7;58.9;0.99
+2025-02-18;vente;AMZN;Action US;1;150.2;1.5
+2025-02-22;achat;ETH-ETF;ETF Crypto;1;2200.0;2.0

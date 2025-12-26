@@ -91,11 +91,11 @@ export interface FinancialGoal {
   isPinned: boolean;
   iconType: 'home' | 'plane' | 'car' | 'emergency' | 'other';
   color: string;
-  
+
   method: 'manual' | 'dynamic';
   manualAmount?: number;
   linkedAssets?: LinkedAsset[]; // Now supports specific assets, classes, or groups
-  
+
   currentAmount?: number;
 }
 
@@ -113,12 +113,39 @@ export interface Achievement {
   title: string;
   iconType: 'trophy' | 'wallet' | 'chart' | 'star' | 'rocket' | 'diamond';
   color: string; // tailwind color name like 'blue', 'emerald'
-  
+
   conditionType: 'total_value' | 'transaction_count' | 'asset_count' | 'streak';
   levels: AchievementLevel[];
-  
+
   // State
   currentLevel: number; // 0 if not started
-  currentValue?: number; 
+  currentValue?: number;
   unlocked: boolean; // True if level > 0
+}
+
+// --- SERVICE TYPES ---
+
+export interface DashboardSummary {
+  totalValue: number;
+  totalCost: number;
+  totalPL: number;
+  plPercent: number;
+  chartData: { name: string; value: number }[];
+}
+
+export interface TransactionFilter {
+  searchQuery?: string;
+  dateRange?: string; // 'All', 'Last 30 Days', 'Last 90 Days', 'YTD'
+  assetClass?: string; // 'All', 'Equities', 'ETFs', 'Crypto'
+  side?: string; // 'All', 'Buy', 'Sell', 'Deposit', 'Withdrawal'
+  source?: string;
+  currency?: string;
+  status?: string;
+}
+
+export interface PositionFilter {
+  type?: string; // 'All', 'Equities', 'ETFs', 'Crypto', 'Cash'
+  searchQuery?: string;
+  source?: string;
+  currency?: string;
 }

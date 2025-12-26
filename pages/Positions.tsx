@@ -1,44 +1,49 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import { Search, Download } from 'lucide-react';
+import { portfolioService } from '../src/services/portfolioService';
+import { Position } from '../types';
 
 const Positions: React.FC = () => {
-  const { positions } = useData(); 
+  const { positions: globalPositions } = useData();
 
   const [filterType, setFilterType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState('All');
   const [currencyFilter, setCurrencyFilter] = useState('All');
 
-  const sources = useMemo(() => ['All', ...Array.from(new Set(positions.map(p => p.source).filter(Boolean) as string[]))], [positions]);
-  const currencies = useMemo(() => ['All', ...Array.from(new Set(positions.map(p => p.currency)))], [positions]);
+  const [filteredPositions, setFilteredPositions] = useState<Position[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredPositions = useMemo(() => {
-    return positions.filter(p => {
-      if (filterType !== 'All') {
-         if (filterType === 'Equities' && p.type !== 'Equity') return false;
-         if (filterType === 'ETFs' && p.type !== 'ETF') return false;
-         if (filterType === 'Crypto' && p.type !== 'Crypto') return false;
-         if (filterType === 'Cash' && p.type !== 'Cash') return false;
+  // Derive unique values from global state (for dropdowns)
+  const sources = useMemo(() => ['All', ...Array.from(new Set(globalPositions.map(p => p.source).filter(Boolean) as string[]))], [globalPositions]);
+  const currencies = useMemo(() => ['All', ...Array.from(new Set(globalPositions.map(p => p.currency)))], [globalPositions]);
+
+  // Filter Logic via Service
+  useEffect(() => {
+    const fetchPositions = async () => {
+      setIsLoading(true);
+      try {
+        const result = await portfolioService.getPositions({
+          type: filterType,
+          searchQuery: searchQuery,
+          source: sourceFilter,
+          currency: currencyFilter
+        });
+        setFilteredPositions(result);
+      } catch (error) {
+        console.error("Failed to fetch positions", error);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matches = 
-          p.instrument.toLowerCase().includes(query) || 
-          p.symbol.toLowerCase().includes(query) || 
-          (p.bankName && p.bankName.toLowerCase().includes(query));
-        if (!matches) return false;
-      }
+    const debounce = setTimeout(fetchPositions, 300);
+    return () => clearTimeout(debounce);
+  }, [filterType, searchQuery, sourceFilter, currencyFilter, globalPositions]);
 
-      if (sourceFilter !== 'All' && p.source !== sourceFilter) return false;
-      if (currencyFilter !== 'All' && p.currency !== currencyFilter) return false;
-
-      return true;
-    });
-  }, [positions, filterType, searchQuery, sourceFilter, currencyFilter]);
 
   const cardStyle = "rounded-xl bg-white/50 dark:bg-black/20 shadow-lg ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-lg";
 
@@ -48,57 +53,57 @@ const Positions: React.FC = () => {
         <h1 className="text-3xl font-bold text-black dark:text-white">Positions</h1>
         <Link to="/import">
           <Button className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90">
-             <Download size={16} />
-             Import
+            <Download size={16} />
+            Import
           </Button>
         </Link>
       </div>
 
       {/* Filters and Search */}
       <div className={`${cardStyle} p-2 flex flex-col lg:flex-row justify-between gap-4`}>
-         
-         {/* Left: Type Tabs */}
-         <div className="flex p-1 gap-1 bg-black/5 dark:bg-white/5 rounded-lg overflow-x-auto">
-            {['All', 'Equities', 'ETFs', 'Crypto', 'Cash'].map(tab => (
-               <button 
-                  key={tab}
-                  onClick={() => setFilterType(tab)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab ? 'bg-primary text-white shadow-lg' : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'}`}
-               >
-                  {tab}
-               </button>
-            ))}
-         </div>
 
-         {/* Right: Dropdowns & Search */}
-         <div className="flex flex-col sm:flex-row gap-3">
-            <select 
-               value={sourceFilter}
-               onChange={(e) => setSourceFilter(e.target.value)}
-               className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+        {/* Left: Type Tabs */}
+        <div className="flex p-1 gap-1 bg-black/5 dark:bg-white/5 rounded-lg overflow-x-auto">
+          {['All', 'Equities', 'ETFs', 'Crypto', 'Cash'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setFilterType(tab)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab ? 'bg-primary text-white shadow-lg' : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
-               {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
-            </select>
+              {tab}
+            </button>
+          ))}
+        </div>
 
-            <select 
-               value={currencyFilter}
-               onChange={(e) => setCurrencyFilter(e.target.value)}
-               className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
-            >
-               {currencies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Currencies' : c}</option>)}
-            </select>
+        {/* Right: Dropdowns & Search */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+          >
+            {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
+          </select>
 
-            <div className="relative">
-               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black/40 dark:text-white/40" size={16} />
-               <input 
-                  type="text" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search..." 
-                  className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-black/40 dark:placeholder-white/40" 
-               />
-            </div>
-         </div>
+          <select
+            value={currencyFilter}
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+          >
+            {currencies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Currencies' : c}</option>)}
+          </select>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black/40 dark:text-white/40" size={16} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-black/40 dark:placeholder-white/40"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -118,26 +123,32 @@ const Positions: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-              {filteredPositions.map((pos) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-black/40 dark:text-white/40">
+                    Loading positions...
+                  </td>
+                </tr>
+              ) : filteredPositions.map((pos) => (
                 <tr key={pos.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">
-                     <div className="flex flex-col">
-                        <span className="font-bold">{pos.instrument}</span>
-                        <div className="flex gap-2 text-xs text-black/50 dark:text-white/50">
-                             <span>{pos.symbol}</span>
-                             {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">CASH</span>}
-                        </div>
-                     </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold">{pos.instrument}</span>
+                      <div className="flex gap-2 text-xs text-black/50 dark:text-white/50">
+                        <span>{pos.symbol}</span>
+                        {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">CASH</span>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-black/60 dark:text-white/60">
-                      {pos.type === 'Cash' ? (
-                          <div className="flex flex-col">
-                              <span className="font-semibold text-black dark:text-white">{pos.bankName || pos.source}</span>
-                              <span className="text-xs">{pos.accountName || 'Main Account'}</span>
-                          </div>
-                      ) : (
-                          pos.source || '-'
-                      )}
+                    {pos.type === 'Cash' ? (
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-black dark:text-white">{pos.bankName || pos.source}</span>
+                        <span className="text-xs">{pos.accountName || 'Main Account'}</span>
+                      </div>
+                    ) : (
+                      pos.source || '-'
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString()}</td>
                   <td className="px-6 py-4 text-right">${pos.avgCost.toFixed(2)}</td>
@@ -152,10 +163,10 @@ const Positions: React.FC = () => {
             </tbody>
           </table>
         </div>
-        {filteredPositions.length === 0 && (
-           <div className="p-8 text-center text-black/40 dark:text-white/40">
-              No positions found matching your criteria.
-           </div>
+        {!isLoading && filteredPositions.length === 0 && (
+          <div className="p-8 text-center text-black/40 dark:text-white/40">
+            No positions found matching your criteria.
+          </div>
         )}
       </div>
     </div>
