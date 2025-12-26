@@ -8,6 +8,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Progress from './pages/Progress';
 import ImportWizard from './pages/ImportWizard';
+import ImportHistory from './pages/ImportHistory';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { DataProvider } from './context/DataContext';
@@ -19,7 +20,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const location = useLocation();
 
   if (isLoading) {
-     return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-blue-500">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-blue-500">Loading...</div>;
   }
 
   if (!user) {
@@ -38,7 +39,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              
+
               {/* Protected Routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/positions" element={<ProtectedRoute><Positions /></ProtectedRoute>} />
@@ -49,7 +50,8 @@ const App: React.FC = () => {
               {/* Legacy route alias */}
               <Route path="/goals" element={<Navigate to="/progress" replace />} />
               <Route path="/import" element={<ProtectedRoute><ImportWizard /></ProtectedRoute>} />
-              
+              <Route path="/import-history" element={<ProtectedRoute><ImportHistory /></ProtectedRoute>} />
+
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

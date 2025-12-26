@@ -93,6 +93,7 @@ const Transactions: React.FC = () => {
                      <option value="Equities">Equities</option>
                      <option value="ETFs">ETFs</option>
                      <option value="Crypto">Crypto</option>
+                     <option value="Cash">Cash</option>
                   </select>
                </div>
 
