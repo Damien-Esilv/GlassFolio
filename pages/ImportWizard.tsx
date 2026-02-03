@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
+import SnapshotWizard from '../components/SnapshotWizard';
 import {
   Upload,
   FileText,
@@ -42,25 +43,31 @@ import { InstituteType, AccountType } from '../src/types';
 const ImportWizard: React.FC = () => {
   const wizard = useImportWizard();
 
+  // For snapshot mode, show dedicated SnapshotWizard from step 3 onwards
+  const showSnapshotWizard = wizard.importMode === 'snapshot' &&
+    wizard.step >= 3 &&
+    wizard.rawCSVText &&
+    wizard.selectedAccountId;
+
   return (
     <div className="py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Import Transactions</h1>
-          <p className="text-slate-400 mt-1">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Import Transactions</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             {wizard.step === 1 && 'Select where to import your data'}
             {wizard.step === 2 && 'Upload your CSV file'}
-            {wizard.step === 3 && 'Map columns to database fields'}
+            {wizard.step === 3 && (wizard.importMode === 'snapshot' ? 'Configure snapshot import' : 'Map columns to database fields')}
             {wizard.step === 4 && 'Review and validate data'}
             {wizard.step === 5 && 'Import complete!'}
           </p>
         </div>
-        <StepIndicator currentStep={wizard.step} />
+        {!showSnapshotWizard && <StepIndicator currentStep={wizard.step} />}
       </div>
 
       {/* Error Banner */}
-      {wizard.error && (
+      {wizard.error && !showSnapshotWizard && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
           <AlertCircle className="text-rose-500" size={20} />
           <span className="text-rose-400">{wizard.error}</span>
@@ -71,7 +78,7 @@ const ImportWizard: React.FC = () => {
       )}
 
       {/* Loading Overlay */}
-      {wizard.isLoading && (
+      {wizard.isLoading && !showSnapshotWizard && (
         <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -82,21 +89,36 @@ const ImportWizard: React.FC = () => {
 
       {/* Step Content */}
       <div className="min-h-[450px] animate-fade-in">
-        {wizard.step === 1 && <Step1ContextSelection wizard={wizard} />}
-        {wizard.step === 2 && <Step2FileUpload wizard={wizard} />}
-        {wizard.step === 3 && <Step3Mapping wizard={wizard} />}
-        {wizard.step === 4 && <Step4StagingArea wizard={wizard} />}
-        {wizard.step === 5 && <Step5Complete wizard={wizard} />}
+        {/* Snapshot Wizard takes over from step 3 */}
+        {showSnapshotWizard ? (
+          <SnapshotWizard
+            accountId={wizard.selectedAccountId!}
+            accountName={wizard.selectedAccount?.name || 'Account'}
+            rawCSVText={wizard.rawCSVText}
+            headers={wizard.headers}
+            previewRows={wizard.previewRows}
+            onBack={() => wizard.goToStep(2)}
+            onComplete={wizard.reset}
+          />
+        ) : (
+          <>
+            {wizard.step === 1 && <Step1ContextSelection wizard={wizard} />}
+            {wizard.step === 2 && <Step2FileUpload wizard={wizard} />}
+            {wizard.step === 3 && wizard.importMode === 'history' && <Step3Mapping wizard={wizard} />}
+            {wizard.step === 4 && <Step4StagingArea wizard={wizard} />}
+            {wizard.step === 5 && <Step5Complete wizard={wizard} />}
+          </>
+        )}
       </div>
 
-      {/* Navigation Footer */}
-      {wizard.step > 1 && wizard.step < 5 && (
+      {/* Navigation Footer - only for history mode after step 2 */}
+      {!showSnapshotWizard && wizard.step > 1 && wizard.step < 5 && (
         <div className="flex justify-between mt-12 pt-8 border-t border-slate-800">
           <Button variant="secondary" size="lg" onClick={wizard.goBack}>
             Back
           </Button>
 
-          {wizard.step === 3 && (
+          {wizard.step === 3 && wizard.importMode === 'history' && (
             <Button
               size="lg"
               onClick={wizard.analyzeData}
@@ -185,10 +207,10 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Institute Selection */}
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
         <div className="flex items-center gap-3 mb-4">
           <Building2 className="text-blue-500" size={24} />
-          <h2 className="text-lg font-bold text-white">1. Select Institution</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Select Institution</h2>
         </div>
 
         {!showNewInstitute ? (
@@ -199,11 +221,11 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                   key={inst.id}
                   onClick={() => wizard.selectInstitute(inst.id)}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedInstituteId === inst.id
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                 >
-                  <span className="text-white font-medium">{inst.name}</span>
+                  <span className="text-slate-900 dark:text-white font-medium">{inst.name}</span>
                   <span className="block text-xs text-slate-500 mt-1 capitalize">{inst.type}</span>
                 </button>
               ))}
@@ -252,10 +274,10 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
       {/* Account Selection */}
       {wizard.selectedInstituteId && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 animate-fade-in">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 animate-fade-in shadow-sm dark:shadow-none">
           <div className="flex items-center gap-3 mb-4">
             <Wallet className="text-emerald-500" size={24} />
-            <h2 className="text-lg font-bold text-white">2. Select Account</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">2. Select Account</h2>
           </div>
 
           {!showNewAccount ? (
@@ -269,11 +291,11 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                       key={acc.id}
                       onClick={() => wizard.selectAccount(acc.id)}
                       className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedAccountId === acc.id
-                          ? 'border-emerald-500 bg-emerald-500/10'
-                          : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                        ? 'border-emerald-500 bg-emerald-500/10'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                     >
-                      <span className="text-white font-medium">{acc.name}</span>
+                      <span className="text-slate-900 dark:text-white font-medium">{acc.name}</span>
                       <span className="block text-xs text-slate-500 mt-1">{acc.defaultCurrency} · {acc.type}</span>
                     </button>
                   ))}
@@ -337,23 +359,23 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
       {/* Import Mode */}
       {wizard.selectedAccountId && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 animate-fade-in">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 animate-fade-in shadow-sm dark:shadow-none">
           <div className="flex items-center gap-3 mb-4">
             <FileText className="text-purple-500" size={24} />
-            <h2 className="text-lg font-bold text-white">3. Import Mode</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">3. Import Mode</h2>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => wizard.setImportMode('history')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'history'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                ? 'border-purple-500 bg-purple-500/10'
+                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
             >
-              <History className={wizard.importMode === 'history' ? 'text-purple-400' : 'text-slate-400'} size={28} />
+              <History className={wizard.importMode === 'history' ? 'text-purple-500 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'} size={28} />
               <div className="mt-3">
-                <span className="text-white font-bold">Transaction History</span>
+                <span className="text-slate-900 dark:text-white font-bold">Transaction History</span>
                 <p className="text-slate-400 text-sm mt-1">Import buy/sell transactions with dates and prices</p>
               </div>
             </button>
@@ -361,13 +383,13 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
             <button
               onClick={() => wizard.setImportMode('snapshot')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'snapshot'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                ? 'border-purple-500 bg-purple-500/10'
+                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
             >
-              <Camera className={wizard.importMode === 'snapshot' ? 'text-purple-400' : 'text-slate-400'} size={28} />
+              <Camera className={wizard.importMode === 'snapshot' ? 'text-purple-500 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'} size={28} />
               <div className="mt-3">
-                <span className="text-white font-bold">Position Snapshot</span>
+                <span className="text-slate-900 dark:text-white font-bold">Position Snapshot</span>
                 <p className="text-slate-400 text-sm mt-1">Import current holdings with average prices</p>
               </div>
             </button>
@@ -419,10 +441,10 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Context Summary */}
-      <div className="bg-slate-800 rounded-xl p-4 flex items-center gap-4">
+      <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 flex items-center gap-4">
         <div className="flex-1">
-          <span className="text-slate-400 text-sm">Importing to:</span>
-          <div className="text-white font-medium">
+          <span className="text-slate-500 dark:text-slate-400 text-sm">Importing to:</span>
+          <div className="text-slate-900 dark:text-white font-medium">
             {wizard.selectedInstitute?.name} → {wizard.selectedAccount?.name}
           </div>
         </div>
@@ -435,10 +457,10 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
       <label
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-        className="border-2 border-dashed border-slate-700 rounded-3xl p-16 flex flex-col items-center justify-center text-center hover:border-blue-500 transition-colors cursor-pointer bg-slate-800/50 group"
+        className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-16 flex flex-col items-center justify-center text-center hover:border-blue-500 transition-colors cursor-pointer bg-white dark:bg-slate-800/50 group"
       >
         <Upload className="text-slate-400 group-hover:text-blue-500 mb-4" size={48} />
-        <h3 className="text-xl font-medium text-white mb-2">Drop your CSV file here</h3>
+        <h3 className="text-xl font-medium text-slate-900 dark:text-white mb-2">Drop your CSV file here</h3>
         <p className="text-slate-400 text-sm">or click to browse</p>
         <input
           type="file"
@@ -450,16 +472,16 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
 
       {/* Saved Templates */}
       {wizard.mappingTemplates.length > 0 && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
-          <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">Saved Mapping Templates</h3>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm dark:shadow-none">
+          <h3 className="text-sm font-bold text-slate-500 uppercase mb-3">Saved Mapping Templates</h3>
           <div className="flex flex-wrap gap-2">
             {wizard.mappingTemplates.map(tpl => (
               <button
                 key={tpl.id}
                 onClick={() => wizard.applyTemplate(tpl.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${wizard.selectedTemplateId === tpl.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
               >
                 {tpl.name}
@@ -509,14 +531,14 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
       )}
 
       {/* Mapping Grid */}
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-white">Column Mapping</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Column Mapping</h2>
 
           {!showSaveTemplate ? (
             <button
               onClick={() => setShowSaveTemplate(true)}
-              className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+              className="flex items-center gap-2 text-blue-500 dark:text-blue-400 hover:text-blue-400 dark:hover:text-blue-300 text-sm"
             >
               <Save size={16} /> Save as template
             </button>
@@ -548,9 +570,9 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
               <select
                 value={wizard.mappings[field.key as keyof typeof wizard.mappings] as string || ''}
                 onChange={e => wizard.setMapping(field.key as keyof typeof wizard.mappings, e.target.value || undefined)}
-                className={`w-full bg-slate-800 border text-white text-sm rounded-lg p-2.5 ${field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]
-                    ? 'border-rose-500/50'
-                    : 'border-slate-600'
+                className={`w-full bg-slate-50 dark:bg-slate-800 border text-slate-900 dark:text-white text-sm rounded-lg p-2.5 ${field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]
+                  ? 'border-rose-500/50'
+                  : 'border-slate-300 dark:border-slate-600'
                   } focus:ring-blue-500 focus:border-blue-500`}
               >
                 <option value="">— Not mapped —</option>
@@ -565,13 +587,13 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
 
       {/* Live Preview */}
       {wizard.previewRows.length > 0 && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-700 bg-slate-800/50">
-            <h3 className="text-sm font-bold text-white">Preview (First 5 Rows)</h3>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Preview (First 5 Rows)</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-800 text-xs uppercase text-slate-400">
+              <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-2">Date</th>
                   <th className="px-4 py-2">Type</th>
@@ -582,16 +604,16 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                   <th className="px-4 py-2">Description</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {wizard.previewRows.map((row, idx) => (
-                  <tr key={idx} className="text-slate-300">
+                  <tr key={idx} className="text-slate-600 dark:text-slate-300">
                     <td className="px-4 py-2 font-mono text-xs">{getMappedValue(row, 'transactionDate')}</td>
                     <td className="px-4 py-2">{getMappedValue(row, 'type')}</td>
-                    <td className="px-4 py-2 font-bold text-white">{getMappedValue(row, 'assetSymbol')}</td>
+                    <td className="px-4 py-2 font-bold text-slate-900 dark:text-white">{getMappedValue(row, 'assetSymbol')}</td>
                     <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'amountPrimary')}</td>
                     <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'priceUnit')}</td>
                     <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'quantity')}</td>
-                    <td className="px-4 py-2 text-slate-400 truncate max-w-[200px]">{getMappedValue(row, 'rawLabel')}</td>
+                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{getMappedValue(row, 'rawLabel')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -654,10 +676,10 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
       </div>
 
       {/* Staging Table */}
-      <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
         <div className="max-h-[500px] overflow-y-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-800 text-xs uppercase text-slate-400 sticky top-0 z-10">
+            <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 w-24">Status</th>
                 <th className="px-4 py-3">Date</th>
@@ -669,7 +691,7 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
                 <th className="px-4 py-3 w-32 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {stagedTransactions.map(tx => (
                 <StagingRow key={tx.id} tx={tx} wizard={wizard} />
               ))}
@@ -691,7 +713,7 @@ const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ l
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm dark:shadow-none">
       <span className="text-xs font-bold text-slate-500 uppercase">{label}</span>
       <div className={`text-2xl font-bold mt-1 ${colorClasses[color]}`}>{value}</div>
     </div>
@@ -714,7 +736,7 @@ const StagingRow: React.FC<{
   const StatusIcon = statusBadge.icon;
 
   return (
-    <tr className={`hover:bg-slate-800/50 ${tx.resolution === 'skip' ? 'opacity-50' : ''}`}>
+    <tr className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${tx.resolution === 'skip' ? 'opacity-50' : ''}`}>
       <td className="px-4 py-3">
         <span className={`flex items-center gap-1.5 ${statusBadge.color}`}>
           <StatusIcon size={14} />
@@ -727,26 +749,26 @@ const StagingRow: React.FC<{
             type="text"
             value={tx.parsed.transactionDate?.split('T')[0] || ''}
             onChange={e => wizard.updateRowField(tx.id, 'transactionDate', e.target.value)}
-            className="bg-slate-800 border border-blue-500 text-white rounded px-2 py-1 text-xs w-28"
+            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-28"
           />
         ) : (
-          <span className={`font-mono text-xs ${tx.errors.some(e => e.field === 'transactionDate') ? 'text-rose-400' : 'text-white'
+          <span className={`font-mono text-xs ${tx.errors.some(e => e.field === 'transactionDate') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
             }`}>
             {tx.parsed.transactionDate?.split('T')[0] || '—'}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-300">{tx.parsed.type || '—'}</td>
+      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{tx.parsed.type || '—'}</td>
       <td className="px-4 py-3">
         {isEditing ? (
           <input
             type="text"
             value={tx.parsed.assetSymbol || ''}
             onChange={e => wizard.updateRowField(tx.id, 'assetSymbol', e.target.value)}
-            className="bg-slate-800 border border-blue-500 text-white rounded px-2 py-1 text-xs w-20"
+            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-20"
           />
         ) : (
-          <span className={`font-bold ${tx.errors.some(e => e.field === 'assetSymbol') ? 'text-rose-400' : 'text-white'
+          <span className={`font-bold ${tx.errors.some(e => e.field === 'assetSymbol') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
             }`}>
             {tx.parsed.assetSymbol || '—'}
           </span>
@@ -758,16 +780,16 @@ const StagingRow: React.FC<{
             type="text"
             value={tx.parsed.amountPrimary || ''}
             onChange={e => wizard.updateRowField(tx.id, 'amountPrimary', e.target.value)}
-            className="bg-slate-800 border border-blue-500 text-white rounded px-2 py-1 text-xs w-24 text-right"
+            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-24 text-right"
           />
         ) : (
-          <span className={`font-mono ${tx.errors.some(e => e.field === 'amountPrimary') ? 'text-rose-400' : 'text-white'
+          <span className={`font-mono ${tx.errors.some(e => e.field === 'amountPrimary') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
             }`}>
             {tx.parsed.amountPrimary || '—'}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-slate-400">
+      <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">
         {tx.parsed.quantity || '—'}
       </td>
       <td className="px-4 py-3">
@@ -804,8 +826,8 @@ const StagingRow: React.FC<{
               <button
                 onClick={() => wizard.setRowResolution(tx.id, tx.resolution === 'import' ? 'skip' : 'import')}
                 className={`px-2 py-1 rounded text-xs ${tx.resolution === 'import'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
               >
                 {tx.resolution === 'import' ? 'Importing' : 'Skipping'}

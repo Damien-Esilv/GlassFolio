@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Positions from './pages/Positions';
 import Transactions from './pages/Transactions';
+import Portfolio from './pages/Portfolio';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Progress from './pages/Progress';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
 
               {/* Protected Routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/positions" element={<ProtectedRoute><Positions /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />

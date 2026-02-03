@@ -14,6 +14,7 @@ import {
     MappingTemplate,
     ImportBatchStatus
 } from '../types';
+import { portfolioService } from './portfolioService';
 
 // ============================================================================
 // TYPES
@@ -705,6 +706,7 @@ export const commitBatch = async (
     const unifiedTxs: UnifiedTransaction[] = toImport.map(staged => ({
         id: `utx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         batchId,
+        accountId, // Link directly to account
         ...staged.parsed,
         transactionDate: staged.parsed.transactionDate || now,
         type: staged.parsed.type || 'BUY',
@@ -736,6 +738,9 @@ export const commitBatch = async (
     const batches = db.getImportBatches();
     db.saveImportBatches([newBatch, ...batches]);
 
+    // Recalculate positions to reflect new data
+    await portfolioService.recalculatePositions();
+
     return newBatch;
 };
 
@@ -747,6 +752,10 @@ export const rollbackBatch = async (batchId: string): Promise<{ deleted: number;
 
     // Delete transactions
     const deletedCount = db.deleteTransactionsByBatch(batchId);
+
+    // Recalculate positions
+    await portfolioService.recalculatePositions();
+
 
     // Update batch status
     const batches = db.getImportBatches();

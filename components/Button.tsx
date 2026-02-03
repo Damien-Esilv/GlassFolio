@@ -6,22 +6,22 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  className = '', 
+const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className = '',
   isLoading,
-  ...props 
+  ...props
 }) => {
   const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-500 text-white focus:ring-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)]",
-    secondary: "bg-slate-700 hover:bg-slate-600 text-white focus:ring-slate-500",
-    outline: "border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-500",
-    danger: "bg-rose-600 hover:bg-rose-500 text-white focus:ring-rose-500",
-    ghost: "text-slate-400 hover:text-white hover:bg-slate-800/50",
+    primary: "bg-brand-static hover:bg-brand-static/90 text-white focus:ring-brand-static shadow-lg shadow-brand-static/20 hover:shadow-brand-static/30",
+    secondary: "bg-subtle hover:bg-card-hover text-primary border border-border focus:ring-border-strong",
+    outline: "border border-border text-secondary hover:bg-subtle hover:text-primary hover:border-border-strong",
+    danger: "bg-error hover:bg-error/90 text-white focus:ring-error",
+    ghost: "text-secondary hover:text-primary hover:bg-subtle",
   };
 
   const sizes = {
@@ -31,7 +31,7 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <button 
+    <button
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >

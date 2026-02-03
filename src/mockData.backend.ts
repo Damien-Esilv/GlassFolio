@@ -175,63 +175,168 @@ export const importBatches: ImportBatch[] = [
 // ============================================================================
 
 export const unifiedTransactions: UnifiedTransaction[] = [
-    // Crypto transactions (Binance)
+    // --- BATCH 1: Binance History (Crypto) ---
     {
-        id: 'utx-001',
-        batchId: 'batch-001',
-        externalId: 'BINANCE-TX-123456',
-        transactionDate: '2024-11-15T14:32:00Z',
+        id: 'utx-binance-1',
+        accountId: 'acc-binance-spot',
+        batchId: 'batch-binance-1',
+        externalId: 'tx-bn-001',
+        transactionDate: '2024-01-15T10:30:00Z',
         type: 'BUY',
-        rawType: 'Buy',
-        label: 'Buy BTC with USDT',
-        rawLabel: 'Buy BTC',
-        amountPrimary: '-1500.00',
+        rawType: 'Transaction Buy',
+        label: 'Buy BTC',
+        rawLabel: 'BTC/USDT Buy Limit',
+        amountPrimary: '-5000.00',
         assetSymbol: 'USDT',
-        priceUnit: '62500.00',
-        quantity: '0.024',
-        feeAmount: '1.50',
+        assetIsin: undefined,
+        priceUnit: '42000.50',
+        quantity: '0.119046',
+        feeAmount: '5.00',
         feeAsset: 'USDT',
         metadata: {
-            pair: 'BTC/USDT',
-            orderType: 'Market'
+            orderId: 'ord-001',
+            pair: 'BTCUSDT'
         }
     },
     {
-        id: 'utx-002',
-        batchId: 'batch-001',
-        externalId: 'BINANCE-TX-123457',
-        transactionDate: '2024-11-20T09:15:00Z',
-        type: 'SWAP',
-        rawType: 'Small Assets Exchange',
-        label: 'Swap dust to BNB',
-        rawLabel: 'Small Assets Exchange BNB',
-        amountPrimary: '0.05',
-        assetSymbol: 'BNB',
-        feeAmount: '0',
-        feeAsset: 'BNB',
+        id: 'utx-binance-2',
+        accountId: 'acc-binance-spot',
+        batchId: 'batch-binance-1',
+        externalId: 'tx-bn-002',
+        transactionDate: '2024-02-10T14:15:00Z',
+        type: 'SWAP', // ETH -> BTC
+        rawType: 'Convert',
+        label: 'Swap ETH to BTC',
+        rawLabel: 'Convert ETH for BTC',
+        amountPrimary: '-1.5',
+        assetSymbol: 'ETH',
+        feeAmount: '0.001',
+        feeAsset: 'ETH',
         metadata: {
-            originalAssets: ['SHIB', 'DOGE'],
-            isConversion: true
+            toAsset: 'BTC',
+            toAmount: '0.085'
         }
     },
     {
-        id: 'utx-003',
-        batchId: 'batch-001',
-        transactionDate: '2024-11-25T00:00:00Z',
+        id: 'utx-binance-3',
+        accountId: 'acc-binance-spot',
+        batchId: 'batch-binance-1', // Binance Earn batch
+        transactionDate: '2024-03-01T00:00:00Z',
         type: 'INCOME',
-        rawType: 'Savings Interest',
-        label: 'Flexible Savings Interest',
+        rawType: 'Simple Earn',
+        label: 'Staking Rewards',
         rawLabel: 'Simple Earn Flexible Interest',
-        amountPrimary: '0.00012345',
+        amountPrimary: '0.000055',
         assetSymbol: 'BTC',
         metadata: {
-            product: 'Flexible Savings',
-            apy: '1.2%'
+            product: 'Flexible',
+            apy: '0.05'
+        }
+    },
+
+    // --- BATCH 2: BoursoBank (Equities/Cash) ---
+    {
+        id: 'utx-bourso-1',
+        accountId: 'acc-bourso-pea',
+        batchId: 'batch-bourso-1',
+        transactionDate: '2024-01-20T09:00:00Z',
+        valueDate: '2024-01-22T00:00:00Z',
+        type: 'BUY',
+        rawType: 'Virement émis',
+        label: 'Achat LVMH',
+        rawLabel: 'ACHAT LVMH MOET HENNESSY',
+        amountPrimary: '-1350.00',
+        assetSymbol: 'MC',
+        assetIsin: 'FR0000121014',
+        priceUnit: '675.00',
+        quantity: '2',
+        feeAmount: '6.50',
+        feeAsset: 'EUR',
+        balanceAfter: '4500.00',
+        metadata: {
+            description: 'Exec: 2 @ 675.00'
+        }
+    },
+    {
+        id: 'utx-bourso-2',
+        accountId: 'acc-bourso-pea',
+        batchId: 'batch-bourso-1',
+        transactionDate: '2024-04-15T09:00:00Z',
+        valueDate: '2024-04-17T00:00:00Z',
+        type: 'INCOME',
+        rawType: 'Coupons',
+        label: 'Dividende LVMH',
+        rawLabel: 'DIVIDENDE LVMH',
+        amountPrimary: '26.00',
+        assetSymbol: 'MC',
+        assetIsin: 'FR0000121014',
+        taxAmount: '4.50',
+        balanceAfter: '4526.00',
+        metadata: {
+            grossAmount: '30.50'
+        }
+    },
+    {
+        id: 'utx-bourso-3',
+        accountId: 'acc-bourso-main',
+        batchId: 'batch-bourso-1',
+        externalId: 'vir-001',
+        transactionDate: '2024-05-01T10:00:00Z',
+        valueDate: '2024-05-01T00:00:00Z',
+        type: 'DEPOSIT',
+        rawType: 'Virement reçu',
+        label: 'Salaire Mai',
+        rawLabel: 'VIR RECU TIERS XYZ',
+        amountPrimary: '3500.00',
+        assetSymbol: 'EUR',
+        balanceAfter: '5200.00',
+        metadata: {
+            sender: 'Employer SAS'
+        }
+    },
+    {
+        id: 'utx-bourso-4',
+        accountId: 'acc-bourso-main',
+        batchId: 'batch-bourso-1',
+        transactionDate: '2024-05-05T14:30:00Z',
+        valueDate: '2024-05-05T00:00:00Z',
+        type: 'TRANSFER',
+        rawType: 'Virement interne',
+        label: 'Epargne mensuelle',
+        rawLabel: 'VIR VERS CMPT EPARGNE',
+        amountPrimary: '-500.00',
+        assetSymbol: 'EUR',
+        balanceAfter: '4700.00',
+        metadata: {
+            beneficiary: 'Livret A'
+        }
+    },
+
+    // --- BATCH 3: Kraken (Crypto) ---
+    {
+        id: 'utx-kraken-1',
+        accountId: 'acc-kraken-spot',
+        batchId: 'batch-kraken-1',
+        externalId: 'tx-kr-001',
+        transactionDate: '2024-06-01T12:00:00Z',
+        type: 'BUY',
+        rawType: 'buy',
+        label: 'Buy SOL',
+        rawLabel: 'Buy Solana',
+        amountPrimary: '-200.00',
+        assetSymbol: 'USD',
+        priceUnit: '145.50',
+        quantity: '1.3745',
+        feeAmount: '0.52',
+        feeAsset: 'USD',
+        metadata: {
+            pair: 'SOLUSD'
         }
     },
     // Stock transactions (Trade Republic / PEA)
     {
         id: 'utx-004',
+        accountId: 'acc-006',
         batchId: 'batch-002',
         transactionDate: '2024-06-10T10:00:00Z',
         valueDate: '2024-06-12T00:00:00Z',
@@ -254,6 +359,7 @@ export const unifiedTransactions: UnifiedTransaction[] = [
     },
     {
         id: 'utx-005',
+        accountId: 'acc-006',
         batchId: 'batch-002',
         transactionDate: '2024-09-15T16:00:00Z',
         valueDate: '2024-09-17T00:00:00Z',
@@ -275,6 +381,7 @@ export const unifiedTransactions: UnifiedTransaction[] = [
     // Bank transactions (BoursoBank)
     {
         id: 'utx-006',
+        accountId: 'acc-bourso-main',
         batchId: 'batch-001',
         externalId: 'BOURSO-REF-789',
         transactionDate: '2024-12-01T00:00:00Z',
@@ -293,6 +400,7 @@ export const unifiedTransactions: UnifiedTransaction[] = [
     },
     {
         id: 'utx-007',
+        accountId: 'acc-bourso-main',
         batchId: 'batch-001',
         transactionDate: '2024-12-05T00:00:00Z',
         valueDate: '2024-12-05T00:00:00Z',
@@ -310,6 +418,7 @@ export const unifiedTransactions: UnifiedTransaction[] = [
     // Complex crypto example: Fee in different asset
     {
         id: 'utx-008',
+        accountId: 'acc-binance-spot',
         batchId: 'batch-001',
         externalId: 'BINANCE-TX-999999',
         transactionDate: '2024-12-10T18:45:00Z',

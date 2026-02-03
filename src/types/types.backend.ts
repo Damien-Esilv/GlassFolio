@@ -169,6 +169,9 @@ export interface UnifiedTransaction {
     /** UUID - Internal Primary Key */
     id: string;
 
+    /** UUID - Direct link to Account */
+    accountId: string;
+
     /** UUID - Links to ImportBatch for rollback capability */
     batchId: string;
 

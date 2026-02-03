@@ -1,139 +1,133 @@
-import { Position, PositionFilter, DashboardSummary, Transaction } from '../../types';
+import { Position, PositionFilter, Transaction } from '../../types';
 import { db, delay } from './db';
-import { dashboardChartData } from '../../mockData';
+import { convertToLegacyTransaction } from './transformers';
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
-        await delay(300);
+        await delay(100);
         let positions = db.getPositions();
 
         if (filter) {
             positions = positions.filter(p => {
-                if (filter.type && filter.type !== 'All') {
-                    if (filter.type === 'Equities' && p.type !== 'Equity') return false;
-                    if (filter.type === 'ETFs' && p.type !== 'ETF') return false;
-                    // Note: Mock data 'Crypto' matches type exactly, unlike 'Equities' which maps to 'Equity'
-                    if (filter.type === 'Crypto' && p.type !== 'Crypto') return false;
-                    if (filter.type === 'Cash' && p.type !== 'Cash') return false;
-                }
+                const matchesType = !filter.type || filter.type === 'All' || p.type === filter.type;
+                const matchesSource = !filter.source || filter.source === 'All' || p.source === filter.source;
+                const matchesCurrency = !filter.currency || filter.currency === 'All' || p.currency === filter.currency;
+                const matchesSearch = !filter.searchQuery ||
+                    p.symbol.toLowerCase().includes(filter.searchQuery.toLowerCase()) ||
+                    p.instrument.toLowerCase().includes(filter.searchQuery.toLowerCase());
 
-                if (filter.searchQuery) {
-                    const query = filter.searchQuery.toLowerCase();
-                    const matches =
-                        p.instrument.toLowerCase().includes(query) ||
-                        p.symbol.toLowerCase().includes(query) ||
-                        (p.bankName && p.bankName.toLowerCase().includes(query));
-                    if (!matches) return false;
-                }
-
-                if (filter.source && filter.source !== 'All' && p.source !== filter.source) return false;
-                if (filter.currency && filter.currency !== 'All' && p.currency !== filter.currency) return false;
-
-                return true;
+                return matchesType && matchesSource && matchesCurrency && matchesSearch;
             });
         }
-
         return positions;
     },
 
-    getDashboardSummary: async (): Promise<DashboardSummary> => {
-        await delay(400); // Slightly longer for "calculation"
-        const positions = db.getPositions(); // fetching raw to calculate
+    recalculatePositions: async (newTxs?: Transaction[]): Promise<void> => {
+        // Fetch ALL transactions to rebuild positions accurately
+        const unifiedTxs = db.getUnifiedTransactions();
+        const accounts = db.getAccounts();
+        const institutes = db.getInstitutes();
 
-        const totalValue = positions.reduce((acc, pos) => acc + pos.marketValue, 0);
-        const totalCost = positions.reduce((acc, pos) => acc + (pos.quantity * pos.avgCost), 0);
-        const totalPL = totalValue - totalCost;
-        const plPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+        const convertedTxs = unifiedTxs.map(tx =>
+            convertToLegacyTransaction(tx, accounts, institutes)
+        );
+        const legacyTxs = db.getTransactions();
+        const allTxs = [...convertedTxs, ...legacyTxs];
 
-        // --- Chart Data Logic (Migrated from Dashboard.tsx) ---
-        // In a real app, this would query historical data table
-        const baseData = dashboardChartData;
-        // Scale mock data so the last point matches current totalValue
-        const lastMockValue = baseData[baseData.length - 1].value;
-        const scaleFactor = totalValue / (lastMockValue || 1);
+        // Sort by date ascending
+        allTxs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const chartData = baseData.map(d => ({
-            ...d,
-            value: d.value * scaleFactor * (1 + (Math.random() * 0.02 - 0.01))
-        }));
+        // Group by Symbol + Source to keep positions separated by broker
+        const positionMap = new Map<string, Position>();
+
+        for (const tx of allTxs) {
+            if (!tx.symbol) continue;
+
+            const key = `${tx.symbol}-${tx.source || 'Unknown'}`;
+
+            let pos = positionMap.get(key);
+            if (!pos) {
+                pos = {
+                    id: `pos-${Math.random().toString(36).substr(2, 9)}`,
+                    instrument: tx.instrument,
+                    symbol: tx.symbol,
+                    quantity: 0,
+                    avgCost: 0,
+                    lastPrice: tx.price,
+                    marketValue: 0,
+                    unrealizedPL: 0,
+                    unrealizedPLPercent: 0,
+                    currency: tx.currency,
+                    type: tx.assetClass || 'Equity',
+                    source: tx.source,
+                    bankName: tx.bankName,
+                    accountName: tx.accountName
+                };
+            }
+
+            // Simple FIFO/AvgCost Logic
+            // Note: This matches the simplified logic common in MVP portfolio trackers
+            if (tx.type === 'Buy' || tx.type === 'Deposit') {
+                const totalCost = (pos.quantity * pos.avgCost) + (tx.amount * tx.price);
+                const totalQty = pos.quantity + tx.amount;
+
+                if (totalQty > 0) {
+                    pos.avgCost = totalCost / totalQty;
+                }
+                pos.quantity = totalQty;
+                pos.lastPrice = tx.price > 0 ? tx.price : pos.lastPrice;
+            } else if (tx.type === 'Sell' || tx.type === 'Withdrawal') {
+                pos.quantity -= tx.amount;
+                if (tx.price > 0) pos.lastPrice = tx.price;
+            }
+
+            // Ensure quantity doesn't go negative (data errors)
+            if (pos.quantity < 0) pos.quantity = 0;
+
+            positionMap.set(key, pos);
+        }
+
+        // Filter zero positions
+        const positions = Array.from(positionMap.values())
+            .filter(p => p.quantity > 0.000001);
+
+        // Calculate PL
+        positions.forEach(p => {
+            p.marketValue = p.quantity * p.lastPrice;
+            p.unrealizedPL = p.marketValue - (p.quantity * p.avgCost);
+            const invested = p.quantity * p.avgCost;
+            p.unrealizedPLPercent = invested > 0 ? (p.unrealizedPL / invested) * 100 : 0;
+        });
+
+        // Save calculated positions to DB (cache)
+        db.savePositions(positions);
+    },
+
+    getDashboardSummary: async (): Promise<any> => {
+        await delay(300);
+        const positions = db.getPositions();
+
+        const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+        const totalInvested = positions.reduce((sum, p) => sum + (p.quantity * p.avgCost), 0);
+        const totalPL = totalValue - totalInvested;
+        const plPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
+
+        // Generate dummy chart data based on current value mostly being steady with some volatility
+        // In a real app, this would come from historical snapshots
+        const chartData = Array.from({ length: 30 }, (_, i) => {
+            const volatility = (Math.random() - 0.5) * 0.02; // 2% daily volatility
+            return {
+                name: `Day ${i + 1}`,
+                value: totalValue * (1 - (0.01 * (30 - i))) * (1 + volatility)
+            };
+        });
 
         return {
             totalValue,
-            totalCost,
+            totalCost: totalInvested,
             totalPL,
             plPercent,
             chartData
         };
-    },
-
-    recalculatePositions: async (newTxs: Transaction[]): Promise<void> => {
-        // This is the logic migrated from DataContext.addTransactions
-        // It runs server-side (conceptually) to update the Positions table
-
-        const currentPositions = [...db.getPositions()];
-
-        newTxs.forEach(tx => {
-            const isBuy = tx.type === 'Buy' || tx.type === 'Deposit';
-            const isSell = tx.type === 'Sell' || tx.type === 'Withdrawal';
-            if (!isBuy && !isSell) return;
-
-            // Find existing position matching symbol AND (if cash) bank/account
-            const existingIdx = currentPositions.findIndex(p => {
-                if (p.type === 'Cash' && tx.assetClass === 'Cash') {
-                    // Strict match for cash accounts
-                    return p.symbol === tx.symbol && p.bankName === tx.bankName && p.accountName === tx.accountName;
-                }
-                return p.symbol === tx.symbol;
-            });
-
-            const qtyChange = isBuy ? tx.amount : -tx.amount;
-
-            if (existingIdx >= 0) {
-                const pos = currentPositions[existingIdx];
-                const newQty = Math.max(0, pos.quantity + qtyChange);
-                let newAvgCost = pos.avgCost;
-                if (isBuy && newQty > 0) {
-                    const totalCost = (pos.quantity * pos.avgCost) + (tx.amount * tx.price);
-                    newAvgCost = totalCost / (pos.quantity + tx.amount);
-                }
-
-                if (newQty === 0) {
-                    currentPositions.splice(existingIdx, 1);
-                } else {
-                    currentPositions[existingIdx] = {
-                        ...pos,
-                        quantity: newQty,
-                        avgCost: newAvgCost,
-                        marketValue: newQty * tx.price,
-                        unrealizedPL: (tx.price - newAvgCost) * newQty,
-                        unrealizedPLPercent: newAvgCost > 0 ? ((tx.price - newAvgCost) / newAvgCost) * 100 : 0
-                    };
-                }
-            } else if (isBuy) {
-                let type: Position['type'] = 'Equity';
-                if (tx.assetClass) type = tx.assetClass;
-                else if (['BTC', 'ETH', 'SOL'].some(c => tx.symbol.includes(c))) type = 'Crypto';
-                else if (tx.symbol === 'USD' || tx.symbol === 'EUR' || tx.type === 'Deposit') type = 'Cash';
-
-                currentPositions.push({
-                    id: Math.random().toString(36).substr(2, 9),
-                    symbol: tx.symbol,
-                    instrument: tx.instrument || tx.symbol,
-                    quantity: tx.amount,
-                    avgCost: tx.price,
-                    lastPrice: tx.price,
-                    marketValue: tx.amount * tx.price,
-                    unrealizedPL: 0,
-                    unrealizedPLPercent: 0,
-                    currency: tx.currency,
-                    type: type,
-                    source: tx.source,
-                    bankName: tx.bankName,
-                    accountName: tx.accountName
-                });
-            }
-        });
-
-        db.savePositions(currentPositions);
     }
 };

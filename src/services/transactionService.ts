@@ -1,11 +1,32 @@
 import { Transaction, TransactionFilter } from '../../types';
+import { UnifiedTransaction, Account, Institute } from '../types';
 import { db, delay } from './db';
 import { portfolioService } from './portfolioService';
+import { convertToLegacyTransaction } from './transformers';
+
+/**
+ * Convert UnifiedTransaction to legacy Transaction format
+ * This provides backward compatibility with existing UI components
+ */
+// ... imports at top ...
 
 export const transactionService = {
     getTransactions: async (filter?: TransactionFilter): Promise<Transaction[]> => {
-        await delay(300); // Simulate network latency
-        let transactions = db.getTransactions();
+        await delay(200);
+
+        // Read from UnifiedTransaction storage (new imports)
+        const unifiedTxs = db.getUnifiedTransactions();
+        const accounts = db.getAccounts();
+        const institutes = db.getInstitutes();
+
+        // Convert to legacy format
+        let transactions = unifiedTxs.map(tx =>
+            convertToLegacyTransaction(tx, accounts, institutes)
+        );
+
+        // Also include old legacy transactions for backward compat
+        const legacyTxs = db.getTransactions();
+        transactions = [...transactions, ...legacyTxs];
 
         if (filter) {
             transactions = transactions.filter(tx => {
@@ -54,19 +75,19 @@ export const transactionService = {
         db.saveTransactions(updatedTransactions);
 
         // Trigger position recalculation logic
-        // In a real backend, this would likely be a queued job or a transaction
         await portfolioService.recalculatePositions(newTxs);
     },
 
     checkDuplicates: async (limit = 1000): Promise<Transaction[]> => {
-        // Return a lightweight list for checking duplicates (or check internally)
-        // For this implementation, we'll just expose getTransactions for client-side check 
-        // OR implement the specific check here.
+        // Return all transactions for duplicate checking
+        const unified = db.getUnifiedTransactions();
+        const accounts = db.getAccounts();
+        const institutes = db.getInstitutes();
 
-        // Let's implement the specific check needed by ImportWizard if needed, 
-        // but ImportWizard logic was fairly complex client-side.
-        // Better: Return all transactions so client can check (or emulate a "checkBatch" endpoint).
+        const converted = unified.map(tx => convertToLegacyTransaction(tx, accounts, institutes));
+        const legacy = db.getTransactions();
 
-        return db.getTransactions();
+        return [...converted, ...legacy];
     }
 };
+

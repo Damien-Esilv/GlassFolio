@@ -1,0 +1,31 @@
+UTC_Time,Account,Operation,Coin,Change,Fee,Remark
+2024-01-05 10:15:32,Spot,Buy,BTC,0.025,-0.0001,Market order
+2024-01-12 14:22:45,Spot,Buy,ETH,0.5,-0.0005,DCA purchase
+2024-01-20 09:30:18,Spot,Buy,SOL,15,-0.05,New position
+2024-02-02 16:45:22,Spot,Sell,BTC,0.01,0.00005,Partial profit
+2024-02-15 11:20:33,Spot,Buy,BNB,2,-0.002,Platform token
+2024-02-28 08:55:12,Spot,Buy,ETH,0.3,-0.0003,Adding
+2024-03-08 13:12:45,Spot,Buy,XRP,500,-0.5,Altcoin exposure
+2024-03-18 17:30:55,Spot,Buy,ADA,1000,-1,Cardano bet
+2024-03-25 10:05:28,Spot,Sell,SOL,5,0.02,Taking profit
+2024-04-05 14:40:33,Spot,Buy,DOGE,5000,-5,Meme coin
+2024-04-15 09:25:18,Spot,Buy,BTC,0.015,-0.00008,DCA
+2024-04-28 16:55:42,Spot,Buy,AVAX,20,-0.02,Layer 1 play
+2024-05-10 11:30:25,Spot,Sell,ETH,0.2,0.0002,Rebalance
+2024-05-22 08:45:38,Spot,Buy,MATIC,300,-0.3,L2 scaling
+2024-06-05 15:20:15,Spot,Buy,BTC,0.02,-0.0001,BTC accumulation
+2024-06-18 10:55:48,Spot,Sell,DOGE,2000,2,Meme profit
+2024-07-02 14:10:32,Spot,Buy,SOL,10,-0.03,Adding back
+2024-07-15 09:35:22,Spot,Buy,ETH,0.25,-0.00025,DCA
+2024-07-28 17:25:45,Spot,Sell,XRP,200,0.2,Partial exit
+2024-08-08 12:40:18,Spot,Buy,BTC,0.018,-0.00009,Monthly DCA
+2024-08-22 08:15:55,Spot,Buy,BNB,1.5,-0.0015,Adding
+2024-09-05 15:50:28,Spot,Sell,ADA,400,0.4,Rebalance
+2024-09-18 11:25:42,Spot,Buy,AVAX,15,-0.015,Averaging down
+2024-10-02 16:30:35,Spot,Buy,BTC,0.022,-0.00011,Strong buy
+2024-10-15 09:45:18,Spot,Buy,ETH,0.4,-0.0004,Pre-ETF hype
+2024-10-28 14:20:55,Spot,Sell,SOL,8,0.024,Taking profit
+2024-11-08 10:55:32,Spot,Buy,BTC,0.03,-0.00015,Bull run
+2024-11-22 17:40:45,Spot,Buy,SOL,12,-0.036,Re-entry
+2024-12-05 12:15:28,Spot,Sell,BTC,0.015,0.000075,Year-end profit
+2024-12-18 08:30:42,Spot,Buy,ETH,0.35,-0.00035,Year-end DCA

@@ -1,92 +1,206 @@
 <!DOCTYPE html>
 <html lang="en" class="dark" data-theme="night">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Glassfolio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: '#137fec',
-              background: 'var(--bg-background)',
-              'accent-green': '#10b981',
-              'accent-red': '#ef4444',
-              // Mapping standard slate colors to our variables for compatibility if needed
-              slate: {
-                800: 'var(--bg-card)', // Mapping card background to slate-800 utility use
-                900: 'var(--bg-background)',
-              }
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Inter', 'sans-serif'],
-            },
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glassfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          // Flattened colors for things like ring-, divide-, etc. if needed, 
+          // but we prefer specific overrides.
+          colors: {
+            brand: 'var(--color-primary)',
+            'brand-static': 'var(--color-brand-static)',
+            success: 'var(--color-success)',
+            error: 'var(--color-error)',
+            warning: 'var(--color-warning)',
+            info: 'var(--color-info)',
+            // Aliases
+            'accent-green': 'var(--color-success)',
+            'accent-red': 'var(--color-error)',
+          },
+          textColor: {
+            primary: 'var(--text-primary)',
+            secondary: 'var(--text-secondary)',
+            tertiary: 'var(--text-tertiary)',
+            brand: 'var(--color-primary)',
+            'brand-static': 'var(--color-brand-static)',
+            success: 'var(--color-success)',
+            error: 'var(--color-error)',
+            warning: 'var(--color-warning)',
+            'accent-green': 'var(--color-success)',
+            'accent-red': 'var(--color-error)',
+          },
+          backgroundColor: {
+            canvas: 'var(--bg-canvas)',
+            card: 'var(--bg-card)',
+            'card-hover': 'var(--bg-card-hover)',
+            subtle: 'var(--bg-subtle)',
+
+            // Brand
+            primary: 'var(--color-primary)',
+            brand: 'var(--color-primary)',
+            'brand-static': 'var(--color-brand-static)',
+
+            // Status
+            success: 'var(--color-success)',
+            error: 'var(--color-error)',
+            warning: 'var(--color-warning)',
+            info: 'var(--color-info)',
+            'accent-green': 'var(--color-success)',
+            'accent-red': 'var(--color-error)',
+          },
+          borderColor: {
+            border: 'var(--border-subtle)',
+            strong: 'var(--border-strong)',
+            brand: 'var(--color-primary)',
+            'accent-green': 'var(--color-success)',
+            'accent-red': 'var(--color-error)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Inter', 'sans-serif'],
           },
         },
-      }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        --bg-background: #ffffff;
-        --bg-card: rgba(0, 0, 0, 0.05); /* Light mode card */
-        --text-main: #000000;
-        --text-muted: rgba(0, 0, 0, 0.6);
-      }
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Base Palette - Light (Default) */
+      --bg-canvas: #f8fafc;
+      /* Slate 50 */
+      --bg-card: #ffffff;
+      /* White */
+      --bg-card-hover: #f1f5f9;
+      /* Slate 100 */
+      --bg-subtle: #f1f5f9;
+      /* Slate 100 */
 
-      [data-theme='light'] {
-        --bg-background: #f6f7f8;
-        --bg-card: rgba(255, 255, 255, 0.5);
-        --text-main: #000000;
-        --text-muted: rgba(0, 0, 0, 0.6);
-      }
+      --text-primary: #0f172a;
+      /* Slate 900 */
+      --text-secondary: #64748b;
+      /* Slate 500 */
+      --text-tertiary: #94a3b8;
+      /* Slate 400 */
 
-      /* Neutral Dark */
-      [data-theme='dark'] {
-        --bg-background: #18181b; /* Zinc 900 */
-        --bg-card: rgba(255, 255, 255, 0.05);
-        --text-main: #ffffff;
-        --text-muted: rgba(255, 255, 255, 0.6);
-      }
+      --border-subtle: #e2e8f0;
+      /* Slate 200 */
+      --border-strong: #cbd5e1;
+      /* Slate 300 */
 
-      /* Blue Night (Template Default) */
-      [data-theme='night'] {
-        --bg-background: #101922; /* Template Dark BG */
-        --bg-card: rgba(0, 0, 0, 0.2); /* Template Card BG */
-        --text-main: #ffffff;
-        --text-muted: rgba(255, 255, 255, 0.6);
-      }
+      --color-primary: #3b82f6;
+      /* Blue 500 */
+      --color-primary-hover: #2563eb;
+      /* Blue 600 */
+      --color-brand-static: #3b82f6;
+      /* CONSTANT BLUE */
 
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: var(--bg-background);
-        color: var(--text-main);
-        transition: background-color 0.3s ease, color 0.3s ease;
-      }
-      
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: var(--bg-background); 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #334155; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569; 
-      }
-    </style>
+      --color-success: #10b981;
+      --color-error: #ef4444;
+      --color-warning: #f59e0b;
+      --color-info: #3b82f6;
+    }
+
+    /* Dark Mode (Zinc/Slate Mix) */
+    [data-theme='dark'],
+    .dark {
+      --bg-canvas: #09090b;
+      /* Zinc 950 */
+      --bg-card: #18181b;
+      /* Zinc 900 */
+      --bg-card-hover: #27272a;
+      /* Zinc 800 */
+      --bg-subtle: #27272a;
+      /* Zinc 800 */
+
+      --text-primary: #f8fafc;
+      /* Slate 50 */
+      --text-secondary: #94a3b8;
+      /* Slate 400 */
+      --text-tertiary: #475569;
+      /* Slate 600 */
+
+      --border-subtle: #27272a;
+      /* Zinc 800 */
+      --border-strong: #3f3f46;
+      /* Zinc 700 */
+
+      --color-primary: #3b82f6;
+      /* Blue 500 - Matches Light Mode */
+      --color-primary-hover: #2563eb;
+      /* Blue 600 */
+    }
+
+    /* Night Mode (Deep Blue) */
+    [data-theme='night'] {
+      --bg-canvas: #020617;
+      /* Slate 950 */
+      --bg-card: #0f172a;
+      /* Slate 900 */
+      --bg-card-hover: #1e293b;
+      /* Slate 800 */
+      --bg-subtle: #1e293b;
+      /* Slate 800 */
+
+      --text-primary: #f8fafc;
+      /* Slate 50 */
+      --text-secondary: #94a3b8;
+      /* Slate 400 */
+      --text-tertiary: #475569;
+      /* Slate 600 */
+
+      --border-subtle: #1e293b;
+      /* Slate 800 */
+      --border-strong: #334155;
+      /* Slate 700 */
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Utilities */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      /* 12px */
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-canvas);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
+  </style>
   <script type="module" src="/index.tsx"></script>
 </head>
-  <body class="font-display">
-    <div id="root"></div>
-  </body>
+
+<body class="font-display">
+  <div id="root"></div>
+</body>
+
 </html>
