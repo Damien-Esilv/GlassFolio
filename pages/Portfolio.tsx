@@ -22,6 +22,7 @@ import {
     Wallet
 } from 'lucide-react';
 import { Position } from '../types';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES
@@ -52,6 +53,7 @@ interface CategoryGroup {
 // ============================================================================
 
 const Portfolio: React.FC = () => {
+    const { t } = useTranslation();
     const { positions: globalPositions } = useData();
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['stocks', 'crypto', 'cash']));
     const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
@@ -189,7 +191,7 @@ const Portfolio: React.FC = () => {
                     <Link to="/import">
                         <Button className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90">
                             <Download size={16} />
-                            Import
+                            {t('common:buttons.import')}
                         </Button>
                     </Link>
                 </div>

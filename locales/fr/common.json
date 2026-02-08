@@ -1,0 +1,49 @@
+{
+    "buttons": {
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "create": "Créer",
+        "import": "Importer",
+        "export": "Exporter",
+        "remove": "Retirer",
+        "upload": "Télécharger nouveau",
+        "close": "Fermer",
+        "signIn": "Se connecter",
+        "signOut": "Se déconnecter",
+        "createAccount": "Créer un compte",
+        "saveChanges": "Enregistrer les modifications",
+        "updatePassword": "Mettre à jour le mot de passe",
+        "saveProfile": "Enregistrer le profil"
+    },
+    "actions": {
+        "seeAll": "Voir tout",
+        "viewReport": "Voir le rapport",
+        "viewHistory": "Voir l'historique",
+        "viewBadges": "Voir les badges",
+        "addNew": "Ajouter nouveau",
+        "review": "Examiner",
+        "fillDemo": "Utiliser le compte démo"
+    },
+    "labels": {
+        "search": "Rechercher...",
+        "loading": "Chargement...",
+        "noDataFound": "Aucune donnée trouvée",
+        "progress": "Progrès",
+        "target": "Objectif",
+        "level": "Niveau",
+        "xp": "XP",
+        "autoTracking": "SUIVI AUTO"
+    },
+    "errors": {
+        "failedToLogin": "Échec de la connexion",
+        "passwordsDoNotMatch": "Les nouveaux mots de passe ne correspondent pas !",
+        "required": "Ce champ est requis"
+    },
+    "common": {
+        "all": "Tout",
+        "week": "Semaine",
+        "lvl": "Niv"
+    }
+}

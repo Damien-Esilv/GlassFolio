@@ -1,0 +1,18 @@
+{
+    "menu": {
+        "dashboard": "Tableau de bord",
+        "portfolio": "Portefeuille",
+        "summary": "Résumé",
+        "positions": "Positions",
+        "transactions": "Transactions",
+        "progress": "Progrès",
+        "reports": "Rapports",
+        "settings": "Paramètres"
+    },
+    "header": {
+        "proPlan": "Plan Pro",
+        "profileAndAccount": "Profil & Compte",
+        "preferences": "Préférences"
+    },
+    "brandName": "Glassfolio"
+}

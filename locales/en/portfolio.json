@@ -1,0 +1,15 @@
+{
+    "title": "Portfolio Summary",
+    "totalValue": "Total Value",
+    "categories": {
+        "equities": "Equities",
+        "etfs": "ETFs",
+        "crypto": "Crypto",
+        "cash": "Cash"
+    },
+    "allocation": "Asset Allocation",
+    "topHoldings": "Top Holdings",
+    "performance": "Performance",
+    "noAssets": "No assets in portfolio",
+    "addAssets": "Add your first assets to get started"
+}

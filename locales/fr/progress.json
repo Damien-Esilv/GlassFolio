@@ -1,0 +1,41 @@
+{
+    "title": "Progrès & Objectifs",
+    "tabs": {
+        "goals": "Objectifs",
+        "achievements": "Succès"
+    },
+    "goals": {
+        "title": "Objectifs financiers",
+        "createNew": "Créer un nouvel objectif",
+        "editGoal": "Modifier l'objectif",
+        "deleteGoal": "Supprimer l'objectif",
+        "noGoals": "Aucun objectif créé",
+        "noGoalsDescription": "Définissez votre premier objectif financier pour commencer à suivre vos progrès.",
+        "form": {
+            "goalName": "Nom de l'objectif",
+            "goalNamePlaceholder": "ex: Fonds d'urgence",
+            "targetAmount": "Montant cible",
+            "currentAmount": "Montant actuel",
+            "trackingMethod": "Méthode de suivi",
+            "manual": "Manuel",
+            "dynamic": "Dynamique (Suivi automatique)",
+            "linkedAssets": "Actifs liés",
+            "selectAssets": "Sélectionner les actifs à suivre",
+            "icon": "Icône",
+            "home": "Maison",
+            "plane": "Voyage",
+            "car": "Voiture",
+            "emergency": "Urgence",
+            "other": "Autre"
+        }
+    },
+    "achievements": {
+        "title": "Succès",
+        "unlocked": "Débloqué",
+        "locked": "Verrouillé",
+        "progress": "Progrès",
+        "level": "Niveau",
+        "noAchievements": "Aucun succès pour le moment",
+        "viewDetails": "Voir les détails"
+    }
+}

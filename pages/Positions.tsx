@@ -5,8 +5,10 @@ import Button from '../components/Button';
 import { Search, Download } from 'lucide-react';
 import { portfolioService } from '../src/services/portfolioService';
 import { Position } from '../types';
+import { useTranslation } from 'react-i18next';
 
 const Positions: React.FC = () => {
+  const { t } = useTranslation();
   const { positions: globalPositions } = useData();
 
   const [filterType, setFilterType] = useState('All');
@@ -45,16 +47,16 @@ const Positions: React.FC = () => {
   }, [filterType, searchQuery, sourceFilter, currencyFilter, globalPositions]);
 
 
-  const cardStyle = "rounded-xl bg-white/50 dark:bg-black/20 shadow-lg ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-lg";
+  const cardStyle = "rounded-xl bg-card shadow-lg border border-subtle";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-black dark:text-white">Positions</h1>
+        <h1 className="text-3xl font-bold text-primary">{t('navigation:menu.positions')}</h1>
         <Link to="/import">
           <Button className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90">
             <Download size={16} />
-            Import
+            {t('common:buttons.import')}
           </Button>
         </Link>
       </div>
@@ -63,12 +65,12 @@ const Positions: React.FC = () => {
       <div className={`${cardStyle} p-2 flex flex-col lg:flex-row justify-between gap-4`}>
 
         {/* Left: Type Tabs */}
-        <div className="flex p-1 gap-1 bg-black/5 dark:bg-white/5 rounded-lg overflow-x-auto">
+        <div className="flex p-1 gap-1 bg-subtle rounded-lg overflow-x-auto">
           {['All', 'Equities', 'ETFs', 'Crypto', 'Cash'].map(tab => (
             <button
               key={tab}
               onClick={() => setFilterType(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab ? 'bg-primary text-white shadow-lg' : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'}`}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:text-primary hover:bg-subtle'}`}
             >
               {tab}
             </button>
@@ -80,7 +82,7 @@ const Positions: React.FC = () => {
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+            className="bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
           >
             {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
           </select>
@@ -88,19 +90,19 @@ const Positions: React.FC = () => {
           <select
             value={currencyFilter}
             onChange={(e) => setCurrencyFilter(e.target.value)}
-            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+            className="bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
           >
             {currencies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Currencies' : c}</option>)}
           </select>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black/40 dark:text-white/40" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={16} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-black/40 dark:placeholder-white/40"
+              placeholder={t('common:labels.search')}
+              className="bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-tertiary"
             />
           </div>
         </div>
@@ -109,8 +111,8 @@ const Positions: React.FC = () => {
       {/* Data Table */}
       <div className={`${cardStyle} overflow-hidden`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-black/60 dark:text-white/60">
-            <thead className="text-xs text-black/40 dark:text-white/40 uppercase bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
+          <table className="w-full text-sm text-left text-secondary">
+            <thead className="text-xs text-tertiary uppercase bg-subtle border-b border-subtle">
               <tr>
                 <th scope="col" className="px-6 py-4 font-medium tracking-wider">Instrument</th>
                 <th scope="col" className="px-6 py-4 font-medium tracking-wider">Source / Bank</th>
@@ -122,28 +124,28 @@ const Positions: React.FC = () => {
                 <th scope="col" className="px-6 py-4 font-medium tracking-wider text-center">Ccy</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+            <tbody className="divide-y divide-subtle">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-black/40 dark:text-white/40">
-                    Loading positions...
+                  <td colSpan={8} className="px-6 py-8 text-center text-tertiary">
+                    {t('common:labels.loading')}
                   </td>
                 </tr>
               ) : filteredPositions.map((pos) => (
-                <tr key={pos.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">
+                <tr key={pos.id} className="hover:bg-subtle transition-colors">
+                  <td className="px-6 py-4 font-medium text-primary whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="font-bold">{pos.instrument}</span>
-                      <div className="flex gap-2 text-xs text-black/50 dark:text-white/50">
+                      <div className="flex gap-2 text-xs text-secondary">
                         <span>{pos.symbol}</span>
                         {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">CASH</span>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-black/60 dark:text-white/60">
+                  <td className="px-6 py-4 text-secondary">
                     {pos.type === 'Cash' ? (
                       <div className="flex flex-col">
-                        <span className="font-semibold text-black dark:text-white">{pos.bankName || pos.source}</span>
+                        <span className="font-semibold text-primary">{pos.bankName || pos.source}</span>
                         <span className="text-xs">{pos.accountName || 'Main Account'}</span>
                       </div>
                     ) : (
@@ -152,8 +154,8 @@ const Positions: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString()}</td>
                   <td className="px-6 py-4 text-right">${pos.avgCost.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right text-black/70 dark:text-white/70">${pos.lastPrice.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right font-semibold text-black dark:text-white">${pos.marketValue.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right text-tertiary">${pos.lastPrice.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-right font-semibold text-primary">${pos.marketValue.toLocaleString()}</td>
                   <td className={`px-6 py-4 text-right font-medium ${pos.unrealizedPL >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                     {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPL.toLocaleString()} <span className="text-xs opacity-70">({pos.unrealizedPLPercent.toFixed(2)}%)</span>
                   </td>
@@ -164,8 +166,8 @@ const Positions: React.FC = () => {
           </table>
         </div>
         {!isLoading && filteredPositions.length === 0 && (
-          <div className="p-8 text-center text-black/40 dark:text-white/40">
-            No positions found matching your criteria.
+          <div className="p-8 text-center text-tertiary">
+            {t('common:labels.noDataFound')}
           </div>
         )}
       </div>

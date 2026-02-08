@@ -20,8 +20,10 @@ import {
 import { ImportBatch, Account, Institute } from '../src/types';
 import { importService } from '../src/services/importService';
 import { instituteService, accountService } from '../src/services/instituteService';
+import { useTranslation } from 'react-i18next';
 
 const ImportHistory: React.FC = () => {
+    const { t } = useTranslation();
     const [batches, setBatches] = useState<ImportBatch[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -181,8 +183,8 @@ const ImportHistory: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs font-medium px-2 py-1 rounded ${batch.importMode === 'history'
-                                                    ? 'bg-purple-500/20 text-purple-400'
-                                                    : 'bg-blue-500/20 text-blue-400'
+                                                ? 'bg-purple-500/20 text-purple-400'
+                                                : 'bg-blue-500/20 text-blue-400'
                                                 }`}>
                                                 {batch.importMode === 'history' ? 'History' : 'Snapshot'}
                                             </span>

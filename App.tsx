@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import './src/i18n'; // Initialize i18n
 
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {

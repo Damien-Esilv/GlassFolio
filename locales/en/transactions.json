@@ -1,0 +1,40 @@
+{
+    "title": "Transactions",
+    "importButton": "Import",
+    "filters": {
+        "dateRange": "Date Range",
+        "all": "All",
+        "last30Days": "Last 30 Days",
+        "last90Days": "Last 90 Days",
+        "ytd": "YTD",
+        "class": "Class",
+        "equities": "Equities",
+        "etfs": "ETFs",
+        "crypto": "Crypto",
+        "cash": "Cash",
+        "side": "Side",
+        "buy": "Buy",
+        "sell": "Sell",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "source": "Source",
+        "currency": "Currency",
+        "search": "Search transactions..."
+    },
+    "table": {
+        "date": "Date",
+        "asset": "Asset",
+        "type": "Type",
+        "quantity": "Quantity",
+        "price": "Price",
+        "total": "Total",
+        "source": "Source"
+    },
+    "summary": {
+        "showing": "Showing",
+        "of": "of",
+        "transactions": "transactions"
+    },
+    "noResults": "No transactions found",
+    "loading": "Loading transactions..."
+}

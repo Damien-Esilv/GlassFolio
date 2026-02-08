@@ -1,0 +1,38 @@
+{
+    "title": "Settings",
+    "subtitle": "Manage your profile settings and application preferences.",
+    "tabs": {
+        "profile": "Profile",
+        "preferences": "Preferences"
+    },
+    "profile": {
+        "publicProfile": "Public Profile",
+        "profilePicture": "Profile Picture",
+        "profilePictureInfo": "Supports JPG, PNG or GIF. Max size 2MB.",
+        "displayName": "Display Name",
+        "emailAddress": "Email Address",
+        "changePassword": "Change Password",
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "confirmNewPassword": "Confirm New Password",
+        "profileUpdated": "Profile details updated successfully",
+        "passwordUpdated": "Password changed successfully"
+    },
+    "preferences": {
+        "applicationSettings": "Application Settings",
+        "baseCurrency": "Base Currency",
+        "baseCurrencyInfo": "Select your preferred currency for aggregation.",
+        "language": "Language",
+        "languageInfo": "Select your preferred language.",
+        "appearance": "Appearance",
+        "appearanceInfo": "Customize your interface theme.",
+        "light": "Light",
+        "dark": "Dark",
+        "night": "Night",
+        "system": "System",
+        "notifications": "Notifications",
+        "notificationsInfo": "Receive updates about your portfolio.",
+        "english": "English",
+        "french": "French"
+    }
+}

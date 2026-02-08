@@ -1,0 +1,38 @@
+{
+    "title": "Paramètres",
+    "subtitle": "Gérez vos paramètres de profil et les préférences de l'application.",
+    "tabs": {
+        "profile": "Profil",
+        "preferences": "Préférences"
+    },
+    "profile": {
+        "publicProfile": "Profil public",
+        "profilePicture": "Photo de profil",
+        "profilePictureInfo": "Supporte JPG, PNG ou GIF. Taille max 2 Mo.",
+        "displayName": "Nom d'affichage",
+        "emailAddress": "Adresse e-mail",
+        "changePassword": "Changer le mot de passe",
+        "currentPassword": "Mot de passe actuel",
+        "newPassword": "Nouveau mot de passe",
+        "confirmNewPassword": "Confirmer le nouveau mot de passe",
+        "profileUpdated": "Détails du profil mis à jour avec succès",
+        "passwordUpdated": "Mot de passe changé avec succès"
+    },
+    "preferences": {
+        "applicationSettings": "Paramètres de l'application",
+        "baseCurrency": "Devise de base",
+        "baseCurrencyInfo": "Sélectionnez votre devise préférée pour l'agrégation.",
+        "language": "Langue",
+        "languageInfo": "Sélectionnez votre langue préférée.",
+        "appearance": "Apparence",
+        "appearanceInfo": "Personnalisez le thème de votre interface.",
+        "light": "Clair",
+        "dark": "Sombre",
+        "night": "Nuit",
+        "system": "Système",
+        "notifications": "Notifications",
+        "notificationsInfo": "Recevez des mises à jour sur votre portefeuille.",
+        "english": "Anglais",
+        "french": "Français"
+    }
+}

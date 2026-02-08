@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { useImportWizard, MAPPABLE_FIELDS, WizardStep } from '../hooks/importHooks';
 import { InstituteType, AccountType } from '../src/types';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // MAIN COMPONENT

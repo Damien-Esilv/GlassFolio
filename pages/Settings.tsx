@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop } from 'lucide-react';
+import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Settings: React.FC = () => {
+    const { t } = useTranslation();
     const { user, updateProfile } = useAuth();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
@@ -26,7 +28,8 @@ const Settings: React.FC = () => {
     const [prefData, setPrefData] = useState({
         currency: user?.preferences?.currency || 'USD',
         theme: user?.preferences?.theme || 'night',
-        notifications: user?.preferences?.notifications ?? true
+        notifications: user?.preferences?.notifications ?? true,
+        language: user?.preferences?.language || 'en'
     });
 
     // Password State
@@ -84,7 +87,8 @@ const Settings: React.FC = () => {
     const handleChangePassword = (e: React.FormEvent) => {
         e.preventDefault();
         if (passwords.new !== passwords.confirm) {
-            alert("New passwords do not match!");
+            setSuccessMsg(t('common:errors.passwordsDoNotMatch'));
+            setTimeout(() => setSuccessMsg(''), 3000);
             return;
         }
         setIsSaving(true);
@@ -110,8 +114,8 @@ const Settings: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto pb-12">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-primary mb-2">Settings</h1>
-                <p className="text-secondary">Manage your profile settings and application preferences.</p>
+                <h1 className="text-3xl font-bold text-primary mb-2">{t('settings:title')}</h1>
+                <p className="text-secondary">{t('settings:subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -121,13 +125,13 @@ const Settings: React.FC = () => {
                         onClick={() => setActiveTab('profile')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <User size={18} /> Profile
+                        <User size={18} /> {t('settings:tabs.profile')}
                     </button>
                     <button
                         onClick={() => setActiveTab('preferences')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'preferences' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <Globe size={18} /> Preferences
+                        <Globe size={18} /> {t('settings:tabs.preferences')}
                     </button>
                 </div>
 
@@ -138,7 +142,7 @@ const Settings: React.FC = () => {
                     {activeTab === 'profile' && (
                         <div className="space-y-6 animate-fade-in">
                             <div className={cardStyle}>
-                                <h2 className="text-xl font-semibold text-primary mb-6">Public Profile</h2>
+                                <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:profile.publicProfile')}</h2>
 
                                 {/* Avatar Section */}
                                 <div className="flex items-center gap-6 mb-8 pb-8 border-b border-border">
@@ -153,16 +157,16 @@ const Settings: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <h3 className="text-lg font-medium text-primary">Profile Picture</h3>
-                                        <p className="text-sm text-tertiary mb-3">Supports JPG, PNG or GIF. Max size 2MB.</p>
+                                        <h3 className="text-lg font-medium text-primary">{t('settings:profile.profilePicture')}</h3>
+                                        <p className="text-sm text-tertiary mb-3">{t('settings:profile.profilePictureInfo')}</p>
                                         <div className="flex gap-3">
                                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                                             <Button size="sm" variant="secondary" onClick={triggerFileInput}>
                                                 <Upload size={14} className="mr-2" />
-                                                Upload New
+                                                {t('common:buttons.upload')}
                                             </Button>
                                             <Button size="sm" variant="ghost" className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10" onClick={() => updateProfile({ avatar: '' })}>
-                                                Remove
+                                                {t('common:buttons.remove')}
                                             </Button>
                                         </div>
                                     </div>
@@ -172,7 +176,7 @@ const Settings: React.FC = () => {
                                 <form onSubmit={handleSaveProfile} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-medium text-secondary mb-1.5">Display Name</label>
+                                            <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.displayName')}</label>
                                             <input
                                                 type="text"
                                                 name="name"
@@ -182,7 +186,7 @@ const Settings: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-secondary mb-1.5">Email Address</label>
+                                            <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.emailAddress')}</label>
                                             <input
                                                 type="email"
                                                 name="email"
@@ -194,7 +198,7 @@ const Settings: React.FC = () => {
                                     </div>
 
                                     <div className="flex justify-end">
-                                        <Button type="submit" isLoading={isSaving} className="bg-primary text-white hover:bg-primary/90">Save Profile</Button>
+                                        <Button type="submit" isLoading={isSaving} className="bg-primary text-white hover:bg-primary/90">{t('common:buttons.saveProfile')}</Button>
                                     </div>
                                 </form>
                             </div>
@@ -203,11 +207,11 @@ const Settings: React.FC = () => {
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-2">
                                     <Lock size={20} className="text-tertiary" />
-                                    Change Password
+                                    {t('settings:profile.changePassword')}
                                 </h2>
                                 <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
                                     <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">Current Password</label>
+                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.currentPassword')}</label>
                                         <input
                                             type="password"
                                             name="current"
@@ -217,7 +221,7 @@ const Settings: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">New Password</label>
+                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.newPassword')}</label>
                                         <input
                                             type="password"
                                             name="new"
@@ -227,7 +231,7 @@ const Settings: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">Confirm New Password</label>
+                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.confirmNewPassword')}</label>
                                         <input
                                             type="password"
                                             name="confirm"
@@ -238,7 +242,7 @@ const Settings: React.FC = () => {
                                     </div>
                                     <div className="pt-2 flex justify-between items-center">
                                         <span className="text-accent-green text-sm font-medium">{successMsg}</span>
-                                        <Button type="submit" variant="secondary">Update Password</Button>
+                                        <Button type="submit" variant="secondary">{t('common:buttons.updatePassword')}</Button>
                                     </div>
                                 </form>
                             </div>
@@ -250,15 +254,15 @@ const Settings: React.FC = () => {
                         <div className="space-y-6 animate-fade-in">
                             {/* App Settings */}
                             <div className={cardStyle}>
-                                <h2 className="text-xl font-semibold text-primary mb-6">Application Settings</h2>
+                                <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:preferences.applicationSettings')}</h2>
                                 <div className="space-y-8">
                                     {/* Currency */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-subtle rounded-lg text-secondary"><Globe size={20} /></div>
                                             <div>
-                                                <p className="text-sm font-medium text-primary">Base Currency</p>
-                                                <p className="text-xs text-tertiary">Select your preferred currency for aggregation.</p>
+                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.baseCurrency')}</p>
+                                                <p className="text-xs text-tertiary">{t('settings:preferences.baseCurrencyInfo')}</p>
                                             </div>
                                         </div>
                                         <select
@@ -272,13 +276,32 @@ const Settings: React.FC = () => {
                                         </select>
                                     </div>
 
+                                    {/* Language Selector */}
+                                    <div className="flex items-center justify-between border-t border-border pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-subtle rounded-lg text-secondary"><Languages size={20} /></div>
+                                            <div>
+                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.language')}</p>
+                                                <p className="text-xs text-tertiary">{t('settings:preferences.languageInfo')}</p>
+                                            </div>
+                                        </div>
+                                        <select
+                                            value={prefData.language}
+                                            onChange={(e) => updatePreference('language', e.target.value)}
+                                            className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[120px]"
+                                        >
+                                            <option value="en">{t('settings:preferences.english')}</option>
+                                            <option value="fr">{t('settings:preferences.french')}</option>
+                                        </select>
+                                    </div>
+
                                     {/* Theme Selector */}
                                     <div className="border-t border-border pt-6">
                                         <div className="flex items-center gap-3 mb-4">
                                             <div className="p-2 bg-subtle rounded-lg text-secondary"><Moon size={20} /></div>
                                             <div>
-                                                <p className="text-sm font-medium text-primary">Appearance</p>
-                                                <p className="text-xs text-tertiary">Customize your interface theme.</p>
+                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.appearance')}</p>
+                                                <p className="text-xs text-tertiary">{t('settings:preferences.appearanceInfo')}</p>
                                             </div>
                                         </div>
 
@@ -288,28 +311,28 @@ const Settings: React.FC = () => {
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'light' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
                                             >
                                                 <Sun size={20} />
-                                                <span className="text-xs font-medium">Light</span>
+                                                <span className="text-xs font-medium">{t('settings:preferences.light')}</span>
                                             </button>
                                             <button
                                                 onClick={() => updatePreference('theme', 'dark')}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'dark' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
                                             >
                                                 <Moon size={20} />
-                                                <span className="text-xs font-medium">Dark</span>
+                                                <span className="text-xs font-medium">{t('settings:preferences.dark')}</span>
                                             </button>
                                             <button
                                                 onClick={() => updatePreference('theme', 'night')}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'night' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
                                             >
                                                 <div className="w-5 h-5 rounded-full bg-[#101922] border border-slate-700"></div>
-                                                <span className="text-xs font-medium">Night</span>
+                                                <span className="text-xs font-medium">{t('settings:preferences.night')}</span>
                                             </button>
                                             <button
                                                 onClick={() => updatePreference('theme', 'system')}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'system' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
                                             >
                                                 <Laptop size={20} />
-                                                <span className="text-xs font-medium">System</span>
+                                                <span className="text-xs font-medium">{t('settings:preferences.system')}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -319,8 +342,8 @@ const Settings: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-subtle rounded-lg text-secondary"><Bell size={20} /></div>
                                             <div>
-                                                <p className="text-sm font-medium text-primary">Notifications</p>
-                                                <p className="text-xs text-tertiary">Receive updates about your portfolio.</p>
+                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.notifications')}</p>
+                                                <p className="text-xs text-tertiary">{t('settings:preferences.notificationsInfo')}</p>
                                             </div>
                                         </div>
                                         <button

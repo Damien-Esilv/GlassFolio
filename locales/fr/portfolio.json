@@ -1,0 +1,15 @@
+{
+    "title": "Résumé du portefeuille",
+    "totalValue": "Valeur totale",
+    "categories": {
+        "equities": "Actions",
+        "etfs": "ETF",
+        "crypto": "Crypto",
+        "cash": "Liquidités"
+    },
+    "allocation": "Répartition des actifs",
+    "topHoldings": "Principales positions",
+    "performance": "Performance",
+    "noAssets": "Aucun actif dans le portefeuille",
+    "addAssets": "Ajoutez vos premiers actifs pour commencer"
+}

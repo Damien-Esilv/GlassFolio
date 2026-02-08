@@ -6,10 +6,12 @@ import { FinancialGoal, Achievement, LinkedAsset, AssetGroup } from '../types';
 import { Home, Plane, Car, Shield, Wallet, PlusCircle, Pin, Trash2, Edit2, X, Zap, Link as LinkIcon, Target, Trophy, Lock, Medal, BarChart3, Star, CheckCircle, Settings, ChevronLeft, Plus, ArrowUpRight, Save } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 
 const Progress: React.FC = () => {
+    const { t } = useTranslation();
     const { goals, positions, achievements, assetGroups, saveGoal, deleteGoal, toggleGoalPin, addAssetGroup, updateAssetGroup, deleteAssetGroup } = useData();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'goals' | 'achievements'>('goals');

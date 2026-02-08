@@ -1,0 +1,49 @@
+{
+    "buttons": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "import": "Import",
+        "export": "Export",
+        "remove": "Remove",
+        "upload": "Upload New",
+        "close": "Close",
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
+        "createAccount": "Create Account",
+        "saveChanges": "Save Changes",
+        "updatePassword": "Update Password",
+        "saveProfile": "Save Profile"
+    },
+    "actions": {
+        "seeAll": "See All",
+        "viewReport": "View Report",
+        "viewHistory": "View History",
+        "viewBadges": "View Badges",
+        "addNew": "Add New",
+        "review": "Review",
+        "fillDemo": "Use Demo Account"
+    },
+    "labels": {
+        "search": "Search...",
+        "loading": "Loading...",
+        "noDataFound": "No data found",
+        "progress": "Progress",
+        "target": "Target",
+        "level": "Level",
+        "xp": "XP",
+        "autoTracking": "AUTO-TRACKING"
+    },
+    "errors": {
+        "failedToLogin": "Failed to login",
+        "passwordsDoNotMatch": "New passwords do not match!",
+        "required": "This field is required"
+    },
+    "common": {
+        "all": "All",
+        "week": "Week",
+        "lvl": "Lvl"
+    }
+}

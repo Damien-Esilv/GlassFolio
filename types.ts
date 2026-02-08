@@ -4,6 +4,7 @@ export interface UserPreferences {
   theme: 'light' | 'dark' | 'night' | 'system';
   currency: string;
   notifications: boolean;
+  language?: 'en' | 'fr'; // Language preference for i18n
 }
 
 export interface User {

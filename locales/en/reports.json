@@ -1,0 +1,16 @@
+{
+    "title": "Reports",
+    "subtitle": "Generate comprehensive portfolio reports",
+    "periods": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
+    },
+    "export": {
+        "pdf": "Export as PDF",
+        "csv": "Export as CSV",
+        "excel": "Export as Excel"
+    },
+    "generating": "Generating report...",
+    "noData": "No data available for this period"
+}

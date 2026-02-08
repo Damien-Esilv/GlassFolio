@@ -1,0 +1,16 @@
+{
+    "title": "Rapports",
+    "subtitle": "Générez des rapports complets de portefeuille",
+    "periods": {
+        "monthly": "Mensuel",
+        "quarterly": "Trimestriel",
+        "yearly": "Annuel"
+    },
+    "export": {
+        "pdf": "Exporter en PDF",
+        "csv": "Exporter en CSV",
+        "excel": "Exporter en Excel"
+    },
+    "generating": "Génération du rapport...",
+    "noData": "Aucune donnée disponible pour cette période"
+}

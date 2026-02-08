@@ -1,0 +1,17 @@
+{
+    "title": "Valeur totale du portefeuille",
+    "realTimeEstimate": "Estimation en temps réel",
+    "financialGoals": "Objectifs financiers",
+    "noGoalsYet": "Aucun objectif défini pour le moment.",
+    "addNewGoal": "Ajouter un nouvel objectif",
+    "achievements": "Succès",
+    "weeklyProgress": "Progrès hebdomadaire",
+    "transactions": "Transactions",
+    "streak": "Série",
+    "xpEarned": "XP gagné",
+    "equities": "Actions",
+    "etfs": "ETF",
+    "crypto": "Crypto",
+    "recentAlerts": "Alertes récentes",
+    "autoTracking": "SUIVI AUTO"
+}

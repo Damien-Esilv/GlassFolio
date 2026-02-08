@@ -1,0 +1,41 @@
+{
+    "title": "Progress & Goals",
+    "tabs": {
+        "goals": "Goals",
+        "achievements": "Achievements"
+    },
+    "goals": {
+        "title": "Financial Goals",
+        "createNew": "Create New Goal",
+        "editGoal": "Edit Goal",
+        "deleteGoal": "Delete Goal",
+        "noGoals": "No goals created yet",
+        "noGoalsDescription": "Set your first financial goal to start tracking your progress.",
+        "form": {
+            "goalName": "Goal Name",
+            "goalNamePlaceholder": "e.g., Emergency Fund",
+            "targetAmount": "Target Amount",
+            "currentAmount": "Current Amount",
+            "trackingMethod": "Tracking Method",
+            "manual": "Manual",
+            "dynamic": "Dynamic (Auto-tracking)",
+            "linkedAssets": "Linked Assets",
+            "selectAssets": "Select assets to track",
+            "icon": "Icon",
+            "home": "Home",
+            "plane": "Travel",
+            "car": "Car",
+            "emergency": "Emergency",
+            "other": "Other"
+        }
+    },
+    "achievements": {
+        "title": "Achievements",
+        "unlocked": "Unlocked",
+        "locked": "Locked",
+        "progress": "Progress",
+        "level": "Level",
+        "noAchievements": "No achievements yet",
+        "viewDetails": "View Details"
+    }
+}

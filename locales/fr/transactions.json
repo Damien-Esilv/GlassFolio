@@ -1,0 +1,40 @@
+{
+    "title": "Transactions",
+    "importButton": "Importer",
+    "filters": {
+        "dateRange": "Plage de dates",
+        "all": "Tout",
+        "last30Days": "30 derniers jours",
+        "last90Days": "90 derniers jours",
+        "ytd": "Année en cours",
+        "class": "Classe",
+        "equities": "Actions",
+        "etfs": "ETF",
+        "crypto": "Crypto",
+        "cash": "Liquidités",
+        "side": "Type",
+        "buy": "Achat",
+        "sell": "Vente",
+        "deposit": "Dépôt",
+        "withdrawal": "Retrait",
+        "source": "Source",
+        "currency": "Devise",
+        "search": "Rechercher des transactions..."
+    },
+    "table": {
+        "date": "Date",
+        "asset": "Actif",
+        "type": "Type",
+        "quantity": "Quantité",
+        "price": "Prix",
+        "total": "Total",
+        "source": "Source"
+    },
+    "summary": {
+        "showing": "Affichage de",
+        "of": "sur",
+        "transactions": "transactions"
+    },
+    "noResults": "Aucune transaction trouvée",
+    "loading": "Chargement des transactions..."
+}

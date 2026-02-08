@@ -1,6 +1,7 @@
 import React from 'react';
 import { FinancialGoal } from '../types';
 import { Home, Plane, Car, Shield, Wallet, Pin, Trash2, Edit2, Zap, Link as LinkIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 
@@ -9,9 +10,11 @@ interface GoalCardProps {
     onEdit?: (goal: FinancialGoal) => void;
     onDelete?: (id: string) => void;
     onPin?: (id: string) => void;
+    showDetailTags?: boolean;
 }
 
-const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin }) => {
+const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, showDetailTags = true }) => {
+    const { t } = useTranslation();
     const Icon = ICON_MAP[goal.iconType] || Wallet;
     const safeCurrent = goal.currentAmount || 0;
     const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
@@ -47,10 +50,10 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin }) =>
 
             <div className="flex items-center gap-4 mb-4">
                 <div className={`p-3 rounded-xl bg-opacity-10 ${goal.color === 'emerald' ? 'bg-success/10 text-success' :
-                        goal.color === 'rose' ? 'bg-error/10 text-error' :
-                            goal.color === 'orange' ? 'bg-orange-500/10 text-orange-500' :
-                                goal.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
-                                    'bg-blue-500/10 text-blue-500'
+                    goal.color === 'rose' ? 'bg-error/10 text-error' :
+                        goal.color === 'orange' ? 'bg-orange-500/10 text-orange-500' :
+                            goal.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
+                                'bg-blue-500/10 text-blue-500'
                     }`}>
                     <Icon size={24} />
                 </div>
@@ -59,7 +62,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin }) =>
                     {goal.method === 'dynamic' && (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-accent-green mt-0.5">
                             <Zap size={10} fill="currentColor" />
-                            <span>AUTO-TRACKING</span>
+                            <span>{t('common:labels.autoTracking')}</span>
                         </div>
                     )}
                 </div>
@@ -67,7 +70,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin }) =>
 
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm font-medium">
-                    <span className="text-secondary">Progress</span>
+                    <span className="text-secondary">{t('common:labels.progress')}</span>
                     <span className="text-primary">{progress.toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
@@ -75,11 +78,11 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin }) =>
                 </div>
                 <div className="flex justify-between text-xs text-secondary font-mono">
                     <span>${safeCurrent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                    <span>Target: ${goal.targetAmount.toLocaleString()}</span>
+                    <span>{t('common:labels.target')}: ${goal.targetAmount.toLocaleString()}</span>
                 </div>
             </div>
 
-            {goal.method === 'dynamic' && goal.linkedAssets && (
+            {showDetailTags && goal.method === 'dynamic' && goal.linkedAssets && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                     {goal.linkedAssets.map(link => (
                         <span key={link.id} className="px-2 py-1 rounded text-[10px] font-bold bg-subtle text-secondary border border-border flex items-center gap-1">

@@ -24,7 +24,16 @@ This project is an advanced financial dashboard ("GlassFolio"). Homogeneity, aes
     *   ❌ `bg-[#1e293b]` (Forbidden)
     *   ❌ `text-gray-500` (Avoid generic colors; use semantic `text-secondary` or `text-tertiary`)
 
-### 1.3. Dynamic Theming (Light, Dark, Midnight)
+### 1.3. Form Elements (Inputs & Dropdowns)
+*   **Problem:** Browser default inputs often have white backgrounds or unreadable text in Dark Mode if transparency is used wrongly.
+*   **Standard:** All form elements (`<input>`, `<select>`, `<textarea>`) **MUST** use the following pattern:
+    *   **Background:** `bg-subtle` (Adapts to Slate-100 in Light, Zinc-800 in Dark).
+    *   **Text:** `text-primary` (Ensures contrast).
+    *   **Border:** `border-subtle` (Optional, but recommended).
+    *   **Focus:** `focus:ring-primary focus:border-primary`.
+*   **Prohibited:** `bg-black/5`, `bg-white/10`, `text-black`, `text-white` on form elements. These cause visibility issues in specific themes.
+
+### 1.4. Dynamic Theming (Light, Dark, Midnight)
 The system supports three distinct themes. Your code must support all three automatically by using the semantic variables.
 *   **Mechanism:** `AuthContext` updates the `data-theme` attribute and `.dark` class on the `<html>` element.
 *   **Themes:**
@@ -74,24 +83,75 @@ The system supports three distinct themes. Your code must support all three auto
 
 ---
 
-## 4. Critical Value Adds & strict Rules
+## 4. Internationalization (i18n)
+**Goal:** Professional multi-language support with zero hardcoded user-facing text.
 
-### 4.1. Security & Permissions
+### 4.1. Zero Hardcoded Text Policy
+*   **STRICT PROHIBITION:** Never hardcode user-facing strings in components, pages, or logic.
+*   **ENFORCEMENT:** All UI text must be externalized via the i18n library.
+*   **Rule:** Use `t('namespace:key')` for all user-visible text.
+*   **Scope:** This applies to: labels, buttons, placeholders, error messages, tooltips, notifications, and all dynamic content.
+
+### 4.2. Translation Structure
+*   **Technology:** `i18next` + `react-i18next` for React components.
+*   **Location:** `locales/{lang}/{namespace}.json` (e.g., `locales/en/common.json`, `locales/fr/dashboard.json`).
+*   **Languages:** English (`en`) and French (`fr`).
+*   **Namespaces:**
+    *   `common.json` - Shared buttons, actions, labels, errors
+    *   `navigation.json` - Menu items, brand name, header elements
+    *   `auth.json` - Login, Signup forms
+    *   `dashboard.json` - Dashboard-specific labels
+    *   `portfolio.json` - Portfolio, Positions page labels
+    *   `transactions.json` - Transactions page labels
+    *   `progress.json` - Goals & Achievements labels
+    *   `settings.json` - Settings page labels
+    *   `reports.json` - Reports page labels
+
+### 4.3. Usage Patterns
+*   **Import:** `import { useTranslation } from 'react-i18next';`
+*   **Hook:** `const { t } = useTranslation();`
+*   **Simple Text:** `t('common:buttons.save')` → "Save" (or "Enregistrer" in French)
+*   **Interpolation:** `t('dashboard:totalValue', { value: 1000 })` → "Total: $1,000"
+*   **Pluralization:** Use i18next plural forms, NEVER string concatenation
+*   **Dynamic Content:** Always use i18n interpolation for variable data
+
+### 4.4. Adding New Strings
+*   **Process:** When adding UI text, immediately add the key to **both** `en` and `fr` translation files.
+*   **Key Naming:** Use descriptive, hierarchical keys (e.g., `settings.profile.displayName`).
+*   **Fallback:** Never use inline fallback strings like `t('key', 'fallback text')`.
+
+### 4.5. Language Switching
+*   User language preference is stored in `user.preferences.language` via `AuthContext`.
+*   The i18n system automatically detects and applies the correct language on mount and language change.
+*   **AuthContext** syncs language changes with i18next via `i18n.changeLanguage()`.
+*   Components should NEVER manually switch languages; rely on the i18n provider.
+*   A language selector is available in **Settings → Preferences**.
+
+### 4.6. Language Behavior
+*   The application displays in **one language at a time** - either English or French.
+*   When the user switches languages, the entire UI updates immediately.
+*   The system is extensible to support additional languages in the future (Spanish, German, etc.).
+
+---
+
+## 5. Critical Value Adds & Strict Rules
+
+### 5.1. Security & Permissions
 *   **Client-Side Verification:** `ProtectedRoute` handles navigation guarding, but does not secure data.
 *   **Data Isolation:** Ensure all queries implicitly filter by `ownerId` (once added) to prevent data leaks between users in the future shared DB.
 
-### 4.2. Accessibility (A11y)
+### 5.2. Accessibility (A11y)
 *   **Mandatory Labels:** Every generic icon button (e.g., `<Bell />`) **MUST** have an `aria-label` attribute describing its action.
 *   **Contrast:** Verify that text on custom badges or graphs meets WCAG AA standards, especially in "Midnight" mode.
 
-### 4.3. Error Handling (The "Graceful Failure")
+### 5.3. Error Handling (The "Graceful Failure")
 *   **Boundaries:** Major layout sections (Sidebar, Dashboard Widgets) should be wrapped in Error Boundaries to prevent a single widget crash from taking down the entire app.
 *   **Toast Notifications:** Use the toast/alert system for user feedback, never `window.alert`.
 
-### 4.4. Directory Structure
+### 5.4. Directory Structure
 *   **Vite Non-Standard:** Note that `pages/` and `components/` reside in the **ROOT**, while `services/` resides in `src/`. Respect this structure; do not move files unnecessarily.
 
-### 4.5. Strict Typing
+### 5.5. Strict Typing
 *   **No ANY:** The use of `any` is strictly prohibited unless wrapping an external untyped library (and even then, prefer `unknown`).
 *   **Return Types:** Explicitly define return types for all Service functions to ensure contract stability.
 

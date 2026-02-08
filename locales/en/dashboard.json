@@ -1,0 +1,17 @@
+{
+    "title": "Total Portfolio Value",
+    "realTimeEstimate": "Real-time Estimate",
+    "financialGoals": "Financial Goals",
+    "noGoalsYet": "No goals set yet.",
+    "addNewGoal": "Add New Goal",
+    "achievements": "Achievements",
+    "weeklyProgress": "Weekly Progress",
+    "transactions": "Transactions",
+    "streak": "Streak",
+    "xpEarned": "XP Earned",
+    "equities": "Equities",
+    "etfs": "ETFs",
+    "crypto": "Crypto",
+    "recentAlerts": "Recent Alerts",
+    "autoTracking": "AUTO-TRACKING"
+}
