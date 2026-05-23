@@ -6,15 +6,13 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { ImportBatch } from '../src/types';
+import { ImportBatch, ENGINE_VERSION } from '../src/types';
 import { db, delay } from '../src/services/db';
 import {
     SnapshotFieldMappings,
-    SnapshotPosition,
     StagedSnapshotPosition,
-    SnapshotParseResult,
-    ReconciliationDiff,
     ReconciliationResult,
+    ReconciliationDiff,
 } from '../src/services/import/types';
 import {
     snapshotService,
@@ -22,11 +20,10 @@ import {
     parseSnapshotFile,
     getExistingPositions,
     calculateReconciliation,
-    updateDiffSellPrice,
-    generateSyntheticTransactions,
+    generateReconciliationTransactions,
     createPositionTransactions
 } from '../src/services/import/snapshotService';
-import { parseCSVText } from '../src/services/import/csvParser';
+import { transactionManager, computeFileHash } from '../src/services/core/transactionManager';
 
 // ============================================================================
 // TYPES
@@ -49,7 +46,7 @@ export interface SnapshotImportState {
     mappings: Partial<SnapshotFieldMappings>;
 
     // Options (after mapping)
-    generateSyntheticTransactions: boolean;
+    generateSyntheticTransactionsOption: boolean;
 
     // Parsed positions
     parsedPositions: StagedSnapshotPosition[];
@@ -73,7 +70,7 @@ const initialState: SnapshotImportState = {
 
     mappings: {},
 
-    generateSyntheticTransactions: false,
+    generateSyntheticTransactionsOption: false,
 
     parsedPositions: [],
     parseStats: { total: 0, valid: 0, errors: 0 },
@@ -131,7 +128,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
     // =========================================================================
 
     const setGenerateSyntheticTransactions = useCallback((value: boolean) => {
-        updateState({ generateSyntheticTransactions: value });
+        updateState({ generateSyntheticTransactionsOption: value });
     }, [updateState]);
 
     const analyzeAndPreview = useCallback(async () => {
@@ -146,7 +143,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
 
             const validPositions = parseResult.positions.filter(p => p.status === 'valid');
 
-            if (state.generateSyntheticTransactions) {
+            if (state.generateSyntheticTransactionsOption) {
                 // Get existing positions and calculate reconciliation
                 const existingPos = await getExistingPositions(accountId);
                 const reconciliation = await calculateReconciliation(
@@ -174,12 +171,17 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         } catch (err) {
             updateState({ error: 'Failed to analyze data', isLoading: false });
         }
-    }, [state.rawCSVText, state.mappings, state.generateSyntheticTransactions, accountId, updateState]);
+    }, [state.rawCSVText, state.mappings, state.generateSyntheticTransactionsOption, accountId, updateState]);
 
     // =========================================================================
     // STEP 3: PREVIEW / RECONCILIATION
     // =========================================================================
 
+    /**
+     * Update sell price for a reconciliation diff that requires user input
+     * (Note: In the new model, BALANCE_ADJUSTMENT doesn't require price input,
+     * but we keep this for future extensions or real SELL transactions)
+     */
     const updateSellPrice = useCallback((assetKey: string, price: string) => {
         if (!state.reconciliationResult) return;
 
@@ -187,8 +189,14 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
             if (!prev.reconciliationResult) return prev;
 
             const newDiffs = prev.reconciliationResult.diffs.map(diff => {
-                if (diff.assetKey === assetKey && diff.syntheticType === 'SELL') {
-                    return updateDiffSellPrice(diff, price);
+                if (diff.assetKey === assetKey && diff.requiresUserInput) {
+                    return {
+                        ...diff,
+                        syntheticPrice: price,
+                        userProvidedSellPrice: price,
+                        requiresUserInput: false,
+                        isValid: true
+                    };
                 }
                 return diff;
             });
@@ -202,20 +210,24 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
 
             return {
                 ...prev,
-                reconciliationResult: { diffs: newDiffs, stats }
+                reconciliationResult: {
+                    ...prev.reconciliationResult,
+                    diffs: newDiffs,
+                    stats
+                }
             };
         });
     }, [state.reconciliationResult]);
 
     const canCommit = useMemo(() => {
-        if (state.generateSyntheticTransactions && state.reconciliationResult) {
+        if (state.generateSyntheticTransactionsOption && state.reconciliationResult) {
             // All diffs must be valid and no inputs required
             return state.reconciliationResult.stats.requiresInput === 0 &&
                 state.reconciliationResult.stats.hasErrors === 0;
         }
         // Snapshot only: just need valid positions
         return state.parseStats.valid > 0;
-    }, [state.generateSyntheticTransactions, state.reconciliationResult, state.parseStats]);
+    }, [state.generateSyntheticTransactionsOption, state.reconciliationResult, state.parseStats]);
 
     // =========================================================================
     // STEP 4: COMMIT
@@ -227,16 +239,21 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         try {
             const batchId = `batch-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const now = new Date().toISOString();
+            const fileHash = await computeFileHash(state.rawCSVText);
+
+            // Begin atomic transaction
+            transactionManager.begin();
 
             let transactions;
 
-            if (state.generateSyntheticTransactions && state.reconciliationResult) {
+            if (state.generateSyntheticTransactionsOption && state.reconciliationResult) {
                 // Generate synthetic transactions from reconciliation
-                transactions = generateSyntheticTransactions(
+                transactions = await generateReconciliationTransactions(
                     state.reconciliationResult.diffs,
                     batchId,
                     accountId,
-                    now
+                    now,
+                    'default-user'
                 );
             } else {
                 // Snapshot only: create position transactions
@@ -244,33 +261,43 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
                     .filter(p => p.status === 'valid')
                     .map(p => p.position);
 
-                transactions = createPositionTransactions(validPositions, batchId, accountId, now);
-            }
-
-            // Save transactions to DB
-            if (transactions.length > 0) {
-                const existing = db.getUnifiedTransactions();
-                db.saveUnifiedTransactions([...transactions, ...existing]);
+                transactions = await createPositionTransactions(
+                    validPositions,
+                    batchId,
+                    accountId,
+                    now,
+                    'default-user'
+                );
             }
 
             // Create batch record
             const batch: ImportBatch = {
                 id: batchId,
+                ownerId: 'default-user',
                 accountId,
                 importMode: 'snapshot',
                 fileName: 'snapshot_import.csv',
+                fileHash,
                 transactionCount: transactions.length,
+                skippedCount: state.parseStats.total - state.parseStats.valid,
                 importedAt: now,
+                importedBy: 'default-user',
                 status: 'completed',
-                metadata: {
-                    generateSyntheticTransactions: state.generateSyntheticTransactions,
-                    totalPositions: state.parseStats.total,
-                    validPositions: state.parseStats.valid
-                }
+                engineVersion: ENGINE_VERSION,
+                metadata: { totalRows: state.parseStats.total }
             };
 
-            const batches = db.getImportBatches();
-            db.saveImportBatches([batch, ...batches]);
+            // Add to transaction context
+            transactionManager.addTransactions(transactions);
+            transactionManager.addBatch(batch);
+
+            // Commit atomically
+            const result = transactionManager.commit();
+
+            if (!result.success) {
+                updateState({ error: result.error || 'Commit failed', isLoading: false });
+                return;
+            }
 
             updateState({
                 completedBatch: batch,
@@ -278,11 +305,13 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
                 isLoading: false
             });
         } catch (err) {
+            transactionManager.rollback();
             updateState({ error: 'Failed to commit import', isLoading: false });
         }
     }, [
         accountId,
-        state.generateSyntheticTransactions,
+        state.rawCSVText,
+        state.generateSyntheticTransactionsOption,
         state.reconciliationResult,
         state.parsedPositions,
         state.parseStats,
@@ -325,6 +354,9 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         isValidMapping,
         canCommit,
         SNAPSHOT_MAPPABLE_FIELDS,
+
+        // Rename for compatibility
+        generateSyntheticTransactions: state.generateSyntheticTransactionsOption,
 
         // Actions
         setMapping,

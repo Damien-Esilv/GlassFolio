@@ -1,6 +1,4 @@
 /**
- * Backend Types Index
- * Re-exports all backend-specific types for clean imports
+ * Export all backend types
  */
-
 export * from './types.backend';

@@ -68,7 +68,8 @@ export const portfolioService = {
             // Simple FIFO/AvgCost Logic
             // Note: This matches the simplified logic common in MVP portfolio trackers
             if (tx.type === 'Buy' || tx.type === 'Deposit') {
-                const totalCost = (pos.quantity * pos.avgCost) + (tx.amount * tx.price);
+                // Cost basis includes fees (CRITICAL for French PRU calculation)
+                const totalCost = (pos.quantity * pos.avgCost) + (tx.amount * tx.price) + (tx.fees || 0);
                 const totalQty = pos.quantity + tx.amount;
 
                 if (totalQty > 0) {

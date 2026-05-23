@@ -1,29 +1,133 @@
 /**
- * Snapshot Service
+ * Snapshot Service (Refactored)
  * 
- * Handles Snapshot mode imports with reconciliation logic and
- * optional synthetic transaction generation.
+ * Handles Snapshot mode imports with proper reconciliation logic.
+ * Generates BALANCE_ADJUSTMENT transactions (non-fiscal) for position changes.
+ * 
+ * CRITICAL: Synthetic transactions are NEVER fiscal.
  */
 
-import { UnifiedTransaction } from '../../types';
-import { db, delay } from '../db';
-import { parseCSVText, parseDate, parseDecimal, getValue, rowToObject } from './csvParser';
 import {
-    SnapshotFieldMappings,
-    SnapshotPosition,
-    StagedSnapshotPosition,
-    SnapshotParseResult,
-    SnapshotImportConfig,
-    ExistingPosition,
-    ReconciliationDiff,
-    ReconciliationResult,
-    FieldError,
-    getAssetKey,
-    assetsMatch
-} from './types';
+    UnifiedTransaction,
+    TransactionType,
+    SourceOrigin,
+    ImportMode,
+    FieldError
+} from '../../types';
+import { db, delay } from '../db';
+import { computeRowHash } from '../core/transactionManager';
+import { parseCSVText, parseDate, parseDecimal } from './importManager';
 
 // ============================================================================
-// SNAPSHOT MAPPING FIELDS
+// TYPES
+// ============================================================================
+
+export interface SnapshotFieldMappings {
+    assetSymbol?: string | number;
+    assetIsin?: string | number;
+    assetName?: string | number;
+    quantity: string | number;
+    avgPrice: string | number;
+    purchaseDate?: string | number;
+}
+
+export interface SnapshotPosition {
+    assetSymbol?: string;
+    assetIsin?: string;
+    assetName?: string;
+    quantity: string;
+    avgPrice: string;
+    purchaseDate?: string;
+    displayName: string;
+    assetKey: string;
+}
+
+export interface ExistingPosition {
+    assetSymbol?: string;
+    assetIsin?: string;
+    assetName?: string;
+    quantity: string;
+    avgPrice: string;
+    totalCost: string;
+    assetKey: string;
+    sourceMode: ImportMode | 'mixed';
+}
+
+export interface ReconciliationDiff {
+    assetKey: string;
+    displayName: string;
+    assetSymbol?: string;
+    assetIsin?: string;
+
+    // Old position
+    oldQty: string;
+    oldAvgPrice: string;
+    oldTotalCost: string;
+
+    // New position
+    newQty: string;
+    newAvgPrice: string;
+    newTotalCost: string;
+
+    // Delta
+    deltaQty: string;
+    deltaTotalCost: string;
+
+    // Synthetic transaction to generate
+    syntheticType: 'BALANCE_ADJUSTMENT' | 'NONE';
+    syntheticQty: string;
+    syntheticPrice: string;
+
+    // Direction for UI
+    direction: 'increase' | 'decrease' | 'none';
+
+    // Validation
+    requiresUserInput: boolean;
+    isValid: boolean;
+    validationMessage?: string;
+    userProvidedSellPrice?: string;
+
+    // Source mode conflict detection
+    hasSourceModeConflict: boolean;
+    existingSourceMode?: ImportMode | 'mixed';
+}
+
+export interface StagedSnapshotPosition {
+    id: string;
+    rowIndex: number;
+    originalRow: Record<string, string>;
+    position: SnapshotPosition;
+    status: 'valid' | 'error' | 'warning';
+    errors: FieldError[];
+}
+
+export interface SnapshotParseResult {
+    positions: StagedSnapshotPosition[];
+    stats: {
+        total: number;
+        valid: number;
+        errors: number;
+    };
+    headers: string[];
+    detectedDelimiter: string;
+}
+
+export interface ReconciliationResult {
+    diffs: ReconciliationDiff[];
+    stats: {
+        newAssets: number;
+        increasePositions: number;
+        decreasePositions: number;
+        unchangedPositions: number;
+        requiresInput: number;
+        hasErrors: number;
+        hasConflicts: number;
+    };
+    warnings: string[];
+}
+
+// ============================================================================
+// MAPPABLE FIELDS
 // ============================================================================
 
 export const SNAPSHOT_MAPPABLE_FIELDS = [
@@ -34,6 +138,23 @@ export const SNAPSHOT_MAPPABLE_FIELDS = [
     { key: 'avgPrice', label: 'Average Price', required: true, hint: 'Cost basis per unit' },
     { key: 'purchaseDate', label: 'Purchase Date', required: false, hint: 'Defaults to import date' },
 ] as const;
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function rowToObject(row: string[], headers: string[]): Record<string, string> {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = row[i] || ''; });
+    return obj;
+}
+
+function getValue(row: string[], headers: string[], mapping: string | number | undefined): string | undefined {
+    if (mapping === undefined) return undefined;
+    if (typeof mapping === 'number') return row[mapping];
+    const idx = headers.indexOf(mapping);
+    return idx >= 0 ? row[idx] : undefined;
+}
 
 // ============================================================================
 // PARSING
@@ -83,6 +204,15 @@ export async function parseSnapshotFile(
                 message: 'Quantity is required',
                 severity: 'error'
             });
+        } else {
+            const qty = parseFloat(quantity);
+            if (qty < 0) {
+                errors.push({
+                    field: 'quantity',
+                    message: 'Quantity cannot be negative',
+                    severity: 'error'
+                });
+            }
         }
 
         // Parse average price
@@ -93,6 +223,15 @@ export async function parseSnapshotFile(
                 message: 'Average price is required',
                 severity: 'error'
             });
+        } else {
+            const price = parseFloat(avgPrice);
+            if (price < 0) {
+                errors.push({
+                    field: 'avgPrice',
+                    message: 'Price cannot be negative',
+                    severity: 'error'
+                });
+            }
         }
 
         // Parse optional date
@@ -142,8 +281,7 @@ export async function parseSnapshotFile(
 // ============================================================================
 
 /**
- * Get existing positions from UnifiedTransactions
- * Groups by assetKey (ISIN or Symbol)
+ * Get existing positions from transaction journal
  */
 export async function getExistingPositions(accountId: string): Promise<ExistingPosition[]> {
     await delay(100);
@@ -157,14 +295,12 @@ export async function getExistingPositions(accountId: string): Promise<ExistingP
         assetName?: string;
         totalQty: number;
         totalCost: number;
+        sourceModes: Set<ImportMode>;
     }>();
 
     for (const tx of transactions) {
-        // Filter by account ID first
         if (tx.accountId !== accountId) continue;
-
-        // Skip non-buy/sell transactions for position calculation
-        if (!['BUY', 'SELL'].includes(tx.type)) continue;
+        if (!['BUY', 'SELL', 'BALANCE_ADJUSTMENT', 'SNAPSHOT_ADJUSTMENT'].includes(tx.type)) continue;
 
         const key = tx.assetIsin || tx.assetSymbol;
         if (!key) continue;
@@ -174,30 +310,32 @@ export async function getExistingPositions(accountId: string): Promise<ExistingP
             assetIsin: tx.assetIsin,
             assetName: undefined,
             totalQty: 0,
-            totalCost: 0
+            totalCost: 0,
+            sourceModes: new Set<ImportMode>()
         };
 
         const qty = parseFloat(tx.quantity || tx.amountPrimary || '0');
-        const price = parseFloat(tx.priceUnit || '0');
         const amount = parseFloat(tx.amountPrimary || '0');
 
-        if (tx.type === 'BUY') {
-            existing.totalQty += qty;
+        if (tx.type === 'BUY' || tx.type === 'BALANCE_ADJUSTMENT' || tx.type === 'SNAPSHOT_ADJUSTMENT') {
+            existing.totalQty += Math.abs(qty);
             existing.totalCost += Math.abs(amount);
         } else if (tx.type === 'SELL') {
             existing.totalQty -= Math.abs(qty);
-            // Selling doesn't reduce cost basis in simple tracking
         }
 
+        existing.sourceModes.add(tx.sourceMode);
         positionMap.set(key, existing);
     }
 
     // Convert to array
     const positions: ExistingPosition[] = [];
     for (const [key, pos] of positionMap) {
-        if (pos.totalQty <= 0) continue; // Skip zero/negative positions
+        if (pos.totalQty <= 0) continue;
 
         const avgPrice = pos.totalQty > 0 ? pos.totalCost / pos.totalQty : 0;
+        const sourceMode: ImportMode | 'mixed' = pos.sourceModes.size > 1 ? 'mixed' :
+            pos.sourceModes.values().next().value || 'history';
 
         positions.push({
             assetSymbol: pos.assetSymbol,
@@ -206,7 +344,8 @@ export async function getExistingPositions(accountId: string): Promise<ExistingP
             quantity: pos.totalQty.toString(),
             avgPrice: avgPrice.toString(),
             totalCost: pos.totalCost.toString(),
-            assetKey: key
+            assetKey: key,
+            sourceMode
         });
     }
 
@@ -219,7 +358,9 @@ export async function getExistingPositions(accountId: string): Promise<ExistingP
 
 /**
  * Calculate reconciliation between new snapshot and existing positions
- * Generates synthetic transaction recommendations
+ * 
+ * CRITICAL: When mixing snapshot with history, we generate BALANCE_ADJUSTMENT
+ * transactions that are explicitly marked as non-fiscal.
  */
 export async function calculateReconciliation(
     newPositions: SnapshotPosition[],
@@ -228,11 +369,11 @@ export async function calculateReconciliation(
     await delay(100);
 
     const diffs: ReconciliationDiff[] = [];
+    const warnings: string[] = [];
     const processedExistingKeys = new Set<string>();
 
     // Process each new position
     for (const newPos of newPositions) {
-        // Find matching existing position
         const existing = existingPositions.find(ex =>
             (ex.assetIsin && newPos.assetIsin && ex.assetIsin === newPos.assetIsin) ||
             (ex.assetSymbol && newPos.assetSymbol && ex.assetSymbol.toUpperCase() === newPos.assetSymbol.toUpperCase())
@@ -254,22 +395,34 @@ export async function calculateReconciliation(
         const deltaQty = newQty - oldQty;
         const deltaTotalCost = newTotalCost - oldTotalCost;
 
-        // Determine synthetic transaction type
-        let syntheticType: 'BUY' | 'SELL' | 'NONE' = 'NONE';
+        // Check for source mode conflicts
+        const hasSourceModeConflict = !!existing && existing.sourceMode === 'history';
+        if (hasSourceModeConflict) {
+            warnings.push(
+                `Asset ${newPos.displayName} has history transactions. ` +
+                `Snapshot will create BALANCE_ADJUSTMENT (non-fiscal) to reconcile.`
+            );
+        }
+
+        // Determine synthetic transaction
+        let syntheticType: 'BALANCE_ADJUSTMENT' | 'NONE' = 'NONE';
         let syntheticQty = '0';
         let syntheticPrice = '0';
+        let direction: 'increase' | 'decrease' | 'none' = 'none';
         let requiresUserInput = false;
         let isValid = true;
         let validationMessage: string | undefined;
 
-        if (Math.abs(deltaQty) > 0.000001) { // Threshold for float comparison
+        if (Math.abs(deltaQty) > 0.000001) {
+            syntheticType = 'BALANCE_ADJUSTMENT';
+
             if (deltaQty > 0) {
-                // Position increased → synthetic BUY
-                syntheticType = 'BUY';
+                // Position increased
+                direction = 'increase';
                 syntheticQty = deltaQty.toString();
 
-                // Calculate implied price: ΔTC / ΔQ
-                const impliedPrice = deltaTotalCost / deltaQty;
+                // Calculate implied price
+                const impliedPrice = deltaQty !== 0 ? deltaTotalCost / deltaQty : newAvgPrice;
 
                 if (impliedPrice < 0) {
                     isValid = false;
@@ -279,15 +432,14 @@ export async function calculateReconciliation(
                     syntheticPrice = impliedPrice.toFixed(4);
                 }
             } else {
-                // Position decreased → synthetic SELL
-                syntheticType = 'SELL';
+                // Position decreased
+                direction = 'decrease';
                 syntheticQty = Math.abs(deltaQty).toString();
 
-                // For SELL, we need user to provide the sell price
-                // (snapshot doesn't tell us at what price they sold)
-                requiresUserInput = true;
-                syntheticPrice = '0';
-                validationMessage = 'Please enter the sell price';
+                // For decreases, we need user to provide sell price (snapshot doesn't tell us)
+                // UNLESS we're just doing a balance adjustment
+                requiresUserInput = false; // Balance adjustments don't need price
+                syntheticPrice = oldAvgPrice.toFixed(4); // Use old PRU as reference
             }
         }
 
@@ -297,61 +449,37 @@ export async function calculateReconciliation(
             assetSymbol: newPos.assetSymbol,
             assetIsin: newPos.assetIsin,
             oldQty: oldQty.toString(),
-            oldAvgPrice: oldAvgPrice.toFixed(2),
+            oldAvgPrice: oldAvgPrice.toFixed(4),
             oldTotalCost: oldTotalCost.toFixed(2),
             newQty: newQty.toString(),
-            newAvgPrice: newAvgPrice.toFixed(2),
+            newAvgPrice: newAvgPrice.toFixed(4),
             newTotalCost: newTotalCost.toFixed(2),
             deltaQty: deltaQty.toFixed(4),
             deltaTotalCost: deltaTotalCost.toFixed(2),
             syntheticType,
             syntheticQty,
             syntheticPrice,
+            direction,
             requiresUserInput,
             isValid,
-            validationMessage
+            validationMessage,
+            hasSourceModeConflict,
+            existingSourceMode: existing?.sourceMode
         });
     }
 
     // Calculate stats
     const stats = {
         newAssets: diffs.filter(d => d.oldQty === '0').length,
-        increasePositions: diffs.filter(d => d.syntheticType === 'BUY' && d.oldQty !== '0').length,
-        decreasePositions: diffs.filter(d => d.syntheticType === 'SELL').length,
+        increasePositions: diffs.filter(d => d.direction === 'increase' && d.oldQty !== '0').length,
+        decreasePositions: diffs.filter(d => d.direction === 'decrease').length,
         unchangedPositions: diffs.filter(d => d.syntheticType === 'NONE').length,
         requiresInput: diffs.filter(d => d.requiresUserInput).length,
-        hasErrors: diffs.filter(d => !d.isValid).length
+        hasErrors: diffs.filter(d => !d.isValid).length,
+        hasConflicts: diffs.filter(d => d.hasSourceModeConflict).length
     };
 
-    return { diffs, stats };
-}
-
-/**
- * Update a reconciliation diff with user-provided sell price
- */
-export function updateDiffSellPrice(
-    diff: ReconciliationDiff,
-    sellPrice: string
-): ReconciliationDiff {
-    const price = parseFloat(sellPrice);
-
-    if (isNaN(price) || price <= 0) {
-        return {
-            ...diff,
-            syntheticPrice: sellPrice,
-            isValid: false,
-            validationMessage: 'Please enter a valid positive price'
-        };
-    }
-
-    return {
-        ...diff,
-        syntheticPrice: price.toFixed(4),
-        userProvidedSellPrice: sellPrice,
-        requiresUserInput: false,
-        isValid: true,
-        validationMessage: undefined
-    };
+    return { diffs, stats, warnings };
 }
 
 // ============================================================================
@@ -359,16 +487,18 @@ export function updateDiffSellPrice(
 // ============================================================================
 
 /**
- * Generate synthetic transactions from reconciliation diffs
- * Only processes diffs that are valid and resolved
+ * Generate BALANCE_ADJUSTMENT transactions from reconciliation
+ * These are ALWAYS non-fiscal (isFiscal: false)
  */
-export function generateSyntheticTransactions(
+export async function generateReconciliationTransactions(
     diffs: ReconciliationDiff[],
     batchId: string,
     accountId: string,
-    defaultDate: string
-): UnifiedTransaction[] {
+    defaultDate: string,
+    userId: string = 'default-user'
+): Promise<UnifiedTransaction[]> {
     const transactions: UnifiedTransaction[] = [];
+    const now = new Date().toISOString();
 
     for (const diff of diffs) {
         if (diff.syntheticType === 'NONE') continue;
@@ -379,26 +509,49 @@ export function generateSyntheticTransactions(
         const price = parseFloat(diff.syntheticPrice);
         const total = qty * price;
 
+        // Compute row hash for this synthetic transaction
+        const rowHash = await computeRowHash(
+            defaultDate,
+            total.toString(),
+            diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
+            'BALANCE_ADJUSTMENT',
+            '0'
+        );
+
         const tx: UnifiedTransaction = {
-            id: `utx-synth-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `utx-adj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            ownerId: userId,
             batchId,
             accountId,
+            rowHash,
+            sourceOrigin: 'SYNTHETIC' as SourceOrigin,
+
+            // CRITICAL: Synthetic transactions are NOT fiscal
+            isSynthetic: true,
+            isFiscal: false,
+
+            sourceMode: 'snapshot',
             transactionDate: defaultDate,
-            type: diff.syntheticType,
-            rawType: `Synthetic ${diff.syntheticType} (Snapshot Reconciliation)`,
-            label: `${diff.syntheticType} ${qty} ${diff.displayName} @ ${price}`,
-            rawLabel: `Snapshot reconciliation: ${diff.syntheticType}`,
-            amountPrimary: diff.syntheticType === 'BUY' ? (-total).toString() : total.toString(),
+            type: 'BALANCE_ADJUSTMENT' as TransactionType,
+            rawType: `Balance Adjustment (Snapshot Reconciliation - ${diff.direction})`,
+            label: `${diff.direction === 'increase' ? '+' : '-'}${qty} ${diff.displayName} @ ${price}`,
+            rawLabel: `Snapshot reconciliation: ${diff.direction}`,
+            amountPrimary: diff.direction === 'increase' ? (-total).toString() : total.toString(),
             assetSymbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
             assetIsin: diff.assetIsin,
             priceUnit: diff.syntheticPrice,
             quantity: diff.syntheticQty,
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
             metadata: {
                 syntheticTransaction: true,
                 fromSnapshot: true,
+                reconciliationType: diff.direction,
                 oldQty: diff.oldQty,
                 newQty: diff.newQty,
-                deltaQty: diff.deltaQty
+                deltaQty: diff.deltaQty,
+                hadSourceModeConflict: diff.hasSourceModeConflict
             }
         };
 
@@ -408,31 +561,50 @@ export function generateSyntheticTransactions(
     return transactions;
 }
 
-// ============================================================================
-// SNAPSHOT ONLY MODE (No Transaction Generation)
-// ============================================================================
-
 /**
- * Create position records directly from snapshot
- * Returns synthetic BUY transactions representing current holdings
+ * Create position transactions for new assets (first-time snapshot)
+ * These are marked as synthetic but use SNAPSHOT_ADJUSTMENT type
  */
-export function createPositionTransactions(
+export async function createPositionTransactions(
     positions: SnapshotPosition[],
     batchId: string,
     accountId: string,
-    defaultDate: string
-): UnifiedTransaction[] {
-    return positions.map(pos => {
+    defaultDate: string,
+    userId: string = 'default-user'
+): Promise<UnifiedTransaction[]> {
+    const transactions: UnifiedTransaction[] = [];
+    const now = new Date().toISOString();
+
+    for (const pos of positions) {
         const qty = parseFloat(pos.quantity);
         const price = parseFloat(pos.avgPrice);
         const total = qty * price;
 
-        return {
+        // Compute row hash
+        const rowHash = await computeRowHash(
+            pos.purchaseDate || defaultDate,
+            total.toString(),
+            pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
+            'SNAPSHOT_ADJUSTMENT',
+            '0'
+        );
+
+        const tx: UnifiedTransaction = {
             id: `utx-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            ownerId: userId,
             batchId,
             accountId,
+            rowHash,
+            sourceOrigin: 'SYNTHETIC' as SourceOrigin,
+
+            // CRITICAL: Snapshot positions are NOT fiscal
+            // They establish a baseline, not a real purchase
+            isSynthetic: true,
+            isFiscal: false,
+
+            sourceMode: 'snapshot',
             transactionDate: pos.purchaseDate || defaultDate,
-            type: 'BUY' as const,
+            type: 'SNAPSHOT_ADJUSTMENT' as TransactionType,
             rawType: 'Snapshot Position',
             label: `Position: ${qty} ${pos.displayName} @ ${price}`,
             rawLabel: `Snapshot import: ${pos.displayName}`,
@@ -441,12 +613,49 @@ export function createPositionTransactions(
             assetIsin: pos.assetIsin,
             priceUnit: pos.avgPrice,
             quantity: pos.quantity,
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
             metadata: {
                 snapshotImport: true,
                 displayName: pos.displayName
             }
         };
-    });
+
+        transactions.push(tx);
+    }
+
+    return transactions;
+}
+
+/**
+ * Detect potential conflicts between source modes (History vs Snapshot)
+ * 
+ * If an account already has snapshot imports, history import might cause 
+ * duplicate balances unless handled carefully.
+ */
+export async function detectSourceModeConflict(
+    accountId: string,
+    newMode: ImportMode
+): Promise<'NONE' | 'WARNING' | 'CRITICAL'> {
+    const batches = db.getImportBatches().filter(b => b.accountId === accountId && b.status === 'completed');
+
+    if (batches.length === 0) return 'NONE';
+
+    const hasSnapshots = batches.some(b => b.importMode === 'snapshot');
+    const hasHistory = batches.some(b => b.importMode === 'history');
+
+    if (newMode === 'history' && hasSnapshots) {
+        // Mixing history into a snapshot-based account is dangerous
+        return 'CRITICAL';
+    }
+
+    if (newMode === 'snapshot' && hasHistory) {
+        // Snapshot over history is okay but needs warning about potential adjustments
+        return 'WARNING';
+    }
+
+    return 'NONE';
 }
 
 // ============================================================================
@@ -457,8 +666,8 @@ export const snapshotService = {
     parseSnapshotFile,
     getExistingPositions,
     calculateReconciliation,
-    updateDiffSellPrice,
-    generateSyntheticTransactions,
+    generateReconciliationTransactions,
     createPositionTransactions,
+    detectSourceModeConflict,
     SNAPSHOT_MAPPABLE_FIELDS
 };

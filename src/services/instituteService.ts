@@ -42,6 +42,7 @@ export const instituteService = {
         const now = new Date().toISOString();
         const newInstitute: Institute = {
             id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            ownerId: 'default-user', // TODO: Get from auth context
             name: data.name,
             type: data.type,
             isCustom: data.isCustom ?? true, // User-created by default
@@ -145,6 +146,7 @@ export const accountService = {
         const now = new Date().toISOString();
         const newAccount: Account = {
             id: `acc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            ownerId: 'default-user', // TODO: Get from auth context
             instituteId: data.instituteId,
             name: data.name,
             type: data.type,

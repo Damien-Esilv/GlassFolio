@@ -1,3 +1,10 @@
+/**
+ * Database Layer - Mock DB with localStorage
+ * 
+ * This module provides the data access layer for all entities.
+ * Designed for easy migration to InstantDB in production.
+ */
+
 import {
     transactions as initialTransactions,
     positions as initialPositions,
@@ -14,7 +21,8 @@ import {
     Account,
     ImportBatch,
     UnifiedTransaction,
-    MappingTemplate
+    MappingTemplate,
+    AssetPosition
 } from '../types';
 import {
     institutes as initialInstitutes,
@@ -22,7 +30,7 @@ import {
     importBatches as initialImportBatches,
     unifiedTransactions as initialUnifiedTransactions,
     mappingTemplates as initialMappingTemplates
-} from '../mockData.backend';
+} from './mockData.backend';
 
 const STORAGE_KEYS = {
     // Legacy keys (existing functionality)
@@ -37,7 +45,8 @@ const STORAGE_KEYS = {
     ACCOUNTS: 'glassfolio_accounts',
     IMPORT_BATCHES: 'glassfolio_import_batches',
     UNIFIED_TRANSACTIONS: 'glassfolio_unified_transactions',
-    MAPPING_TEMPLATES: 'glassfolio_mapping_templates'
+    MAPPING_TEMPLATES: 'glassfolio_mapping_templates',
+    ASSET_POSITIONS: 'glassfolio_asset_positions'
 };
 
 // Helper: Simulate network delay
@@ -116,6 +125,10 @@ class MockDB {
         localStorage.setItem(STORAGE_KEYS.INSTITUTES, JSON.stringify(data));
     }
 
+    getInstituteById(id: string): Institute | undefined {
+        return this.getInstitutes().find(i => i.id === id);
+    }
+
     // --- Accounts ---
     getAccounts(): Account[] {
         const stored = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
@@ -126,6 +139,10 @@ class MockDB {
         localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(data));
     }
 
+    getAccountById(id: string): Account | undefined {
+        return this.getAccounts().find(a => a.id === id);
+    }
+
     getAccountsByInstitute(instituteId: string): Account[] {
         return this.getAccounts().filter(acc => acc.instituteId === instituteId);
     }
@@ -133,21 +150,55 @@ class MockDB {
     // --- Import Batches ---
     getImportBatches(): ImportBatch[] {
         const stored = localStorage.getItem(STORAGE_KEYS.IMPORT_BATCHES);
-        return stored ? JSON.parse(stored) : initialImportBatches;
+        if (!stored) return initialImportBatches;
+
+        // Migrate old batches to new schema if needed
+        const batches = JSON.parse(stored) as ImportBatch[];
+        return batches.map(b => ({
+            ...b,
+            ownerId: b.ownerId || 'default-user',
+            fileHash: b.fileHash || '',
+            skippedCount: b.skippedCount || 0,
+            importedBy: b.importedBy || 'default-user',
+            engineVersion: b.engineVersion || '1.0.0'
+        }));
     }
 
     saveImportBatches(data: ImportBatch[]) {
         localStorage.setItem(STORAGE_KEYS.IMPORT_BATCHES, JSON.stringify(data));
     }
 
+    getImportBatchById(id: string): ImportBatch | undefined {
+        return this.getImportBatches().find(b => b.id === id);
+    }
+
     getImportBatchesByAccount(accountId: string): ImportBatch[] {
         return this.getImportBatches().filter(batch => batch.accountId === accountId);
+    }
+
+    getImportBatchByFileHash(fileHash: string): ImportBatch | undefined {
+        return this.getImportBatches().find(b => b.fileHash === fileHash && b.status === 'completed');
     }
 
     // --- Unified Transactions ---
     getUnifiedTransactions(): UnifiedTransaction[] {
         const stored = localStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
-        return stored ? JSON.parse(stored) : initialUnifiedTransactions;
+        if (!stored) return initialUnifiedTransactions;
+
+        // Migrate old transactions to new schema if needed
+        const transactions = JSON.parse(stored) as UnifiedTransaction[];
+        return transactions.map(tx => ({
+            ...tx,
+            ownerId: tx.ownerId || 'default-user',
+            rowHash: tx.rowHash || '',
+            sourceOrigin: tx.sourceOrigin || 'FILE',
+            isSynthetic: tx.isSynthetic ?? false,
+            isFiscal: tx.isFiscal ?? true,
+            sourceMode: tx.sourceMode || 'history',
+            createdAt: tx.createdAt || new Date().toISOString(),
+            updatedAt: tx.updatedAt || new Date().toISOString(),
+            version: tx.version || 1
+        }));
     }
 
     saveUnifiedTransactions(data: UnifiedTransaction[]) {
@@ -156,6 +207,10 @@ class MockDB {
 
     getUnifiedTransactionsByBatch(batchId: string): UnifiedTransaction[] {
         return this.getUnifiedTransactions().filter(tx => tx.batchId === batchId);
+    }
+
+    getUnifiedTransactionsByAccount(accountId: string): UnifiedTransaction[] {
+        return this.getUnifiedTransactions().filter(tx => tx.accountId === accountId);
     }
 
     /**
@@ -172,11 +227,69 @@ class MockDB {
     // --- Mapping Templates ---
     getMappingTemplates(): MappingTemplate[] {
         const stored = localStorage.getItem(STORAGE_KEYS.MAPPING_TEMPLATES);
-        return stored ? JSON.parse(stored) : initialMappingTemplates;
+        if (!stored) return initialMappingTemplates;
+
+        const templates = JSON.parse(stored) as MappingTemplate[];
+        return templates.map(t => ({
+            ...t,
+            ownerId: t.ownerId || 'default-user',
+            isPreset: t.isPreset ?? false
+        }));
     }
 
     saveMappingTemplates(data: MappingTemplate[]) {
         localStorage.setItem(STORAGE_KEYS.MAPPING_TEMPLATES, JSON.stringify(data));
+    }
+
+    getMappingTemplateById(id: string): MappingTemplate | undefined {
+        return this.getMappingTemplates().find(t => t.id === id);
+    }
+
+    // --- Asset Positions (Derived/Cached) ---
+    getAssetPositions(): AssetPosition[] {
+        const stored = localStorage.getItem(STORAGE_KEYS.ASSET_POSITIONS);
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    saveAssetPositions(data: AssetPosition[]) {
+        localStorage.setItem(STORAGE_KEYS.ASSET_POSITIONS, JSON.stringify(data));
+    }
+
+    getAssetPositionsByAccount(accountId: string): AssetPosition[] {
+        return this.getAssetPositions().filter(p => p.accountId === accountId);
+    }
+
+    // =========================================================================
+    // UTILITY METHODS
+    // =========================================================================
+
+    /**
+     * Clear all data (useful for testing)
+     */
+    clearAll() {
+        Object.values(STORAGE_KEYS).forEach(key => {
+            localStorage.removeItem(key);
+        });
+    }
+
+    /**
+     * Export all data (for backup)
+     */
+    exportAll(): Record<string, unknown> {
+        return {
+            transactions: this.getTransactions(),
+            positions: this.getPositions(),
+            goals: this.getGoals(),
+            achievements: this.getAchievements(),
+            alerts: this.getAlerts(),
+            assetGroups: this.getAssetGroups(),
+            institutes: this.getInstitutes(),
+            accounts: this.getAccounts(),
+            importBatches: this.getImportBatches(),
+            unifiedTransactions: this.getUnifiedTransactions(),
+            mappingTemplates: this.getMappingTemplates(),
+            assetPositions: this.getAssetPositions()
+        };
     }
 }
 

@@ -247,13 +247,13 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               value={newInstituteName}
               onChange={e => setNewInstituteName(e.target.value)}
               placeholder="Institution name..."
-              className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-1 focus:ring-primary"
               autoFocus
             />
             <select
               value={newInstituteType}
               onChange={e => setNewInstituteType(e.target.value as InstituteType)}
-              className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg p-3"
+              className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
             >
               <option value="bank">Bank</option>
               <option value="broker">Broker</option>
@@ -317,14 +317,14 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 value={newAccountName}
                 onChange={e => setNewAccountName(e.target.value)}
                 placeholder="Account name..."
-                className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg p-3 focus:border-blue-500"
+                className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-primary"
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={newAccountType}
                   onChange={e => setNewAccountType(e.target.value as AccountType)}
-                  className="bg-slate-800 border border-slate-600 text-white rounded-lg p-3"
+                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
                 >
                   <option value="checking">Checking</option>
                   <option value="savings">Savings</option>
@@ -336,7 +336,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 <select
                   value={newAccountCurrency}
                   onChange={e => setNewAccountCurrency(e.target.value)}
-                  className="bg-slate-800 border border-slate-600 text-white rounded-lg p-3"
+                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
                 >
                   <option value="EUR">EUR</option>
                   <option value="USD">USD</option>
@@ -511,12 +511,9 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
     }
   };
 
-  // Get mapped value for preview
-  const getMappedValue = (row: string[], field: string): string => {
-    const mapping = wizard.mappings[field as keyof typeof wizard.mappings];
-    if (mapping === undefined) return '—';
-    const idx = typeof mapping === 'number' ? mapping : wizard.headers.indexOf(mapping as string);
-    return idx >= 0 && row[idx] ? row[idx] : '—';
+  // Check if a header is mapped to any field
+  const isHeaderMapped = (header: string): boolean => {
+    return Object.values(wizard.mappings).some(mapping => mapping === header);
   };
 
   return (
@@ -528,6 +525,35 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
           <span className="text-emerald-400">
             Detected format: <strong>{wizard.detectedPreset}</strong> — mappings applied automatically
           </span>
+        </div>
+      )}
+
+      {/* Header Tokens - Visual Mapping Status */}
+      {wizard.headers.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">CSV Headers (Mapping Status)</h3>
+          <div className="flex flex-wrap gap-2">
+            {wizard.headers.map((header, idx) => {
+              const isMapped = isHeaderMapped(header);
+              return (
+                <span
+                  key={idx}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isMapped
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                    }`}
+                >
+                  {header}
+                </span>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+            <span className="inline-block w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/30 mr-1"></span>
+            Mapped
+            <span className="inline-block w-3 h-3 rounded bg-rose-500/20 border border-rose-500/30 ml-4 mr-1"></span>
+            Not Mapped
+          </p>
         </div>
       )}
 
@@ -550,7 +576,7 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
                 placeholder="Template name..."
-                className="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-1.5 text-sm"
+                className="bg-subtle border border-subtle text-primary rounded-lg px-3 py-1.5 text-sm focus:ring-primary focus:border-primary"
                 autoFocus
               />
               <Button size="sm" onClick={handleSaveTemplate}>Save</Button>
@@ -571,10 +597,10 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
               <select
                 value={wizard.mappings[field.key as keyof typeof wizard.mappings] as string || ''}
                 onChange={e => wizard.setMapping(field.key as keyof typeof wizard.mappings, e.target.value || undefined)}
-                className={`w-full bg-slate-50 dark:bg-slate-800 border text-slate-900 dark:text-white text-sm rounded-lg p-2.5 ${field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]
+                className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]
                   ? 'border-rose-500/50'
-                  : 'border-slate-300 dark:border-slate-600'
-                  } focus:ring-blue-500 focus:border-blue-500`}
+                  : 'border-subtle'
+                  } focus:ring-primary focus:border-primary`}
               >
                 <option value="">— Not mapped —</option>
                 {wizard.headers.map(h => (
@@ -586,35 +612,33 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         </div>
       </div>
 
-      {/* Live Preview */}
-      {wizard.previewRows.length > 0 && (
+      {/* Live Preview - Dynamic Columns */}
+      {wizard.previewRows.length > 0 && wizard.headers.length > 0 && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
           <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Preview (First 5 Rows)</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Preview (First {wizard.previewRows.length} Rows × {wizard.headers.length} Columns)
+            </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
                 <tr>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Type</th>
-                  <th className="px-4 py-2">Asset</th>
-                  <th className="px-4 py-2 text-right">Amount</th>
-                  <th className="px-4 py-2 text-right">Price</th>
-                  <th className="px-4 py-2 text-right">Qty</th>
-                  <th className="px-4 py-2">Description</th>
+                  {wizard.headers.map((header, idx) => (
+                    <th key={idx} className="px-4 py-2 whitespace-nowrap">
+                      {header}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {wizard.previewRows.map((row, idx) => (
-                  <tr key={idx} className="text-slate-600 dark:text-slate-300">
-                    <td className="px-4 py-2 font-mono text-xs">{getMappedValue(row, 'transactionDate')}</td>
-                    <td className="px-4 py-2">{getMappedValue(row, 'type')}</td>
-                    <td className="px-4 py-2 font-bold text-slate-900 dark:text-white">{getMappedValue(row, 'assetSymbol')}</td>
-                    <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'amountPrimary')}</td>
-                    <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'priceUnit')}</td>
-                    <td className="px-4 py-2 text-right font-mono">{getMappedValue(row, 'quantity')}</td>
-                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{getMappedValue(row, 'rawLabel')}</td>
+                {wizard.previewRows.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="text-slate-600 dark:text-slate-300">
+                    {row.map((cell, cellIdx) => (
+                      <td key={cellIdx} className="px-4 py-2 font-mono text-xs whitespace-nowrap">
+                        {cell || '—'}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -750,7 +774,7 @@ const StagingRow: React.FC<{
             type="text"
             value={tx.parsed.transactionDate?.split('T')[0] || ''}
             onChange={e => wizard.updateRowField(tx.id, 'transactionDate', e.target.value)}
-            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-28"
+            className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-28 focus:ring-primary"
           />
         ) : (
           <span className={`font-mono text-xs ${tx.errors.some(e => e.field === 'transactionDate') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
@@ -766,7 +790,7 @@ const StagingRow: React.FC<{
             type="text"
             value={tx.parsed.assetSymbol || ''}
             onChange={e => wizard.updateRowField(tx.id, 'assetSymbol', e.target.value)}
-            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-20"
+            className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-20 focus:ring-primary"
           />
         ) : (
           <span className={`font-bold ${tx.errors.some(e => e.field === 'assetSymbol') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
@@ -781,7 +805,7 @@ const StagingRow: React.FC<{
             type="text"
             value={tx.parsed.amountPrimary || ''}
             onChange={e => wizard.updateRowField(tx.id, 'amountPrimary', e.target.value)}
-            className="bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-white rounded px-2 py-1 text-xs w-24 text-right"
+            className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-24 text-right focus:ring-primary"
           />
         ) : (
           <span className={`font-mono ${tx.errors.some(e => e.field === 'amountPrimary') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'

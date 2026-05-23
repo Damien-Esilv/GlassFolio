@@ -40,6 +40,7 @@ export interface ImportWizardState {
     selectedInstituteId: string | null;
     selectedAccountId: string | null;
     importMode: ImportMode;
+    conflict: 'NONE' | 'WARNING' | 'CRITICAL';
 
     // Step 2: File Upload
     file: File | null;
@@ -94,6 +95,7 @@ const initialState: ImportWizardState = {
     selectedInstituteId: null,
     selectedAccountId: null,
     importMode: 'history',
+    conflict: 'NONE',
 
     file: null,
     rawCSVText: '',
@@ -165,6 +167,21 @@ export const useImportWizard = () => {
         };
         loadAccounts();
     }, [state.selectedInstituteId, updateState]);
+
+    // Check for mode conflict when account or mode changes
+    useEffect(() => {
+        const checkConflict = async () => {
+            if (!state.selectedAccountId) {
+                updateState({ conflict: 'NONE' });
+                return;
+            }
+            // Use local import to avoid circular dependency or ensuring snapshotService is loaded
+            const { snapshotService } = await import('../src/services/import/snapshotService');
+            const conflict = await snapshotService.detectSourceModeConflict(state.selectedAccountId, state.importMode);
+            updateState({ conflict });
+        };
+        checkConflict();
+    }, [state.selectedAccountId, state.importMode, updateState]);
 
     // =========================================================================
     // STEP 1: CONTEXT SELECTION
@@ -242,7 +259,7 @@ export const useImportWizard = () => {
             let detectedPreset: string | null = null;
 
             if (detected) {
-                mappings = detected.template.mappings as Partial<FieldMappings>;
+                mappings = detected.mappings as Partial<FieldMappings>;
                 detectedPreset = detected.presetName;
             } else {
                 // Try auto-mapping based on header names
@@ -418,8 +435,15 @@ export const useImportWizard = () => {
     }, []);
 
     const downloadInvalidRows = useCallback(() => {
-        const csv = importService.generateInvalidRowsCSV(state.stagedTransactions, state.headers);
-        if (!csv) return;
+        // Generate CSV for invalid rows only
+        const invalidRows = state.stagedTransactions.filter(t => t.status === 'error');
+        if (invalidRows.length === 0) return;
+
+        const csvRows = [state.headers.join(',')];
+        invalidRows.forEach(row => {
+            csvRows.push(row.originalRowArray.map(v => `"${v.replace(/"/g, '""')}"`).join(','));
+        });
+        const csv = csvRows.join('\n');
 
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -451,22 +475,35 @@ export const useImportWizard = () => {
                     : t.resolution
             }));
 
-            const batch = await importService.commitBatch(
+            // Compute file hash for the commit (simplified - using file name as hash for now)
+            const fileHash = await crypto.subtle.digest(
+                'SHA-256',
+                new TextEncoder().encode(state.rawCSVText)
+            ).then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+            const result = await importService.commitBatch(
                 toCommit,
                 state.selectedAccountId,
                 state.importMode,
-                state.file.name
+                state.file.name,
+                fileHash,
+                'default-user' // userId
             );
 
+            if (!result.success) {
+                updateState({ error: result.error || 'Import failed', isLoading: false });
+                return;
+            }
+
             updateState({
-                completedBatch: batch,
+                completedBatch: result.batch || null,
                 isLoading: false,
                 step: 5
             });
         } catch (err) {
             updateState({ error: 'Failed to complete import', isLoading: false });
         }
-    }, [state.selectedAccountId, state.file, state.stagedTransactions, state.importMode, updateState]);
+    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, updateState]);
 
     // =========================================================================
     // NAVIGATION
