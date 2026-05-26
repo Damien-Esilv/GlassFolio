@@ -10,6 +10,9 @@
         "remove": "Retirer",
         "upload": "Télécharger nouveau",
         "close": "Fermer",
+        "back": "Retour",
+        "next": "Suivant",
+        "continue": "Continuer",
         "signIn": "Se connecter",
         "signOut": "Se déconnecter",
         "createAccount": "Créer un compte",
@@ -29,6 +32,7 @@
     "labels": {
         "search": "Rechercher...",
         "loading": "Chargement...",
+        "processing": "Traitement...",
         "noDataFound": "Aucune donnée trouvée",
         "progress": "Progrès",
         "target": "Objectif",
@@ -38,6 +42,7 @@
     },
     "errors": {
         "failedToLogin": "Échec de la connexion",
+        "failedToLoad": "Échec du chargement des données. Veuillez réessayer.",
         "passwordsDoNotMatch": "Les nouveaux mots de passe ne correspondent pas !",
         "required": "Ce champ est requis"
     },

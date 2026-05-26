@@ -21,6 +21,13 @@ const Transactions: React.FC = () => {
    const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
    const [isLoading, setIsLoading] = useState(true);
 
+   const typeLabels = useMemo(() => ({
+      Buy: t('transactions:filters.buy'),
+      Sell: t('transactions:filters.sell'),
+      Deposit: t('transactions:filters.deposit'),
+      Withdrawal: t('transactions:filters.withdrawal')
+   }), [t]);
+
    // Derive unique values for dropdowns (still from global list is fine, or hardcode)
    const sources = useMemo(() => ['All', ...Array.from(new Set(globalTransactions.map(t => t.source).filter(Boolean)))], [globalTransactions]);
    const currencies = useMemo(() => ['All', ...Array.from(new Set(globalTransactions.map(t => t.currency).filter(Boolean)))], [globalTransactions]);
@@ -123,7 +130,11 @@ const Transactions: React.FC = () => {
                      onChange={(e) => setSource(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
                   >
-                     {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
+                     {sources.map(s => (
+                        <option key={s} value={s}>
+                           {s === 'All' ? t('transactions:filters.allSources') : s}
+                        </option>
+                     ))}
                   </select>
                </div>
 
@@ -135,17 +146,21 @@ const Transactions: React.FC = () => {
                      onChange={(e) => setCurrency(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
                   >
-                     {currencies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Currencies' : c}</option>)}
+                     {currencies.map(c => (
+                        <option key={c} value={c}>
+                           {c === 'All' ? t('transactions:filters.allCurrencies') : c}
+                        </option>
+                     ))}
                   </select>
                </div>
 
                {/* Reconciliation */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">Status</label>
+                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.status')}</label>
                   <select className="w-full bg-subtle border border-subtle text-tertiary text-xs rounded-lg focus:ring-primary focus:border-primary p-2" disabled>
-                     <option>All</option>
-                     <option>Completed</option>
-                     <option>Pending</option>
+                     <option>{t('transactions:filters.statusAll')}</option>
+                     <option>{t('transactions:filters.statusCompleted')}</option>
+                     <option>{t('transactions:filters.statusPending')}</option>
                   </select>
                </div>
             </div>
@@ -169,16 +184,16 @@ const Transactions: React.FC = () => {
                <table className="w-full text-sm text-left text-secondary">
                   <thead className="text-xs text-tertiary uppercase bg-subtle border-b border-subtle">
                      <tr>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Date (UTC)</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Source</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Action</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Instrument</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Symbol</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Qty</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Price</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Gross</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Fee</th>
-                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">Fee Ccy</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.dateUtc')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.source')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.action')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.instrument')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.symbol')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('transactions:table.qty')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('transactions:table.price')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('transactions:table.gross')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('transactions:table.fee')}</th>
+                        <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('transactions:table.feeCurrency')}</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-subtle">
@@ -197,7 +212,7 @@ const Transactions: React.FC = () => {
                                  tx.type === 'Sell' ? 'bg-accent-red/10 text-accent-red' :
                                     'bg-primary/10 text-primary'
                                  }`}>
-                                 {tx.type}
+                                 {typeLabels[tx.type] ?? tx.type}
                               </span>
                            </td>
                            <td className="px-6 py-4 text-primary font-medium">{tx.instrument}</td>

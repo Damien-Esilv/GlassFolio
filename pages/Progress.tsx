@@ -9,6 +9,13 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
+const GOAL_COLOR_TOKENS: Record<string, string> = {
+    blue: 'var(--color-primary)',
+    indigo: 'var(--color-info)',
+    emerald: 'var(--color-success)',
+    orange: 'var(--color-warning)',
+    rose: 'var(--color-error)'
+};
 
 const Progress: React.FC = () => {
     const { t } = useTranslation();
@@ -153,12 +160,12 @@ const Progress: React.FC = () => {
         if (goal.color === 'indigo') colorClass = 'bg-indigo-500';
 
         return (
-            <div className="relative group rounded-xl bg-white/50 dark:bg-black/20 p-6 shadow-lg ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-lg border border-transparent hover:border-black/5 dark:hover:border-white/5 transition-all">
+            <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-subtle hover:border-border transition-all">
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button onClick={() => toggleGoalPin(goal.id)} className={`p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ${goal.isPinned ? 'text-primary' : 'text-black/40 dark:text-white/40'}`}>
+                    <button onClick={() => toggleGoalPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-tertiary'}`}>
                         <Pin size={16} fill={goal.isPinned ? "currentColor" : "none"} />
                     </button>
-                    <button onClick={() => handleEdit(goal)} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-black/60 dark:text-white/60">
+                    <button onClick={() => handleEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
                         <Edit2 size={16} />
                     </button>
                     <button onClick={() => deleteGoal(goal.id)} className="p-2 rounded-full hover:bg-rose-500/10 text-rose-500">
@@ -176,7 +183,7 @@ const Progress: React.FC = () => {
                         <Icon size={24} />
                     </div>
                     <div className="pr-24">
-                        <h3 className="text-lg font-bold text-black dark:text-white truncate" title={goal.title}>{goal.title}</h3>
+                        <h3 className="text-lg font-bold text-primary truncate" title={goal.title}>{goal.title}</h3>
                         {goal.method === 'dynamic' && (
                             <div className="flex items-center gap-1 text-[10px] font-bold text-accent-green mt-0.5">
                                 <Zap size={10} fill="currentColor" />
@@ -188,22 +195,22 @@ const Progress: React.FC = () => {
 
                 <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm font-medium">
-                        <span className="text-black/60 dark:text-white/60">Progress</span>
-                        <span className="text-black dark:text-white">{progress.toFixed(0)}%</span>
+                        <span className="text-secondary">Progress</span>
+                        <span className="text-primary">{progress.toFixed(0)}%</span>
                     </div>
-                    <div className="w-full bg-black/10 dark:bg-white/10 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
                         <div className={`h-full ${colorClass} transition-all duration-1000 relative overflow-hidden`} style={{ width: `${progress}%` }}></div>
                     </div>
-                    <div className="flex justify-between text-xs text-black/40 dark:text-white/40 font-mono">
+                    <div className="flex justify-between text-xs text-tertiary font-mono">
                         <span>${safeCurrent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                         <span>Target: ${goal.targetAmount.toLocaleString()}</span>
                     </div>
                 </div>
 
                 {goal.method === 'dynamic' && goal.linkedAssets && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-subtle">
                         {goal.linkedAssets.map(link => (
-                            <span key={link.id} className="px-2 py-1 rounded text-[10px] font-bold bg-black/5 dark:bg-white/5 text-black/60 dark:text-white/60 border border-black/5 dark:border-white/5 flex items-center gap-1">
+                            <span key={link.id} className="px-2 py-1 rounded text-[10px] font-bold bg-subtle text-secondary border border-subtle flex items-center gap-1">
                                 <LinkIcon size={8} /> {link.percentage}% {link.name}
                             </span>
                         ))}
@@ -247,8 +254,8 @@ const Progress: React.FC = () => {
                     ach.iconType === 'trophy' ? Trophy :
                         ach.iconType === 'star' ? ArrowUpRight : Star;
 
-        let colorClass = 'text-slate-500 bg-slate-500/10';
-        let progressColor = 'bg-slate-500';
+        let colorClass = 'text-secondary bg-subtle';
+        let progressColor = 'bg-brand/50';
 
         if (ach.unlocked) {
             if (ach.color === 'indigo') { colorClass = 'text-indigo-500 bg-indigo-500/10'; progressColor = 'bg-indigo-500'; }
@@ -261,7 +268,7 @@ const Progress: React.FC = () => {
             <button
                 onClick={() => setSelectedAchievement(ach)}
                 className={`relative flex flex-col items-center p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full
-            ${ach.unlocked ? 'bg-white/5 dark:bg-white/5 border-primary/20 hover:border-primary/50' : 'bg-black/5 dark:bg-white/5 border-transparent opacity-60 hover:opacity-100'}
+            ${ach.unlocked ? 'bg-card border-brand/20 hover:border-brand/50' : 'bg-subtle border-transparent opacity-60 hover:opacity-100'}
         `}>
                 {/* Removed top-right absolute icon as requested */}
 
@@ -269,11 +276,11 @@ const Progress: React.FC = () => {
                     <Icon size={24} />
                 </div>
 
-                <h3 className="font-bold text-black dark:text-white mb-1">{ach.title}</h3>
-                <p className="text-xs text-black/50 dark:text-white/50 mb-4 text-center">Level {ach.currentLevel}</p>
+                <h3 className="font-bold text-primary mb-1">{ach.title}</h3>
+                <p className="text-xs text-tertiary mb-4 text-center">Level {ach.currentLevel}</p>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-black/10 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden">
                     <div className={`h-full transition-all duration-1000 ${progressColor}`} style={{ width: `${progressPercent}%` }}></div>
                 </div>
             </button>
@@ -285,15 +292,15 @@ const Progress: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-blue-600 dark:text-blue-500 mb-2">Progress Hub</h1>
-                    <p className="text-black/60 dark:text-white/60">
+                    <h1 className="text-4xl font-black text-brand mb-2">Progress Hub</h1>
+                    <p className="text-secondary">
                         Level {user?.level || 1} • {user?.xp || 0} XP
                     </p>
                 </div>
 
-                <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
-                    <button onClick={() => { setActiveTab('goals'); setSearchParams({ tab: 'goals' }); }} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'goals' ? 'bg-white dark:bg-slate-800 text-primary shadow-lg' : 'text-black/40 dark:text-white/40'}`}>Goals</button>
-                    <button onClick={() => { setActiveTab('achievements'); setSearchParams({ tab: 'achievements' }); }} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'achievements' ? 'bg-white dark:bg-slate-800 text-primary shadow-lg' : 'text-black/40 dark:text-white/40'}`}>Achievements</button>
+                <div className="flex bg-subtle p-1 rounded-xl">
+                    <button onClick={() => { setActiveTab('goals'); setSearchParams({ tab: 'goals' }); }} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'goals' ? 'bg-card text-primary shadow-lg' : 'text-secondary/60'}`}>Goals</button>
+                    <button onClick={() => { setActiveTab('achievements'); setSearchParams({ tab: 'achievements' }); }} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'achievements' ? 'bg-card text-primary shadow-lg' : 'text-secondary/60'}`}>Achievements</button>
                 </div>
             </div>
 
@@ -301,7 +308,7 @@ const Progress: React.FC = () => {
             {activeTab === 'goals' && (
                 <div className="animate-fade-in space-y-6">
                     <div className="flex justify-end">
-                        <Button onClick={handleAddNew} className="flex items-center gap-2 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20">
+                        <Button onClick={handleAddNew} className="flex items-center gap-2 bg-brand text-white hover:bg-brand/90 shadow-lg shadow-brand/20">
                             <PlusCircle size={18} /> New Goal
                         </Button>
                     </div>
@@ -310,9 +317,6 @@ const Progress: React.FC = () => {
                             <GoalCard
                                 key={goal.id}
                                 goal={goal}
-                                onEdit={() => handleEdit(goal)}
-                                onDelete={() => deleteGoal(goal.id)}
-                                onPin={() => toggleGoalPin(goal.id)}
                             />
                         ))}
                     </div>
@@ -329,13 +333,13 @@ const Progress: React.FC = () => {
             {/* --- GOAL MODAL (Styled like Screenshot) --- */}
             {isModalOpen && editingGoal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="w-full max-w-xl bg-white dark:bg-slate-950 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+                    <div className="w-full max-w-xl bg-card rounded-2xl shadow-2xl border border-subtle flex flex-col max-h-[90vh]">
                         {/* Header */}
-                        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Target size={18} className="text-primary" /> Set New Target
+                        <div className="p-6 border-b border-subtle flex justify-between items-center">
+                            <h2 className="text-lg font-bold text-primary flex items-center gap-2">
+                                <Target size={18} className="text-brand" /> Set New Target
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white"><X size={20} /></button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-secondary hover:text-primary"><X size={20} /></button>
                         </div>
 
                         {/* Body */}
@@ -346,21 +350,21 @@ const Progress: React.FC = () => {
                                     value={editingGoal.title}
                                     onChange={(e) => setEditingGoal({ ...editingGoal, title: e.target.value })}
                                     placeholder="e.g. Dream House"
-                                    className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-slate-900 dark:text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                                    className="bg-subtle border border-subtle rounded-lg p-3 text-primary placeholder-tertiary focus:border-brand focus:outline-none"
                                 />
                                 <input
                                     type="number"
                                     value={editingGoal.targetAmount}
                                     onChange={(e) => setEditingGoal({ ...editingGoal, targetAmount: parseFloat(e.target.value) })}
                                     placeholder="10000"
-                                    className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-slate-900 dark:text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                                    className="bg-subtle border border-subtle rounded-lg p-3 text-primary placeholder-tertiary focus:border-brand focus:outline-none"
                                 />
                             </div>
 
                             {/* Icons & Colors */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs font-bold text-slate-500 mb-2 uppercase">ICON</p>
+                                    <p className="text-xs font-bold text-secondary mb-2 uppercase">ICON</p>
                                     <div className="flex gap-2">
                                         {Object.keys(ICON_MAP).map((key) => {
                                             const Icon = ICON_MAP[key as keyof typeof ICON_MAP];
@@ -368,8 +372,8 @@ const Progress: React.FC = () => {
                                             return (
                                                 <button
                                                     key={key}
-                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as any })}
-                                                    className={`p-2.5 rounded-lg border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as keyof typeof ICON_MAP })}
+                                                    className={`p-2.5 rounded-lg border transition-all ${isSelected ? 'bg-brand text-white border-brand' : 'bg-subtle border-subtle text-secondary hover:text-primary'}`}
                                                 >
                                                     <Icon size={18} />
                                                 </button>
@@ -378,14 +382,14 @@ const Progress: React.FC = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-slate-500 mb-2 uppercase">COLOR</p>
+                                    <p className="text-xs font-bold text-secondary mb-2 uppercase">COLOR</p>
                                     <div className="flex gap-2">
                                         {['blue', 'indigo', 'emerald', 'orange', 'rose'].map(color => (
                                             <button
                                                 key={color}
                                                 onClick={() => setEditingGoal({ ...editingGoal, color })}
-                                                className={`w-10 h-10 rounded-lg transition-all ${editingGoal.color === color ? 'ring-2 ring-white scale-110' : 'opacity-60 hover:opacity-100'}`}
-                                                style={{ backgroundColor: `var(--color-${color}-500, ${color === 'blue' ? '#3b82f6' : color === 'indigo' ? '#6366f1' : color === 'emerald' ? '#10b981' : color === 'orange' ? '#f97316' : '#f43f5e'})` }}
+                                                className={`w-10 h-10 rounded-lg transition-all ${editingGoal.color === color ? 'ring-2 ring-primary scale-110' : 'opacity-60 hover:opacity-100'}`}
+                                                style={{ backgroundColor: GOAL_COLOR_TOKENS[color] ?? 'var(--color-primary)' }}
                                             />
                                         ))}
                                     </div>
@@ -393,18 +397,18 @@ const Progress: React.FC = () => {
                             </div>
 
                             {/* Tracking Method Container (Blue Border like screenshot) */}
-                            <div className="border border-blue-500/30 rounded-xl bg-blue-500/5 p-4">
-                                <p className="text-xs font-bold text-slate-500 mb-3 uppercase">TRACKING METHOD</p>
+                            <div className="border border-brand/30 rounded-xl bg-brand/5 p-4">
+                                <p className="text-xs font-bold text-secondary mb-3 uppercase">TRACKING METHOD</p>
                                 <div className="flex gap-4 mb-4">
                                     <button
                                         onClick={() => setEditingGoal({ ...editingGoal, method: 'dynamic' })}
-                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'dynamic' ? 'bg-slate-100 dark:bg-slate-900 border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'dynamic' ? 'bg-subtle border-brand text-brand' : 'border-transparent text-secondary hover:text-primary'}`}
                                     >
                                         <Zap size={16} /> Auto-Track Assets
                                     </button>
                                     <button
                                         onClick={() => setEditingGoal({ ...editingGoal, method: 'manual' })}
-                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'manual' ? 'bg-slate-100 dark:bg-slate-900 border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'manual' ? 'bg-subtle border-brand text-brand' : 'border-transparent text-secondary hover:text-primary'}`}
                                     >
                                         <Save size={16} /> Fixed Manual Amount
                                     </button>
@@ -416,28 +420,28 @@ const Progress: React.FC = () => {
                                         {/* If editing a group, show Group Edit UI, otherwise show Tabs */}
                                         {editingGroupId ? (
                                             <div className="animate-in fade-in slide-in-from-right-4">
-                                                <div className="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
-                                                    <button onClick={() => setEditingGroupId(null)} className="p-1 hover:bg-slate-700 rounded"><ChevronLeft size={16} className="text-white" /></button>
-                                                    <p className="text-sm font-bold text-white">Edit "{assetGroups.find(g => g.id === editingGroupId)?.name}"</p>
+                                                <div className="flex items-center gap-2 mb-4 border-b border-subtle pb-2">
+                                                    <button onClick={() => setEditingGroupId(null)} className="p-1 hover:bg-card-hover rounded"><ChevronLeft size={16} className="text-primary" /></button>
+                                                    <p className="text-sm font-bold text-primary">Edit "{assetGroups.find(g => g.id === editingGroupId)?.name}"</p>
                                                 </div>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
                                                     {positions.map(pos => {
                                                         const group = assetGroups.find(g => g.id === editingGroupId);
                                                         const isIncluded = group?.symbols.includes(pos.symbol);
                                                         return (
-                                                            <div key={pos.id} onClick={() => toggleAssetInGroup(editingGroupId, pos.symbol)} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${isIncluded ? 'bg-slate-100 dark:bg-slate-900 border-blue-500/50' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'}`}>
+                                                            <div key={pos.id} onClick={() => toggleAssetInGroup(editingGroupId, pos.symbol)} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${isIncluded ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isIncluded ? 'bg-blue-600 border-blue-600' : 'border-slate-600'}`}>
+                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isIncluded ? 'bg-brand border-brand' : 'border-subtle'}`}>
                                                                         {isIncluded && <CheckCircle size={12} className="text-white" />}
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-sm font-bold text-white">{pos.instrument}</p>
-                                                                        <p className="text-xs text-slate-500 flex gap-2">
+                                                                        <p className="text-sm font-bold text-primary">{pos.instrument}</p>
+                                                                        <p className="text-xs text-secondary flex gap-2">
                                                                             {pos.type === 'Cash' && pos.accountName ? <span>{pos.accountName} ({pos.currency})</span> : <span>{pos.symbol}</span>}
                                                                         </p>
                                                                     </div>
                                                                 </div>
-                                                                <span className="text-xs text-slate-400">{pos.type}</span>
+                                                                <span className="text-xs text-secondary">{pos.type}</span>
                                                             </div>
                                                         )
                                                     })}
@@ -445,10 +449,10 @@ const Progress: React.FC = () => {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="flex gap-4 border-b border-slate-700 mb-4">
-                                                    <button onClick={() => setLinkTab('asset')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'asset' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500'}`}>Assets</button>
-                                                    <button onClick={() => setLinkTab('class')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'class' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500'}`}>Classes</button>
-                                                    <button onClick={() => setLinkTab('group')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'group' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500'}`}>Groups</button>
+                                                <div className="flex gap-4 border-b border-subtle mb-4">
+                                                    <button onClick={() => setLinkTab('asset')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'asset' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Assets</button>
+                                                    <button onClick={() => setLinkTab('class')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'class' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Classes</button>
+                                                    <button onClick={() => setLinkTab('group')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'group' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Groups</button>
                                                 </div>
 
                                                 {/* List of Selectable Items */}
@@ -456,18 +460,18 @@ const Progress: React.FC = () => {
                                                     {linkTab === 'asset' && positions.map(pos => {
                                                         const link = editingGoal.linkedAssets?.find(l => l.id === pos.symbol && l.type === 'asset');
                                                         return (
-                                                            <div key={pos.id} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-slate-100 dark:bg-slate-900 border-blue-500/50' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'}`}>
+                                                            <div key={pos.id} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                 <div className="flex items-center gap-3">
-                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('asset', pos.symbol, pos.instrument)} className="rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-offset-0" />
+                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('asset', pos.symbol, pos.instrument)} className="rounded border-subtle bg-subtle text-brand focus:ring-offset-0" />
                                                                     <div>
-                                                                        <p className="text-sm font-bold text-white">{pos.instrument}</p>
-                                                                        <p className="text-xs text-slate-500 flex gap-2">
+                                                                        <p className="text-sm font-bold text-primary">{pos.instrument}</p>
+                                                                        <p className="text-xs text-secondary flex gap-2">
                                                                             {pos.type === 'Cash' && pos.accountName ? <span>{pos.bankName} - {pos.accountName}</span> : <span>{pos.symbol}</span>}
                                                                             <span>• ${pos.marketValue.toLocaleString()}</span>
                                                                         </p>
                                                                     </div>
                                                                 </div>
-                                                                {link && <div className="flex items-center gap-2"><span className="text-xs text-slate-400">Include:</span><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(pos.symbol, 'asset', parseInt(e.target.value))} className="w-12 bg-slate-800 text-white text-xs p-1 rounded border border-slate-700 text-center" /> <span className="text-xs text-slate-400">%</span></div>}
+                                                                {link && <div className="flex items-center gap-2"><span className="text-xs text-secondary">Include:</span><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(pos.symbol, 'asset', parseInt(e.target.value))} className="w-12 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
                                                             </div>
                                                         )
                                                     })}
@@ -475,12 +479,12 @@ const Progress: React.FC = () => {
                                                     {linkTab === 'class' && ['Equity', 'ETF', 'Crypto', 'Cash'].map(cls => {
                                                         const link = editingGoal.linkedAssets?.find(l => l.id === cls && l.type === 'class');
                                                         return (
-                                                            <div key={cls} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-slate-100 dark:bg-slate-900 border-blue-500/50' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'}`}>
+                                                            <div key={cls} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                 <div className="flex items-center gap-3">
-                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('class', cls, `All ${cls}`)} className="rounded border-slate-600 bg-slate-800 text-blue-600" />
-                                                                    <p className="text-sm font-bold text-white">All {cls}</p>
+                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('class', cls, `All ${cls}`)} className="rounded border-subtle bg-subtle text-brand" />
+                                                                    <p className="text-sm font-bold text-primary">All {cls}</p>
                                                                 </div>
-                                                                {link && <div className="flex items-center gap-2"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(cls, 'class', parseInt(e.target.value))} className="w-12 bg-slate-800 text-white text-xs p-1 rounded border border-slate-700 text-center" /> <span className="text-xs text-slate-400">%</span></div>}
+                                                                {link && <div className="flex items-center gap-2"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(cls, 'class', parseInt(e.target.value))} className="w-12 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
                                                             </div>
                                                         )
                                                     })}
@@ -488,25 +492,25 @@ const Progress: React.FC = () => {
                                                     {linkTab === 'group' && (
                                                         <>
                                                             <div className="flex gap-2 mb-2">
-                                                                <input type="text" placeholder="New Group Name" value={newGroupname} onChange={e => setNewGroupName(e.target.value)} className="flex-1 bg-slate-800 border-none rounded text-xs px-2 text-white placeholder-slate-500 focus:ring-1 focus:ring-blue-500" />
-                                                                <button onClick={handleCreateGroup} className="bg-blue-600 text-white text-xs px-3 rounded flex items-center gap-1 hover:bg-blue-500"><Plus size={14} /> Create</button>
+                                                                <input type="text" placeholder="New Group Name" value={newGroupname} onChange={e => setNewGroupName(e.target.value)} className="flex-1 bg-subtle border-none rounded text-xs px-2 text-primary placeholder-tertiary focus:ring-1 focus:ring-brand" />
+                                                                <button onClick={handleCreateGroup} className="bg-brand text-white text-xs px-3 rounded flex items-center gap-1 hover:bg-brand/90"><Plus size={14} /> Create</button>
                                                             </div>
                                                             {assetGroups.map(grp => {
                                                                 const link = editingGoal.linkedAssets?.find(l => l.id === grp.id && l.type === 'group');
                                                                 return (
-                                                                    <div key={grp.id} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-slate-100 dark:bg-slate-900 border-blue-500/50' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900'}`}>
+                                                                    <div key={grp.id} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                         <div className="flex items-center gap-3">
-                                                                            <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('group', grp.id, grp.name)} className="rounded border-slate-600 bg-slate-800 text-blue-600" />
+                                                                            <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('group', grp.id, grp.name)} className="rounded border-subtle bg-subtle text-brand" />
                                                                             <div>
-                                                                                <p className="text-sm font-bold text-white">{grp.name}</p>
-                                                                                <p className="text-xs text-slate-500">{grp.symbols.length} Assets</p>
+                                                                                <p className="text-sm font-bold text-primary">{grp.name}</p>
+                                                                                <p className="text-xs text-secondary">{grp.symbols.length} Assets</p>
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
-                                                                            <button onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); }} className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white" title="Edit Members">
+                                                                            <button onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); }} className="p-1.5 rounded hover:bg-card-hover text-secondary hover:text-primary" title="Edit Members">
                                                                                 <Settings size={14} />
                                                                             </button>
-                                                                            {link && <div className="flex items-center gap-1"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(grp.id, 'group', parseInt(e.target.value))} className="w-10 bg-slate-800 text-white text-xs p-1 rounded border border-slate-700 text-center" /> <span className="text-xs text-slate-400">%</span></div>}
+                                                                            {link && <div className="flex items-center gap-1"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(grp.id, 'group', parseInt(e.target.value))} className="w-10 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
                                                                         </div>
                                                                     </div>
                                                                 )
@@ -526,7 +530,7 @@ const Progress: React.FC = () => {
                                             value={editingGoal.manualAmount}
                                             onChange={(e) => setEditingGoal({ ...editingGoal, manualAmount: parseFloat(e.target.value) })}
                                             placeholder="Enter Amount"
-                                            className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-slate-900 dark:text-white focus:border-blue-500 outline-none"
+                                            className="w-full bg-subtle border border-subtle rounded-lg p-3 text-primary placeholder-tertiary focus:border-brand outline-none"
                                         />
                                     </div>
                                 )}
@@ -535,7 +539,7 @@ const Progress: React.FC = () => {
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-white dark:bg-slate-950 rounded-b-2xl">
+                        <div className="p-4 border-t border-subtle flex justify-end gap-3 bg-card rounded-b-2xl">
                             <Button onClick={() => setIsModalOpen(false)} variant="ghost">Cancel</Button>
                             <Button onClick={handleSave} className="flex items-center gap-2">
                                 <Save size={16} /> Save Changes
@@ -555,8 +559,8 @@ const Progress: React.FC = () => {
                                     <Trophy size={32} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">{selectedAchievement.title}</h2>
-                                    <p className="text-slate-500 text-sm">Level {selectedAchievement.currentLevel}</p>
+                                    <h2 className="text-xl font-bold text-primary">{selectedAchievement.title}</h2>
+                                    <p className="text-secondary text-sm">Level {selectedAchievement.currentLevel}</p>
                                 </div>
                             </div>
                             {/* Removed X button as requested */}

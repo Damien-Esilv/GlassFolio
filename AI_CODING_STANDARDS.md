@@ -1,5 +1,5 @@
 # AI CODING STANDARDS & ARCHITECTURAL REFERENCE
-> **Status:** ACTIVE | **Version:** 1.0 | **Author:** Lead Architect
+> **Status:** ACTIVE | **Version:** 1.1 | **Author:** Lead Architect
 
 ## 0. Meta-Instruction (The "Prime Directive")
 **ALL AI AGENTS MUST READ THIS DOCUMENT BEFORE WRITING CODE.**
@@ -150,10 +150,36 @@ The system supports three distinct themes. Your code must support all three auto
 
 ### 5.4. Directory Structure
 *   **Vite Non-Standard:** Note that `pages/` and `components/` reside in the **ROOT**, while `services/` resides in `src/`. Respect this structure; do not move files unnecessarily.
+*   **No `docs/` in repo:** Project documentation (feature specs, ADRs, session logs, code summaries) is centralized in the **external Obsidian vault** at `/Users/damien/Developpement/brain/GlassFolio/`, accessible via the MCP `obsidian` server. Do not create a `docs/` folder in this repo.
 
 ### 5.5. Strict Typing
 *   **No ANY:** The use of `any` is strictly prohibited unless wrapping an external untyped library (and even then, prefer `unknown`).
 *   **Return Types:** Explicitly define return types for all Service functions to ensure contract stability.
+
+---
+
+## 6. MCP Memory Maintenance (`glassfolio.json`)
+**Goal:** Keep the persistent knowledge graph in sync with the codebase at all times.
+
+### 6.1. Memory Graph Location
+*   **File:** `/Users/damien/Developpement/memory/glassfolio.json`
+*   **Server:** MCP `memory` (configured via `MEMORY_FILE_PATH` env var)
+*   **Scope:** This file is the **sole** persistence file for GlassFolio. Do NOT read or modify other files in the `memory/` directory.
+
+### 6.2. When to Update the Memory Graph
+*   **New module/service/page/component:** Call `create_entities` with: entity type, source file path, exported symbols, dependencies, and any constraints.
+*   **New dependency between modules:** Call `create_relations` (e.g., `GlassFolio-PageX depends_on GlassFolio-ServiceY`).
+*   **API or interface change:** Call `add_observations` on the affected entity to document the change.
+*   **Removed module:** Call `delete_entities` and/or `delete_relations` to remove stale entries.
+*   **After major changes (3+ files):** Call `read_graph` to verify graph consistency.
+
+### 6.3. Entity Naming Convention
+*   All entity names MUST be prefixed with `GlassFolio-` (e.g., `GlassFolio-PortfolioService`, `GlassFolio-Dashboard`).
+*   Entity types: `Project`, `Component`, `Service`, `Page`, `UIComponent`, `Hook`, `Context`, `Config`, `Utility`, `DataFile`, `Script`.
+
+### 6.4. Observation Quality
+*   Each entity observation should include at minimum: source file path, exported symbols, direct dependencies, and any relevant constraints or anomalies.
+*   Keep observations factual and concise. Avoid duplicating information already in the code.
 
 ---
 **End of Standards.**

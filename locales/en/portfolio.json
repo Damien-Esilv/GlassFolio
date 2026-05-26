@@ -5,11 +5,65 @@
         "equities": "Equities",
         "etfs": "ETFs",
         "crypto": "Crypto",
-        "cash": "Cash"
+        "cash": "Cash",
+        "stocks": "Stocks & Funds"
     },
     "allocation": "Asset Allocation",
     "topHoldings": "Top Holdings",
     "performance": "Performance",
     "noAssets": "No assets in portfolio",
-    "addAssets": "Add your first assets to get started"
+    "addAssets": "Add your first assets to get started",
+    "summary": {
+        "assets": "Assets",
+        "categoriesCount": "{{count}} categories"
+    },
+    "table": {
+        "category": "Category",
+        "allocation": "Allocation",
+        "value": "Value",
+        "pnl": "P&L"
+    },
+    "types": {
+        "equity": "Equity",
+        "etf": "ETF",
+        "crypto": "Crypto",
+        "cash": "Cash"
+    },
+    "fallback": {
+        "other": "Other",
+        "mainAccount": "Main account"
+    },
+    "emptyState": {
+        "message": "No positions found.",
+        "link": "Import data",
+        "suffix": "to get started."
+    },
+    "positions": {
+        "filters": {
+            "all": "All",
+            "equities": "Equities",
+            "etfs": "ETFs",
+            "crypto": "Crypto",
+            "cash": "Cash",
+            "allSources": "All sources",
+            "allCurrencies": "All currencies"
+        },
+        "table": {
+            "instrument": "Instrument",
+            "sourceBank": "Source / Bank",
+            "quantity": "Quantity",
+            "avgCost": "Avg cost",
+            "price": "Price",
+            "marketValue": "Market value",
+            "unrealizedPl": "Unrealized P&L",
+            "currency": "Currency"
+        },
+        "badges": {
+            "cash": "CASH"
+        },
+        "fallback": {
+            "mainAccount": "Main account",
+            "noSource": "—"
+        }
+    }
 }

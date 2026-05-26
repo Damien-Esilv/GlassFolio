@@ -8,7 +8,7 @@ import { Position } from '../types';
 import { useTranslation } from 'react-i18next';
 
 const Positions: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('portfolio');
   const { positions: globalPositions } = useData();
 
   const [filterType, setFilterType] = useState('All');
@@ -18,6 +18,15 @@ const Positions: React.FC = () => {
 
   const [filteredPositions, setFilteredPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const typeTabs = useMemo(() => ([
+    { value: 'All', label: t('positions.filters.all') },
+    { value: 'Equities', label: t('positions.filters.equities') },
+    { value: 'ETFs', label: t('positions.filters.etfs') },
+    { value: 'Crypto', label: t('positions.filters.crypto') },
+    { value: 'Cash', label: t('positions.filters.cash') }
+  ]), [t]);
+
 
   // Derive unique values from global state (for dropdowns)
   const sources = useMemo(() => ['All', ...Array.from(new Set(globalPositions.map(p => p.source).filter(Boolean) as string[]))], [globalPositions]);
@@ -66,13 +75,13 @@ const Positions: React.FC = () => {
 
         {/* Left: Type Tabs */}
         <div className="flex p-1 gap-1 bg-subtle rounded-lg overflow-x-auto">
-          {['All', 'Equities', 'ETFs', 'Crypto', 'Cash'].map(tab => (
+          {typeTabs.map(tab => (
             <button
-              key={tab}
-              onClick={() => setFilterType(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:text-primary hover:bg-subtle'}`}
+              key={tab.value}
+              onClick={() => setFilterType(tab.value)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterType === tab.value ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:text-primary hover:bg-subtle'}`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -84,7 +93,11 @@ const Positions: React.FC = () => {
             onChange={(e) => setSourceFilter(e.target.value)}
             className="bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
           >
-            {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
+            {sources.map(s => (
+              <option key={s} value={s}>
+                {s === 'All' ? t('positions.filters.allSources') : s}
+              </option>
+            ))}
           </select>
 
           <select
@@ -92,7 +105,11 @@ const Positions: React.FC = () => {
             onChange={(e) => setCurrencyFilter(e.target.value)}
             className="bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
           >
-            {currencies.map(c => <option key={c} value={c}>{c === 'All' ? 'All Currencies' : c}</option>)}
+            {currencies.map(c => (
+              <option key={c} value={c}>
+                {c === 'All' ? t('positions.filters.allCurrencies') : c}
+              </option>
+            ))}
           </select>
 
           <div className="relative">
@@ -114,14 +131,14 @@ const Positions: React.FC = () => {
           <table className="w-full text-sm text-left text-secondary">
             <thead className="text-xs text-tertiary uppercase bg-subtle border-b border-subtle">
               <tr>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider">Instrument</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider">Source / Bank</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Quantity</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Avg Cost</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Price</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Market Value</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">Unrealized P/L</th>
-                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-center">Ccy</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('positions.table.instrument')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider">{t('positions.table.sourceBank')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('positions.table.quantity')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('positions.table.avgCost')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('positions.table.price')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('positions.table.marketValue')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-right">{t('positions.table.unrealizedPl')}</th>
+                <th scope="col" className="px-6 py-4 font-medium tracking-wider text-center">{t('positions.table.currency')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-subtle">
@@ -138,7 +155,7 @@ const Positions: React.FC = () => {
                       <span className="font-bold">{pos.instrument}</span>
                       <div className="flex gap-2 text-xs text-secondary">
                         <span>{pos.symbol}</span>
-                        {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">CASH</span>}
+                          {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">{t('positions.badges.cash')}</span>}
                       </div>
                     </div>
                   </td>
@@ -146,10 +163,10 @@ const Positions: React.FC = () => {
                     {pos.type === 'Cash' ? (
                       <div className="flex flex-col">
                         <span className="font-semibold text-primary">{pos.bankName || pos.source}</span>
-                        <span className="text-xs">{pos.accountName || 'Main Account'}</span>
+                        <span className="text-xs">{pos.accountName || t('positions.fallback.mainAccount')}</span>
                       </div>
                     ) : (
-                      pos.source || '-'
+                      pos.source || t('positions.fallback.noSource')
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString()}</td>

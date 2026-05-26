@@ -21,6 +21,7 @@ import {
     parseCSVText
 } from '../src/services/importService';
 import { instituteService, accountService } from '../src/services/instituteService';
+import i18n from '../src/i18n';
 
 // ============================================================================
 // TYPES
@@ -65,20 +66,20 @@ export interface ImportWizardState {
 
 // List of mappable fields for UI
 export const MAPPABLE_FIELDS = [
-    { key: 'transactionDate', label: 'Transaction Date', required: true },
-    { key: 'amountPrimary', label: 'Amount', required: true },
-    { key: 'assetSymbol', label: 'Asset Symbol', required: true },
-    { key: 'type', label: 'Transaction Type', required: false },
-    { key: 'rawLabel', label: 'Description / Label', required: false },
-    { key: 'priceUnit', label: 'Price per Unit', required: false },
-    { key: 'quantity', label: 'Quantity', required: false },
-    { key: 'assetIsin', label: 'ISIN Code', required: false },
-    { key: 'feeAmount', label: 'Fee Amount', required: false },
-    { key: 'feeAsset', label: 'Fee Currency', required: false },
-    { key: 'taxAmount', label: 'Tax Amount', required: false },
-    { key: 'valueDate', label: 'Value Date', required: false },
-    { key: 'balanceAfter', label: 'Balance After', required: false },
-    { key: 'externalId', label: 'External ID (for dedup)', required: false },
+    { key: 'transactionDate', labelKey: 'importWizard.fields.transactionDate', required: true },
+    { key: 'amountPrimary', labelKey: 'importWizard.fields.amountPrimary', required: true },
+    { key: 'assetSymbol', labelKey: 'importWizard.fields.assetSymbol', required: true },
+    { key: 'type', labelKey: 'importWizard.fields.type', required: false },
+    { key: 'rawLabel', labelKey: 'importWizard.fields.rawLabel', required: false },
+    { key: 'priceUnit', labelKey: 'importWizard.fields.priceUnit', required: false },
+    { key: 'quantity', labelKey: 'importWizard.fields.quantity', required: false },
+    { key: 'assetIsin', labelKey: 'importWizard.fields.assetIsin', required: false },
+    { key: 'feeAmount', labelKey: 'importWizard.fields.feeAmount', required: false },
+    { key: 'feeAsset', labelKey: 'importWizard.fields.feeAsset', required: false },
+    { key: 'taxAmount', labelKey: 'importWizard.fields.taxAmount', required: false },
+    { key: 'valueDate', labelKey: 'importWizard.fields.valueDate', required: false },
+    { key: 'balanceAfter', labelKey: 'importWizard.fields.balanceAfter', required: false },
+    { key: 'externalId', labelKey: 'importWizard.fields.externalId', required: false },
 ] as const;
 
 // ============================================================================
@@ -145,7 +146,7 @@ export const useImportWizard = () => {
                     isLoading: false
                 });
             } catch (err) {
-                updateState({ error: 'Failed to load data', isLoading: false });
+                updateState({ error: i18n.t('transactions:importWizard.errors.failedToLoadData'), isLoading: false });
             }
         };
         loadInitialData();
@@ -162,7 +163,7 @@ export const useImportWizard = () => {
                 const accounts = await accountService.getAccountsByInstitute(state.selectedInstituteId);
                 updateState({ accounts, selectedAccountId: null });
             } catch (err) {
-                updateState({ error: 'Failed to load accounts' });
+                updateState({ error: i18n.t('transactions:importWizard.errors.failedToLoadAccounts') });
             }
         };
         loadAccounts();
@@ -211,7 +212,7 @@ export const useImportWizard = () => {
             });
             return newInstitute;
         } catch (err) {
-            updateState({ error: 'Failed to create institute', isLoading: false });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToCreateInstitute'), isLoading: false });
             return null;
         }
     }, [updateState]);
@@ -235,7 +236,7 @@ export const useImportWizard = () => {
             });
             return newAccount;
         } catch (err) {
-            updateState({ error: 'Failed to create account', isLoading: false });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToCreateAccount'), isLoading: false });
             return null;
         }
     }, [state.selectedInstituteId, updateState]);
@@ -276,7 +277,7 @@ export const useImportWizard = () => {
                 step: 3 // Move to mapping step
             });
         } catch (err) {
-            updateState({ error: 'Failed to parse file', isLoading: false });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToParseFile'), isLoading: false });
         }
     }, [updateState]);
 
@@ -317,14 +318,14 @@ export const useImportWizard = () => {
             updateState({ mappingTemplates: templates });
             return template;
         } catch (err) {
-            updateState({ error: 'Failed to save template' });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToSaveTemplate') });
             return null;
         }
     }, [state.mappings, state.selectedInstituteId, updateState]);
 
     const analyzeData = useCallback(async () => {
         if (!state.selectedAccountId) {
-            updateState({ error: 'Please select an account' });
+            updateState({ error: i18n.t('transactions:importWizard.errors.selectAccountFirst') });
             return;
         }
 
@@ -344,7 +345,7 @@ export const useImportWizard = () => {
                 step: 4
             });
         } catch (err) {
-            updateState({ error: 'Failed to analyze data', isLoading: false });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToAnalyzeData'), isLoading: false });
         }
     }, [state.selectedAccountId, state.rawCSVText, state.importMode, state.mappings, updateState]);
 
@@ -413,13 +414,13 @@ export const useImportWizard = () => {
                 // Re-validate
                 const errors = [];
                 if (!updated.parsed.transactionDate) {
-                    errors.push({ field: 'transactionDate', message: 'Date is required', severity: 'error' as const });
+                    errors.push({ field: 'transactionDate', message: i18n.t('transactions:importWizard.validation.dateRequired'), severity: 'error' as const });
                 }
                 if (!updated.parsed.amountPrimary) {
-                    errors.push({ field: 'amountPrimary', message: 'Amount is required', severity: 'error' as const });
+                    errors.push({ field: 'amountPrimary', message: i18n.t('transactions:importWizard.validation.amountRequired'), severity: 'error' as const });
                 }
                 if (!updated.parsed.assetSymbol) {
-                    errors.push({ field: 'assetSymbol', message: 'Asset symbol is required', severity: 'error' as const });
+                    errors.push({ field: 'assetSymbol', message: i18n.t('transactions:importWizard.validation.assetSymbolRequired'), severity: 'error' as const });
                 }
 
                 const hasErrors = errors.some(e => e.severity === 'error');
@@ -460,7 +461,7 @@ export const useImportWizard = () => {
 
     const finalizeImport = useCallback(async () => {
         if (!state.selectedAccountId || !state.file) {
-            updateState({ error: 'Missing account or file' });
+            updateState({ error: i18n.t('transactions:importWizard.errors.missingAccountOrFile') });
             return;
         }
 
@@ -491,7 +492,7 @@ export const useImportWizard = () => {
             );
 
             if (!result.success) {
-                updateState({ error: result.error || 'Import failed', isLoading: false });
+                updateState({ error: result.error || i18n.t('transactions:importWizard.errors.importFailed'), isLoading: false });
                 return;
             }
 
@@ -501,7 +502,7 @@ export const useImportWizard = () => {
                 step: 5
             });
         } catch (err) {
-            updateState({ error: 'Failed to complete import', isLoading: false });
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToCompleteImport'), isLoading: false });
         }
     }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, updateState]);
 

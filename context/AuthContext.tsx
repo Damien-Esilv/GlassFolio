@@ -145,7 +145,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const updatedUser = { ...user, ...data };
           // If preferences are partial, merge them
           if (data.preferences) {
-            updatedUser.preferences = { ...user.preferences, ...data.preferences } as any;
+            updatedUser.preferences = {
+              theme: data.preferences.theme ?? user.preferences?.theme ?? 'night',
+              currency: data.preferences.currency ?? user.preferences?.currency ?? 'USD',
+              notifications: data.preferences.notifications ?? user.preferences?.notifications ?? true,
+              language: data.preferences.language ?? user.preferences?.language ?? 'en'
+            };
           }
           setUser(updatedUser);
           localStorage.setItem('glassfolio_user', JSON.stringify(updatedUser));

@@ -19,16 +19,30 @@
         "withdrawal": "Retrait",
         "source": "Source",
         "currency": "Devise",
+        "allSources": "Toutes les sources",
+        "allCurrencies": "Toutes les devises",
+        "status": "Statut",
+        "statusAll": "Tous les statuts",
+        "statusCompleted": "Terminé",
+        "statusPending": "En attente",
         "search": "Rechercher des transactions..."
     },
     "table": {
+        "dateUtc": "Date UTC",
         "date": "Date",
         "asset": "Actif",
         "type": "Type",
         "quantity": "Quantité",
         "price": "Prix",
         "total": "Total",
-        "source": "Source"
+        "source": "Source",
+        "action": "Action",
+        "instrument": "Instrument",
+        "symbol": "Symbole",
+        "qty": "Qté",
+        "gross": "Brut",
+        "fee": "Frais",
+        "feeCurrency": "Devise des frais"
     },
     "summary": {
         "showing": "Affichage de",
@@ -36,5 +50,301 @@
         "transactions": "transactions"
     },
     "noResults": "Aucune transaction trouvée",
-    "loading": "Chargement des transactions..."
+    "loading": "Chargement des transactions...",
+    "importWizard": {
+        "title": "Importer des transactions",
+        "stepDescription": {
+            "context": "Choisissez où importer vos données",
+            "upload": "Importez votre fichier CSV",
+            "mappingSnapshot": "Configurer l'import snapshot",
+            "mappingHistory": "Associer les colonnes aux champs",
+            "review": "Revoir et valider les données",
+            "complete": "Import terminé !"
+        },
+        "steps": {
+            "context": "Contexte",
+            "upload": "Import",
+            "mapping": "Association",
+            "review": "Revue",
+            "done": "Terminé"
+        },
+        "fallbackAccount": "Compte",
+        "context": {
+            "selectInstitution": "1. Sélectionner l'institution",
+            "new": "Nouveau",
+            "institutionNamePlaceholder": "Nom de l'institution...",
+            "instituteTypes": {
+                "bank": "Banque",
+                "broker": "Courtier",
+                "exchange": "Exchange crypto",
+                "wallet": "Wallet",
+                "other": "Autre"
+            },
+            "selectAccount": "2. Sélectionner le compte",
+            "noAccounts": "Aucun compte trouvé. Créez-en un pour continuer.",
+            "createNewAccount": "Créer un nouveau compte",
+            "accountNamePlaceholder": "Nom du compte...",
+            "accountTypes": {
+                "checking": "Courant",
+                "savings": "Épargne",
+                "investment": "Investissement (PEA, CTO)",
+                "cryptoSpot": "Crypto Spot",
+                "cryptoEarn": "Crypto Earn",
+                "other": "Autre"
+            }
+        },
+        "mode": {
+            "title": "3. Mode d'import",
+            "historyTitle": "Historique des transactions",
+            "historyDescription": "Importer des transactions d'achat/vente avec dates et prix",
+            "snapshotTitle": "Snapshot de positions",
+            "snapshotDescription": "Importer les positions actuelles avec prix moyens",
+            "snapshotWarning": "Le mode snapshot crée des transactions BUY synthétiques basées sur Quantité × Prix moyen",
+            "history": "Historique",
+            "snapshot": "Snapshot"
+        },
+        "upload": {
+            "importingTo": "Importation vers :",
+            "dropTitle": "Déposez votre fichier CSV ici",
+            "dropSubtitle": "ou cliquez pour parcourir",
+            "savedTemplates": "Templates d'association sauvegardés"
+        },
+        "mapping": {
+            "detectedFormat": "Format détecté : {{preset}} — associations appliquées automatiquement",
+            "csvHeaders": "En-têtes CSV (statut d'association)",
+            "mapped": "Associé",
+            "notMapped": "Non associé",
+            "columnMapping": "Association des colonnes",
+            "saveTemplate": "Enregistrer comme template",
+            "templateNamePlaceholder": "Nom du template...",
+            "notMappedOption": "— Non associé —",
+            "preview": "Aperçu (Premières {{rows}} lignes × {{columns}} colonnes)"
+        },
+        "fields": {
+            "transactionDate": "Date de transaction",
+            "amountPrimary": "Montant",
+            "assetSymbol": "Symbole de l'actif",
+            "type": "Type de transaction",
+            "rawLabel": "Description / Libellé",
+            "priceUnit": "Prix par unité",
+            "quantity": "Quantité",
+            "assetIsin": "Code ISIN",
+            "feeAmount": "Frais",
+            "feeAsset": "Devise des frais",
+            "taxAmount": "Taxes",
+            "valueDate": "Date de valeur",
+            "balanceAfter": "Solde après",
+            "externalId": "ID externe (pour dédoublonnage)"
+        },
+        "staging": {
+            "stats": {
+                "totalRows": "Total lignes",
+                "valid": "Valides",
+                "warnings": "Avertissements",
+                "errors": "Erreurs",
+                "duplicates": "Doublons"
+            },
+            "duplicatesLabel": "Doublons :",
+            "skipAll": "Tout ignorer",
+            "importAll": "Tout importer",
+            "downloadInvalid": "Télécharger les lignes invalides",
+            "table": {
+                "status": "Statut",
+                "date": "Date",
+                "type": "Type",
+                "asset": "Actif",
+                "amount": "Montant",
+                "quantity": "Qté",
+                "errors": "Erreurs",
+                "actions": "Actions"
+            },
+            "status": {
+                "valid": "Valide",
+                "warning": "Avertissement",
+                "error": "Erreur",
+                "duplicate": "Doublon"
+            },
+            "editRow": "Modifier la ligne",
+            "doneEditing": "Terminer l'édition",
+            "importing": "Importé",
+            "skipping": "Ignoré",
+            "removeRow": "Supprimer la ligne"
+        },
+        "common": {
+            "emptyValue": "—"
+        },
+        "buttons": {
+            "analyzeData": "Analyser les données",
+            "importTransactions": "Importer {{count}} transactions"
+        },
+        "complete": {
+            "title": "Import terminé !",
+            "success": "Import réussi de {{count}} transactions",
+            "summaryTitle": "Résumé de l'import",
+            "batchId": "ID du lot",
+            "transactions": "Transactions",
+            "mode": "Mode",
+            "file": "Fichier",
+            "goToDashboard": "Aller au dashboard",
+            "importMore": "Importer plus"
+        },
+        "errors": {
+            "failedToLoadData": "Échec du chargement des données",
+            "failedToLoadAccounts": "Échec du chargement des comptes",
+            "failedToCreateInstitute": "Échec de la création de l'institution",
+            "failedToCreateAccount": "Échec de la création du compte",
+            "failedToParseFile": "Échec de l'analyse du fichier",
+            "failedToSaveTemplate": "Échec de l'enregistrement du template",
+            "selectAccountFirst": "Veuillez sélectionner un compte",
+            "failedToAnalyzeData": "Échec de l'analyse des données",
+            "missingAccountOrFile": "Compte ou fichier manquant",
+            "importFailed": "Échec de l'import",
+            "failedToCompleteImport": "Échec de la finalisation de l'import"
+        },
+        "validation": {
+            "dateRequired": "La date est requise",
+            "amountRequired": "Le montant est requis",
+            "assetSymbolRequired": "Le symbole de l'actif est requis"
+        }
+    },
+    "importHistory": {
+        "title": "Historique des imports",
+        "subtitle": "Voir et gérer les imports passés",
+        "newImport": "Nouvel import",
+        "emptyTitle": "Aucun import pour l'instant",
+        "emptySubtitle": "Commencez par importer votre premier fichier",
+        "importData": "Importer des données",
+        "table": {
+            "date": "Date",
+            "account": "Compte",
+            "file": "Fichier",
+            "mode": "Mode",
+            "transactions": "Transactions",
+            "status": "Statut",
+            "actions": "Actions"
+        },
+        "mode": {
+            "history": "Historique",
+            "snapshot": "Snapshot"
+        },
+        "status": {
+            "completed": "Terminé",
+            "partial": "Partiel",
+            "rolledBack": "Annulé"
+        },
+        "undo": "Annuler",
+        "confirmDelete": "Supprimer {{count}} transactions ?",
+        "rollingBack": "Annulation...",
+        "confirm": "Confirmer",
+        "rolledBack": "Annulé",
+        "rollbackTitle": "À propos de l'annulation :",
+        "rollbackDescription": "Annuler un import supprimera définitivement toutes les transactions associées à ce lot. Cette action est irréversible. Les autres imports et données ne seront pas affectés.",
+        "unknown": "Inconnu"
+    },
+    "snapshotWizard": {
+        "title": "Import snapshot",
+        "subtitle": "Importer les positions pour {{accountName}}",
+        "buttons": {
+            "analyze": "Analyser",
+            "importPositions": "Importer les positions"
+        },
+        "mapping": {
+            "title": "Mode snapshot",
+            "description": "Associez vos colonnes pour importer les positions actuelles. Il faut au moins un Symbole ou ISIN, ainsi que Quantité et Prix moyen.",
+            "fieldsTitle": "Champs de position",
+            "notMappedOption": "— Non associé —",
+            "validation": "Associez au moins un identifiant (Symbole ou ISIN), Quantité et Prix moyen"
+        },
+        "fields": {
+            "assetSymbol": "Symbole de l'actif",
+            "assetIsin": "ISIN",
+            "assetName": "Nom de l'actif",
+            "quantity": "Quantité",
+            "avgPrice": "Prix moyen",
+            "purchaseDate": "Date d'achat"
+        },
+        "hints": {
+            "assetSymbol": "AAPL, BTC (optionnel pour ETF)",
+            "assetIsin": "Pour ETF/Fonds",
+            "assetName": "Nom d'affichage",
+            "quantity": "Nombre d'actions/unités",
+            "avgPrice": "Coût moyen par unité",
+            "purchaseDate": "Par défaut : date d'import"
+        },
+        "preview": {
+            "title": "Aperçu",
+            "positionsTitle": "Positions à importer",
+            "stats": {
+                "totalPositions": "Total positions",
+                "valid": "Valides",
+                "errors": "Erreurs"
+            },
+            "table": {
+                "symbol": "Symbole",
+                "isin": "ISIN",
+                "quantity": "Quantité",
+                "avgPrice": "Prix moyen",
+                "date": "Date",
+                "status": "Statut",
+                "asset": "Actif",
+                "totalValue": "Valeur totale"
+            }
+        },
+        "options": {
+            "title": "Comment souhaitez-vous importer ?",
+            "snapshotOnlyTitle": "Snapshot uniquement",
+            "snapshotOnlyDescription": "Suivre uniquement les positions actuelles. Aucun historique de transactions ne sera généré.",
+            "snapshotOnlyBestFor": "Idéal pour : configuration rapide du portefeuille, suivi simple",
+            "syntheticTitle": "Générer des transactions synthétiques",
+            "syntheticDescription": "Calculer et créer des transactions BUY/SELL pour réconcilier avec l'historique existant.",
+            "syntheticBestFor": "Idéal pour : conserver l'historique, suivi P&L précis",
+            "syntheticInfo": "Le système comparera votre snapshot aux positions existantes et créera des transactions BUY/SELL synthétiques pour réconcilier les différences."
+        },
+        "reconciliation": {
+            "title": "Aperçu de réconciliation",
+            "stats": {
+                "newAssets": "Nouveaux actifs",
+                "increased": "Augmenté",
+                "decreased": "Diminué",
+                "unchanged": "Inchangé",
+                "needsInput": "À compléter"
+            },
+            "table": {
+                "asset": "Actif",
+                "oldQty": "Qté ancienne",
+                "newQty": "Qté nouvelle",
+                "delta": "Delta",
+                "action": "Action",
+                "price": "Prix",
+                "status": "Statut"
+            },
+            "requiresInput": "{{count}} position(s) nécessitent un prix de vente. Veuillez saisir le prix auquel vous avez vendu.",
+            "actions": {
+                "buy": "ACHAT",
+                "sell": "VENTE"
+            },
+            "enterPrice": "Saisir le prix",
+            "clickToEdit": "Cliquer pour éditer"
+        },
+        "complete": {
+            "title": "Import snapshot terminé !",
+            "success": "{{count}} positions importées avec succès",
+            "summaryTitle": "Résumé de l'import",
+            "batchId": "ID du lot",
+            "positions": "Positions",
+            "mode": "Mode",
+            "withSynthetic": "Avec transactions synthétiques",
+            "snapshotOnly": "Snapshot uniquement",
+            "goToDashboard": "Aller au dashboard",
+            "importMore": "Importer plus"
+        },
+        "common": {
+            "emptyValue": "—"
+        },
+        "errors": {
+            "failedToAnalyzeData": "Échec de l'analyse des données",
+            "commitFailed": "Échec de la validation",
+            "failedToCommitImport": "Échec de la finalisation de l'import"
+        }
+    }
 }

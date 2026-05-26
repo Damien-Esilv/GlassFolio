@@ -14,15 +14,17 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import './src/i18n'; // Initialize i18n
 
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-blue-500">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-canvas text-brand">{t('common:labels.loading')}</div>;
   }
 
   if (!user) {

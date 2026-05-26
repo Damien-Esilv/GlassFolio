@@ -4,6 +4,7 @@ import Button from '../components/Button';
 import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { UserPreferences } from '../types';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
@@ -25,7 +26,7 @@ const Settings: React.FC = () => {
     });
 
     // Preferences State
-    const [prefData, setPrefData] = useState({
+    const [prefData, setPrefData] = useState<UserPreferences>({
         currency: user?.preferences?.currency || 'USD',
         theme: user?.preferences?.theme || 'night',
         notifications: user?.preferences?.notifications ?? true,
@@ -101,10 +102,10 @@ const Settings: React.FC = () => {
         }, 1000);
     };
 
-    const updatePreference = async (key: string, value: any) => {
-        const newPrefs = { ...prefData, [key]: value };
+    const updatePreference = async <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+        const newPrefs: UserPreferences = { ...prefData, [key]: value };
         setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs as any });
+        await updateProfile({ preferences: newPrefs });
     };
 
     if (!user) return null;
@@ -146,11 +147,11 @@ const Settings: React.FC = () => {
 
                                 {/* Avatar Section */}
                                 <div className="flex items-center gap-6 mb-8 pb-8 border-b border-border">
-                                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 bg-slate-200 dark:bg-slate-800 shrink-0">
+                                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-card bg-subtle shrink-0">
                                         {user.avatar ? (
                                             <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-slate-500">
+                                            <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-tertiary">
                                                 {user.name.charAt(0)}
                                             </div>
                                         )}
@@ -324,7 +325,7 @@ const Settings: React.FC = () => {
                                                 onClick={() => updatePreference('theme', 'night')}
                                                 className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'night' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
                                             >
-                                                <div className="w-5 h-5 rounded-full bg-[#101922] border border-slate-700"></div>
+                                                <div data-theme="night" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
                                                 <span className="text-xs font-medium">{t('settings:preferences.night')}</span>
                                             </button>
                                             <button

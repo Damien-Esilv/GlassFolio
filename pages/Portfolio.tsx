@@ -53,17 +53,24 @@ interface CategoryGroup {
 // ============================================================================
 
 const Portfolio: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation('portfolio');
     const { positions: globalPositions } = useData();
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['stocks', 'crypto', 'cash']));
     const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
     // Category configuration
     const categoryConfig = [
-        { id: 'stocks', name: 'Actions & Fonds', icon: TrendingUp, color: 'blue', types: ['Equity', 'ETF'] },
-        { id: 'crypto', name: 'Crypto', icon: Coins, color: 'purple', types: ['Crypto'] },
-        { id: 'cash', name: 'Livrets & Liquidités', icon: Building2, color: 'emerald', types: ['Cash'] },
+        { id: 'stocks', name: t('categories.stocks'), icon: TrendingUp, color: 'blue', types: ['Equity', 'ETF'] },
+        { id: 'crypto', name: t('categories.crypto'), icon: Coins, color: 'purple', types: ['Crypto'] },
+        { id: 'cash', name: t('categories.cash'), icon: Building2, color: 'emerald', types: ['Cash'] },
     ];
+
+    const typeLabels: Record<string, string> = {
+        Equity: t('types.equity'),
+        ETF: t('types.etf'),
+        Crypto: t('types.crypto'),
+        Cash: t('types.cash')
+    };
 
     // Group positions by Category -> Account
     const categories = useMemo(() => {
@@ -80,8 +87,8 @@ const Portfolio: React.FC = () => {
             categoryPositions.forEach(pos => {
                 // Create a unique key for grouping
                 // Use accountName if available, otherwise assume a default account for the source
-                const instName = pos.bankName || pos.source || 'Autre';
-                const accName = pos.accountName || 'Compte Principal';
+                const instName = pos.bankName || pos.source || t('fallback.other');
+                const accName = pos.accountName || t('fallback.mainAccount');
                 const key = `${instName}||${accName}`;
 
                 if (!accountMap.has(key)) accountMap.set(key, []);
@@ -154,7 +161,8 @@ const Portfolio: React.FC = () => {
 
     // Get current date formatted
     const today = new Date();
-    const formattedDate = today.toLocaleDateString('fr-FR', {
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    const formattedDate = today.toLocaleDateString(locale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric'
@@ -171,7 +179,7 @@ const Portfolio: React.FC = () => {
                             <span>{formattedDate}</span>
                         </div>
                         <div className="text-4xl md:text-5xl font-bold text-primary mb-3">
-                            {totalValue.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })}
+                            {totalValue.toLocaleString(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })}
                         </div>
                         <div className="flex items-center gap-3">
                             <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${totalGain >= 0
@@ -179,7 +187,7 @@ const Portfolio: React.FC = () => {
                                 : 'bg-red-500/10 text-error'
                                 }`}>
                                 {totalGain >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                                {totalGain >= 0 ? '+' : ''}{totalGain.toLocaleString('fr-FR', { minimumFractionDigits: 0 })}€
+                                {totalGain >= 0 ? '+' : ''}{totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })}€
                             </span>
                             <span className={`text-sm font-medium ${gainPercent >= 0 ? 'text-success' : 'text-error'
                                 }`}>
@@ -200,19 +208,19 @@ const Portfolio: React.FC = () => {
             {/* Categories Table */}
             <div className="bg-card rounded-2xl border border-border overflow-hidden">
                 <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-primary">Actifs</h2>
+                        <h2 className="text-lg font-bold text-primary">{t('summary.assets')}</h2>
                     <div className="text-sm text-secondary">
-                        {categories.length} catégories
+                        {t('summary.categoriesCount', { count: categories.length })}
                     </div>
                 </div>
 
                 <div className="w-full text-sm">
                     {/* Header */}
                     <div className="grid grid-cols-12 px-6 py-3 bg-subtle border-b border-border text-xs text-secondary uppercase font-medium">
-                        <div className="col-span-5">Catégorie</div>
-                        <div className="col-span-2 text-right">Répartition</div>
-                        <div className="col-span-3 text-right">Valeur</div>
-                        <div className="col-span-2 text-right">PnL</div>
+                        <div className="col-span-5">{t('table.category')}</div>
+                        <div className="col-span-2 text-right">{t('table.allocation')}</div>
+                        <div className="col-span-3 text-right">{t('table.value')}</div>
+                        <div className="col-span-2 text-right">{t('table.pnl')}</div>
                     </div>
 
                     {/* Body */}
@@ -236,11 +244,11 @@ const Portfolio: React.FC = () => {
                                         {category.allocation.toFixed(0)} %
                                     </div>
                                     <div className="col-span-3 text-right font-bold text-primary">
-                                        {category.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                        {category.totalValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                     </div>
                                     <div className="col-span-2 text-right">
                                         <div className={`font-semibold ${category.totalGain >= 0 ? 'text-success' : 'text-error'}`}>
-                                            {category.totalGain >= 0 ? '+' : ''}{category.totalGain.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                            {category.totalGain >= 0 ? '+' : ''}{category.totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                         </div>
                                     </div>
                                 </div>
@@ -269,11 +277,11 @@ const Portfolio: React.FC = () => {
                                                 {/* No allocation at account level usually, or relative to category? */}
                                             </div>
                                             <div className="col-span-3 text-right font-medium text-primary text-sm">
-                                                {account.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                                {account.totalValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                             </div>
                                             <div className="col-span-2 text-right text-sm">
                                                 <div className={`${account.totalGain >= 0 ? 'text-success' : 'text-error'}`}>
-                                                    {account.totalGain >= 0 ? '+' : ''}{account.totalGain.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                                    {account.totalGain >= 0 ? '+' : ''}{account.totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                                 </div>
                                             </div>
                                         </div>
@@ -292,14 +300,18 @@ const Portfolio: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <div className="col-span-2 text-right text-secondary">
-                                                    {pos.quantity > 0 && <span className="bg-card px-1.5 py-0.5 rounded text-[10px] border border-border">{pos.type}</span>}
+                                                    {pos.quantity > 0 && (
+                                                        <span className="bg-card px-1.5 py-0.5 rounded text-[10px] border border-border">
+                                                            {typeLabels[pos.type] ?? pos.type}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="col-span-3 text-right font-medium text-primary">
-                                                    {pos.marketValue.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                                    {pos.marketValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                                 </div>
                                                 <div className="col-span-2 text-right">
                                                     <div className={`${pos.unrealizedPL >= 0 ? 'text-success/80' : 'text-error/80'}`}>
-                                                        {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPL.toLocaleString('fr-FR', { minimumFractionDigits: 0 })} €
+                                                        {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPL.toLocaleString(locale, { minimumFractionDigits: 0 })} €
                                                     </div>
                                                 </div>
                                             </div>
@@ -312,7 +324,7 @@ const Portfolio: React.FC = () => {
 
                     {categories.length === 0 && (
                         <div className="p-12 text-center text-secondary">
-                            Aucune position trouvée. <Link to="/import" className="text-brand hover:underline">Importez des données</Link> pour commencer.
+                            {t('emptyState.message')} <Link to="/import" className="text-brand hover:underline">{t('emptyState.link')}</Link> {t('emptyState.suffix')}
                         </div>
                     )}
                 </div>

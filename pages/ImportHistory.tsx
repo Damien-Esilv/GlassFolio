@@ -23,7 +23,7 @@ import { instituteService, accountService } from '../src/services/instituteServi
 import { useTranslation } from 'react-i18next';
 
 const ImportHistory: React.FC = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('transactions');
     const [batches, setBatches] = useState<ImportBatch[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -56,7 +56,7 @@ const ImportHistory: React.FC = () => {
     // Get account and institute names
     const getAccountInfo = (accountId: string) => {
         const account = accounts.find(a => a.id === accountId);
-        if (!account) return { accountName: 'Unknown', instituteName: 'Unknown' };
+        if (!account) return { accountName: t('importHistory.unknown'), instituteName: t('importHistory.unknown') };
 
         const institute = institutes.find(i => i.id === account.instituteId);
         return {
@@ -98,9 +98,9 @@ const ImportHistory: React.FC = () => {
     // Status badge
     const StatusBadge: React.FC<{ status: ImportBatch['status'] }> = ({ status }) => {
         const config = {
-            completed: { icon: CheckCircle, color: 'text-emerald-500 bg-emerald-500/10', label: 'Completed' },
-            partial: { icon: AlertTriangle, color: 'text-amber-500 bg-amber-500/10', label: 'Partial' },
-            rolled_back: { icon: XCircle, color: 'text-slate-500 bg-slate-500/10', label: 'Rolled Back' }
+            completed: { icon: CheckCircle, color: 'text-emerald-500 bg-emerald-500/10', label: t('importHistory.status.completed') },
+            partial: { icon: AlertTriangle, color: 'text-amber-500 bg-amber-500/10', label: t('importHistory.status.partial') },
+            rolled_back: { icon: XCircle, color: 'text-secondary bg-subtle', label: t('importHistory.status.rolledBack') }
         }[status];
 
         const Icon = config.icon;
@@ -118,15 +118,15 @@ const ImportHistory: React.FC = () => {
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <History className="text-blue-500" />
-                        Import History
+                    <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
+                        <History className="text-brand" />
+                        {t('importHistory.title')}
                     </h1>
-                    <p className="text-slate-400 mt-1">View and manage past data imports</p>
+                    <p className="text-secondary mt-1">{t('importHistory.subtitle')}</p>
                 </div>
                 <Link to="/import">
                     <Button>
-                        New Import <ChevronRight size={16} className="ml-1" />
+                        {t('importHistory.newImport')} <ChevronRight size={16} className="ml-1" />
                     </Button>
                 </Link>
             </div>
@@ -139,58 +139,60 @@ const ImportHistory: React.FC = () => {
             ) : batches.length === 0 ? (
                 // Empty State
                 <div className="text-center py-20">
-                    <FileText className="text-slate-600 mx-auto mb-4" size={48} />
-                    <h2 className="text-xl font-bold text-white mb-2">No imports yet</h2>
-                    <p className="text-slate-400 mb-6">Start by importing your first file</p>
+                    <FileText className="text-tertiary mx-auto mb-4" size={48} />
+                    <h2 className="text-xl font-bold text-primary mb-2">{t('importHistory.emptyTitle')}</h2>
+                    <p className="text-secondary mb-6">{t('importHistory.emptySubtitle')}</p>
                     <Link to="/import">
-                        <Button>Import Data</Button>
+                        <Button>{t('importHistory.importData')}</Button>
                     </Link>
                 </div>
             ) : (
                 // Batches Table
-                <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                <div className="bg-card border border-subtle rounded-xl overflow-hidden">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-800 text-xs uppercase text-slate-400 font-bold">
+                        <thead className="bg-subtle text-xs uppercase text-secondary font-bold">
                             <tr>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Account</th>
-                                <th className="px-6 py-4">File</th>
-                                <th className="px-6 py-4 text-center">Mode</th>
-                                <th className="px-6 py-4 text-center">Transactions</th>
-                                <th className="px-6 py-4 text-center">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4">{t('importHistory.table.date')}</th>
+                                <th className="px-6 py-4">{t('importHistory.table.account')}</th>
+                                <th className="px-6 py-4">{t('importHistory.table.file')}</th>
+                                <th className="px-6 py-4 text-center">{t('importHistory.table.mode')}</th>
+                                <th className="px-6 py-4 text-center">{t('importHistory.table.transactions')}</th>
+                                <th className="px-6 py-4 text-center">{t('importHistory.table.status')}</th>
+                                <th className="px-6 py-4 text-right">{t('importHistory.table.actions')}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-subtle">
                             {batches.map(batch => {
                                 const { accountName, instituteName } = getAccountInfo(batch.accountId);
                                 const isRollingBack = rollbackId === batch.id;
                                 const showConfirm = confirmRollback === batch.id;
 
                                 return (
-                                    <tr key={batch.id} className="hover:bg-slate-800/50">
+                                    <tr key={batch.id} className="hover:bg-card-hover">
                                         <td className="px-6 py-4">
-                                            <span className="text-white">{formatDate(batch.importedAt)}</span>
+                                            <span className="text-primary">{formatDate(batch.importedAt)}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium">{accountName}</span>
-                                                <span className="text-slate-500 text-xs">{instituteName}</span>
+                                                <span className="text-primary font-medium">{accountName}</span>
+                                                <span className="text-secondary text-xs">{instituteName}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-slate-300 font-mono text-sm">{batch.fileName}</span>
+                                            <span className="text-secondary font-mono text-sm">{batch.fileName}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs font-medium px-2 py-1 rounded ${batch.importMode === 'history'
                                                 ? 'bg-purple-500/20 text-purple-400'
-                                                : 'bg-blue-500/20 text-blue-400'
+                                                : 'bg-brand/20 text-brand'
                                                 }`}>
-                                                {batch.importMode === 'history' ? 'History' : 'Snapshot'}
+                                                {batch.importMode === 'history'
+                                                    ? t('importHistory.mode.history')
+                                                    : t('importHistory.mode.snapshot')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="text-white font-bold">{batch.transactionCount}</span>
+                                            <span className="text-primary font-bold">{batch.transactionCount}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <StatusBadge status={batch.status} />
@@ -199,35 +201,35 @@ const ImportHistory: React.FC = () => {
                                             {batch.status === 'completed' && !showConfirm && (
                                                 <button
                                                     onClick={() => setConfirmRollback(batch.id)}
-                                                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-rose-400 text-sm transition-colors"
+                                                    className="inline-flex items-center gap-1.5 text-secondary hover:text-error text-sm transition-colors"
                                                     disabled={isRollingBack}
                                                 >
                                                     <Undo2 size={14} />
-                                                    Undo
+                                                    {t('importHistory.undo')}
                                                 </button>
                                             )}
 
                                             {showConfirm && (
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <span className="text-rose-400 text-xs">Delete {batch.transactionCount} transactions?</span>
+                                                    <span className="text-error text-xs">{t('importHistory.confirmDelete', { count: batch.transactionCount })}</span>
                                                     <button
                                                         onClick={() => handleRollback(batch.id)}
-                                                        className="px-2 py-1 bg-rose-600 text-white text-xs rounded hover:bg-rose-500"
+                                                        className="px-2 py-1 bg-error text-white text-xs rounded hover:bg-error/80"
                                                         disabled={isRollingBack}
                                                     >
-                                                        {isRollingBack ? 'Rolling back...' : 'Confirm'}
+                                                        {isRollingBack ? t('importHistory.rollingBack') : t('importHistory.confirm')}
                                                     </button>
                                                     <button
                                                         onClick={() => setConfirmRollback(null)}
-                                                        className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded hover:bg-slate-600"
+                                                        className="px-2 py-1 bg-subtle text-secondary text-xs rounded hover:bg-card-hover"
                                                     >
-                                                        Cancel
+                                                        {t('common:buttons.cancel')}
                                                     </button>
                                                 </div>
                                             )}
 
                                             {batch.status === 'rolled_back' && (
-                                                <span className="text-slate-500 text-sm">Rolled back</span>
+                                                <span className="text-secondary text-sm">{t('importHistory.rolledBack')}</span>
                                             )}
                                         </td>
                                     </tr>
@@ -239,11 +241,10 @@ const ImportHistory: React.FC = () => {
             )}
 
             {/* Info Banner */}
-            <div className="mt-8 bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle className="text-amber-500 flex-shrink-0 mt-0.5" size={18} />
-                <div className="text-sm text-slate-400">
-                    <strong className="text-white">About Rollback:</strong> Undoing an import will permanently delete all
-                    transactions associated with that batch. This action cannot be undone. Other imports and data will not be affected.
+            <div className="mt-8 bg-subtle border border-subtle rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="text-warning flex-shrink-0 mt-0.5" size={18} />
+                <div className="text-sm text-secondary">
+                    <strong className="text-primary">{t('importHistory.rollbackTitle')}</strong> {t('importHistory.rollbackDescription')}
                 </div>
             </div>
         </div>

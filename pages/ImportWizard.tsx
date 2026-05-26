@@ -43,6 +43,7 @@ import { useTranslation } from 'react-i18next';
 
 const ImportWizard: React.FC = () => {
   const wizard = useImportWizard();
+  const { t } = useTranslation('transactions');
 
   // For snapshot mode, show dedicated SnapshotWizard from step 3 onwards
   const showSnapshotWizard = wizard.importMode === 'snapshot' &&
@@ -55,13 +56,15 @@ const ImportWizard: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Import Transactions</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {wizard.step === 1 && 'Select where to import your data'}
-            {wizard.step === 2 && 'Upload your CSV file'}
-            {wizard.step === 3 && (wizard.importMode === 'snapshot' ? 'Configure snapshot import' : 'Map columns to database fields')}
-            {wizard.step === 4 && 'Review and validate data'}
-            {wizard.step === 5 && 'Import complete!'}
+          <h1 className="text-3xl font-bold text-primary">{t('importWizard.title')}</h1>
+          <p className="text-secondary mt-1">
+            {wizard.step === 1 && t('importWizard.stepDescription.context')}
+            {wizard.step === 2 && t('importWizard.stepDescription.upload')}
+            {wizard.step === 3 && (wizard.importMode === 'snapshot'
+              ? t('importWizard.stepDescription.mappingSnapshot')
+              : t('importWizard.stepDescription.mappingHistory'))}
+            {wizard.step === 4 && t('importWizard.stepDescription.review')}
+            {wizard.step === 5 && t('importWizard.stepDescription.complete')}
           </p>
         </div>
         {!showSnapshotWizard && <StepIndicator currentStep={wizard.step} />}
@@ -80,10 +83,10 @@ const ImportWizard: React.FC = () => {
 
       {/* Loading Overlay */}
       {wizard.isLoading && !showSnapshotWizard && (
-        <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-canvas/80 z-50 flex items-center justify-center backdrop-blur-sm">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white">Processing...</p>
+            <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-primary">{t('common:labels.processing')}</p>
           </div>
         </div>
       )}
@@ -94,7 +97,7 @@ const ImportWizard: React.FC = () => {
         {showSnapshotWizard ? (
           <SnapshotWizard
             accountId={wizard.selectedAccountId!}
-            accountName={wizard.selectedAccount?.name || 'Account'}
+            accountName={wizard.selectedAccount?.name || t('importWizard.fallbackAccount')}
             rawCSVText={wizard.rawCSVText}
             headers={wizard.headers}
             previewRows={wizard.previewRows}
@@ -114,9 +117,9 @@ const ImportWizard: React.FC = () => {
 
       {/* Navigation Footer - only for history mode after step 2 */}
       {!showSnapshotWizard && wizard.step > 1 && wizard.step < 5 && (
-        <div className="flex justify-between mt-12 pt-8 border-t border-slate-800">
+        <div className="flex justify-between mt-12 pt-8 border-t border-subtle">
           <Button variant="secondary" size="lg" onClick={wizard.goBack}>
-            Back
+            {t('common:buttons.back')}
           </Button>
 
           {wizard.step === 3 && wizard.importMode === 'history' && (
@@ -125,7 +128,7 @@ const ImportWizard: React.FC = () => {
               onClick={wizard.analyzeData}
               disabled={!wizard.isValidMappingForAnalysis}
             >
-              Analyze Data <ArrowRight size={18} className="ml-2" />
+              {t('importWizard.buttons.analyzeData')} <ArrowRight size={18} className="ml-2" />
             </Button>
           )}
 
@@ -135,7 +138,7 @@ const ImportWizard: React.FC = () => {
               onClick={wizard.finalizeImport}
               disabled={wizard.importableTxCount === 0}
             >
-              Import {wizard.importableTxCount} Transactions
+              {t('importWizard.buttons.importTransactions', { count: wizard.importableTxCount })}
             </Button>
           )}
         </div>
@@ -149,12 +152,13 @@ const ImportWizard: React.FC = () => {
 // ============================================================================
 
 const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) => {
+  const { t } = useTranslation('transactions');
   const steps = [
-    { num: 1, label: 'Context' },
-    { num: 2, label: 'Upload' },
-    { num: 3, label: 'Mapping' },
-    { num: 4, label: 'Review' },
-    { num: 5, label: 'Done' }
+    { num: 1, label: t('importWizard.steps.context') },
+    { num: 2, label: t('importWizard.steps.upload') },
+    { num: 3, label: t('importWizard.steps.mapping') },
+    { num: 4, label: t('importWizard.steps.review') },
+    { num: 5, label: t('importWizard.steps.done') }
   ];
 
   return (
@@ -163,14 +167,14 @@ const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) =
         <React.Fragment key={step.num}>
           <div className={`
             w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-            ${currentStep === step.num ? 'bg-blue-600 text-white' :
-              currentStep > step.num ? 'bg-emerald-600 text-white' :
-                'bg-slate-700 text-slate-400'}
+            ${currentStep === step.num ? 'bg-brand text-white' :
+              currentStep > step.num ? 'bg-success text-white' :
+                'bg-subtle text-secondary'}
           `}>
             {currentStep > step.num ? <Check size={14} /> : step.num}
           </div>
           {idx < steps.length - 1 && (
-            <div className={`w-8 h-0.5 ${currentStep > step.num ? 'bg-emerald-600' : 'bg-slate-700'}`} />
+            <div className={`w-8 h-0.5 ${currentStep > step.num ? 'bg-success' : 'bg-subtle'}`} />
           )}
         </React.Fragment>
       ))}
@@ -183,6 +187,7 @@ const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) =
 // ============================================================================
 
 const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+  const { t } = useTranslation('transactions');
   const [showNewInstitute, setShowNewInstitute] = useState(false);
   const [showNewAccount, setShowNewAccount] = useState(false);
   const [newInstituteName, setNewInstituteName] = useState('');
@@ -208,10 +213,10 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Institute Selection */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
+      <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
-          <Building2 className="text-blue-500" size={24} />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">1. Select Institution</h2>
+          <Building2 className="text-brand" size={24} />
+          <h2 className="text-lg font-bold text-primary">{t('importWizard.context.selectInstitution')}</h2>
         </div>
 
         {!showNewInstitute ? (
@@ -222,21 +227,21 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                   key={inst.id}
                   onClick={() => wizard.selectInstitute(inst.id)}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedInstituteId === inst.id
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                    ? 'border-brand bg-brand/10'
+                    : 'border-subtle bg-subtle hover:bg-card-hover'
                     }`}
                 >
-                  <span className="text-slate-900 dark:text-white font-medium">{inst.name}</span>
-                  <span className="block text-xs text-slate-500 mt-1 capitalize">{inst.type}</span>
+                  <span className="text-primary font-medium">{inst.name}</span>
+                  <span className="block text-xs text-secondary mt-1 capitalize">{inst.type}</span>
                 </button>
               ))}
 
               <button
                 onClick={() => setShowNewInstitute(true)}
-                className="p-4 rounded-xl border-2 border-dashed border-slate-600 hover:border-blue-500 transition-all flex flex-col items-center justify-center text-slate-400 hover:text-blue-400"
+                className="p-4 rounded-xl border-2 border-dashed border-subtle hover:border-brand transition-all flex flex-col items-center justify-center text-secondary hover:text-brand"
               >
                 <Plus size={24} />
-                <span className="text-sm mt-1">New</span>
+                <span className="text-sm mt-1">{t('importWizard.context.new')}</span>
               </button>
             </div>
           </div>
@@ -246,7 +251,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               type="text"
               value={newInstituteName}
               onChange={e => setNewInstituteName(e.target.value)}
-              placeholder="Institution name..."
+              placeholder={t('importWizard.context.institutionNamePlaceholder')}
               className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-1 focus:ring-primary"
               autoFocus
             />
@@ -255,18 +260,18 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               onChange={e => setNewInstituteType(e.target.value as InstituteType)}
               className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
             >
-              <option value="bank">Bank</option>
-              <option value="broker">Broker</option>
-              <option value="exchange">Crypto Exchange</option>
-              <option value="wallet">Wallet</option>
-              <option value="other">Other</option>
+              <option value="bank">{t('importWizard.context.instituteTypes.bank')}</option>
+              <option value="broker">{t('importWizard.context.instituteTypes.broker')}</option>
+              <option value="exchange">{t('importWizard.context.instituteTypes.exchange')}</option>
+              <option value="wallet">{t('importWizard.context.instituteTypes.wallet')}</option>
+              <option value="other">{t('importWizard.context.instituteTypes.other')}</option>
             </select>
             <div className="flex gap-2">
               <Button onClick={handleCreateInstitute} disabled={!newInstituteName.trim()}>
-                Create
+                {t('common:buttons.create')}
               </Button>
               <Button variant="secondary" onClick={() => setShowNewInstitute(false)}>
-                Cancel
+                {t('common:buttons.cancel')}
               </Button>
             </div>
           </div>
@@ -275,16 +280,16 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
       {/* Account Selection */}
       {wizard.selectedInstituteId && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 animate-fade-in shadow-sm dark:shadow-none">
+        <div className="bg-card border border-subtle rounded-xl p-6 animate-fade-in shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <Wallet className="text-emerald-500" size={24} />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">2. Select Account</h2>
+            <Wallet className="text-success" size={24} />
+            <h2 className="text-lg font-bold text-primary">{t('importWizard.context.selectAccount')}</h2>
           </div>
 
           {!showNewAccount ? (
             <div className="space-y-4">
               {wizard.accounts.length === 0 ? (
-                <p className="text-slate-400 text-sm">No accounts found. Create one to continue.</p>
+                <p className="text-secondary text-sm">{t('importWizard.context.noAccounts')}</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {wizard.accounts.map(acc => (
@@ -292,12 +297,12 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                       key={acc.id}
                       onClick={() => wizard.selectAccount(acc.id)}
                       className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedAccountId === acc.id
-                        ? 'border-emerald-500 bg-emerald-500/10'
-                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                        ? 'border-success bg-success/10'
+                        : 'border-subtle bg-subtle hover:bg-card-hover'
                         }`}
                     >
-                      <span className="text-slate-900 dark:text-white font-medium">{acc.name}</span>
-                      <span className="block text-xs text-slate-500 mt-1">{acc.defaultCurrency} · {acc.type}</span>
+                      <span className="text-primary font-medium">{acc.name}</span>
+                      <span className="block text-xs text-secondary mt-1">{acc.defaultCurrency} · {acc.type}</span>
                     </button>
                   ))}
                 </div>
@@ -305,9 +310,9 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
               <button
                 onClick={() => setShowNewAccount(true)}
-                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+                className="flex items-center gap-2 text-brand hover:text-brand/80 text-sm"
               >
-                <Plus size={16} /> Create new account
+                <Plus size={16} /> {t('importWizard.context.createNewAccount')}
               </button>
             </div>
           ) : (
@@ -316,7 +321,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 type="text"
                 value={newAccountName}
                 onChange={e => setNewAccountName(e.target.value)}
-                placeholder="Account name..."
+                placeholder={t('importWizard.context.accountNamePlaceholder')}
                 className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-primary"
                 autoFocus
               />
@@ -326,12 +331,12 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                   onChange={e => setNewAccountType(e.target.value as AccountType)}
                   className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
                 >
-                  <option value="checking">Checking</option>
-                  <option value="savings">Savings</option>
-                  <option value="investment">Investment (PEA, CTO)</option>
-                  <option value="crypto_spot">Crypto Spot</option>
-                  <option value="crypto_earn">Crypto Earn</option>
-                  <option value="other">Other</option>
+                  <option value="checking">{t('importWizard.context.accountTypes.checking')}</option>
+                  <option value="savings">{t('importWizard.context.accountTypes.savings')}</option>
+                  <option value="investment">{t('importWizard.context.accountTypes.investment')}</option>
+                  <option value="crypto_spot">{t('importWizard.context.accountTypes.cryptoSpot')}</option>
+                  <option value="crypto_earn">{t('importWizard.context.accountTypes.cryptoEarn')}</option>
+                  <option value="other">{t('importWizard.context.accountTypes.other')}</option>
                 </select>
                 <select
                   value={newAccountCurrency}
@@ -347,10 +352,10 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleCreateAccount} disabled={!newAccountName.trim()}>
-                  Create
+                  {t('common:buttons.create')}
                 </Button>
                 <Button variant="secondary" onClick={() => setShowNewAccount(false)}>
-                  Cancel
+                  {t('common:buttons.cancel')}
                 </Button>
               </div>
             </div>
@@ -360,10 +365,10 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
       {/* Import Mode */}
       {wizard.selectedAccountId && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 animate-fade-in shadow-sm dark:shadow-none">
+        <div className="bg-card border border-subtle rounded-xl p-6 animate-fade-in shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <FileText className="text-purple-500" size={24} />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">3. Import Mode</h2>
+            <h2 className="text-lg font-bold text-primary">{t('importWizard.mode.title')}</h2>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -371,13 +376,13 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               onClick={() => wizard.setImportMode('history')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'history'
                 ? 'border-purple-500 bg-purple-500/10'
-                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                : 'border-subtle bg-subtle hover:bg-card-hover'
                 }`}
             >
-              <History className={wizard.importMode === 'history' ? 'text-purple-500 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'} size={28} />
+              <History className={wizard.importMode === 'history' ? 'text-purple-500' : 'text-secondary'} size={28} />
               <div className="mt-3">
-                <span className="text-slate-900 dark:text-white font-bold">Transaction History</span>
-                <p className="text-slate-400 text-sm mt-1">Import buy/sell transactions with dates and prices</p>
+                <span className="text-primary font-bold">{t('importWizard.mode.historyTitle')}</span>
+                <p className="text-secondary text-sm mt-1">{t('importWizard.mode.historyDescription')}</p>
               </div>
             </button>
 
@@ -385,13 +390,13 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               onClick={() => wizard.setImportMode('snapshot')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'snapshot'
                 ? 'border-purple-500 bg-purple-500/10'
-                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                : 'border-subtle bg-subtle hover:bg-card-hover'
                 }`}
             >
-              <Camera className={wizard.importMode === 'snapshot' ? 'text-purple-500 dark:text-purple-400' : 'text-slate-500 dark:text-slate-400'} size={28} />
+              <Camera className={wizard.importMode === 'snapshot' ? 'text-purple-500' : 'text-secondary'} size={28} />
               <div className="mt-3">
-                <span className="text-slate-900 dark:text-white font-bold">Position Snapshot</span>
-                <p className="text-slate-400 text-sm mt-1">Import current holdings with average prices</p>
+                <span className="text-primary font-bold">{t('importWizard.mode.snapshotTitle')}</span>
+                <p className="text-secondary text-sm mt-1">{t('importWizard.mode.snapshotDescription')}</p>
               </div>
             </button>
           </div>
@@ -399,7 +404,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
           {wizard.importMode === 'snapshot' && (
             <div className="mt-4 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-amber-400 text-sm">
               <AlertTriangle size={16} className="inline mr-2" />
-              Snapshot mode creates synthetic BUY transactions based on Quantity × Average Price
+              {t('importWizard.mode.snapshotWarning')}
             </div>
           )}
 
@@ -410,7 +415,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               onClick={() => wizard.goToStep(2)}
               disabled={!wizard.canProceedFromStep1}
             >
-              Continue <ArrowRight size={18} className="ml-2" />
+              {t('common:buttons.continue')} <ArrowRight size={18} className="ml-2" />
             </Button>
           </div>
         </div>
@@ -424,6 +429,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 // ============================================================================
 
 const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+  const { t } = useTranslation('transactions');
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -442,15 +448,17 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Context Summary */}
-      <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 flex items-center gap-4">
+      <div className="bg-subtle border border-subtle rounded-xl p-4 flex items-center gap-4">
         <div className="flex-1">
-          <span className="text-slate-500 dark:text-slate-400 text-sm">Importing to:</span>
-          <div className="text-slate-900 dark:text-white font-medium">
+          <span className="text-secondary text-sm">{t('importWizard.upload.importingTo')}</span>
+          <div className="text-primary font-medium">
             {wizard.selectedInstitute?.name} → {wizard.selectedAccount?.name}
           </div>
         </div>
         <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
-          {wizard.importMode === 'history' ? 'History' : 'Snapshot'}
+          {wizard.importMode === 'history'
+            ? t('importWizard.mode.history')
+            : t('importWizard.mode.snapshot')}
         </div>
       </div>
 
@@ -458,11 +466,11 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
       <label
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-        className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-16 flex flex-col items-center justify-center text-center hover:border-blue-500 transition-colors cursor-pointer bg-white dark:bg-slate-800/50 group"
+        className="border-2 border-dashed border-subtle rounded-3xl p-16 flex flex-col items-center justify-center text-center hover:border-brand transition-colors cursor-pointer bg-card/50 group"
       >
-        <Upload className="text-slate-400 group-hover:text-blue-500 mb-4" size={48} />
-        <h3 className="text-xl font-medium text-slate-900 dark:text-white mb-2">Drop your CSV file here</h3>
-        <p className="text-slate-400 text-sm">or click to browse</p>
+        <Upload className="text-secondary group-hover:text-brand mb-4" size={48} />
+        <h3 className="text-xl font-medium text-primary mb-2">{t('importWizard.upload.dropTitle')}</h3>
+        <p className="text-secondary text-sm">{t('importWizard.upload.dropSubtitle')}</p>
         <input
           type="file"
           accept=".csv,.txt"
@@ -473,16 +481,16 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
 
       {/* Saved Templates */}
       {wizard.mappingTemplates.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm dark:shadow-none">
-          <h3 className="text-sm font-bold text-slate-500 uppercase mb-3">Saved Mapping Templates</h3>
+        <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
+          <h3 className="text-sm font-bold text-secondary uppercase mb-3">{t('importWizard.upload.savedTemplates')}</h3>
           <div className="flex flex-wrap gap-2">
             {wizard.mappingTemplates.map(tpl => (
               <button
                 key={tpl.id}
                 onClick={() => wizard.applyTemplate(tpl.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${wizard.selectedTemplateId === tpl.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-secondary hover:bg-card-hover'
                   }`}
               >
                 {tpl.name}
@@ -500,6 +508,7 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
 // ============================================================================
 
 const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+  const { t } = useTranslation('transactions');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
 
@@ -523,15 +532,15 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
           <CheckCircle className="text-emerald-500" size={20} />
           <span className="text-emerald-400">
-            Detected format: <strong>{wizard.detectedPreset}</strong> — mappings applied automatically
+            {t('importWizard.mapping.detectedFormat', { preset: wizard.detectedPreset })}
           </span>
         </div>
       )}
 
       {/* Header Tokens - Visual Mapping Status */}
       {wizard.headers.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">CSV Headers (Mapping Status)</h3>
+        <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-primary mb-3">{t('importWizard.mapping.csvHeaders')}</h3>
           <div className="flex flex-wrap gap-2">
             {wizard.headers.map((header, idx) => {
               const isMapped = isHeaderMapped(header);
@@ -548,26 +557,26 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
               );
             })}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+          <p className="text-xs text-secondary mt-3">
             <span className="inline-block w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/30 mr-1"></span>
-            Mapped
+            {t('importWizard.mapping.mapped')}
             <span className="inline-block w-3 h-3 rounded bg-rose-500/20 border border-rose-500/30 ml-4 mr-1"></span>
-            Not Mapped
+            {t('importWizard.mapping.notMapped')}
           </p>
         </div>
       )}
 
       {/* Mapping Grid */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm dark:shadow-none">
+      <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Column Mapping</h2>
+          <h2 className="text-lg font-bold text-primary">{t('importWizard.mapping.columnMapping')}</h2>
 
           {!showSaveTemplate ? (
             <button
               onClick={() => setShowSaveTemplate(true)}
-              className="flex items-center gap-2 text-blue-500 dark:text-blue-400 hover:text-blue-400 dark:hover:text-blue-300 text-sm"
+              className="flex items-center gap-2 text-brand hover:text-brand/80 text-sm"
             >
-              <Save size={16} /> Save as template
+              <Save size={16} /> {t('importWizard.mapping.saveTemplate')}
             </button>
           ) : (
             <div className="flex items-center gap-2">
@@ -575,12 +584,12 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                 type="text"
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
-                placeholder="Template name..."
+                placeholder={t('importWizard.mapping.templateNamePlaceholder')}
                 className="bg-subtle border border-subtle text-primary rounded-lg px-3 py-1.5 text-sm focus:ring-primary focus:border-primary"
                 autoFocus
               />
-              <Button size="sm" onClick={handleSaveTemplate}>Save</Button>
-              <button onClick={() => setShowSaveTemplate(false)} className="text-slate-400 hover:text-white">
+              <Button size="sm" onClick={handleSaveTemplate}>{t('common:buttons.save')}</Button>
+              <button onClick={() => setShowSaveTemplate(false)} className="text-secondary hover:text-primary">
                 <X size={16} />
               </button>
             </div>
@@ -590,8 +599,8 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {MAPPABLE_FIELDS.map(field => (
             <div key={field.key} className="space-y-1">
-              <label className="flex items-center gap-1 text-xs font-bold text-slate-500 uppercase">
-                {field.label}
+              <label className="flex items-center gap-1 text-xs font-bold text-secondary uppercase">
+                {t(field.labelKey)}
                 {field.required && <span className="text-rose-500">*</span>}
               </label>
               <select
@@ -602,7 +611,7 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                   : 'border-subtle'
                   } focus:ring-primary focus:border-primary`}
               >
-                <option value="">— Not mapped —</option>
+                <option value="">{t('importWizard.mapping.notMappedOption')}</option>
                 {wizard.headers.map(h => (
                   <option key={h} value={h}>{h}</option>
                 ))}
@@ -614,15 +623,15 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
 
       {/* Live Preview - Dynamic Columns */}
       {wizard.previewRows.length > 0 && wizard.headers.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Preview (First {wizard.previewRows.length} Rows × {wizard.headers.length} Columns)
+        <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-subtle bg-subtle/50">
+            <h3 className="text-sm font-bold text-primary">
+              {t('importWizard.mapping.preview', { rows: wizard.previewRows.length, columns: wizard.headers.length })}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+              <thead className="bg-subtle text-xs uppercase text-secondary">
                 <tr>
                   {wizard.headers.map((header, idx) => (
                     <th key={idx} className="px-4 py-2 whitespace-nowrap">
@@ -631,12 +640,12 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <tbody className="divide-y divide-subtle">
                 {wizard.previewRows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="text-slate-600 dark:text-slate-300">
+                  <tr key={rowIdx} className="text-secondary">
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} className="px-4 py-2 font-mono text-xs whitespace-nowrap">
-                        {cell || '—'}
+                        {cell || t('importWizard.common.emptyValue')}
                       </td>
                     ))}
                   </tr>
@@ -655,37 +664,38 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
 // ============================================================================
 
 const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+  const { t } = useTranslation('transactions');
   const { stats, stagedTransactions } = wizard;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard label="Total Rows" value={stats.total} color="blue" />
-        <StatCard label="Valid" value={stats.valid} color="emerald" />
-        <StatCard label="Warnings" value={stats.warnings} color="amber" />
-        <StatCard label="Errors" value={stats.errors} color="rose" />
-        <StatCard label="Duplicates" value={stats.duplicates} color="purple" />
+        <StatCard label={t('importWizard.staging.stats.totalRows')} value={stats.total} color="blue" />
+        <StatCard label={t('importWizard.staging.stats.valid')} value={stats.valid} color="emerald" />
+        <StatCard label={t('importWizard.staging.stats.warnings')} value={stats.warnings} color="amber" />
+        <StatCard label={t('importWizard.staging.stats.errors')} value={stats.errors} color="rose" />
+        <StatCard label={t('importWizard.staging.stats.duplicates')} value={stats.duplicates} color="purple" />
       </div>
 
       {/* Action Bar */}
       <div className="flex flex-wrap gap-4 items-center">
         {stats.duplicates > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-sm">Duplicates:</span>
+            <span className="text-slate-400 text-sm">{t('importWizard.staging.duplicatesLabel')}</span>
             <Button
               size="sm"
               variant="secondary"
               onClick={() => wizard.bulkSetResolution('duplicate', 'skip')}
             >
-              Skip All
+              {t('importWizard.staging.skipAll')}
             </Button>
             <Button
               size="sm"
               variant="secondary"
               onClick={() => wizard.bulkSetResolution('duplicate', 'import')}
             >
-              Import All
+              {t('importWizard.staging.importAll')}
             </Button>
           </div>
         )}
@@ -695,28 +705,28 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
             onClick={wizard.downloadInvalidRows}
             className="flex items-center gap-2 text-amber-400 hover:text-amber-300 text-sm ml-auto"
           >
-            <Download size={16} /> Download Invalid Rows
+            <Download size={16} /> {t('importWizard.staging.downloadInvalid')}
           </button>
         )}
       </div>
 
       {/* Staging Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
+      <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">
         <div className="max-h-[500px] overflow-y-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 sticky top-0 z-10">
+            <thead className="bg-subtle text-xs uppercase text-secondary sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 w-24">Status</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Asset</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3 text-right">Qty</th>
-                <th className="px-4 py-3">Errors</th>
-                <th className="px-4 py-3 w-32 text-right">Actions</th>
+                <th className="px-4 py-3 w-24">{t('importWizard.staging.table.status')}</th>
+                <th className="px-4 py-3">{t('importWizard.staging.table.date')}</th>
+                <th className="px-4 py-3">{t('importWizard.staging.table.type')}</th>
+                <th className="px-4 py-3">{t('importWizard.staging.table.asset')}</th>
+                <th className="px-4 py-3 text-right">{t('importWizard.staging.table.amount')}</th>
+                <th className="px-4 py-3 text-right">{t('importWizard.staging.table.quantity')}</th>
+                <th className="px-4 py-3">{t('importWizard.staging.table.errors')}</th>
+                <th className="px-4 py-3 w-32 text-right">{t('importWizard.staging.table.actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+            <tbody className="divide-y divide-subtle">
               {stagedTransactions.map(tx => (
                 <StagingRow key={tx.id} tx={tx} wizard={wizard} />
               ))}
@@ -730,16 +740,16 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
 
 const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => {
   const colorClasses: Record<string, string> = {
-    blue: 'text-blue-500',
-    emerald: 'text-emerald-500',
-    amber: 'text-amber-500',
-    rose: 'text-rose-500',
+    blue: 'text-brand',
+    emerald: 'text-success',
+    amber: 'text-warning',
+    rose: 'text-error',
     purple: 'text-purple-500'
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm dark:shadow-none">
-      <span className="text-xs font-bold text-slate-500 uppercase">{label}</span>
+    <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
+      <span className="text-xs font-bold text-secondary uppercase">{label}</span>
       <div className={`text-2xl font-bold mt-1 ${colorClasses[color]}`}>{value}</div>
     </div>
   );
@@ -749,19 +759,20 @@ const StagingRow: React.FC<{
   tx: ReturnType<typeof useImportWizard>['stagedTransactions'][0];
   wizard: ReturnType<typeof useImportWizard>;
 }> = ({ tx, wizard }) => {
+  const { t } = useTranslation('transactions');
   const isEditing = wizard.editingRowId === tx.id;
 
   const statusBadge = {
-    valid: { icon: CheckCircle, color: 'text-emerald-500', label: 'Valid' },
-    warning: { icon: AlertTriangle, color: 'text-amber-500', label: 'Warning' },
-    error: { icon: AlertCircle, color: 'text-rose-500', label: 'Error' },
-    duplicate: { icon: AlertTriangle, color: 'text-purple-500', label: 'Duplicate' }
+    valid: { icon: CheckCircle, color: 'text-emerald-500', label: t('importWizard.staging.status.valid') },
+    warning: { icon: AlertTriangle, color: 'text-amber-500', label: t('importWizard.staging.status.warning') },
+    error: { icon: AlertCircle, color: 'text-rose-500', label: t('importWizard.staging.status.error') },
+    duplicate: { icon: AlertTriangle, color: 'text-purple-500', label: t('importWizard.staging.status.duplicate') }
   }[tx.status];
 
   const StatusIcon = statusBadge.icon;
 
   return (
-    <tr className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${tx.resolution === 'skip' ? 'opacity-50' : ''}`}>
+    <tr className={`hover:bg-card-hover ${tx.resolution === 'skip' ? 'opacity-50' : ''}`}>
       <td className="px-4 py-3">
         <span className={`flex items-center gap-1.5 ${statusBadge.color}`}>
           <StatusIcon size={14} />
@@ -777,13 +788,13 @@ const StagingRow: React.FC<{
             className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-28 focus:ring-primary"
           />
         ) : (
-          <span className={`font-mono text-xs ${tx.errors.some(e => e.field === 'transactionDate') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+          <span className={`font-mono text-xs ${tx.errors.some(e => e.field === 'transactionDate') ? 'text-error' : 'text-primary'
             }`}>
-            {tx.parsed.transactionDate?.split('T')[0] || '—'}
+            {tx.parsed.transactionDate?.split('T')[0] || t('importWizard.common.emptyValue')}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{tx.parsed.type || '—'}</td>
+      <td className="px-4 py-3 text-secondary">{tx.parsed.type || t('importWizard.common.emptyValue')}</td>
       <td className="px-4 py-3">
         {isEditing ? (
           <input
@@ -793,9 +804,9 @@ const StagingRow: React.FC<{
             className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-20 focus:ring-primary"
           />
         ) : (
-          <span className={`font-bold ${tx.errors.some(e => e.field === 'assetSymbol') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+          <span className={`font-bold ${tx.errors.some(e => e.field === 'assetSymbol') ? 'text-error' : 'text-primary'
             }`}>
-            {tx.parsed.assetSymbol || '—'}
+            {tx.parsed.assetSymbol || t('importWizard.common.emptyValue')}
           </span>
         )}
       </td>
@@ -808,18 +819,18 @@ const StagingRow: React.FC<{
             className="bg-subtle border border-primary text-primary rounded px-2 py-1 text-xs w-24 text-right focus:ring-primary"
           />
         ) : (
-          <span className={`font-mono ${tx.errors.some(e => e.field === 'amountPrimary') ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+          <span className={`font-mono ${tx.errors.some(e => e.field === 'amountPrimary') ? 'text-error' : 'text-primary'
             }`}>
-            {tx.parsed.amountPrimary || '—'}
+            {tx.parsed.amountPrimary || t('importWizard.common.emptyValue')}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">
-        {tx.parsed.quantity || '—'}
+      <td className="px-4 py-3 text-right font-mono text-secondary">
+        {tx.parsed.quantity || t('importWizard.common.emptyValue')}
       </td>
       <td className="px-4 py-3">
         {tx.errors.length > 0 && (
-          <span className="text-rose-400 text-xs">
+          <span className="text-error text-xs">
             {tx.errors.map(e => e.message).join(', ')}
           </span>
         )}
@@ -829,8 +840,8 @@ const StagingRow: React.FC<{
           {tx.status === 'error' && !isEditing && (
             <button
               onClick={() => wizard.startEditRow(tx.id)}
-              className="p-1.5 text-blue-400 hover:text-blue-300"
-              title="Edit row"
+              className="p-1.5 text-brand hover:text-brand/80"
+              title={t('importWizard.staging.editRow')}
             >
               <Edit3 size={14} />
             </button>
@@ -839,8 +850,8 @@ const StagingRow: React.FC<{
           {isEditing && (
             <button
               onClick={() => wizard.cancelEditRow()}
-              className="p-1.5 text-emerald-400 hover:text-emerald-300"
-              title="Done editing"
+              className="p-1.5 text-success hover:text-success/80"
+              title={t('importWizard.staging.doneEditing')}
             >
               <Check size={14} />
             </button>
@@ -851,19 +862,21 @@ const StagingRow: React.FC<{
               <button
                 onClick={() => wizard.setRowResolution(tx.id, tx.resolution === 'import' ? 'skip' : 'import')}
                 className={`px-2 py-1 rounded text-xs ${tx.resolution === 'import'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-secondary hover:bg-card-hover'
                   }`}
               >
-                {tx.resolution === 'import' ? 'Importing' : 'Skipping'}
+                {tx.resolution === 'import'
+                  ? t('importWizard.staging.importing')
+                  : t('importWizard.staging.skipping')}
               </button>
             </>
           )}
 
           <button
             onClick={() => wizard.removeRow(tx.id)}
-            className="p-1.5 text-slate-500 hover:text-rose-400"
-            title="Remove row"
+            className="p-1.5 text-secondary hover:text-error"
+            title={t('importWizard.staging.removeRow')}
           >
             <Trash2 size={14} />
           </button>
@@ -878,6 +891,7 @@ const StagingRow: React.FC<{
 // ============================================================================
 
 const Step5Complete: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+  const { t } = useTranslation('transactions');
   return (
     <div className="max-w-2xl mx-auto text-center space-y-8">
       <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -885,31 +899,35 @@ const Step5Complete: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = 
       </div>
 
       <div>
-        <h2 className="text-3xl font-bold text-white mb-2">Import Complete!</h2>
-        <p className="text-slate-400">
-          Successfully imported {wizard.completedBatch?.transactionCount || 0} transactions
+        <h2 className="text-3xl font-bold text-primary mb-2">{t('importWizard.complete.title')}</h2>
+        <p className="text-secondary">
+          {t('importWizard.complete.success', { count: wizard.completedBatch?.transactionCount || 0 })}
         </p>
       </div>
 
       {wizard.completedBatch && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 text-left">
-          <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Import Summary</h3>
+        <div className="bg-card border border-subtle rounded-xl p-6 text-left">
+          <h3 className="text-sm font-bold text-secondary uppercase mb-4">{t('importWizard.complete.summaryTitle')}</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-400">Batch ID</dt>
-              <dd className="text-white font-mono">{wizard.completedBatch.id}</dd>
+              <dt className="text-secondary">{t('importWizard.complete.batchId')}</dt>
+              <dd className="text-primary font-mono">{wizard.completedBatch.id}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">Transactions</dt>
-              <dd className="text-white">{wizard.completedBatch.transactionCount}</dd>
+              <dt className="text-secondary">{t('importWizard.complete.transactions')}</dt>
+              <dd className="text-primary">{wizard.completedBatch.transactionCount}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">Mode</dt>
-              <dd className="text-white capitalize">{wizard.completedBatch.importMode}</dd>
+              <dt className="text-secondary">{t('importWizard.complete.mode')}</dt>
+              <dd className="text-primary capitalize">
+                {wizard.completedBatch.importMode === 'history'
+                  ? t('importWizard.mode.history')
+                  : t('importWizard.mode.snapshot')}
+              </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">File</dt>
-              <dd className="text-white">{wizard.completedBatch.fileName}</dd>
+              <dt className="text-secondary">{t('importWizard.complete.file')}</dt>
+              <dd className="text-primary">{wizard.completedBatch.fileName}</dd>
             </div>
           </dl>
         </div>
@@ -917,10 +935,10 @@ const Step5Complete: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = 
 
       <div className="flex justify-center gap-4">
         <Link to="/">
-          <Button size="lg">Go to Dashboard</Button>
+          <Button size="lg">{t('importWizard.complete.goToDashboard')}</Button>
         </Link>
         <Button variant="secondary" size="lg" onClick={wizard.reset}>
-          Import More
+          {t('importWizard.complete.importMore')}
         </Button>
       </div>
     </div>

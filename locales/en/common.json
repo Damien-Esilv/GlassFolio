@@ -10,6 +10,9 @@
         "remove": "Remove",
         "upload": "Upload New",
         "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "continue": "Continue",
         "signIn": "Sign In",
         "signOut": "Sign Out",
         "createAccount": "Create Account",
@@ -29,6 +32,7 @@
     "labels": {
         "search": "Search...",
         "loading": "Loading...",
+        "processing": "Processing...",
         "noDataFound": "No data found",
         "progress": "Progress",
         "target": "Target",
@@ -38,6 +42,7 @@
     },
     "errors": {
         "failedToLogin": "Failed to login",
+        "failedToLoad": "Failed to load data. Please try again.",
         "passwordsDoNotMatch": "New passwords do not match!",
         "required": "This field is required"
     },

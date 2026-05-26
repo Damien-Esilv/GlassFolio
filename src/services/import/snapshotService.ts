@@ -131,12 +131,12 @@ export interface ReconciliationResult {
 // ============================================================================
 
 export const SNAPSHOT_MAPPABLE_FIELDS = [
-    { key: 'assetSymbol', label: 'Asset Symbol', required: false, hint: 'AAPL, BTC (optional for ETFs)' },
-    { key: 'assetIsin', label: 'ISIN', required: false, hint: 'For ETFs/Funds' },
-    { key: 'assetName', label: 'Asset Name', required: false, hint: 'Display name' },
-    { key: 'quantity', label: 'Quantity', required: true, hint: 'Number of shares/units' },
-    { key: 'avgPrice', label: 'Average Price', required: true, hint: 'Cost basis per unit' },
-    { key: 'purchaseDate', label: 'Purchase Date', required: false, hint: 'Defaults to import date' },
+    { key: 'assetSymbol', labelKey: 'snapshotWizard.fields.assetSymbol', required: false, hintKey: 'snapshotWizard.hints.assetSymbol' },
+    { key: 'assetIsin', labelKey: 'snapshotWizard.fields.assetIsin', required: false, hintKey: 'snapshotWizard.hints.assetIsin' },
+    { key: 'assetName', labelKey: 'snapshotWizard.fields.assetName', required: false, hintKey: 'snapshotWizard.hints.assetName' },
+    { key: 'quantity', labelKey: 'snapshotWizard.fields.quantity', required: true, hintKey: 'snapshotWizard.hints.quantity' },
+    { key: 'avgPrice', labelKey: 'snapshotWizard.fields.avgPrice', required: true, hintKey: 'snapshotWizard.hints.avgPrice' },
+    { key: 'purchaseDate', labelKey: 'snapshotWizard.fields.purchaseDate', required: false, hintKey: 'snapshotWizard.hints.purchaseDate' },
 ] as const;
 
 // ============================================================================

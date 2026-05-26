@@ -114,19 +114,19 @@ const Dashboard: React.FC = () => {
               <AreaChart data={summary.chartData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#137fec" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#137fec" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(16, 25, 34, 0.9)', border: 'none', borderRadius: '12px', color: '#fff' }}
-                  itemStyle={{ color: '#fff' }}
-                  cursor={{ stroke: '#137fec', strokeWidth: 1, strokeDasharray: '5 5' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)' }}
+                  itemStyle={{ color: 'var(--text-primary)' }}
+                  cursor={{ stroke: 'var(--color-primary)', strokeWidth: 1, strokeDasharray: '5 5' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#137fec"
+                  stroke="var(--color-primary)"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorValue)"

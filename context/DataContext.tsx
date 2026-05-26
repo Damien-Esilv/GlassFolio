@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Transaction, Position, Alert, FinancialGoal, Achievement, AssetGroup } from '../types';
 import { useAuth } from './AuthContext';
 import { transactionService } from '../src/services/transactionService';
@@ -31,6 +32,7 @@ const DataContext = createContext<DataContextType>({} as DataContextType);
 export const useData = () => useContext(DataContext);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const { user, updateProfile } = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -71,7 +73,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (err) {
       console.error("Failed to fetch data", err);
-      setError("Failed to load data. Please try again.");
+      setError(t('common:errors.failedToLoad'));
     } finally {
       setIsLoading(false);
     }

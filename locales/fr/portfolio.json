@@ -5,11 +5,65 @@
         "equities": "Actions",
         "etfs": "ETF",
         "crypto": "Crypto",
-        "cash": "Liquidités"
+        "cash": "Liquidités",
+        "stocks": "Actions & Fonds"
     },
     "allocation": "Répartition des actifs",
     "topHoldings": "Principales positions",
     "performance": "Performance",
     "noAssets": "Aucun actif dans le portefeuille",
-    "addAssets": "Ajoutez vos premiers actifs pour commencer"
+    "addAssets": "Ajoutez vos premiers actifs pour commencer",
+    "summary": {
+        "assets": "Actifs",
+        "categoriesCount": "{{count}} catégories"
+    },
+    "table": {
+        "category": "Catégorie",
+        "allocation": "Répartition",
+        "value": "Valeur",
+        "pnl": "P&L"
+    },
+    "types": {
+        "equity": "Action",
+        "etf": "ETF",
+        "crypto": "Crypto",
+        "cash": "Liquidités"
+    },
+    "fallback": {
+        "other": "Autre",
+        "mainAccount": "Compte principal"
+    },
+    "emptyState": {
+        "message": "Aucune position trouvée.",
+        "link": "Importez des données",
+        "suffix": "pour commencer."
+    },
+    "positions": {
+        "filters": {
+            "all": "Tout",
+            "equities": "Actions",
+            "etfs": "ETF",
+            "crypto": "Crypto",
+            "cash": "Liquidités",
+            "allSources": "Toutes les sources",
+            "allCurrencies": "Toutes les devises"
+        },
+        "table": {
+            "instrument": "Instrument",
+            "sourceBank": "Source / Banque",
+            "quantity": "Quantité",
+            "avgCost": "Prix moyen",
+            "price": "Prix",
+            "marketValue": "Valeur de marché",
+            "unrealizedPl": "P&L latent",
+            "currency": "Devise"
+        },
+        "badges": {
+            "cash": "LIQUIDITÉS"
+        },
+        "fallback": {
+            "mainAccount": "Compte principal",
+            "noSource": "—"
+        }
+    }
 }

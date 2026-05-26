@@ -24,6 +24,7 @@ import {
     createPositionTransactions
 } from '../src/services/import/snapshotService';
 import { transactionManager, computeFileHash } from '../src/services/core/transactionManager';
+import i18n from '../src/i18n';
 
 // ============================================================================
 // TYPES
@@ -169,7 +170,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
                 });
             }
         } catch (err) {
-            updateState({ error: 'Failed to analyze data', isLoading: false });
+            updateState({ error: i18n.t('transactions:snapshotWizard.errors.failedToAnalyzeData'), isLoading: false });
         }
     }, [state.rawCSVText, state.mappings, state.generateSyntheticTransactionsOption, accountId, updateState]);
 
@@ -295,7 +296,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
             const result = transactionManager.commit();
 
             if (!result.success) {
-                updateState({ error: result.error || 'Commit failed', isLoading: false });
+                updateState({ error: result.error || i18n.t('transactions:snapshotWizard.errors.commitFailed'), isLoading: false });
                 return;
             }
 
@@ -306,7 +307,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
             });
         } catch (err) {
             transactionManager.rollback();
-            updateState({ error: 'Failed to commit import', isLoading: false });
+            updateState({ error: i18n.t('transactions:snapshotWizard.errors.failedToCommitImport'), isLoading: false });
         }
     }, [
         accountId,
