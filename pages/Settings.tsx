@@ -1,16 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages } from 'lucide-react';
+import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences } from '../types';
+import ImportBatchList from '../components/ImportBatchList';
+import { useData } from '../context/DataContext';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile } = useAuth();
+    const { resetToSeedData } = useData();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
 
     // Check URL params for active tab
     useEffect(() => {
@@ -166,7 +171,7 @@ const Settings: React.FC = () => {
                                                 <Upload size={14} className="mr-2" />
                                                 {t('common:buttons.upload')}
                                             </Button>
-                                            <Button size="sm" variant="ghost" className="text-rose-500 hover:text-rose-600 hover:bg-rose-500/10" onClick={() => updateProfile({ avatar: '' })}>
+                                            <Button size="sm" variant="ghost" className="text-error hover:bg-error/10" onClick={() => updateProfile({ avatar: '' })}>
                                                 {t('common:buttons.remove')}
                                             </Button>
                                         </div>
@@ -274,6 +279,13 @@ const Settings: React.FC = () => {
                                             <option value="USD">USD ($)</option>
                                             <option value="EUR">EUR (€)</option>
                                             <option value="GBP">GBP (£)</option>
+                                            <option value="JPY">JPY (¥)</option>
+                                            <option value="CAD">CAD (C$)</option>
+                                            <option value="CHF">CHF (CHF)</option>
+                                            <option value="AUD">AUD (A$)</option>
+                                            <option value="CNY">CNY (¥)</option>
+                                            <option value="HKD">HKD (HK$)</option>
+                                            <option value="SGD">SGD (S$)</option>
                                         </select>
                                     </div>
 
@@ -354,6 +366,49 @@ const Settings: React.FC = () => {
                                             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${prefData.notifications ? 'left-7' : 'left-1'}`}></div>
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Import History & Rollback Section */}
+                            <div className={cardStyle}>
+                                <ImportBatchList compact limit={5} showTitle />
+                            </div>
+
+                            {/* Reset Demo Data */}
+                            <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500">
+                                            <RotateCcw size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">Réinitialiser les données de démo</p>
+                                            <p className="text-xs text-tertiary mt-0.5">Efface toutes les données locales et restaure les données de démo initiales.</p>
+                                        </div>
+                                    </div>
+                                    {!showResetConfirm ? (
+                                        <Button variant="danger" size="sm" onClick={() => setShowResetConfirm(true)}>
+                                            Réinitialiser
+                                        </Button>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-rose-500 font-medium">Confirmer ?</span>
+                                            <Button variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>Annuler</Button>
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                isLoading={isResetting}
+                                                onClick={async () => {
+                                                    setIsResetting(true);
+                                                    await resetToSeedData();
+                                                    setIsResetting(false);
+                                                    setShowResetConfirm(false);
+                                                }}
+                                            >
+                                                Oui, réinitialiser
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

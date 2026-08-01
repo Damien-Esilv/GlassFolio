@@ -82,9 +82,16 @@ Le coffre s'appelle `brain`. Les notes GlassFolio sont dans le sous-dossier `Gla
 | `GlassFolio/05-Sessions-IA/` | Logs de sessions (écriture après PR majeure) | Pour retrouver des décisions passées |
 | `GlassFolio/06-Summaries/` | Codemaps pages/components/services | Alternative rapide à la lecture de code |
 
-### Protocole maintenance documentaire
+### Protocole maintenance documentaire & Notion MCP
 
-- **Après une PR majeure (> 3 fichiers)** : créer une note `Session-YYYY-MM-DD-[sujet].md` dans `05-Sessions-IA/`.
+- **Après une session de dev / PR majeure (> 3 fichiers)** : 
+  1. Créer une note `Session-YYYY-MM-DD-[sujet].md` dans Obsidian `GlassFolio/05-Sessions-IA/`.
+  2. **Mise à jour autonome Notion (via le serveur MCP `notion`)** :
+     - **Grosses fonctionnalités / Refactorings majeurs non répertoriés** : Créer automatiquement une nouvelle tâche dans la base `Tâches` (avec ID `TGLA-xxx`, Epic adéquat, Sprint actif, type `Fonctionnalité` ou `Architecture`, et statut `En cours` ou `Fait`).
+     - **Micro-ajustements / Retouches UI (ex: bouton reload, ajustement de marge, fix de style)** : Ne **PAS** créer de nouvelles tâches dans le tableau `Tâches`. Les journaliser directement dans la base **`Database - Bugs`** (type/groupe `Amélioration / Retouche UI`) pour ne pas polluer le tableau des tâches principales.
+     - **Mise à jour des statuts existants (`Tâches`)** : Passer les tâches impactées à `En cours` ou `Fait`.
+     - **Sprints (`Sprints`)** : Si toutes les tâches du sprint actif sont achevées, clôturer le sprint (`Terminé ?` = `true`, `Sprint actif` = `false`) et passer le sprint suivant en `Sprint actif` = `true`.
+     - **Bugs (`Database - Bugs`)** : Passer les bugs et retouches corrigés durant la session au statut `Corrigé`.
 - **Nouvelle feature structurante** : créer/mettre à jour `FEAT-[KEY]-[nom].md` dans `02-Features/`.
 - **Choix architectural** : créer un `ADR-[date]-[titre].md` dans `03-Decisions/`.
 - **Changement API d'un service** : mettre à jour le codemap correspondant dans `06-Summaries/`.

@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import { FinancialGoal, Achievement, LinkedAsset, AssetGroup } from '../types';
 import { Home, Plane, Car, Shield, Wallet, PlusCircle, Pin, Trash2, Edit2, X, Zap, Link as LinkIcon, Target, Trophy, Lock, Medal, BarChart3, Star, CheckCircle, Settings, ChevronLeft, Plus, ArrowUpRight, Save } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
+import AchievementBadge from '../components/AchievementBadge';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { formatCurrency } from '../utils/currency';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
-    blue: 'var(--color-primary)',
-    indigo: 'var(--color-info)',
-    emerald: 'var(--color-success)',
-    orange: 'var(--color-warning)',
-    rose: 'var(--color-error)'
+    blue: '#3b82f6',
+    indigo: '#6366f1',
+    emerald: '#10b981',
+    orange: '#f97316',
+    rose: '#f43f5e'
 };
 
 const Progress: React.FC = () => {
     const { t } = useTranslation();
     const { goals, positions, achievements, assetGroups, saveGoal, deleteGoal, toggleGoalPin, addAssetGroup, updateAssetGroup, deleteAssetGroup } = useData();
     const { user } = useAuth();
+    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
+    const currency = user?.preferences?.currency || 'USD';
     const [activeTab, setActiveTab] = useState<'goals' | 'achievements'>('goals');
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -35,6 +40,15 @@ const Progress: React.FC = () => {
 
     // --- ACHIEVEMENT MODAL STATE ---
     const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+
+    const handleCloseAchievementModal = () => {
+        setSelectedAchievement(null);
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete('openId');
+            return newParams;
+        });
+    };
 
     // Handle URL Params for Tabs and Deep Linking
     useEffect(() => {
@@ -51,8 +65,6 @@ const Progress: React.FC = () => {
             const target = achievements.find(a => a.id === openId);
             if (target) {
                 setSelectedAchievement(target);
-                // Clear the param so refreshing doesn't re-open it indefinitely if we navigate away
-                // But usually we keep it for sharing. For now, let's leave it.
             }
         }
 
@@ -145,147 +157,11 @@ const Progress: React.FC = () => {
 
         updateAssetGroup(groupId, { symbols: newSymbols });
     };
-
-    // --- HELPERS ---
-
-    const GoalCard: React.FC<{ goal: FinancialGoal }> = ({ goal }) => {
-        const Icon = ICON_MAP[goal.iconType] || Wallet;
-        const safeCurrent = goal.currentAmount || 0;
-        const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
-
-        let colorClass = 'bg-primary';
-        if (goal.color === 'emerald') colorClass = 'bg-accent-green';
-        if (goal.color === 'rose') colorClass = 'bg-accent-red';
-        if (goal.color === 'orange') colorClass = 'bg-orange-500';
-        if (goal.color === 'indigo') colorClass = 'bg-indigo-500';
-
-        return (
-            <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-subtle hover:border-border transition-all">
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button onClick={() => toggleGoalPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-tertiary'}`}>
-                        <Pin size={16} fill={goal.isPinned ? "currentColor" : "none"} />
-                    </button>
-                    <button onClick={() => handleEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
-                        <Edit2 size={16} />
-                    </button>
-                    <button onClick={() => deleteGoal(goal.id)} className="p-2 rounded-full hover:bg-rose-500/10 text-rose-500">
-                        <Trash2 size={16} />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-4 mb-4">
-                    <div className={`p-3 rounded-xl bg-opacity-10 ${goal.color === 'emerald' ? 'bg-success/10 text-success' :
-                        goal.color === 'rose' ? 'bg-error/10 text-error' :
-                            goal.color === 'orange' ? 'bg-orange-500/10 text-orange-500' :
-                                goal.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
-                                    'bg-blue-500/10 text-blue-500'
-                        }`}>
-                        <Icon size={24} />
-                    </div>
-                    <div className="pr-24">
-                        <h3 className="text-lg font-bold text-primary truncate" title={goal.title}>{goal.title}</h3>
-                        {goal.method === 'dynamic' && (
-                            <div className="flex items-center gap-1 text-[10px] font-bold text-accent-green mt-0.5">
-                                <Zap size={10} fill="currentColor" />
-                                <span>AUTO-TRACKING</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm font-medium">
-                        <span className="text-secondary">Progress</span>
-                        <span className="text-primary">{progress.toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
-                        <div className={`h-full ${colorClass} transition-all duration-1000 relative overflow-hidden`} style={{ width: `${progress}%` }}></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-tertiary font-mono">
-                        <span>${safeCurrent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                        <span>Target: ${goal.targetAmount.toLocaleString()}</span>
-                    </div>
-                </div>
-
-                {goal.method === 'dynamic' && goal.linkedAssets && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-subtle">
-                        {goal.linkedAssets.map(link => (
-                            <span key={link.id} className="px-2 py-1 rounded text-[10px] font-bold bg-subtle text-secondary border border-subtle flex items-center gap-1">
-                                <LinkIcon size={8} /> {link.percentage}% {link.name}
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const AchievementBadge: React.FC<{ ach: Achievement }> = ({ ach }) => {
-        // Determine next level
-        const nextLevelData = ach.levels.find(l => l.level === ach.currentLevel + 1);
-        const currentLevelData = ach.levels.find(l => l.level === ach.currentLevel);
-
-        let progressPercent = 0;
-
-        if (nextLevelData) {
-            // We are between currentLevel (floor) and nextLevel (ceiling)
-            // For Level 0, floor is 0.
-            const prevTarget = currentLevelData ? currentLevelData.targetValue : 0;
-            const nextTarget = nextLevelData.targetValue;
-            const currentVal = ach.currentValue || 0;
-
-            // Calculate relative progress between levels
-            // e.g. Level 1 (100) -> Level 2 (500). Current 250.
-            // Progress = (250 - 100) / (500 - 100) = 150/400 = 37.5%
-
-            const range = nextTarget - prevTarget;
-            const valueInLevel = Math.max(0, currentVal - prevTarget);
-            progressPercent = Math.min((valueInLevel / range) * 100, 100);
-
-            // If we are at level 0, prevTarget is undefined/0, so math works: (val - 0) / (target - 0)
-        } else {
-            // Max level reached
-            progressPercent = 100;
-        }
-
-        const Icon = ach.iconType === 'rocket' ? Trophy :
-            ach.iconType === 'diamond' ? Wallet :
-                ach.iconType === 'chart' ? BarChart3 :
-                    ach.iconType === 'trophy' ? Trophy :
-                        ach.iconType === 'star' ? ArrowUpRight : Star;
-
-        let colorClass = 'text-secondary bg-subtle';
-        let progressColor = 'bg-brand/50';
-
-        if (ach.unlocked) {
-            if (ach.color === 'indigo') { colorClass = 'text-indigo-500 bg-indigo-500/10'; progressColor = 'bg-indigo-500'; }
-            if (ach.color === 'blue') { colorClass = 'text-blue-500 bg-blue-500/10'; progressColor = 'bg-blue-500'; }
-            if (ach.color === 'emerald') { colorClass = 'text-accent-green bg-accent-green/10'; progressColor = 'bg-accent-green'; }
-            if (ach.color === 'orange') { colorClass = 'text-orange-500 bg-orange-500/10'; progressColor = 'bg-orange-500'; }
-        }
-
-        return (
-            <button
-                onClick={() => setSelectedAchievement(ach)}
-                className={`relative flex flex-col items-center p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full
-            ${ach.unlocked ? 'bg-card border-brand/20 hover:border-brand/50' : 'bg-subtle border-transparent opacity-60 hover:opacity-100'}
-        `}>
-                {/* Removed top-right absolute icon as requested */}
-
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${colorClass}`}>
-                    <Icon size={24} />
-                </div>
-
-                <h3 className="font-bold text-primary mb-1">{ach.title}</h3>
-                <p className="text-xs text-tertiary mb-4 text-center">Level {ach.currentLevel}</p>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-1000 ${progressColor}`} style={{ width: `${progressPercent}%` }}></div>
-                </div>
-            </button>
-        )
-    }
+    const sortedGoals = [...goals].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return 0;
+    });
 
     return (
         <div className="space-y-8 pb-12">
@@ -313,10 +189,13 @@ const Progress: React.FC = () => {
                         </Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {goals.map(goal => (
+                        {sortedGoals.map(goal => (
                             <GoalCard
                                 key={goal.id}
                                 goal={goal}
+                                onEdit={handleEdit}
+                                onDelete={deleteGoal}
+                                onPin={toggleGoalPin}
                             />
                         ))}
                     </div>
@@ -326,20 +205,25 @@ const Progress: React.FC = () => {
             {/* --- ACHIEVEMENTS VIEW --- */}
             {activeTab === 'achievements' && (
                 <div className="animate-fade-in grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {achievements.map(ach => <AchievementBadge key={ach.id} ach={ach} />)}
+                    {achievements.map(ach => (
+                        <AchievementBadge
+                            key={ach.id}
+                            achievement={ach}
+                            onClick={() => setSelectedAchievement(ach)}
+                        />
+                    ))}
                 </div>
             )}
 
             {/* --- GOAL MODAL (Styled like Screenshot) --- */}
-            {isModalOpen && editingGoal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="w-full max-w-xl bg-card rounded-2xl shadow-2xl border border-subtle flex flex-col max-h-[90vh]">
+            {isModalOpen && editingGoal && createPortal(
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setIsModalOpen(false)}>
+                    <div className="w-full max-w-xl bg-card rounded-2xl shadow-2xl border border-subtle flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
                         {/* Header */}
                         <div className="p-6 border-b border-subtle flex justify-between items-center">
                             <h2 className="text-lg font-bold text-primary flex items-center gap-2">
                                 <Target size={18} className="text-brand" /> Set New Target
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-secondary hover:text-primary"><X size={20} /></button>
                         </div>
 
                         {/* Body */}
@@ -372,119 +256,119 @@ const Progress: React.FC = () => {
                                             return (
                                                 <button
                                                     key={key}
-                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as keyof typeof ICON_MAP })}
-                                                    className={`p-2.5 rounded-lg border transition-all ${isSelected ? 'bg-brand text-white border-brand' : 'bg-subtle border-subtle text-secondary hover:text-primary'}`}
+                                                    type="button"
+                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as any })}
+                                                    className={`p-2.5 rounded-lg border transition-all ${isSelected ? 'bg-brand/10 border-brand text-brand' : 'border-subtle text-secondary hover:bg-subtle'}`}
                                                 >
                                                     <Icon size={18} />
                                                 </button>
-                                            )
+                                            );
                                         })}
                                     </div>
                                 </div>
+
                                 <div>
                                     <p className="text-xs font-bold text-secondary mb-2 uppercase">COLOR</p>
                                     <div className="flex gap-2">
-                                        {['blue', 'indigo', 'emerald', 'orange', 'rose'].map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => setEditingGoal({ ...editingGoal, color })}
-                                                className={`w-10 h-10 rounded-lg transition-all ${editingGoal.color === color ? 'ring-2 ring-primary scale-110' : 'opacity-60 hover:opacity-100'}`}
-                                                style={{ backgroundColor: GOAL_COLOR_TOKENS[color] ?? 'var(--color-primary)' }}
-                                            />
-                                        ))}
+                                        {Object.keys(GOAL_COLOR_TOKENS).map((c) => {
+                                            const isSelected = editingGoal.color === c;
+                                            const hex = GOAL_COLOR_TOKENS[c];
+                                            return (
+                                                <button
+                                                    key={c}
+                                                    type="button"
+                                                    onClick={() => setEditingGoal({ ...editingGoal, color: c })}
+                                                    style={{ backgroundColor: hex }}
+                                                    className={`w-8 h-8 rounded-lg transition-transform ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-110' : 'opacity-80 hover:opacity-100'}`}
+                                                />
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Tracking Method Container (Blue Border like screenshot) */}
-                            <div className="border border-brand/30 rounded-xl bg-brand/5 p-4">
-                                <p className="text-xs font-bold text-secondary mb-3 uppercase">TRACKING METHOD</p>
-                                <div className="flex gap-4 mb-4">
+                            {/* Method Selector */}
+                            <div className="border border-subtle rounded-xl p-4 space-y-4 bg-subtle/30">
+                                <p className="text-xs font-bold text-secondary uppercase">TRACKING METHOD</p>
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
+                                        type="button"
                                         onClick={() => setEditingGoal({ ...editingGoal, method: 'dynamic' })}
-                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'dynamic' ? 'bg-subtle border-brand text-brand' : 'border-transparent text-secondary hover:text-primary'}`}
+                                        className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'dynamic' ? 'bg-card border-brand text-brand shadow-sm' : 'border-subtle text-secondary hover:bg-subtle'}`}
                                     >
-                                        <Zap size={16} /> Auto-Track Assets
+                                        <Zap size={14} /> Auto-Track Assets
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={() => setEditingGoal({ ...editingGoal, method: 'manual' })}
-                                        className={`flex-1 py-3 rounded-lg border font-medium text-sm flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'manual' ? 'bg-subtle border-brand text-brand' : 'border-transparent text-secondary hover:text-primary'}`}
+                                        className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'manual' ? 'bg-card border-brand text-brand shadow-sm' : 'border-subtle text-secondary hover:bg-subtle'}`}
                                     >
-                                        <Save size={16} /> Fixed Manual Amount
+                                        <Target size={14} /> Fixed Manual Amount
                                     </button>
                                 </div>
 
-                                {/* Dynamic Logic */}
                                 {editingGoal.method === 'dynamic' && (
-                                    <div>
-                                        {/* If editing a group, show Group Edit UI, otherwise show Tabs */}
+                                    <div className="space-y-3 pt-2">
+                                        <div className="flex border-b border-subtle">
+                                            <button onClick={() => setLinkTab('asset')} className={`px-4 py-1.5 text-xs font-bold border-b-2 transition-all ${linkTab === 'asset' ? 'border-brand text-brand' : 'border-transparent text-secondary'}`}>ASSETS</button>
+                                            <button onClick={() => setLinkTab('class')} className={`px-4 py-1.5 text-xs font-bold border-b-2 transition-all ${linkTab === 'class' ? 'border-brand text-brand' : 'border-transparent text-secondary'}`}>CLASSES</button>
+                                            <button onClick={() => setLinkTab('group')} className={`px-4 py-1.5 text-xs font-bold border-b-2 transition-all ${linkTab === 'group' ? 'border-brand text-brand' : 'border-transparent text-secondary'}`}>GROUPS</button>
+                                        </div>
+
                                         {editingGroupId ? (
-                                            <div className="animate-in fade-in slide-in-from-right-4">
-                                                <div className="flex items-center gap-2 mb-4 border-b border-subtle pb-2">
-                                                    <button onClick={() => setEditingGroupId(null)} className="p-1 hover:bg-card-hover rounded"><ChevronLeft size={16} className="text-primary" /></button>
-                                                    <p className="text-sm font-bold text-primary">Edit "{assetGroups.find(g => g.id === editingGroupId)?.name}"</p>
+                                            /* --- EDIT GROUP MEMBERS INLINE --- */
+                                            <div className="p-3 bg-card rounded-lg border border-subtle space-y-3">
+                                                <div className="flex justify-between items-center pb-2 border-b border-subtle">
+                                                    <span className="text-xs font-bold text-primary">Edit Group Assets</span>
+                                                    <button onClick={() => setEditingGroupId(null)} className="text-xs text-brand hover:underline font-bold">Done</button>
                                                 </div>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
-                                                    {positions.map(pos => {
+                                                <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
+                                                    {Array.from(new Set(positions.map(p => p.symbol))).map(symbol => {
                                                         const group = assetGroups.find(g => g.id === editingGroupId);
-                                                        const isIncluded = group?.symbols.includes(pos.symbol);
+                                                        const isIncluded = group?.symbols.includes(symbol);
                                                         return (
-                                                            <div key={pos.id} onClick={() => toggleAssetInGroup(editingGroupId, pos.symbol)} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${isIncluded ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isIncluded ? 'bg-brand border-brand' : 'border-subtle'}`}>
-                                                                        {isIncluded && <CheckCircle size={12} className="text-white" />}
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-sm font-bold text-primary">{pos.instrument}</p>
-                                                                        <p className="text-xs text-secondary flex gap-2">
-                                                                            {pos.type === 'Cash' && pos.accountName ? <span>{pos.accountName} ({pos.currency})</span> : <span>{pos.symbol}</span>}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                                <span className="text-xs text-secondary">{pos.type}</span>
-                                                            </div>
-                                                        )
+                                                            <label key={symbol} className="flex items-center justify-between p-1.5 hover:bg-subtle rounded text-xs cursor-pointer">
+                                                                <span className="font-bold text-primary">{symbol}</span>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isIncluded}
+                                                                    onChange={() => toggleAssetInGroup(editingGroupId as string, symbol as string)}
+                                                                    className="rounded border-subtle text-brand"
+                                                                />
+                                                            </label>
+                                                        );
                                                     })}
                                                 </div>
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="flex gap-4 border-b border-subtle mb-4">
-                                                    <button onClick={() => setLinkTab('asset')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'asset' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Assets</button>
-                                                    <button onClick={() => setLinkTab('class')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'class' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Classes</button>
-                                                    <button onClick={() => setLinkTab('group')} className={`pb-2 text-xs font-bold uppercase ${linkTab === 'group' ? 'text-primary border-b-2 border-brand' : 'text-secondary'}`}>Groups</button>
-                                                </div>
-
-                                                {/* List of Selectable Items */}
-                                                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                                                {/* LIST OF ASSETS / CLASSES / GROUPS */}
+                                                <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                                                     {linkTab === 'asset' && positions.map(pos => {
-                                                        const link = editingGoal.linkedAssets?.find(l => l.id === pos.symbol && l.type === 'asset');
+                                                        const link = editingGoal.linkedAssets?.find(l => l.id === pos.id && l.type === 'asset');
                                                         return (
-                                                            <div key={pos.id} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
+                                                            <div key={pos.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                 <div className="flex items-center gap-3">
-                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('asset', pos.symbol, pos.instrument)} className="rounded border-subtle bg-subtle text-brand focus:ring-offset-0" />
+                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('asset', pos.id, pos.symbol)} className="rounded border-subtle bg-subtle text-brand" />
                                                                     <div>
-                                                                        <p className="text-sm font-bold text-primary">{pos.instrument}</p>
-                                                                        <p className="text-xs text-secondary flex gap-2">
-                                                                            {pos.type === 'Cash' && pos.accountName ? <span>{pos.bankName} - {pos.accountName}</span> : <span>{pos.symbol}</span>}
-                                                                            <span>• ${pos.marketValue.toLocaleString()}</span>
-                                                                        </p>
+                                                                        <p className="text-xs font-bold text-primary">{pos.symbol}</p>
+                                                                        <p className="text-[10px] text-secondary">{formatCurrency(pos.marketValue, currency, locale)}</p>
                                                                     </div>
                                                                 </div>
-                                                                {link && <div className="flex items-center gap-2"><span className="text-xs text-secondary">Include:</span><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(pos.symbol, 'asset', parseInt(e.target.value))} className="w-12 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
+                                                                {link && <div className="flex items-center gap-1"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(pos.id, 'asset', parseInt(e.target.value))} className="w-10 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
                                                             </div>
                                                         )
                                                     })}
 
-                                                    {linkTab === 'class' && ['Equity', 'ETF', 'Crypto', 'Cash'].map(cls => {
+                                                    {linkTab === 'class' && Array.from(new Set(positions.map(p => p.type))).map(cls => {
                                                         const link = editingGoal.linkedAssets?.find(l => l.id === cls && l.type === 'class');
                                                         return (
-                                                            <div key={cls} className={`flex items-center justify-between p-3 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
+                                                            <div key={cls} className={`flex items-center justify-between p-2.5 rounded-lg border ${link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'}`}>
                                                                 <div className="flex items-center gap-3">
-                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('class', cls, `All ${cls}`)} className="rounded border-subtle bg-subtle text-brand" />
-                                                                    <p className="text-sm font-bold text-primary">All {cls}</p>
+                                                                    <input type="checkbox" checked={!!link} onChange={() => handleToggleLink('class', cls as string, cls as string)} className="rounded border-subtle bg-subtle text-brand" />
+                                                                    <p className="text-xs font-bold text-primary">{cls}</p>
                                                                 </div>
-                                                                {link && <div className="flex items-center gap-2"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(cls, 'class', parseInt(e.target.value))} className="w-12 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
+                                                                {link && <div className="flex items-center gap-1"><input type="number" value={link.percentage} onChange={(e) => updateLinkPercentage(cls as string, 'class', parseInt(e.target.value))} className="w-10 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" /> <span className="text-xs text-secondary">%</span></div>}
                                                             </div>
                                                         )
                                                     })}
@@ -546,16 +430,23 @@ const Progress: React.FC = () => {
                             </Button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* --- ACHIEVEMENT DETAIL MODAL --- */}
-            {selectedAchievement && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border p-6">
+            {selectedAchievement && createPortal(
+                <div
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+                    onClick={handleCloseAchievementModal}
+                >
+                    <div
+                        className="w-full max-w-md bg-card rounded-2xl shadow-2xl border border-subtle p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-4">
-                                <div className={`p-4 rounded-xl ${selectedAchievement.color === 'indigo' ? 'bg-indigo-500/20 text-indigo-500' : 'bg-blue-500/20 text-blue-500'}`}>
+                                <div className="p-4 rounded-xl bg-brand/10 text-brand">
                                     <Trophy size={32} />
                                 </div>
                                 <div>
@@ -563,31 +454,31 @@ const Progress: React.FC = () => {
                                     <p className="text-secondary text-sm">Level {selectedAchievement.currentLevel}</p>
                                 </div>
                             </div>
-                            {/* Removed X button as requested */}
                         </div>
 
                         <div className="space-y-4 mb-6">
-                            {selectedAchievement.levels.map((lvl) => {
+                            {selectedAchievement.levels?.map((lvl) => {
                                 const isCompleted = selectedAchievement.currentLevel >= lvl.level;
                                 const isCurrent = selectedAchievement.currentLevel + 1 === lvl.level;
                                 return (
-                                    <div key={lvl.level} className={`p-4 rounded-xl border flex justify-between items-center ${isCompleted ? 'bg-success/5 border-success/30' : isCurrent ? 'bg-brand/5 border-brand/50' : 'bg-subtle border-border'}`}>
+                                    <div key={lvl.level} className={`p-4 rounded-xl border flex justify-between items-center ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/30' : isCurrent ? 'bg-brand/10 border-brand/50' : 'bg-subtle border-subtle'}`}>
                                         <div>
-                                            <p className={`text-sm font-bold ${isCompleted ? 'text-success' : isCurrent ? 'text-brand' : 'text-secondary'}`}>Level {lvl.level}</p>
+                                            <p className={`text-sm font-bold ${isCompleted ? 'text-emerald-500' : isCurrent ? 'text-brand' : 'text-secondary'}`}>Level {lvl.level}</p>
                                             <p className={`${isCompleted || isCurrent ? 'text-secondary' : 'text-tertiary'} text-sm`}>{lvl.description}</p>
                                         </div>
                                         <div className="flex flex-col items-end">
                                             <span className="text-xs font-bold text-secondary">+{lvl.xpReward} XP</span>
-                                            {isCompleted && <CheckCircle size={16} className="text-success mt-1" />}
+                                            {isCompleted && <CheckCircle size={16} className="text-emerald-500 mt-1" />}
                                         </div>
                                     </div>
                                 )
                             })}
                         </div>
 
-                        <Button onClick={() => setSelectedAchievement(null)} className="w-full" variant="secondary">Close</Button>
+                        <Button onClick={handleCloseAchievementModal} className="w-full" variant="secondary">Close</Button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

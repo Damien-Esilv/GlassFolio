@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import SnapshotWizard from '../components/SnapshotWizard';
+import CashImportWizard from '../components/CashImportWizard';
 import {
   Upload,
   FileText,
@@ -72,10 +73,10 @@ const ImportWizard: React.FC = () => {
 
       {/* Error Banner */}
       {wizard.error && !showSnapshotWizard && (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
-          <AlertCircle className="text-rose-500" size={20} />
-          <span className="text-rose-400">{wizard.error}</span>
-          <button onClick={() => wizard.goToStep(wizard.step)} className="ml-auto text-slate-400 hover:text-white">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+          <AlertCircle className="text-error" size={20} />
+          <span className="text-error">{wizard.error}</span>
+          <button onClick={() => wizard.goToStep(wizard.step)} className="ml-auto text-tertiary hover:text-primary">
             <X size={16} />
           </button>
         </div>
@@ -93,8 +94,16 @@ const ImportWizard: React.FC = () => {
 
       {/* Step Content */}
       <div className="min-h-[450px] animate-fade-in">
-        {/* Snapshot Wizard takes over from step 3 */}
-        {showSnapshotWizard ? (
+        {/* Route to Cash Import Wizard if Cash Account is selected */}
+        {wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 ? (
+          <CashImportWizard
+            accountId={wizard.selectedAccountId!}
+            accountName={wizard.selectedAccount.name}
+            defaultCurrency={wizard.selectedAccount.defaultCurrency}
+            onBack={wizard.goBack}
+            onComplete={wizard.reset}
+          />
+        ) : showSnapshotWizard ? (
           <SnapshotWizard
             accountId={wizard.selectedAccountId!}
             accountName={wizard.selectedAccount?.name || t('importWizard.fallbackAccount')}
@@ -193,7 +202,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   const [newInstituteName, setNewInstituteName] = useState('');
   const [newInstituteType, setNewInstituteType] = useState<InstituteType>('bank');
   const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<AccountType>('checking');
+  const [newAccountType, setNewAccountType] = useState<AccountType>('investment');
   const [newAccountCurrency, setNewAccountCurrency] = useState('EUR');
 
   const handleCreateInstitute = async () => {
@@ -331,12 +340,9 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                   onChange={e => setNewAccountType(e.target.value as AccountType)}
                   className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
                 >
-                  <option value="checking">{t('importWizard.context.accountTypes.checking')}</option>
-                  <option value="savings">{t('importWizard.context.accountTypes.savings')}</option>
                   <option value="investment">{t('importWizard.context.accountTypes.investment')}</option>
                   <option value="crypto_spot">{t('importWizard.context.accountTypes.cryptoSpot')}</option>
-                  <option value="crypto_earn">{t('importWizard.context.accountTypes.cryptoEarn')}</option>
-                  <option value="other">{t('importWizard.context.accountTypes.other')}</option>
+                  <option value="checking">{t('importWizard.context.accountTypes.checking')}</option>
                 </select>
                 <select
                   value={newAccountCurrency}
@@ -363,11 +369,11 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
         </div>
       )}
 
-      {/* Import Mode */}
-      {wizard.selectedAccountId && (
+      {/* Import Mode - Only for non-cash accounts (checking type skips this) */}
+      {wizard.selectedAccountId && wizard.selectedAccount?.type !== 'checking' && (
         <div className="bg-card border border-subtle rounded-xl p-6 animate-fade-in shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <FileText className="text-purple-500" size={24} />
+            <FileText className="text-brand" size={24} />
             <h2 className="text-lg font-bold text-primary">{t('importWizard.mode.title')}</h2>
           </div>
 
@@ -375,11 +381,11 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
             <button
               onClick={() => wizard.setImportMode('history')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'history'
-                ? 'border-purple-500 bg-purple-500/10'
+                ? 'border-brand bg-brand/10'
                 : 'border-subtle bg-subtle hover:bg-card-hover'
                 }`}
             >
-              <History className={wizard.importMode === 'history' ? 'text-purple-500' : 'text-secondary'} size={28} />
+              <History className={wizard.importMode === 'history' ? 'text-brand' : 'text-secondary'} size={28} />
               <div className="mt-3">
                 <span className="text-primary font-bold">{t('importWizard.mode.historyTitle')}</span>
                 <p className="text-secondary text-sm mt-1">{t('importWizard.mode.historyDescription')}</p>
@@ -389,11 +395,11 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
             <button
               onClick={() => wizard.setImportMode('snapshot')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${wizard.importMode === 'snapshot'
-                ? 'border-purple-500 bg-purple-500/10'
+                ? 'border-brand bg-brand/10'
                 : 'border-subtle bg-subtle hover:bg-card-hover'
                 }`}
             >
-              <Camera className={wizard.importMode === 'snapshot' ? 'text-purple-500' : 'text-secondary'} size={28} />
+              <Camera className={wizard.importMode === 'snapshot' ? 'text-brand' : 'text-secondary'} size={28} />
               <div className="mt-3">
                 <span className="text-primary font-bold">{t('importWizard.mode.snapshotTitle')}</span>
                 <p className="text-secondary text-sm mt-1">{t('importWizard.mode.snapshotDescription')}</p>
@@ -402,7 +408,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
           </div>
 
           {wizard.importMode === 'snapshot' && (
-            <div className="mt-4 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-amber-400 text-sm">
+            <div className="mt-4 bg-warning/10 border border-warning/20 rounded-lg p-3 text-warning text-sm">
               <AlertTriangle size={16} className="inline mr-2" />
               {t('importWizard.mode.snapshotWarning')}
             </div>
@@ -418,6 +424,21 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               {t('common:buttons.continue')} <ArrowRight size={18} className="ml-2" />
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Cash Accounts - Continue button directly under selection */}
+      {wizard.selectedAccountId && wizard.selectedAccount?.type === 'checking' && (
+        <div className="mt-6 flex justify-end">
+          <Button
+            size="lg"
+            onClick={() => {
+              wizard.setImportMode('snapshot'); // default internally to snapshot
+              wizard.goToStep(2);
+            }}
+          >
+            {t('common:buttons.continue')} <ArrowRight size={18} className="ml-2" />
+          </Button>
         </div>
       )}
     </div>
@@ -455,7 +476,7 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
             {wizard.selectedInstitute?.name} → {wizard.selectedAccount?.name}
           </div>
         </div>
-        <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
+        <div className="px-3 py-1 rounded-full bg-brand/20 text-brand text-sm font-medium">
           {wizard.importMode === 'history'
             ? t('importWizard.mode.history')
             : t('importWizard.mode.snapshot')}
@@ -525,13 +546,15 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
     return Object.values(wizard.mappings).some(mapping => mapping === header);
   };
 
+  const isIdentifierMapped = !!(wizard.mappings.assetSymbol || wizard.mappings.assetIsin);
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Detected Preset Banner */}
       {wizard.detectedPreset && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
-          <CheckCircle className="text-emerald-500" size={20} />
-          <span className="text-emerald-400">
+        <div className="bg-success/10 border border-success/20 rounded-xl p-4 flex items-center gap-3">
+          <CheckCircle className="text-success" size={20} />
+          <span className="text-success">
             {t('importWizard.mapping.detectedFormat', { preset: wizard.detectedPreset })}
           </span>
         </div>
@@ -548,8 +571,8 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
                 <span
                   key={idx}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isMapped
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                    : 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                    ? 'bg-success/20 text-success border border-success/30'
+                    : 'bg-error/20 text-error border border-error/30'
                     }`}
                 >
                   {header}
@@ -558,9 +581,9 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
             })}
           </div>
           <p className="text-xs text-secondary mt-3">
-            <span className="inline-block w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/30 mr-1"></span>
+            <span className="inline-block w-3 h-3 rounded bg-success/20 border border-success/30 mr-1"></span>
             {t('importWizard.mapping.mapped')}
-            <span className="inline-block w-3 h-3 rounded bg-rose-500/20 border border-rose-500/30 ml-4 mr-1"></span>
+            <span className="inline-block w-3 h-3 rounded bg-error/20 border border-error/30 ml-4 mr-1"></span>
             {t('importWizard.mapping.notMapped')}
           </p>
         </div>
@@ -596,28 +619,46 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
           )}
         </div>
 
+        {/* Missing Identifier Warning */}
+        {wizard.selectedAccount?.type === 'investment' && !isIdentifierMapped && (
+          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4 mb-6 flex items-center gap-3 animate-pulse">
+            <AlertTriangle className="text-warning" size={20} />
+            <span className="text-warning text-sm font-medium">
+              {t('importWizard.mapping.identifierRequiredWarning')}
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {MAPPABLE_FIELDS.map(field => (
-            <div key={field.key} className="space-y-1">
-              <label className="flex items-center gap-1 text-xs font-bold text-secondary uppercase">
-                {t(field.labelKey)}
-                {field.required && <span className="text-rose-500">*</span>}
-              </label>
-              <select
-                value={wizard.mappings[field.key as keyof typeof wizard.mappings] as string || ''}
-                onChange={e => wizard.setMapping(field.key as keyof typeof wizard.mappings, e.target.value || undefined)}
-                className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]
-                  ? 'border-rose-500/50'
-                  : 'border-subtle'
-                  } focus:ring-primary focus:border-primary`}
-              >
-                <option value="">{t('importWizard.mapping.notMappedOption')}</option>
-                {wizard.headers.map(h => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
-            </div>
-          ))}
+          {MAPPABLE_FIELDS.map(field => {
+            const isIdentifierField = field.key === 'assetSymbol' || field.key === 'assetIsin';
+            const isInvestment = wizard.selectedAccount?.type === 'investment';
+
+            return (
+              <div key={field.key} className="space-y-1">
+                <label className="flex items-center gap-1 text-xs font-bold text-secondary uppercase">
+                  {t(field.labelKey)}
+                  {field.required && <span className="text-error">*</span>}
+                  {isInvestment && isIdentifierField && !isIdentifierMapped && (
+                    <span className="text-error" title="One of Symbol or ISIN is required">*</span>
+                  )}
+                </label>
+                <select
+                  value={wizard.mappings[field.key as keyof typeof wizard.mappings] as string || ''}
+                  onChange={e => wizard.setMapping(field.key as keyof typeof wizard.mappings, e.target.value || undefined)}
+                  className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${(field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]) || (isInvestment && isIdentifierField && !isIdentifierMapped)
+                    ? 'border-error/50'
+                    : 'border-subtle'
+                    } focus:ring-primary focus:border-primary`}
+                >
+                  <option value="">{t('importWizard.mapping.notMappedOption')}</option>
+                  {wizard.headers.map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -682,7 +723,7 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
       <div className="flex flex-wrap gap-4 items-center">
         {stats.duplicates > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-sm">{t('importWizard.staging.duplicatesLabel')}</span>
+            <span className="text-tertiary text-sm">{t('importWizard.staging.duplicatesLabel')}</span>
             <Button
               size="sm"
               variant="secondary"
@@ -703,7 +744,7 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
         {stats.errors > 0 && (
           <button
             onClick={wizard.downloadInvalidRows}
-            className="flex items-center gap-2 text-amber-400 hover:text-amber-300 text-sm ml-auto"
+            className="flex items-center gap-2 text-warning hover:text-warning/80 text-sm ml-auto"
           >
             <Download size={16} /> {t('importWizard.staging.downloadInvalid')}
           </button>
@@ -894,8 +935,8 @@ const Step5Complete: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = 
   const { t } = useTranslation('transactions');
   return (
     <div className="max-w-2xl mx-auto text-center space-y-8">
-      <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-        <CheckCircle className="text-emerald-500" size={48} />
+      <div className="w-20 h-20 bg-success/20 rounded-full flex items-center justify-center mx-auto">
+        <CheckCircle className="text-success" size={48} />
       </div>
 
       <div>

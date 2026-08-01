@@ -6,10 +6,14 @@ import { Search, Download } from 'lucide-react';
 import { portfolioService } from '../src/services/portfolioService';
 import { Position } from '../types';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 const Positions: React.FC = () => {
   const { t } = useTranslation('portfolio');
   const { positions: globalPositions } = useData();
+  const { user } = useAuth();
+  const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
 
   const [filterType, setFilterType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,7 +159,7 @@ const Positions: React.FC = () => {
                       <span className="font-bold">{pos.instrument}</span>
                       <div className="flex gap-2 text-xs text-secondary">
                         <span>{pos.symbol}</span>
-                          {pos.type === 'Cash' && <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded">{t('positions.badges.cash')}</span>}
+                          {pos.type === 'Cash' && <span className="bg-success/10 text-success px-1 rounded">{t('positions.badges.cash')}</span>}
                       </div>
                     </div>
                   </td>
@@ -170,11 +174,11 @@ const Positions: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right">${pos.avgCost.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right text-tertiary">${pos.lastPrice.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right font-semibold text-primary">${pos.marketValue.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(pos.avgCost, pos.currency, locale)}</td>
+                  <td className="px-6 py-4 text-right text-tertiary">{formatCurrency(pos.lastPrice, pos.currency, locale)}</td>
+                  <td className="px-6 py-4 text-right font-semibold text-primary">{formatCurrency(pos.marketValue, pos.currency, locale)}</td>
                   <td className={`px-6 py-4 text-right font-medium ${pos.unrealizedPL >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                    {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPL.toLocaleString()} <span className="text-xs opacity-70">({pos.unrealizedPLPercent.toFixed(2)}%)</span>
+                    {pos.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(pos.unrealizedPL, pos.currency, locale)} <span className="text-xs opacity-70">({pos.unrealizedPLPercent.toFixed(2)}%)</span>
                   </td>
                   <td className="px-6 py-4 text-center">{pos.currency}</td>
                 </tr>

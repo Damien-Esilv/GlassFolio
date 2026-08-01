@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useSnapshotImport, SNAPSHOT_MAPPABLE_FIELDS } from '../hooks/useSnapshotImport';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency, CURRENCY_SYMBOLS } from '../utils/currency';
 
 // ============================================================================
 // MAIN SNAPSHOT WIZARD
@@ -54,7 +56,7 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
         <div className="space-y-8">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <Camera className="text-purple-500" size={28} />
+                <Camera className="text-brand" size={28} />
                 <div>
                     <h2 className="text-xl font-bold text-primary">{t('snapshotWizard.title')}</h2>
                     <p className="text-secondary text-sm">{t('snapshotWizard.subtitle', { accountName })}</p>
@@ -63,9 +65,9 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
 
             {/* Error Banner */}
             {snapshot.error && (
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center gap-3">
-                    <AlertCircle className="text-rose-500" size={20} />
-                    <span className="text-rose-400">{snapshot.error}</span>
+                <div className="bg-error/10 border border-error/20 rounded-xl p-4 flex items-center gap-3">
+                    <AlertCircle className="text-error" size={20} />
+                    <span className="text-error">{snapshot.error}</span>
                 </div>
             )}
 
@@ -73,7 +75,7 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
             {snapshot.isLoading && (
                 <div className="fixed inset-0 bg-canvas/80 z-50 flex items-center justify-center backdrop-blur-sm">
                     <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                         <p className="text-primary">{t('common:labels.processing')}</p>
                     </div>
                 </div>
@@ -150,8 +152,8 @@ const SnapshotMappingStep: React.FC<{
     return (
         <div className="space-y-6">
             {/* Info Banner */}
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                <h3 className="text-purple-500 font-medium mb-2">{t('snapshotWizard.mapping.title')}</h3>
+            <div className="bg-brand/10 border border-brand/20 rounded-xl p-4">
+                <h3 className="text-brand font-medium mb-2">{t('snapshotWizard.mapping.title')}</h3>
                 <p className="text-secondary text-sm">
                     {t('snapshotWizard.mapping.description')}
                 </p>
@@ -166,13 +168,13 @@ const SnapshotMappingStep: React.FC<{
                         <div key={field.key} className="space-y-1">
                             <label className="flex items-center gap-1 text-xs font-bold text-secondary uppercase">
                                 {t(field.labelKey)}
-                                {field.required && <span className="text-rose-500">*</span>}
+                                {field.required && <span className="text-error">*</span>}
                             </label>
                             <select
                                 value={snapshot.mappings[field.key as keyof typeof snapshot.mappings] as string || ''}
                                 onChange={e => snapshot.setMapping(field.key as keyof typeof snapshot.mappings, e.target.value || undefined)}
                                 className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${field.required && !snapshot.mappings[field.key as keyof typeof snapshot.mappings]
-                                    ? 'border-rose-500/50'
+                                    ? 'border-error/50'
                                     : 'border-subtle'
                                     }`}
                             >
@@ -190,7 +192,7 @@ const SnapshotMappingStep: React.FC<{
 
                 {/* Validation message */}
                 {!snapshot.isValidMapping && (
-                    <p className="text-amber-400 text-sm mt-4">
+                    <p className="text-warning text-sm mt-4">
                         <AlertTriangle size={14} className="inline mr-1" />
                         {t('snapshotWizard.mapping.validation')}
                     </p>
@@ -252,13 +254,13 @@ const SnapshotOptionsStep: React.FC<{
                     <button
                         onClick={() => snapshot.setGenerateSyntheticTransactions(false)}
                         className={`w-full p-6 rounded-xl border-2 transition-all text-left ${!snapshot.generateSyntheticTransactions
-                            ? 'border-purple-500 bg-purple-500/10'
+                            ? 'border-brand bg-brand/10'
                             : 'border-subtle bg-subtle hover:bg-card-hover'
                             }`}
                     >
                         <div className="flex items-start gap-4">
-                            <div className={`p-2 rounded-lg ${!snapshot.generateSyntheticTransactions ? 'bg-purple-500/20' : 'bg-card-hover'}`}>
-                                <Camera className={!snapshot.generateSyntheticTransactions ? 'text-purple-500' : 'text-secondary'} size={24} />
+                            <div className={`p-2 rounded-lg ${!snapshot.generateSyntheticTransactions ? 'bg-brand/20' : 'bg-card-hover'}`}>
+                                <Camera className={!snapshot.generateSyntheticTransactions ? 'text-brand' : 'text-secondary'} size={24} />
                             </div>
                             <div>
                                 <h4 className="text-primary font-bold">{t('snapshotWizard.options.snapshotOnlyTitle')}</h4>
@@ -300,7 +302,7 @@ const SnapshotOptionsStep: React.FC<{
 
             {/* Info */}
             {snapshot.generateSyntheticTransactions && (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-blue-400 text-sm">
+                <div className="bg-info/10 border border-info/20 rounded-xl p-4 text-info text-sm">
                     <AlertTriangle size={16} className="inline mr-2" />
                     {t('snapshotWizard.options.syntheticInfo')}
                 </div>
@@ -317,6 +319,9 @@ const SnapshotPreviewStep: React.FC<{
     snapshot: ReturnType<typeof useSnapshotImport>;
 }> = ({ snapshot }) => {
     const { t } = useTranslation('transactions');
+    const { user } = useAuth();
+    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
+    const currency = user?.preferences?.currency || 'USD';
 
     // Snapshot Only Mode - just show positions
     if (!snapshot.generateSyntheticTransactions) {
@@ -375,8 +380,8 @@ const SnapshotPreviewStep: React.FC<{
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right font-mono text-primary">{qty.toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-right font-mono text-secondary">${price.toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-right font-mono font-bold text-primary">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="px-4 py-3 text-right font-mono text-secondary">{formatCurrency(price, currency, locale)}</td>
+                                        <td className="px-4 py-3 text-right font-mono font-bold text-primary">{formatCurrency(total, currency, locale)}</td>
                                     </tr>
                                 );
                             })}
@@ -436,7 +441,7 @@ const SnapshotPreviewStep: React.FC<{
 
             {/* Validation message */}
             {stats.requiresInput > 0 && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-amber-400 text-sm">
+                <div className="bg-warning/10 border border-warning/20 rounded-xl p-4 text-warning text-sm">
                     <AlertTriangle size={16} className="inline mr-2" />
                     {t('snapshotWizard.reconciliation.requiresInput', { count: stats.requiresInput })}
                 </div>
@@ -472,6 +477,10 @@ const ReconciliationRow: React.FC<{
     onUpdatePrice: (assetKey: string, price: string) => void;
 }> = ({ diff, onUpdatePrice }) => {
     const { t } = useTranslation('transactions');
+    const { user } = useAuth();
+    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
+    const currency = user?.preferences?.currency || 'USD';
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
     const [editPrice, setEditPrice] = useState(diff.userProvidedSellPrice || '');
     const [isEditing, setIsEditing] = useState(diff.requiresUserInput);
 
@@ -526,11 +535,11 @@ const ReconciliationRow: React.FC<{
             </td>
             <td className="px-4 py-3 text-right">
                 {diff.syntheticType === 'BUY' && (
-                    <span className="font-mono text-primary">${parseFloat(diff.syntheticPrice).toFixed(2)}</span>
+                    <span className="font-mono text-primary">{formatCurrency(parseFloat(diff.syntheticPrice), currency, locale)}</span>
                 )}
                 {diff.syntheticType === 'SELL' && isEditing && (
                     <div className="flex items-center gap-2 justify-end">
-                        <span className="text-secondary">$</span>
+                        <span className="text-secondary">{symbol}</span>
                         <input
                             type="number"
                             value={editPrice}
@@ -549,7 +558,7 @@ const ReconciliationRow: React.FC<{
                         className="font-mono text-primary hover:text-brand transition-colors cursor-pointer group flex items-center gap-1 justify-end"
                         title={t('snapshotWizard.reconciliation.clickToEdit')}
                     >
-                        ${parseFloat(diff.syntheticPrice).toFixed(2)}
+                        {formatCurrency(parseFloat(diff.syntheticPrice), currency, locale)}
                         <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-brand transition-opacity" />
                     </button>
                 )}

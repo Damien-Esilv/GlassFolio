@@ -21,6 +21,8 @@ export interface Position {
   id: string;
   instrument: string;
   symbol: string;
+  isin?: string;
+  exchange?: string;
   quantity: number;
   avgCost: number;
   lastPrice: number;

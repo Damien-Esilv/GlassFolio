@@ -6,10 +6,14 @@ import { Download, Search } from 'lucide-react';
 import { transactionService } from '../src/services/transactionService';
 import { Transaction } from '../types';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 const Transactions: React.FC = () => {
-   const { t } = useTranslation();
-   const { transactions: globalTransactions } = useData();
+    const { t } = useTranslation();
+    const { transactions: globalTransactions } = useData();
+    const { user } = useAuth();
+    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
 
    const [searchQuery, setSearchQuery] = useState('');
    const [dateRange, setDateRange] = useState('All');
@@ -218,9 +222,9 @@ const Transactions: React.FC = () => {
                            <td className="px-6 py-4 text-primary font-medium">{tx.instrument}</td>
                            <td className="px-6 py-4 font-mono text-xs">{tx.symbol}</td>
                            <td className="px-6 py-4 text-right font-mono">{tx.amount.toLocaleString()}</td>
-                           <td className="px-6 py-4 text-right font-mono">${tx.price.toFixed(2)}</td>
-                           <td className="px-6 py-4 text-right font-mono text-primary">${tx.total.toLocaleString()}</td>
-                           <td className="px-6 py-4 text-right font-mono text-tertiary">{tx.fees.toFixed(2)}</td>
+                           <td className="px-6 py-4 text-right font-mono">{formatCurrency(tx.price, tx.currency, locale)}</td>
+                           <td className="px-6 py-4 text-right font-mono text-primary">{formatCurrency(tx.total, tx.currency, locale)}</td>
+                           <td className="px-6 py-4 text-right font-mono text-tertiary">{formatCurrency(tx.fees, tx.currency, locale)}</td>
                            <td className="px-6 py-4 font-mono">{tx.currency}</td>
                         </tr>
                      ))}

@@ -68,7 +68,7 @@ export interface ImportWizardState {
 export const MAPPABLE_FIELDS = [
     { key: 'transactionDate', labelKey: 'importWizard.fields.transactionDate', required: true },
     { key: 'amountPrimary', labelKey: 'importWizard.fields.amountPrimary', required: true },
-    { key: 'assetSymbol', labelKey: 'importWizard.fields.assetSymbol', required: true },
+    { key: 'assetSymbol', labelKey: 'importWizard.fields.assetSymbol', required: false },
     { key: 'type', labelKey: 'importWizard.fields.type', required: false },
     { key: 'rawLabel', labelKey: 'importWizard.fields.rawLabel', required: false },
     { key: 'priceUnit', labelKey: 'importWizard.fields.priceUnit', required: false },
@@ -77,9 +77,6 @@ export const MAPPABLE_FIELDS = [
     { key: 'feeAmount', labelKey: 'importWizard.fields.feeAmount', required: false },
     { key: 'feeAsset', labelKey: 'importWizard.fields.feeAsset', required: false },
     { key: 'taxAmount', labelKey: 'importWizard.fields.taxAmount', required: false },
-    { key: 'valueDate', labelKey: 'importWizard.fields.valueDate', required: false },
-    { key: 'balanceAfter', labelKey: 'importWizard.fields.balanceAfter', required: false },
-    { key: 'externalId', labelKey: 'importWizard.fields.externalId', required: false },
 ] as const;
 
 // ============================================================================
@@ -419,8 +416,8 @@ export const useImportWizard = () => {
                 if (!updated.parsed.amountPrimary) {
                     errors.push({ field: 'amountPrimary', message: i18n.t('transactions:importWizard.validation.amountRequired'), severity: 'error' as const });
                 }
-                if (!updated.parsed.assetSymbol) {
-                    errors.push({ field: 'assetSymbol', message: i18n.t('transactions:importWizard.validation.assetSymbolRequired'), severity: 'error' as const });
+                if (!updated.parsed.assetSymbol && !updated.parsed.assetIsin) {
+                    errors.push({ field: 'assetSymbol', message: i18n.t('transactions:importWizard.validation.identifierRequired'), severity: 'error' as const });
                 }
 
                 const hasErrors = errors.some(e => e.severity === 'error');
@@ -546,7 +543,8 @@ export const useImportWizard = () => {
 
     const isValidMappingForAnalysis = useMemo(() => {
         const m = state.mappings;
-        return !!(m.transactionDate && m.amountPrimary && m.assetSymbol);
+        const hasIdentifier = !!(m.assetSymbol || m.assetIsin);
+        return !!(m.transactionDate && m.amountPrimary && hasIdentifier);
     }, [state.mappings]);
 
     const canProceedFromStep1 = useMemo(() =>

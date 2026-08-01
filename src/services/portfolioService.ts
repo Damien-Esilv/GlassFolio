@@ -1,6 +1,7 @@
-import { Position, PositionFilter, Transaction } from '../../types';
+import { Position, PositionFilter, Transaction, DashboardSummary } from '../../types';
 import { db, delay } from './db';
 import { convertToLegacyTransaction } from './transformers';
+import { refreshPositionPrices } from './priceService';
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
@@ -9,7 +10,14 @@ export const portfolioService = {
 
         if (filter) {
             positions = positions.filter(p => {
-                const matchesType = !filter.type || filter.type === 'All' || p.type === filter.type;
+                const normType = p.type?.toLowerCase();
+                const filterNorm = filter.type?.toLowerCase();
+                const matchesType = !filter.type || filter.type === 'All' ||
+                    p.type === filter.type ||
+                    (filterNorm === 'equities' && (normType === 'equity' || normType === 'equities' || normType === 'stock')) ||
+                    (filterNorm === 'etfs' && (normType === 'etf' || normType === 'etfs')) ||
+                    (filterNorm === 'crypto' && normType === 'crypto') ||
+                    (filterNorm === 'cash' && normType === 'cash');
                 const matchesSource = !filter.source || filter.source === 'All' || p.source === filter.source;
                 const matchesCurrency = !filter.currency || filter.currency === 'All' || p.currency === filter.currency;
                 const matchesSearch = !filter.searchQuery ||
@@ -19,76 +27,84 @@ export const portfolioService = {
                 return matchesType && matchesSource && matchesCurrency && matchesSearch;
             });
         }
+
+        // Refresh live prices from Yahoo Finance (15-min cache)
+        positions = await refreshPositionPrices(positions);
+
+        // Persist updated positions so all other services (goals, achievements) observe live prices
+        db.savePositions(positions);
+
         return positions;
     },
 
-    recalculatePositions: async (newTxs?: Transaction[]): Promise<void> => {
-        // Fetch ALL transactions to rebuild positions accurately
+    recalculatePositions: async (): Promise<void> => {
         const unifiedTxs = db.getUnifiedTransactions();
         const accounts = db.getAccounts();
         const institutes = db.getInstitutes();
+        const instruments = db.getInstruments();
 
-        const convertedTxs = unifiedTxs.map(tx =>
-            convertToLegacyTransaction(tx, accounts, institutes)
-        );
-        const legacyTxs = db.getTransactions();
-        const allTxs = [...convertedTxs, ...legacyTxs];
+        // Sort unified transactions by date ascending
+        const sortedTxs = [...unifiedTxs].sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
 
-        // Sort by date ascending
-        allTxs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        // Group by Symbol + Source to keep positions separated by broker
+        // Group by (accountId, instrumentId) for proper isolation
         const positionMap = new Map<string, Position>();
 
-        for (const tx of allTxs) {
-            if (!tx.symbol) continue;
+        for (const tx of sortedTxs) {
+            if (!tx.instrumentId) continue;
 
-            const key = `${tx.symbol}-${tx.source || 'Unknown'}`;
+            const instrument = instruments.find(i => i.id === tx.instrumentId);
+            const account = accounts.find(a => a.id === tx.accountId);
+            const institute = account ? institutes.find(i => i.id === account.instituteId) : null;
+            const symbol = instrument?.marketIdentifier.symbol || tx.assetSymbol;
+
+            const key = `${tx.accountId}:${tx.instrumentId}`;
 
             let pos = positionMap.get(key);
             if (!pos) {
                 pos = {
                     id: `pos-${Math.random().toString(36).substr(2, 9)}`,
-                    instrument: tx.instrument,
-                    symbol: tx.symbol,
+                    instrument: instrument?.name || tx.label || symbol,
+                    symbol,
                     quantity: 0,
                     avgCost: 0,
-                    lastPrice: tx.price,
+                    lastPrice: parseFloat(tx.priceUnit || '0'),
                     marketValue: 0,
                     unrealizedPL: 0,
                     unrealizedPLPercent: 0,
-                    currency: tx.currency,
-                    type: tx.assetClass || 'Equity',
-                    source: tx.source,
-                    bankName: tx.bankName,
-                    accountName: tx.accountName
+                    currency: instrument?.denominationCurrency || tx.feeAsset || 'EUR',
+                    type: instrument ? (instrument.type === 'stock' ? 'Equity' : instrument.type === 'crypto' ? 'Crypto' : instrument.type === 'cash' ? 'Cash' : 'ETF') : 'Equity',
+                    source: institute?.name || 'Unknown',
+                    bankName: institute?.name,
+                    accountName: account?.name
                 };
             }
 
-            // Simple FIFO/AvgCost Logic
-            // Note: This matches the simplified logic common in MVP portfolio trackers
-            if (tx.type === 'Buy' || tx.type === 'Deposit') {
+            const qty = parseFloat(tx.quantity || tx.amountPrimary || '0');
+            const price = parseFloat(tx.priceUnit || '0');
+            const fees = parseFloat(tx.feeAmount || '0');
+            const amount = parseFloat(tx.amountPrimary || '0');
+
+            if (tx.type === 'BUY' || tx.type === 'DEPOSIT' || tx.type === 'BALANCE_ADJUSTMENT' || tx.type === 'SNAPSHOT_ADJUSTMENT') {
                 // Cost basis includes fees (CRITICAL for French PRU calculation)
-                const totalCost = (pos.quantity * pos.avgCost) + (tx.amount * tx.price) + (tx.fees || 0);
-                const totalQty = pos.quantity + tx.amount;
+                const totalCost = (pos.quantity * pos.avgCost) + Math.abs(amount) + fees;
+                const totalQty = pos.quantity + qty;
 
                 if (totalQty > 0) {
                     pos.avgCost = totalCost / totalQty;
                 }
                 pos.quantity = totalQty;
-                pos.lastPrice = tx.price > 0 ? tx.price : pos.lastPrice;
-            } else if (tx.type === 'Sell' || tx.type === 'Withdrawal') {
-                pos.quantity -= tx.amount;
-                if (tx.price > 0) pos.lastPrice = tx.price;
+                if (price > 0) pos.lastPrice = price;
+            } else if (tx.type === 'SELL' || tx.type === 'WITHDRAW') {
+                pos.quantity -= Math.abs(qty);
+                if (price > 0) pos.lastPrice = price;
             }
 
-            // Ensure quantity doesn't go negative (data errors)
             if (pos.quantity < 0) pos.quantity = 0;
 
             positionMap.set(key, pos);
         }
 
-        // Filter zero positions
+        // Filter out zero positions
         const positions = Array.from(positionMap.values())
             .filter(p => p.quantity > 0.000001);
 
@@ -104,22 +120,112 @@ export const portfolioService = {
         db.savePositions(positions);
     },
 
-    getDashboardSummary: async (): Promise<any> => {
-        await delay(300);
-        const positions = db.getPositions();
+    getDashboardSummary: async (timeRange: string = '1Y'): Promise<DashboardSummary> => {
+        await delay(150);
+        let positions = db.getPositions();
+
+        // Ensure live prices are fetched and saved
+        positions = await refreshPositionPrices(positions);
+        db.savePositions(positions);
 
         const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
         const totalInvested = positions.reduce((sum, p) => sum + (p.quantity * p.avgCost), 0);
         const totalPL = totalValue - totalInvested;
         const plPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
-        // Generate dummy chart data based on current value mostly being steady with some volatility
-        // In a real app, this would come from historical snapshots
-        const chartData = Array.from({ length: 30 }, (_, i) => {
-            const volatility = (Math.random() - 0.5) * 0.02; // 2% daily volatility
+        const transactions = db.getTransactions();
+        const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const now = new Date();
+        let startDate = new Date();
+        let pointCount = 30;
+        let labelFormat: 'hour' | 'day' | 'month' = 'day';
+
+        switch (timeRange) {
+            case '1D':
+                startDate.setDate(now.getDate() - 1);
+                pointCount = 24;
+                labelFormat = 'hour';
+                break;
+            case '1W':
+                startDate.setDate(now.getDate() - 7);
+                pointCount = 7;
+                labelFormat = 'day';
+                break;
+            case '1M':
+                startDate.setDate(now.getDate() - 30);
+                pointCount = 30;
+                labelFormat = 'day';
+                break;
+            case '1Y':
+                startDate.setFullYear(now.getFullYear() - 1);
+                pointCount = 12;
+                labelFormat = 'month';
+                break;
+            case 'ALL':
+                if (sortedTxs.length > 0) {
+                    startDate = new Date(sortedTxs[0].date);
+                } else {
+                    startDate.setFullYear(now.getFullYear() - 2);
+                }
+                pointCount = 24;
+                labelFormat = 'month';
+                break;
+            default:
+                startDate.setFullYear(now.getFullYear() - 1);
+                pointCount = 12;
+                labelFormat = 'month';
+                break;
+        }
+
+        const timeStepMs = Math.max(1000, (now.getTime() - startDate.getTime()) / Math.max(1, pointCount - 1));
+        const totalDuration = Math.max(1, now.getTime() - startDate.getTime());
+
+        const chartData = Array.from({ length: pointCount }, (_, i) => {
+            const pointTime = new Date(startDate.getTime() + i * timeStepMs);
+            const txsUpToDate = sortedTxs.filter(tx => new Date(tx.date) <= pointTime);
+
+            let pointValue = 0;
+            const assetQuantities: Record<string, number> = {};
+
+            for (const tx of txsUpToDate) {
+                if (tx.type === 'Buy' || tx.type === 'Deposit') {
+                    assetQuantities[tx.symbol] = (assetQuantities[tx.symbol] || 0) + tx.amount;
+                } else if (tx.type === 'Sell' || tx.type === 'Withdrawal') {
+                    assetQuantities[tx.symbol] = Math.max(0, (assetQuantities[tx.symbol] || 0) - tx.amount);
+                }
+            }
+
+            const progress = (pointTime.getTime() - startDate.getTime()) / totalDuration;
+
+            Object.entries(assetQuantities).forEach(([symbol, qty]) => {
+                const pos = positions.find(p => p.symbol === symbol);
+                const currentPrice = pos ? pos.lastPrice : 1;
+                const costPrice = pos ? pos.avgCost : 1;
+
+                // Deterministic subtle market curve so performance looks realistic like Finary
+                const noise = 1 + (Math.sin(i * 1.3 + symbol.length) * 0.012);
+                const simulatedHistoricalPrice = (costPrice + (currentPrice - costPrice) * progress) * noise;
+
+                pointValue += qty * simulatedHistoricalPrice;
+            });
+
+            if (txsUpToDate.length === 0) {
+                pointValue = 0;
+            }
+
+            let name = '';
+            if (labelFormat === 'hour') {
+                name = pointTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (labelFormat === 'month') {
+                name = pointTime.toLocaleDateString([], { month: 'short', year: '2-digit' });
+            } else {
+                name = pointTime.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+
             return {
-                name: `Day ${i + 1}`,
-                value: totalValue * (1 - (0.01 * (30 - i))) * (1 + volatility)
+                name,
+                value: Math.round(pointValue * 100) / 100
             };
         });
 

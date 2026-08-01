@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, PieChart, ArrowRightLeft, FileText, Settings, Search, Bell, Hexagon,
-  LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X
+  LayoutDashboard, PieChart, ArrowRightLeft, FileText, Settings, Bell, Hexagon,
+  LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,10 +17,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { lastPriceRefresh, forceRefreshPrices } = useData();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPortfolioExpanded, setIsPortfolioExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  /** Human-readable freshness label */
+  const freshnessLabel = useMemo(() => {
+    if (!lastPriceRefresh) return null;
+    const diffMs = Date.now() - new Date(lastPriceRefresh).getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return t('dashboard:priceJustRefreshed');
+    if (diffMin < 60) return t('dashboard:priceRefreshedMinutesAgo', { count: diffMin });
+    return t('dashboard:priceRefreshedOverAnHourAgo');
+  }, [lastPriceRefresh, t]);
+
+  const handleForceRefresh = useCallback(async () => {
+    setIsRefreshingPrices(true);
+    await forceRefreshPrices();
+    setIsRefreshingPrices(false);
+  }, [forceRefreshPrices]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -170,28 +189,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div className="md:pl-60">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 h-16 bg-card border-b border-subtle flex items-center justify-between px-4 md:px-6">
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 hover:bg-subtle rounded-lg md:hidden"
-          >
-            <Menu size={20} />
-          </button>
+        <header className="sticky top-0 z-40 h-16 bg-card border-b border-subtle flex items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-3">
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 hover:bg-subtle rounded-lg md:hidden"
+            >
+              <Menu size={20} />
+            </button>
 
-          {/* Search */}
-          <div className="hidden md:flex relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={16} />
-            <input
-              type="text"
-              placeholder={t('common:labels.search')}
-              className="bg-subtle border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary w-64 transition-all placeholder-tertiary"
-            />
+            {/* Live Price Freshness Badge & Refresh Button (Left Side) */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-subtle/60 border border-subtle text-xs">
+              {freshnessLabel ? (
+                <span className="flex items-center gap-1.5 text-tertiary text-[11px] font-medium">
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <span className="hidden sm:inline">{freshnessLabel}</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-tertiary text-[11px] font-medium">
+                  <span className="w-2 h-2 rounded-full bg-warning" />
+                  <span className="hidden sm:inline">{t('dashboard:priceOffline')}</span>
+                </span>
+              )}
+              <button
+                onClick={handleForceRefresh}
+                disabled={isRefreshingPrices}
+                className="p-1 text-secondary hover:text-brand transition-colors disabled:opacity-50"
+                title={t('dashboard:forceRefreshPrices')}
+                aria-label={t('dashboard:forceRefreshPrices')}
+              >
+                <RefreshCw size={13} className={isRefreshingPrices ? 'animate-spin' : ''} />
+              </button>
+            </div>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-3">
-            <button className="p-2 text-secondary hover:bg-subtle rounded-full transition-colors relative">
+          {/* Right Actions (Notifications + Profile) */}
+          <div className="flex items-center gap-3 ml-auto">
+            <button className="p-2 text-secondary hover:bg-subtle rounded-full transition-colors relative" aria-label="Notifications">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-card"></span>
             </button>
@@ -204,7 +239,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               >
                 <div className="hidden sm:block text-right">
                   <p className="text-xs font-bold">{user.name}</p>
-                  <p className="text-[10px] text-secondary">{t('navigation:header.proPlan')}</p>
                 </div>
                 <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-card overflow-hidden">
                   {user.avatar ? (

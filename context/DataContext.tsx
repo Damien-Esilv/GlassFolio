@@ -7,6 +7,8 @@ import { portfolioService } from '../src/services/portfolioService';
 import { alertService } from '../src/services/alertService';
 import { goalService } from '../src/services/goalService';
 import { achievementService } from '../src/services/achievementService';
+import { getLastPriceFetchTime, clearPriceCache } from '../src/services/priceService';
+import { db } from '../src/services/db';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -17,6 +19,10 @@ interface DataContextType {
   assetGroups: AssetGroup[];
   isLoading: boolean;
   error: string | null;
+  /** ISO timestamp of the last successful Yahoo Finance price fetch. Null if never fetched or offline. */
+  lastPriceRefresh: string | null;
+  /** Force-clears the price cache and triggers a fresh fetch on next data load. */
+  forceRefreshPrices: () => Promise<void>;
   addTransactions: (newTxs: Transaction[]) => Promise<void>;
   saveGoal: (goal: FinancialGoal | Omit<FinancialGoal, 'id'>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
@@ -25,6 +31,8 @@ interface DataContextType {
   updateAssetGroup: (id: string, updates: Partial<AssetGroup>) => Promise<void>;
   deleteAssetGroup: (id: string) => Promise<void>;
   refreshData: () => Promise<void>;
+  /** Reset all data to seed/mock data (wipes localStorage). Useful for dev/testing. */
+  resetToSeedData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -41,6 +49,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [assetGroups, setAssetGroups] = useState<AssetGroup[]>([]);
+  const [lastPriceRefresh, setLastPriceRefresh] = useState<string | null>(() => getLastPriceFetchTime());
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<null | string>(null);
@@ -71,6 +80,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfile({ xp: newXp, level: newLevel });
       }
 
+      // Update price refresh timestamp after positions are loaded
+      setLastPriceRefresh(getLastPriceFetchTime());
+
     } catch (err) {
       console.error("Failed to fetch data", err);
       setError(t('common:errors.failedToLoad'));
@@ -78,6 +90,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, [user, updateProfile]);
+
+  /** Clears the 15-min price cache and triggers a full data reload with fresh prices. */
+  const forceRefreshPrices = useCallback(async () => {
+    clearPriceCache();
+    await refreshData();
+  }, [refreshData]);
 
   // Initial Load
   useEffect(() => {
@@ -133,6 +151,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshData();
   }, [refreshData]);
 
+  const resetToSeedData = useCallback(async () => {
+    db.resetToInitialData();
+    await refreshData();
+  }, [refreshData]);
+
   return (
     <DataContext.Provider value={{
       transactions,
@@ -143,6 +166,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       assetGroups,
       isLoading,
       error,
+      lastPriceRefresh,
+      forceRefreshPrices,
       addTransactions,
       saveGoal,
       deleteGoal,
@@ -150,7 +175,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addAssetGroup,
       updateAssetGroup,
       deleteAssetGroup,
-      refreshData
+      refreshData,
+      resetToSeedData
     }}>
       {children}
     </DataContext.Provider>

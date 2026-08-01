@@ -8,7 +8,10 @@
 import {
     TransactionType,
     ImportMode,
+    InstrumentType,
     VALID_CURRENCIES,
+    VALID_FIAT_CURRENCIES,
+    VALID_CRYPTO_SYMBOLS,
     ISIN_REGEX
 } from '../../types/types.backend';
 
@@ -225,11 +228,13 @@ export function validateAmount(
 }
 
 /**
- * Validate currency
+ * Validate currency — strict ISO 4217 for transaction currencies.
+ * Asset symbols (stock tickers, crypto) are validated separately.
  */
 export function validateCurrency(
     currency: string | undefined,
-    fieldName: string = 'currency'
+    fieldName: string = 'currency',
+    strictISO: boolean = false
 ): FieldError[] {
     const errors: FieldError[] = [];
 
@@ -245,16 +250,28 @@ export function validateCurrency(
 
     const normalized = currency.toUpperCase().trim();
 
-    // Check if it's a known currency (warning only, not error)
-    if (!VALID_CURRENCIES.includes(normalized as typeof VALID_CURRENCIES[number])) {
-        // Check if it looks like a stock ticker (2-5 uppercase letters)
-        if (!/^[A-Z]{1,5}$/.test(normalized) && !/^[A-Z]{2,10}\d*$/.test(normalized)) {
+    if (strictISO) {
+        // Strict mode: must be a valid ISO 4217 fiat currency
+        if (!VALID_FIAT_CURRENCIES.includes(normalized as typeof VALID_FIAT_CURRENCIES[number])) {
             errors.push({
                 field: fieldName,
-                message: `Unknown currency/asset code: ${normalized}`,
-                severity: 'warning',
-                code: 'CURRENCY_UNKNOWN'
+                message: `Currency must be ISO 4217. Got: ${normalized}`,
+                severity: 'error',
+                code: 'CURRENCY_NOT_ISO'
             });
+        }
+    } else {
+        // Permissive mode: accept known currencies and crypto, warn on unknown
+        if (!VALID_CURRENCIES.includes(normalized as typeof VALID_CURRENCIES[number])) {
+            // Check if it looks like a stock ticker (2-5 uppercase letters)
+            if (!/^[A-Z]{1,5}$/.test(normalized) && !/^[A-Z]{2,10}\d*$/.test(normalized)) {
+                errors.push({
+                    field: fieldName,
+                    message: `Unknown currency/asset code: ${normalized}`,
+                    severity: 'warning',
+                    code: 'CURRENCY_UNKNOWN'
+                });
+            }
         }
     }
 
@@ -262,7 +279,7 @@ export function validateCurrency(
 }
 
 /**
- * Validate ISIN code
+ * Validate ISIN code — regex format + Luhn check digit.
  */
 export function validateISIN(
     isin: string | undefined,
@@ -278,12 +295,56 @@ export function validateISIN(
         errors.push({
             field: fieldName,
             message: 'Invalid ISIN format (expected: 2 letters + 9 alphanumeric + 1 check digit)',
+            severity: 'error',
+            code: 'ISIN_FORMAT_INVALID'
+        });
+        return errors;
+    }
+
+    // Luhn check digit validation
+    if (!validateISINCheckDigit(normalized)) {
+        errors.push({
+            field: fieldName,
+            message: `ISIN check digit invalid: ${normalized}`,
             severity: 'warning',
-            code: 'ISIN_INVALID'
+            code: 'ISIN_CHECKDIGIT_INVALID'
         });
     }
 
     return errors;
+}
+
+/**
+ * ISIN Luhn check digit algorithm.
+ * Converts letters to numbers (A=10, B=11, ..., Z=35), concatenates,
+ * then applies Luhn mod-10 on the resulting digit string.
+ */
+function validateISINCheckDigit(isin: string): boolean {
+    // Convert each character to its numeric value
+    let digits = '';
+    for (const char of isin) {
+        if (char >= '0' && char <= '9') {
+            digits += char;
+        } else {
+            // A=10, B=11, ..., Z=35
+            digits += (char.charCodeAt(0) - 55).toString();
+        }
+    }
+
+    // Standard Luhn algorithm on the digit string
+    let sum = 0;
+    let alternate = false;
+    for (let i = digits.length - 1; i >= 0; i--) {
+        let n = parseInt(digits[i], 10);
+        if (alternate) {
+            n *= 2;
+            if (n > 9) n -= 9;
+        }
+        sum += n;
+        alternate = !alternate;
+    }
+
+    return sum % 10 === 0;
 }
 
 /**
@@ -337,6 +398,7 @@ export function validateFees(
 
 /**
  * Validate asset identification (at least symbol or ISIN required)
+ * @deprecated Use validateInstrumentIdentification for type-aware validation
  */
 export function validateAssetIdentification(
     symbol: string | undefined,
@@ -351,6 +413,105 @@ export function validateAssetIdentification(
             severity: 'error',
             code: 'ASSET_ID_REQUIRED'
         });
+    }
+
+    return errors;
+}
+
+/**
+ * Validate instrument identification based on asset type.
+ * Enforces mandatory identifiers per the instrument-centric model:
+ *   stock/etf/fund → ISIN OR (symbol + exchange)
+ *   crypto         → symbol + (exchange OR network OR contractAddress)
+ *   cash           → currencyCode ISO 4217
+ */
+export function validateInstrumentIdentification(
+    symbol: string | undefined,
+    instrumentType: InstrumentType | undefined,
+    opts?: {
+        isin?: string;
+        exchange?: string;
+        network?: string;
+        contractAddress?: string;
+        currencyCode?: string;
+    }
+): FieldError[] {
+    const errors: FieldError[] = [];
+
+    // For actions/etfs/funds, we require symbol OR ISIN
+    const isClassic = ['stock', 'etf', 'fund'].includes(instrumentType || '');
+
+    if (isClassic) {
+        if ((!symbol || symbol.trim() === '') && (!opts?.isin || opts.isin.trim() === '')) {
+            errors.push({
+                field: 'assetSymbol',
+                message: 'Asset Symbol or ISIN Code is required',
+                severity: 'error',
+                code: 'IDENTIFIER_REQUIRED'
+            });
+            return errors;
+        }
+    } else {
+        // For other types, symbol is strictly required
+        if (!symbol || symbol.trim() === '') {
+            errors.push({
+                field: 'assetSymbol',
+                message: 'Asset symbol is required',
+                severity: 'error',
+                code: 'SYMBOL_REQUIRED'
+            });
+            return errors;
+        }
+    }
+
+    // If no type provided, we can only do basic validation
+    if (!instrumentType) {
+        return errors;
+    }
+
+    switch (instrumentType) {
+        case 'stock':
+        case 'etf':
+        case 'fund': {
+            const hasIsin = opts?.isin && ISIN_REGEX.test(opts.isin.toUpperCase());
+            const hasSymbolAndExchange = symbol && opts?.exchange;
+            if (!hasIsin && !hasSymbolAndExchange) {
+                errors.push({
+                    field: 'assetIdentification',
+                    message: `${instrumentType.toUpperCase()} requires ISIN or (symbol + exchange)`,
+                    severity: 'error',
+                    code: 'INSTRUMENT_ID_INSUFFICIENT'
+                });
+            }
+            break;
+        }
+        case 'crypto': {
+            const hasContext = opts?.exchange || opts?.network || opts?.contractAddress;
+            if (!hasContext) {
+                errors.push({
+                    field: 'assetIdentification',
+                    message: 'Crypto requires exchange, network, or contract address',
+                    severity: 'error',
+                    code: 'CRYPTO_CONTEXT_REQUIRED'
+                });
+            }
+            break;
+        }
+        case 'cash': {
+            const code = opts?.currencyCode || symbol;
+            if (!code || !VALID_FIAT_CURRENCIES.includes(
+                code.toUpperCase() as typeof VALID_FIAT_CURRENCIES[number]
+            )) {
+                errors.push({
+                    field: 'assetIdentification',
+                    message: 'Cash instrument requires valid ISO 4217 currency code',
+                    severity: 'error',
+                    code: 'CASH_CURRENCY_INVALID'
+                });
+            }
+            break;
+        }
+        // bond, other — best-effort, no hard errors
     }
 
     return errors;
@@ -372,10 +533,21 @@ export interface RowData {
     feeAmount?: string;
     rawLabel?: string;
     label?: string;
+    /** Instrument type for type-aware validation */
+    instrumentType?: InstrumentType;
+    /** Exchange for instrument identification */
+    exchange?: string;
+    /** Blockchain network for crypto */
+    network?: string;
+    /** Contract address for tokens */
+    contractAddress?: string;
+    /** ISO 4217 currency code for cash */
+    currencyCode?: string;
 }
 
 /**
- * Validate a complete row of data
+ * Validate a complete row of data.
+ * Includes instrument-type-aware identification validation.
  */
 export function validateRow(
     data: RowData,
@@ -389,8 +561,23 @@ export function validateRow(
     // Amount validation
     allErrors.push(...validateAmount(data.amountPrimary));
 
-    // Asset identification
-    allErrors.push(...validateAssetIdentification(data.assetSymbol, data.assetIsin));
+    // Instrument identification (type-aware if available)
+    if (data.instrumentType) {
+        allErrors.push(...validateInstrumentIdentification(
+            data.assetSymbol,
+            data.instrumentType,
+            {
+                isin: data.assetIsin,
+                exchange: data.exchange,
+                network: data.network,
+                contractAddress: data.contractAddress,
+                currencyCode: data.currencyCode
+            }
+        ));
+    } else {
+        // Fallback to basic asset identification
+        allErrors.push(...validateAssetIdentification(data.assetSymbol, data.assetIsin));
+    }
 
     // Currency/Symbol validation
     if (data.assetSymbol) {
@@ -493,6 +680,7 @@ export const validationService = {
     validateISIN,
     validateFees,
     validateAssetIdentification,
+    validateInstrumentIdentification,
     validateRow,
     validateSellQuantity
 };

@@ -17,6 +17,7 @@ import {
 import { db, delay } from '../db';
 import { computeRowHash } from '../core/transactionManager';
 import { parseCSVText, parseDate, parseDecimal } from './importManager';
+import { instrumentService } from '../instrumentService';
 
 // ============================================================================
 // TYPES
@@ -509,6 +510,19 @@ export async function generateReconciliationTransactions(
         const price = parseFloat(diff.syntheticPrice);
         const total = qty * price;
 
+        // Resolve instrument
+        let instrumentId = '';
+        try {
+            const instrument = await instrumentService.findOrCreateInstrument({
+                symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
+                isin: diff.assetIsin,
+                name: diff.displayName
+            });
+            instrumentId = instrument.id;
+        } catch (e) {
+            // ignore
+        }
+
         // Compute row hash for this synthetic transaction
         const rowHash = await computeRowHash(
             defaultDate,
@@ -523,6 +537,7 @@ export async function generateReconciliationTransactions(
             ownerId: userId,
             batchId,
             accountId,
+            instrumentId,
             rowHash,
             sourceOrigin: 'SYNTHETIC' as SourceOrigin,
 
@@ -580,6 +595,19 @@ export async function createPositionTransactions(
         const price = parseFloat(pos.avgPrice);
         const total = qty * price;
 
+        // Resolve instrument
+        let instrumentId = '';
+        try {
+            const instrument = await instrumentService.findOrCreateInstrument({
+                symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
+                isin: pos.assetIsin,
+                name: pos.displayName
+            });
+            instrumentId = instrument.id;
+        } catch (e) {
+            // ignore
+        }
+
         // Compute row hash
         const rowHash = await computeRowHash(
             pos.purchaseDate || defaultDate,
@@ -594,6 +622,7 @@ export async function createPositionTransactions(
             ownerId: userId,
             batchId,
             accountId,
+            instrumentId,
             rowHash,
             sourceOrigin: 'SYNTHETIC' as SourceOrigin,
 

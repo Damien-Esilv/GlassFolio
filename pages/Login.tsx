@@ -22,8 +22,9 @@ const Login: React.FC = () => {
       try {
          await login(email, password);
          navigate('/');
-      } catch (err: any) {
-         setError(err.message || t('auth:login.failedToLogin'));
+      } catch (err: unknown) {
+         const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
+         setError(message);
       } finally {
          setIsLoading(false);
       }
@@ -64,7 +65,7 @@ const Login: React.FC = () => {
             </div>
 
             {error && (
-               <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-2 text-rose-400 text-sm">
+               <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-sm">
                   <AlertCircle size={16} />
                   {error}
                </div>

@@ -1,6 +1,12 @@
 {
     "title": "Total Portfolio Value",
+    "totalPortfolioValue": "Total Portfolio Value",
     "realTimeEstimate": "Real-time Estimate",
+    "priceJustRefreshed": "Just refreshed",
+    "priceRefreshedMinutesAgo": "Updated {{count}} min ago",
+    "priceRefreshedOverAnHourAgo": "Updated over an hour ago",
+    "priceOffline": "Prices unavailable (offline)",
+    "forceRefreshPrices": "Force price refresh",
     "financialGoals": "Financial Goals",
     "noGoalsYet": "No goals set yet.",
     "addNewGoal": "Add New Goal",
@@ -13,5 +19,11 @@
     "etfs": "ETFs",
     "crypto": "Crypto",
     "recentAlerts": "Recent Alerts",
-    "autoTracking": "AUTO-TRACKING"
+    "autoTracking": "AUTO-TRACKING",
+    "bestPerformer": "Best Performer",
+    "worstPerformer": "Worst Performer",
+    "assetAllocation": "Asset Allocation",
+    "total": "Total",
+    "cash": "Cash",
+    "noPositionsYet": "No positions available"
 }

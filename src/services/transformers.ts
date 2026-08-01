@@ -1,49 +1,69 @@
 import { Transaction } from '../../types';
-import { UnifiedTransaction, Account, Institute } from '../types';
+import { UnifiedTransaction, Account, Institute, Instrument, InstrumentType } from '../types';
+import { db } from './db';
 
 /**
- * Convert UnifiedTransaction to legacy Transaction format
- * This provides backward compatibility with existing UI components
+ * Map InstrumentType to legacy asset class
+ */
+function instrumentTypeToAssetClass(type: InstrumentType): 'Equity' | 'ETF' | 'Crypto' | 'Cash' {
+    switch (type) {
+        case 'stock': return 'Equity';
+        case 'etf': return 'ETF';
+        case 'fund': return 'ETF';
+        case 'crypto': return 'Crypto';
+        case 'cash': return 'Cash';
+        case 'bond': return 'Equity';
+        case 'other': return 'Equity';
+        default: return 'Equity';
+    }
+}
+
+/**
+ * Convert UnifiedTransaction to legacy Transaction format.
+ * Uses the Instrument entity for asset classification and symbol resolution.
  */
 export function convertToLegacyTransaction(
     unified: UnifiedTransaction,
     accounts: Account[],
-    institutes: Institute[]
+    institutes: Institute[],
+    instruments?: Instrument[]
 ): Transaction {
     // Find account and institute for source info
     let account = accounts.find(a => a.id === unified.accountId);
     if (!account) {
-        // Fallback for legacy data (though batchId shouldn't be accountId usually)
         account = accounts.find(a => a.id === unified.batchId);
     }
     const institute = account ? institutes.find(i => i.id === account.instituteId) : null;
+
+    // Resolve instrument for asset classification
+    let instrument: Instrument | undefined;
+    if (unified.instrumentId) {
+        instrument = instruments
+            ? instruments.find(i => i.id === unified.instrumentId)
+            : db.getInstrumentById(unified.instrumentId);
+    }
 
     // Map UnifiedTransaction type to legacy type
     const typeMap: Record<string, string> = {
         'BUY': 'Buy',
         'SELL': 'Sell',
         'DEPOSIT': 'Deposit',
-        'WITHDRAWAL': 'Withdrawal',
-        'DIVIDEND': 'Dividend',
-        'INTEREST': 'Interest',
-        'FEE': 'Fee',
-        'TRANSFER_IN': 'Transfer',
-        'TRANSFER_OUT': 'Transfer',
-        'STAKING_REWARD': 'Deposit',
-        'AIRDROP': 'Deposit',
-        'OTHER': 'Other'
+        'WITHDRAW': 'Withdrawal',
+        'INCOME': 'Deposit',
+        'EXPENSE': 'Fee',
+        'TRANSFER': 'Transfer',
+        'SWAP': 'Buy',
+        'ADJUSTMENT': 'Other',
+        'BALANCE_ADJUSTMENT': 'Other',
+        'SNAPSHOT_ADJUSTMENT': 'Other'
     };
 
-    // Determine asset class from symbol/isin
-    let assetClass = 'Equity';
-    const symbol = unified.assetSymbol?.toUpperCase() || '';
-    if (['BTC', 'ETH', 'USDT', 'USDC', 'BNB', 'XRP', 'SOL', 'ADA', 'DOGE'].includes(symbol)) {
-        assetClass = 'Crypto';
-    } else if (['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'].includes(symbol)) {
-        assetClass = 'Cash';
-    } else if (unified.assetIsin) {
-        assetClass = 'ETF'; // ISINs are typically for ETFs/stocks
-    }
+    // Asset class from instrument type (no hardcoded symbol lists)
+    const assetClass = instrument
+        ? instrumentTypeToAssetClass(instrument.type)
+        : 'Equity';
+
+    const symbol = instrument?.marketIdentifier.symbol || unified.assetSymbol || '';
 
     const qty = parseFloat(unified.quantity || unified.amountPrimary || '0');
     const price = parseFloat(unified.priceUnit || '0');
@@ -52,17 +72,17 @@ export function convertToLegacyTransaction(
 
     return {
         id: unified.id,
-        date: unified.transactionDate.split('T')[0], // Format: YYYY-MM-DD
+        date: unified.transactionDate.split('T')[0],
         source: institute?.name || 'Import',
         type: (typeMap[unified.type] || 'Buy') as 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal',
-        instrument: unified.label || unified.assetSymbol || unified.assetIsin || 'Unknown',
-        symbol: unified.assetSymbol || unified.assetIsin || '',
+        instrument: instrument?.name || unified.label || symbol || 'Unknown',
+        symbol,
         amount: Math.abs(qty),
         price: price || (qty !== 0 ? Math.abs(amount / qty) : 0),
         total: Math.abs(amount),
         fees: Math.abs(fee),
-        currency: unified.feeAsset || 'USD',
-        assetClass: assetClass as 'Equity' | 'ETF' | 'Crypto' | 'Cash',
+        currency: instrument?.denominationCurrency || unified.feeAsset || 'USD',
+        assetClass,
         status: 'Completed',
         bankName: institute?.name,
         accountName: account?.name

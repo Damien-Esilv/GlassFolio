@@ -1,6 +1,12 @@
 {
     "title": "Valeur totale du portefeuille",
+    "totalPortfolioValue": "Valeur totale du portefeuille",
     "realTimeEstimate": "Estimation en temps réel",
+    "priceJustRefreshed": "Vient d'être mis à jour",
+    "priceRefreshedMinutesAgo": "Mis à jour il y a {{count}} min",
+    "priceRefreshedOverAnHourAgo": "Mis à jour il y a plus d'une heure",
+    "priceOffline": "Prix indisponibles (hors ligne)",
+    "forceRefreshPrices": "Forcer la mise à jour des prix",
     "financialGoals": "Objectifs financiers",
     "noGoalsYet": "Aucun objectif défini pour le moment.",
     "addNewGoal": "Ajouter un nouvel objectif",
@@ -13,5 +19,11 @@
     "etfs": "ETF",
     "crypto": "Crypto",
     "recentAlerts": "Alertes récentes",
-    "autoTracking": "SUIVI AUTO"
+    "autoTracking": "SUIVI AUTO",
+    "bestPerformer": "Meilleure performance",
+    "worstPerformer": "Moins bonne performance",
+    "assetAllocation": "Répartition du patrimoine",
+    "total": "Total",
+    "cash": "Cash",
+    "noPositionsYet": "Aucune position disponible"
 }

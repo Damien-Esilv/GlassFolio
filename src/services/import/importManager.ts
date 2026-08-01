@@ -5,6 +5,7 @@
  * - ACID transactions via TransactionManager
  * - Row-level deduplication via hash
  * - File-level idempotence via fileHash
+ * - Instrument resolution during parsing
  * - Proper validation
  * - Synthetic transaction handling for snapshot mode
  */
@@ -14,6 +15,7 @@ import {
     ImportBatch,
     ImportMode,
     TransactionType,
+    TransactionSubType,
     SourceOrigin,
     MappingTemplate,
     ENGINE_VERSION,
@@ -29,6 +31,8 @@ import {
     CommitResult
 } from '../core/transactionManager';
 import { validationService, RowData } from '../core/validationService';
+import { instrumentService } from '../instrumentService';
+import { portfolioService } from '../portfolioService';
 
 // ============================================================================
 // TYPES
@@ -54,6 +58,14 @@ export interface FieldMappings {
     valueDate?: string | number;
     balanceAfter?: string | number;
     externalId?: string | number;
+    /** Exchange MIC or crypto exchange name (e.g. XNAS, Binance) */
+    exchange?: string | number;
+    /** Blockchain network for crypto (e.g. ethereum, solana) */
+    network?: string | number;
+    /** Contract address for ERC-20 tokens */
+    contractAddress?: string | number;
+    /** Asset name from CSV (e.g. "Apple Inc.") */
+    assetName?: string | number;
 }
 
 /**
@@ -172,7 +184,8 @@ export function parseCSVText(text: string, forcedDelimiter?: string): ParsedCSV 
 // ============================================================================
 
 /**
- * Normalize raw transaction type string
+ * Normalize raw transaction type string.
+ * Returns both the main type and optional sub-type for granular classification.
  */
 export function normalizeTransactionType(rawType: string): TransactionType {
     if (!rawType) return 'BUY';
@@ -201,10 +214,11 @@ export function normalizeTransactionType(rawType: string): TransactionType {
         return 'WITHDRAW';
     }
 
-    // Income patterns
+    // Income patterns (dividends, interest, staking, cashback)
     if (lower.includes('dividend') || lower.includes('dividende') || lower.includes('interest') ||
         lower.includes('intérêt') || lower.includes('distribution') || lower.includes('staking') ||
-        lower.includes('reward') || lower.includes('cashback') || lower.includes('saveback')) {
+        lower.includes('reward') || lower.includes('cashback') || lower.includes('saveback') ||
+        lower.includes('airdrop') || lower.includes('mining')) {
         return 'INCOME';
     }
 
@@ -231,6 +245,25 @@ export function normalizeTransactionType(rawType: string): TransactionType {
     }
 
     return 'BUY';
+}
+
+/**
+ * Infer transaction sub-type from raw type string.
+ * Provides granular classification, especially for crypto operations.
+ */
+export function inferTransactionSubType(rawType: string): TransactionSubType | undefined {
+    if (!rawType) return undefined;
+    const lower = rawType.toLowerCase().trim();
+
+    if (lower.includes('dividend') || lower.includes('dividende')) return 'DIVIDEND';
+    if (lower.includes('interest') || lower.includes('intérêt')) return 'INTEREST';
+    if (lower.includes('staking') || lower.includes('stake reward')) return 'STAKING_REWARD';
+    if (lower.includes('airdrop')) return 'AIRDROP';
+    if (lower.includes('mining')) return 'MINING_REWARD';
+    if (lower.includes('cashback') || lower.includes('saveback')) return 'CASHBACK';
+    if (lower.includes('dust') || lower.includes('small assets')) return 'DUST_CONVERSION';
+
+    return undefined;
 }
 
 // ============================================================================
@@ -481,9 +514,13 @@ export async function parseFile(
         );
 
         // Build parsed transaction
+        const txType = normalizeTransactionType(rawType);
+        const subType = inferTransactionSubType(rawType);
+
         const parsed: Partial<UnifiedTransaction> = {
             transactionDate,
-            type: normalizeTransactionType(rawType),
+            type: txType,
+            subType,
             rawType: rawType || 'Unknown',
             amountPrimary: parseDecimal(rawAmount) || undefined,
             assetSymbol: rawSymbol?.toUpperCase().trim() || undefined,
@@ -528,6 +565,31 @@ export async function parseFile(
         const externalId = getValue(row, mappings!.externalId);
         if (externalId) parsed.externalId = externalId.trim();
 
+        // Extract instrument-related fields from CSV
+        const exchangeVal = getValue(row, mappings!.exchange);
+        const networkVal = getValue(row, mappings!.network);
+        const contractAddressVal = getValue(row, mappings!.contractAddress);
+        const assetNameVal = getValue(row, mappings!.assetName);
+
+        // Resolve instrument from CSV data (find existing or create new)
+        let instrumentId: string | undefined;
+        if (parsed.assetSymbol) {
+            try {
+                const instrument = await instrumentService.findOrCreateInstrument({
+                    symbol: parsed.assetSymbol,
+                    isin: parsed.assetIsin,
+                    name: assetNameVal?.trim(),
+                    exchange: exchangeVal?.trim(),
+                    network: networkVal?.trim(),
+                    contractAddress: contractAddressVal?.trim()
+                });
+                instrumentId = instrument.id;
+                parsed.instrumentId = instrumentId;
+            } catch {
+                // Instrument resolution failed — will be caught by validation
+            }
+        }
+
         // Snapshot mode: calculate invested amount
         if (config.mode === 'snapshot' && parsed.quantity && parsed.priceUnit) {
             const qty = parseFloat(parsed.quantity);
@@ -541,7 +603,10 @@ export async function parseFile(
         // Store raw row in metadata
         parsed.metadata = { ...originalRow };
 
-        // Validate
+        // Resolve instrument type for validation context
+        const resolvedInstrument = instrumentId ? db.getInstrumentById(instrumentId) : undefined;
+
+        // Validate with instrument context
         const rowData: RowData = {
             transactionDate: parsed.transactionDate,
             type: parsed.type,
@@ -552,7 +617,11 @@ export async function parseFile(
             quantity: parsed.quantity,
             feeAmount: parsed.feeAmount,
             rawLabel: parsed.rawLabel,
-            label: parsed.label
+            label: parsed.label,
+            instrumentType: resolvedInstrument?.type,
+            exchange: exchangeVal?.trim(),
+            network: networkVal?.trim(),
+            contractAddress: contractAddressVal?.trim()
         };
         const validation = validationService.validateRow(rowData, config.mode);
         const hasErrors = !validation.isValid;
@@ -646,6 +715,7 @@ export async function commitBatch(
             ownerId: userId,
             batchId,
             accountId,
+            instrumentId: staged.parsed.instrumentId || '',
             rowHash: staged.rowHash,
             externalId: staged.parsed.externalId,
             sourceOrigin: 'FILE' as SourceOrigin,
@@ -655,6 +725,7 @@ export async function commitBatch(
             transactionDate: staged.parsed.transactionDate || now,
             valueDate: staged.parsed.valueDate,
             type: staged.parsed.type || 'BUY',
+            subType: staged.parsed.subType,
             rawType: staged.parsed.rawType || 'Unknown',
             label: staged.parsed.label,
             rawLabel: staged.parsed.rawLabel || '',
@@ -765,149 +836,7 @@ export async function rollbackBatch(batchId: string): Promise<{ deleted: number;
  * THIS IS THE SOURCE OF TRUTH - positions are always derived
  */
 async function recalculatePositions(): Promise<void> {
-    const unifiedTxs = db.getUnifiedTransactions();
-    const accounts = db.getAccounts();
-    const institutes = db.getInstitutes();
-
-    // Also include legacy transactions for backward compatibility
-    const legacyTxs = db.getTransactions();
-
-    // Convert legacy to unified format for processing
-    interface ProcessedTx {
-        date: string;
-        type: string;
-        symbol: string;
-        quantity: number;
-        price: number;
-        amount: number;
-        fees: number;
-        currency: string;
-        source: string;
-        isFiscal: boolean;
-    }
-
-    const allTxs: ProcessedTx[] = [];
-
-    // Process unified transactions
-    for (const tx of unifiedTxs) {
-        const qty = parseFloat(tx.quantity || tx.amountPrimary || '0');
-        const price = parseFloat(tx.priceUnit || '0');
-        const fees = parseFloat(tx.feeAmount || '0');
-
-        const account = accounts.find(a => a.id === tx.accountId);
-        const institute = account ? institutes.find(i => i.id === account.instituteId) : null;
-
-        allTxs.push({
-            date: tx.transactionDate,
-            type: tx.type,
-            symbol: tx.assetSymbol,
-            quantity: qty,
-            price: price > 0 ? price : Math.abs(parseFloat(tx.amountPrimary || '0')) / (qty || 1),
-            amount: parseFloat(tx.amountPrimary || '0'),
-            fees,
-            currency: tx.feeAsset || 'EUR',
-            source: institute?.name || 'Unknown',
-            isFiscal: tx.isFiscal ?? true
-        });
-    }
-
-    // Process legacy transactions
-    for (const tx of legacyTxs) {
-        allTxs.push({
-            date: tx.date,
-            type: tx.type,
-            symbol: tx.symbol,
-            quantity: tx.amount,
-            price: tx.price,
-            amount: tx.total,
-            fees: tx.fees || 0,
-            currency: tx.currency,
-            source: tx.source || 'Unknown',
-            isFiscal: true
-        });
-    }
-
-    // Sort by date ascending
-    allTxs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    // Calculate positions with PRU including fees (French regulation)
-    interface PositionCalc {
-        symbol: string;
-        quantity: number;
-        totalCost: number; // Includes fees
-        totalFees: number;
-        lastPrice: number;
-        currency: string;
-        source: string;
-    }
-
-    const positionMap = new Map<string, PositionCalc>();
-
-    for (const tx of allTxs) {
-        if (!tx.symbol) continue;
-
-        const key = `${tx.symbol}-${tx.source}`;
-        let pos = positionMap.get(key);
-
-        if (!pos) {
-            pos = {
-                symbol: tx.symbol,
-                quantity: 0,
-                totalCost: 0,
-                totalFees: 0,
-                lastPrice: tx.price,
-                currency: tx.currency,
-                source: tx.source
-            };
-        }
-
-        // PRU calculation with fees (French regulation)
-        if (tx.type === 'BUY' || tx.type === 'Buy' || tx.type === 'DEPOSIT' || tx.type === 'Deposit') {
-            // New PRU = (Old TotalCost + New Amount + New Fees) / Total Quantity
-            const newCost = Math.abs(tx.amount) + tx.fees;
-            pos.totalCost += newCost;
-            pos.totalFees += tx.fees;
-            pos.quantity += tx.quantity;
-            if (tx.price > 0) pos.lastPrice = tx.price;
-        } else if (tx.type === 'SELL' || tx.type === 'Sell' || tx.type === 'WITHDRAW' || tx.type === 'Withdrawal') {
-            // Selling reduces quantity but PRU stays (average cost method)
-            // Fees on sell reduce the proceeds, affecting realized P&L (not PRU)
-            pos.quantity -= Math.abs(tx.quantity);
-            if (tx.price > 0) pos.lastPrice = tx.price;
-        }
-
-        // Prevent negative quantities
-        if (pos.quantity < 0) pos.quantity = 0;
-
-        positionMap.set(key, pos);
-    }
-
-    // Convert to Position format for legacy compatibility
-    const positions = Array.from(positionMap.values())
-        .filter(p => p.quantity > 0.000001)
-        .map(p => {
-            const avgCost = p.quantity > 0 ? p.totalCost / p.quantity : 0;
-            const marketValue = p.quantity * p.lastPrice;
-            const unrealizedPL = marketValue - p.totalCost;
-            const unrealizedPLPercent = p.totalCost > 0 ? (unrealizedPL / p.totalCost) * 100 : 0;
-
-            return {
-                id: `pos-${Math.random().toString(36).substr(2, 9)}`,
-                instrument: p.symbol,
-                symbol: p.symbol,
-                quantity: p.quantity,
-                avgCost,
-                lastPrice: p.lastPrice,
-                marketValue,
-                unrealizedPL,
-                unrealizedPLPercent,
-                currency: p.currency,
-                type: 'Equity' as const,
-                source: p.source
-            };
-        });
-
-    db.savePositions(positions);
+    await portfolioService.recalculatePositions();
 }
 
 // ============================================================================

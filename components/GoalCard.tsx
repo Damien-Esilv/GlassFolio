@@ -2,6 +2,8 @@ import React from 'react';
 import { FinancialGoal } from '../types';
 import { Home, Plane, Car, Shield, Wallet, Pin, Trash2, Edit2, Zap, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 
@@ -15,33 +17,42 @@ interface GoalCardProps {
 
 const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, showDetailTags = true }) => {
     const { t } = useTranslation();
+    const { user } = useAuth();
+    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
+    const currency = user?.preferences?.currency || 'USD';
     const Icon = ICON_MAP[goal.iconType] || Wallet;
     const safeCurrent = goal.currentAmount || 0;
     const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
 
-    let colorClass = 'bg-primary';
-    if (goal.color === 'emerald') colorClass = 'bg-accent-green';
-    if (goal.color === 'rose') colorClass = 'bg-accent-red';
+    let colorClass = 'bg-blue-500';
+    if (goal.color === 'emerald') colorClass = 'bg-emerald-500';
+    if (goal.color === 'rose') colorClass = 'bg-rose-500';
     if (goal.color === 'orange') colorClass = 'bg-orange-500';
     if (goal.color === 'indigo') colorClass = 'bg-indigo-500';
 
+    let iconBgClass = 'bg-blue-500/10 text-blue-500';
+    if (goal.color === 'emerald') iconBgClass = 'bg-emerald-500/10 text-emerald-500';
+    if (goal.color === 'rose') iconBgClass = 'bg-rose-500/10 text-rose-500';
+    if (goal.color === 'orange') iconBgClass = 'bg-orange-500/10 text-orange-500';
+    if (goal.color === 'indigo') iconBgClass = 'bg-indigo-500/10 text-indigo-500';
+
     return (
-        <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-border hover:border-black/5 dark:hover:border-white/5 transition-all">
+        <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-border hover:border-strong transition-all">
             {/* Actions (Only show if handlers provided) */}
             {(onPin || onEdit || onDelete) && (
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     {onPin && (
-                        <button onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
+                        <button onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
                             <Pin size={16} fill={goal.isPinned ? "currentColor" : "none"} />
                         </button>
                     )}
                     {onEdit && (
-                        <button onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-secondary">
+                        <button onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
                             <Edit2 size={16} />
                         </button>
                     )}
                     {onDelete && (
-                        <button onClick={() => onDelete(goal.id)} className="p-2 rounded-full hover:bg-rose-500/10 text-rose-500">
+                        <button onClick={() => onDelete(goal.id)} className="p-2 rounded-full hover:bg-error/10 text-error">
                             <Trash2 size={16} />
                         </button>
                     )}
@@ -49,12 +60,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, show
             )}
 
             <div className="flex items-center gap-4 mb-4">
-                <div className={`p-3 rounded-xl bg-opacity-10 ${goal.color === 'emerald' ? 'bg-success/10 text-success' :
-                    goal.color === 'rose' ? 'bg-error/10 text-error' :
-                        goal.color === 'orange' ? 'bg-orange-500/10 text-orange-500' :
-                            goal.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-500' :
-                                'bg-blue-500/10 text-blue-500'
-                    }`}>
+                <div className={`p-3 rounded-xl ${iconBgClass}`}>
                     <Icon size={24} />
                 </div>
                 <div className="pr-24">
@@ -77,8 +83,8 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, show
                     <div className={`h-full ${colorClass} transition-all duration-1000 relative overflow-hidden`} style={{ width: `${progress}%` }}></div>
                 </div>
                 <div className="flex justify-between text-xs text-secondary font-mono">
-                    <span>${safeCurrent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                    <span>{t('common:labels.target')}: ${goal.targetAmount.toLocaleString()}</span>
+                    <span>{formatCurrency(safeCurrent, currency, locale, { maximumFractionDigits: 0 })}</span>
+                    <span>{t('common:labels.target')}: {formatCurrency(goal.targetAmount, currency, locale, { maximumFractionDigits: 0 })}</span>
                 </div>
             </div>
 

@@ -22,14 +22,16 @@ import {
     ImportBatch,
     UnifiedTransaction,
     MappingTemplate,
-    AssetPosition
+    AssetPosition,
+    Instrument
 } from '../types';
 import {
     institutes as initialInstitutes,
     accounts as initialAccounts,
     importBatches as initialImportBatches,
     unifiedTransactions as initialUnifiedTransactions,
-    mappingTemplates as initialMappingTemplates
+    mappingTemplates as initialMappingTemplates,
+    instruments as initialInstruments
 } from './mockData.backend';
 
 const STORAGE_KEYS = {
@@ -46,7 +48,8 @@ const STORAGE_KEYS = {
     IMPORT_BATCHES: 'glassfolio_import_batches',
     UNIFIED_TRANSACTIONS: 'glassfolio_unified_transactions',
     MAPPING_TEMPLATES: 'glassfolio_mapping_templates',
-    ASSET_POSITIONS: 'glassfolio_asset_positions'
+    ASSET_POSITIONS: 'glassfolio_asset_positions',
+    INSTRUMENTS: 'glassfolio_instruments'
 };
 
 // Helper: Simulate network delay
@@ -259,6 +262,47 @@ class MockDB {
         return this.getAssetPositions().filter(p => p.accountId === accountId);
     }
 
+    // --- Instruments ---
+    getInstruments(): Instrument[] {
+        const stored = localStorage.getItem(STORAGE_KEYS.INSTRUMENTS);
+        return stored ? JSON.parse(stored) : initialInstruments;
+    }
+
+    saveInstruments(data: Instrument[]) {
+        localStorage.setItem(STORAGE_KEYS.INSTRUMENTS, JSON.stringify(data));
+    }
+
+    getInstrumentById(id: string): Instrument | undefined {
+        return this.getInstruments().find(i => i.id === id);
+    }
+
+    /**
+     * Find an instrument by its market identifier (ISIN, symbol, or currencyCode).
+     * Used during import to avoid creating duplicates.
+     */
+    findInstrumentByMarketId(opts: { isin?: string; symbol?: string; currencyCode?: string }): Instrument | undefined {
+        const instruments = this.getInstruments();
+        // ISIN match is highest priority (most specific)
+        if (opts.isin) {
+            const found = instruments.find(i => i.marketIdentifier.isin === opts.isin);
+            if (found) return found;
+        }
+        // Cash: match by currencyCode
+        if (opts.currencyCode) {
+            const found = instruments.find(i =>
+                i.type === 'cash' && i.marketIdentifier.currencyCode === opts.currencyCode
+            );
+            if (found) return found;
+        }
+        // Symbol match (less specific — only if no ISIN)
+        if (opts.symbol) {
+            return instruments.find(i =>
+                i.marketIdentifier.symbol.toUpperCase() === opts.symbol!.toUpperCase()
+            );
+        }
+        return undefined;
+    }
+
     // =========================================================================
     // UTILITY METHODS
     // =========================================================================
@@ -288,8 +332,17 @@ class MockDB {
             importBatches: this.getImportBatches(),
             unifiedTransactions: this.getUnifiedTransactions(),
             mappingTemplates: this.getMappingTemplates(),
-            assetPositions: this.getAssetPositions()
+            assetPositions: this.getAssetPositions(),
+            instruments: this.getInstruments()
         };
+    }
+
+    /**
+     * Wipe all localStorage keys used by GlassFolio so the app falls back
+     * to initial seed / mock data on next load.
+     */
+    resetToInitialData(): void {
+        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
     }
 }
 

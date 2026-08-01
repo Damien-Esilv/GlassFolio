@@ -30,6 +30,26 @@ export type TransactionType =
     | 'SNAPSHOT_ADJUSTMENT';// Synthetic: from snapshot import reconciliation
 
 /**
+ * Transaction sub-type for more granular classification (especially crypto)
+ * Aligns with CoinStats import taxonomy.
+ */
+export type TransactionSubType =
+    | 'DIVIDEND'
+    | 'INTEREST'
+    | 'STAKING_REWARD'
+    | 'AIRDROP'
+    | 'MINING_REWARD'
+    | 'CASHBACK'
+    | 'TRANSFER_IN'
+    | 'TRANSFER_OUT'
+    | 'DUST_CONVERSION'      // Small assets exchange
+    | 'FIAT_DEPOSIT'
+    | 'FIAT_WITHDRAWAL'
+    | 'CRYPTO_PURCHASE'
+    | 'CRYPTO_SALE'
+    | 'OTHER';
+
+/**
  * Origin of the transaction data
  */
 export type SourceOrigin =
@@ -47,6 +67,41 @@ export type ImportMode = 'history' | 'snapshot';
  * Type of financial institution
  */
 export type InstituteType = 'bank' | 'exchange' | 'wallet' | 'broker' | 'other';
+
+/**
+ * Asset type classification — determines which market identifiers are required.
+ *
+ * Rules:
+ *   stock/etf/fund  → ISIN OR (symbol + exchange) mandatory
+ *   crypto          → symbol + (exchange OR network OR contractAddress) mandatory
+ *   cash            → currencyCode ISO 4217 mandatory
+ *   bond/other      → best-effort identification
+ */
+export type InstrumentType = 'stock' | 'etf' | 'fund' | 'crypto' | 'cash' | 'bond' | 'other';
+
+/**
+ * Market identifier structure for price resolution.
+ * Contains all the information needed to join an instrument to a market data provider.
+ */
+export interface MarketIdentifier {
+    /** Ticker symbol (e.g. AAPL, BTC, ETH). Always required. */
+    symbol: string;
+
+    /** ISIN code for stocks/ETFs/funds (e.g. US0378331005) */
+    isin?: string;
+
+    /** Stock exchange MIC code (e.g. XNAS, XPAR) or crypto exchange name (e.g. Binance) */
+    exchange?: string;
+
+    /** Blockchain network for crypto (e.g. ethereum, solana, bitcoin) */
+    network?: string;
+
+    /** Smart contract address for ERC-20 / SPL tokens */
+    contractAddress?: string;
+
+    /** ISO 4217 currency code for cash instruments (e.g. EUR, USD) */
+    currencyCode?: string;
+}
 
 /**
  * Type of account within an institution
@@ -91,6 +146,50 @@ export interface Institute {
 
     /** Optional logo URL for display */
     logoUrl?: string;
+
+    /** ISO DateTime - when created */
+    createdAt: string;
+
+    /** ISO DateTime - last update */
+    updatedAt: string;
+}
+
+/**
+ * Instrument — First-class asset entity.
+ *
+ * Sits between Account and Transaction in the data model.
+ * Every UnifiedTransaction and AssetPosition references an instrumentId.
+ *
+ * An instrument is "market-ready" when it has sufficient identifiers
+ * to join to a market data provider for live/historical prices.
+ */
+export interface Instrument {
+    /** UUID - Internal Primary Key */
+    id: string;
+
+    /** Owner ID for RLS */
+    ownerId: string;
+
+    /** Human-readable display name (e.g. "Apple Inc.", "Bitcoin", "Euro") */
+    name: string;
+
+    /** Instrument classification — drives validation rules */
+    type: InstrumentType;
+
+    /** Market identifiers for price resolution */
+    marketIdentifier: MarketIdentifier;
+
+    /**
+     * Whether this instrument has sufficient identifiers for market data lookup.
+     * Computed from type-specific rules:
+     *   stock/etf/fund  → true if isin OR (symbol + exchange)
+     *   crypto          → true if symbol + (exchange OR network OR contractAddress)
+     *   cash            → true if currencyCode is valid ISO 4217
+     */
+    isMarketReady: boolean;
+
+    /** ISO 4217 currency the instrument is denominated/quoted in */
+    denominationCurrency: string;
 
     /** ISO DateTime - when created */
     createdAt: string;
@@ -220,12 +319,15 @@ export interface UnifiedTransaction {
     /** UUID - Direct link to Account */
     accountId: string;
 
+    /** UUID - FK to Instrument — the asset this transaction operates on */
+    instrumentId: string;
+
     /** UUID - Links to ImportBatch for rollback capability */
     batchId: string;
 
     /** 
      * SHA-256 hash of immutable fields for deduplication
-     * Computed from: date + amount + symbol + type + fees
+     * Computed from: accountId + instrumentId + date + quantity + grossAmount + type
      */
     rowHash: string;
 
@@ -271,6 +373,12 @@ export interface UnifiedTransaction {
 
     /** Normalized transaction type */
     type: TransactionType;
+
+    /**
+     * Granular sub-type for richer classification.
+     * Especially useful for crypto (STAKING_REWARD, AIRDROP, etc.)
+     */
+    subType?: TransactionSubType;
 
     /** 
      * Original string from CSV for audit
@@ -431,7 +539,10 @@ export interface AssetPosition {
     /** Account holding this position */
     accountId: string;
 
-    /** Asset identifier (symbol or ISIN) */
+    /** FK to Instrument — the asset this position represents */
+    instrumentId: string;
+
+    /** Asset identifier (symbol or ISIN) — derived from instrument for quick access */
     assetKey: string;
 
     /** Asset symbol */
@@ -522,13 +633,26 @@ export interface RowValidationResult {
 // ============================================================================
 
 /** Current engine version for audit trail */
-export const ENGINE_VERSION = '2.0.0';
+export const ENGINE_VERSION = '3.0.0';
 
-/** Valid ISO 4217 currency codes (common subset) */
-export const VALID_CURRENCIES = [
+/** Valid ISO 4217 fiat currency codes */
+export const VALID_FIAT_CURRENCIES = [
     'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'CNY', 'HKD', 'SGD',
-    'BTC', 'ETH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL', 'DOT', 'DOGE'
+    'SEK', 'NOK', 'DKK', 'NZD', 'KRW', 'INR', 'BRL', 'MXN', 'ZAR', 'PLN'
 ] as const;
 
-/** ISIN validation regex */
+/** Well-known crypto ticker symbols */
+export const VALID_CRYPTO_SYMBOLS = [
+    'BTC', 'ETH', 'USDT', 'USDC', 'BNB', 'XRP', 'ADA', 'SOL', 'DOT', 'DOGE',
+    'AVAX', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'FIL', 'APT', 'ARB', 'OP'
+] as const;
+
+/** Combined currency + crypto list (backward compat) */
+export const VALID_CURRENCIES = [
+    ...VALID_FIAT_CURRENCIES,
+    ...VALID_CRYPTO_SYMBOLS
+] as const;
+
+/** ISIN validation regex (2 country letters + 9 alphanumeric + 1 check digit) */
 export const ISIN_REGEX = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
+

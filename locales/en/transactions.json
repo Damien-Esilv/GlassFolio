@@ -85,12 +85,9 @@
             "createNewAccount": "Create new account",
             "accountNamePlaceholder": "Account name...",
             "accountTypes": {
-                "checking": "Checking",
-                "savings": "Savings",
-                "investment": "Investment (PEA, CTO)",
-                "cryptoSpot": "Crypto Spot",
-                "cryptoEarn": "Crypto Earn",
-                "other": "Other"
+                "checking": "Cash / Savings",
+                "investment": "Stocks / ETFs (PEA, CTO)",
+                "cryptoSpot": "Crypto"
             }
         },
         "mode": {
@@ -118,7 +115,8 @@
             "saveTemplate": "Save as template",
             "templateNamePlaceholder": "Template name...",
             "notMappedOption": "— Not mapped —",
-            "preview": "Preview (First {{rows}} Rows × {{columns}} Columns)"
+            "preview": "Preview (First {{rows}} Rows × {{columns}} Columns)",
+            "identifierRequiredWarning": "Please map either the ISIN Code or the Asset Symbol (at least one is required) to proceed."
         },
         "fields": {
             "transactionDate": "Transaction Date",
@@ -204,7 +202,30 @@
         "validation": {
             "dateRequired": "Date is required",
             "amountRequired": "Amount is required",
-            "assetSymbolRequired": "Asset symbol is required"
+            "assetSymbolRequired": "Asset symbol is required",
+            "identifierRequired": "Symbol or ISIN code is required"
+        },
+        "cashWizard": {
+            "title": "Cash / Savings Balance Update",
+            "subtitle": "Record the balance of {{accountName}}",
+            "options": {
+                "title": "How would you like to update your balance?",
+                "manualTitle": "Saisie Manuelle (Manual Entry)",
+                "manualDescription": "Quickly type in the current balance and the date of the update",
+                "csvTitle": "Import CSV (File Upload)",
+                "csvDescription": "Upload a CSV file containing date and balance history to see progress over time"
+            },
+            "manualForm": {
+                "title": "Manual Balance Entry",
+                "dateLabel": "Statement Date",
+                "amountLabel": "Account Balance",
+                "saveButton": "Record Balance",
+                "success": "Balance recorded successfully"
+            },
+            "csvMapping": {
+                "title": "Simplified CSV Mapping",
+                "description": "To track your cash evolution over time, please map only the Date and Balance Amount columns from your CSV."
+            }
         }
     },
     "importHistory": {
@@ -239,6 +260,9 @@
         "rolledBack": "Rolled back",
         "rollbackTitle": "About Rollback:",
         "rollbackDescription": "Undoing an import will permanently delete all transactions associated with that batch. This action cannot be undone. Other imports and data will not be affected.",
+        "rollbackSuccess": "Import batch successfully rolled back. {{count}} transactions removed.",
+        "rollbackError": "Failed to rollback import batch. Please try again.",
+        "viewAll": "View all history",
         "unknown": "Unknown"
     },
     "snapshotWizard": {

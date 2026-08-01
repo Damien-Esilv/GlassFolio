@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { Position } from '../types';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../utils/currency';
 
 // ============================================================================
 // TYPES
@@ -55,6 +57,8 @@ interface CategoryGroup {
 const Portfolio: React.FC = () => {
     const { t, i18n } = useTranslation('portfolio');
     const { positions: globalPositions } = useData();
+    const { user } = useAuth();
+    const prefCurrency = user?.preferences?.currency || 'USD';
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['stocks', 'crypto', 'cash']));
     const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
@@ -179,7 +183,7 @@ const Portfolio: React.FC = () => {
                             <span>{formattedDate}</span>
                         </div>
                         <div className="text-4xl md:text-5xl font-bold text-primary mb-3">
-                            {totalValue.toLocaleString(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 })}
+                            {formatCurrency(totalValue, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </div>
                         <div className="flex items-center gap-3">
                             <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${totalGain >= 0
@@ -187,7 +191,7 @@ const Portfolio: React.FC = () => {
                                 : 'bg-red-500/10 text-error'
                                 }`}>
                                 {totalGain >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                                {totalGain >= 0 ? '+' : ''}{totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })}€
+                                {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                             <span className={`text-sm font-medium ${gainPercent >= 0 ? 'text-success' : 'text-error'
                                 }`}>
@@ -244,11 +248,11 @@ const Portfolio: React.FC = () => {
                                         {category.allocation.toFixed(0)} %
                                     </div>
                                     <div className="col-span-3 text-right font-bold text-primary">
-                                        {category.totalValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                        {formatCurrency(category.totalValue, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                     </div>
                                     <div className="col-span-2 text-right">
                                         <div className={`font-semibold ${category.totalGain >= 0 ? 'text-success' : 'text-error'}`}>
-                                            {category.totalGain >= 0 ? '+' : ''}{category.totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                            {category.totalGain >= 0 ? '+' : ''}{formatCurrency(category.totalGain, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </div>
                                     </div>
                                 </div>
@@ -277,11 +281,11 @@ const Portfolio: React.FC = () => {
                                                 {/* No allocation at account level usually, or relative to category? */}
                                             </div>
                                             <div className="col-span-3 text-right font-medium text-primary text-sm">
-                                                {account.totalValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                                {formatCurrency(account.totalValue, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                             </div>
                                             <div className="col-span-2 text-right text-sm">
                                                 <div className={`${account.totalGain >= 0 ? 'text-success' : 'text-error'}`}>
-                                                    {account.totalGain >= 0 ? '+' : ''}{account.totalGain.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                                    {account.totalGain >= 0 ? '+' : ''}{formatCurrency(account.totalGain, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </div>
                                             </div>
                                         </div>
@@ -307,11 +311,11 @@ const Portfolio: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div className="col-span-3 text-right font-medium text-primary">
-                                                    {pos.marketValue.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                                    {formatCurrency(pos.marketValue, pos.currency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </div>
                                                 <div className="col-span-2 text-right">
                                                     <div className={`${pos.unrealizedPL >= 0 ? 'text-success/80' : 'text-error/80'}`}>
-                                                        {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPL.toLocaleString(locale, { minimumFractionDigits: 0 })} €
+                                                        {pos.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(pos.unrealizedPL, pos.currency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                     </div>
                                                 </div>
                                             </div>
