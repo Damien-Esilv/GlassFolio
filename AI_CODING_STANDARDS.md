@@ -87,10 +87,10 @@ The system supports three distinct themes. Your code must support all three auto
 **Goal:** Professional multi-language support with zero hardcoded user-facing text.
 
 ### 4.1. Zero Hardcoded Text Policy
-*   **STRICT PROHIBITION:** Never hardcode user-facing strings in components, pages, or logic.
-*   **ENFORCEMENT:** All UI text must be externalized via the i18n library.
-*   **Rule:** Use `t('namespace:key')` for all user-visible text.
-*   **Scope:** This applies to: labels, buttons, placeholders, error messages, tooltips, notifications, and all dynamic content.
+*   **STRICT PROHIBITION:** Never hardcode user-facing strings in components, pages, or logic (e.g., Settings cards, Backup/Merge wizards, Asset & Category Comparison tools, confirmation dialogs, back button tooltips, search input placeholders, or toast messages).
+*   **ENFORCEMENT:** All UI text must be externalized via the i18n library (`react-i18next`).
+*   **Rule:** Use `t('namespace:key')` for all user-visible text. Every new UI key MUST exist in both `locales/en/` and `locales/fr/`.
+*   **Scope:** This applies to: labels, buttons, placeholders, error messages, tooltips, notifications, modal wizards, category pills, asset class labels, and all dynamic content.
 
 ### 4.2. Translation Structure
 *   **Technology:** `i18next` + `react-i18next` for React components.

@@ -130,6 +130,57 @@ function toYahooTicker(pos: Position): string | null {
     return clean;
 }
 
+const MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
+
+export interface ManualPricePoint {
+    date: string; // ISO 8601 string
+    price: number;
+}
+
+export function saveManualPrice(symbol: string, price: number): void {
+    const cleanSymbol = symbol.trim().toUpperCase();
+
+    // 1. Update active cache
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        const parsed: PriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
+        parsed.data[cleanSymbol] = price;
+        parsed.fetchedAt = new Date().toISOString();
+        localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+    } catch {
+        // Storage fallback
+    }
+
+    // 2. Record historical price point
+    try {
+        const rawHistory = localStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        const historyMap: Record<string, ManualPricePoint[]> = rawHistory ? JSON.parse(rawHistory) : {};
+        const symbolHistory = historyMap[cleanSymbol] ?? [];
+
+        symbolHistory.push({
+            date: new Date().toISOString(),
+            price
+        });
+
+        historyMap[cleanSymbol] = symbolHistory;
+        localStorage.setItem(MANUAL_PRICE_HISTORY_KEY, JSON.stringify(historyMap));
+    } catch {
+        // Storage fallback
+    }
+}
+
+export function getManualPriceHistory(symbol: string): ManualPricePoint[] {
+    try {
+        const cleanSymbol = symbol.trim().toUpperCase();
+        const rawHistory = localStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        if (!rawHistory) return [];
+        const historyMap: Record<string, ManualPricePoint[]> = JSON.parse(rawHistory);
+        return historyMap[cleanSymbol] ?? [];
+    } catch {
+        return [];
+    }
+}
+
 function readCache(): PriceCache | null {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
@@ -159,6 +210,7 @@ function writeCache(data: Record<string, number>): void {
 
 export function clearPriceCache(): void {
     localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
 }
 
 export function getLastPriceFetchTime(): string | null {
@@ -310,3 +362,141 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
         };
     });
 }
+
+// ---------------------------------------------------------------------------
+// Historical Price Fetcher for Sparklines / Charts
+// ---------------------------------------------------------------------------
+
+export interface HistoricalPricePoint {
+    timestamp: number;
+    price: number;
+}
+
+const HISTORICAL_PRICE_CACHE_KEY = 'gf_historical_price_cache';
+
+interface HistoricalPriceCache {
+    data: Record<string, HistoricalPricePoint[]>;
+    fetchedAt: string;
+}
+
+/**
+ * Fetches real historical closing prices for a given position using Yahoo Finance v8 chart API,
+ * with CoinGecko fallback for crypto and local caching (15-min TTL).
+ */
+export async function fetchRealPriceHistory(
+    pos: Position,
+    timeRange: '1M' | '3M' | '1Y' | 'ALL' = '1Y'
+): Promise<HistoricalPricePoint[]> {
+    if (!pos || pos.type === 'Cash') return [];
+
+    const ticker = toYahooTicker(pos) || pos.symbol.trim().toUpperCase();
+    const cacheKey = `${ticker}_${timeRange}`;
+
+    // 1. Try reading from cache
+    try {
+        const raw = localStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
+        if (raw) {
+            const parsed: HistoricalPriceCache = JSON.parse(raw);
+            const age = Date.now() - new Date(parsed.fetchedAt).getTime();
+            if (age < CACHE_TTL_MS && parsed.data[cacheKey]?.length > 0) {
+                return parsed.data[cacheKey];
+            }
+        }
+    } catch {
+        // Storage fallback
+    }
+
+    // Determine Yahoo range and interval
+    let rangeParam = '1y';
+    let intervalParam = '1d';
+    if (timeRange === '1M') {
+        rangeParam = '1mo';
+        intervalParam = '1d';
+    } else if (timeRange === '3M') {
+        rangeParam = '3mo';
+        intervalParam = '1d';
+    } else if (timeRange === '1Y') {
+        rangeParam = '1y';
+        intervalParam = '1wk';
+    } else if (timeRange === 'ALL') {
+        rangeParam = '5y';
+        intervalParam = '1mo';
+    }
+
+    let points: HistoricalPricePoint[] = [];
+
+    // 2. Fetch from Yahoo Finance
+    // @ts-expect-error import.meta.env is injected by Vite
+    const base = import.meta.env.DEV
+        ? `/yf/v8/finance/chart/${encodeURIComponent(ticker)}`
+        : `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}`;
+
+    const url = `${base}?range=${rangeParam}&interval=${intervalParam}`;
+
+    try {
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(6000)
+        });
+
+        if (res.ok) {
+            const json = await res.json();
+            const timestamps: number[] = json.chart?.result?.[0]?.timestamp || [];
+            const closes: (number | null)[] = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+
+            if (timestamps.length > 0 && closes.length === timestamps.length) {
+                for (let i = 0; i < timestamps.length; i++) {
+                    const price = closes[i];
+                    if (price !== null && typeof price === 'number' && price > 0) {
+                        points.push({
+                            timestamp: timestamps[i] * 1000,
+                            price: Math.round(price * 100) / 100
+                        });
+                    }
+                }
+            }
+        }
+    } catch {
+        // Fallback to CoinGecko if crypto
+    }
+
+    // 3. Fallback for crypto via CoinGecko if Yahoo failed or returned empty
+    if (points.length === 0 && (pos.type === 'Crypto' || ticker.endsWith('-USD'))) {
+        try {
+            const cleanSymbol = pos.symbol.replace('-USD', '').toUpperCase();
+            const geckoId = COINGECKO_MAP[cleanSymbol];
+            if (geckoId) {
+                const days = timeRange === '1M' ? '30' : timeRange === '3M' ? '90' : timeRange === '1Y' ? '365' : 'max';
+                const cgUrl = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${days}`;
+                const cgRes = await fetch(cgUrl, { signal: AbortSignal.timeout(5000) });
+                if (cgRes.ok) {
+                    const cgData = await cgRes.json();
+                    if (Array.isArray(cgData.prices)) {
+                        points = cgData.prices.map(([ts, p]: [number, number]) => ({
+                            timestamp: ts,
+                            price: Math.round(p * 100) / 100
+                        }));
+                    }
+                }
+            }
+        } catch {
+            // Ignore fallback errors
+        }
+    }
+
+    // 4. Save to cache if points fetched
+    if (points.length > 0) {
+        try {
+            const raw = localStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
+            const parsed: HistoricalPriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
+            parsed.data[cacheKey] = points;
+            parsed.fetchedAt = new Date().toISOString();
+            localStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(parsed));
+        } catch {
+            // Ignore storage errors
+        }
+    }
+
+    return points;
+}
+

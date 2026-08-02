@@ -57,11 +57,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshData = useCallback(async () => {
     try {
       setIsLoading(true);
+      const baseCurr = user?.preferences?.currency || 'EUR';
       const [txs, pos, alrts, gls, achData, grps] = await Promise.all([
         transactionService.getTransactions(),
         portfolioService.getPositions(),
         alertService.getAlerts(),
-        goalService.getGoals(),
+        goalService.getGoals(baseCurr),
         achievementService.getAchievements(),
         goalService.getAssetGroups()
       ]);
@@ -111,9 +112,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshData]);
 
   const saveGoal = useCallback(async (goalData: FinancialGoal | Omit<FinancialGoal, 'id'>) => {
-    await goalService.saveGoal(goalData);
+    const baseCurr = user?.preferences?.currency || 'EUR';
+    await goalService.saveGoal(goalData, baseCurr);
     await refreshData();
-  }, [refreshData]);
+  }, [user, refreshData]);
 
   const deleteGoal = useCallback(async (id: string) => {
     await goalService.deleteGoal(id);
@@ -152,6 +154,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshData]);
 
   const resetToSeedData = useCallback(async () => {
+    clearPriceCache();
     db.resetToInitialData();
     await refreshData();
   }, [refreshData]);

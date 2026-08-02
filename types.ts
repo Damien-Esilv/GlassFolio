@@ -1,10 +1,12 @@
 import React from 'react';
+import { AssetClass } from './src/constants/assetClasses';
 
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'night' | 'system';
   currency: string;
   notifications: boolean;
   language?: 'en' | 'fr'; // Language preference for i18n
+  dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD'; // Date format preference
 }
 
 export interface User {
@@ -30,7 +32,7 @@ export interface Position {
   unrealizedPL: number;
   unrealizedPLPercent: number;
   currency: string;
-  type: 'Equity' | 'ETF' | 'Crypto' | 'Cash';
+  type: AssetClass | 'Cash' | string;
   source?: string;
   // New Cash Fields
   bankName?: string;
@@ -50,7 +52,7 @@ export interface Transaction {
   source: string;
   fees: number;
   status: 'Completed' | 'Pending';
-  assetClass?: 'Equity' | 'ETF' | 'Crypto' | 'Cash';
+  assetClass?: AssetClass | string;
   bankName?: string;
   accountName?: string;
 }
@@ -139,7 +141,7 @@ export interface DashboardSummary {
 export interface TransactionFilter {
   searchQuery?: string;
   dateRange?: string; // 'All', 'Last 30 Days', 'Last 90 Days', 'YTD'
-  assetClass?: string; // 'All', 'Equities', 'ETFs', 'Crypto'
+  assetClass?: string;
   side?: string; // 'All', 'Buy', 'Sell', 'Deposit', 'Withdrawal'
   source?: string;
   currency?: string;
@@ -147,7 +149,7 @@ export interface TransactionFilter {
 }
 
 export interface PositionFilter {
-  type?: string; // 'All', 'Equities', 'ETFs', 'Crypto', 'Cash'
+  type?: string; 
   searchQuery?: string;
   source?: string;
   currency?: string;

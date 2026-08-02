@@ -2,11 +2,18 @@
     "menu": {
         "dashboard": "Dashboard",
         "portfolio": "Portfolio",
+        "portfolioHub": "Portfolio Overview",
         "summary": "Summary",
         "positions": "Positions",
         "transactions": "Transactions",
         "progress": "Progress",
-        "reports": "Reports",
+        "analytics": "Analytics",
+        "analyticsHub": "Analytics Overview",
+        "performance": "Global Performance",
+        "pl": "Realized vs Unrealized P&L",
+        "fees": "Fee Analysis",
+        "tax": "Tax Summary",
+        "reports": "Analytics",
         "settings": "Settings"
     },
     "header": {

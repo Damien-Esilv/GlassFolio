@@ -10,6 +10,7 @@ import AchievementBadge from '../components/AchievementBadge';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../utils/currency';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING, STAGGER_DELAY_MS } from '../src/constants/animations';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
@@ -28,6 +29,13 @@ const Progress: React.FC = () => {
     const currency = user?.preferences?.currency || 'USD';
     const [activeTab, setActiveTab] = useState<'goals' | 'achievements'>('goals');
     const [searchParams, setSearchParams] = useSearchParams();
+    const [animActive, setAnimActive] = useState(false);
+
+    useEffect(() => {
+        setAnimActive(false);
+        const timer = setTimeout(() => setAnimActive(true), 50);
+        return () => clearTimeout(timer);
+    }, [activeTab]);
 
     // --- GOAL MODAL STATE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -182,21 +190,28 @@ const Progress: React.FC = () => {
 
             {/* --- GOALS VIEW --- */}
             {activeTab === 'goals' && (
-                <div className="animate-fade-in space-y-6">
+                <div className="space-y-6">
                     <div className="flex justify-end">
                         <Button onClick={handleAddNew} className="flex items-center gap-2 bg-brand text-white hover:bg-brand/90 shadow-lg shadow-brand/20">
                             <PlusCircle size={18} /> New Goal
                         </Button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {sortedGoals.map(goal => (
-                            <GoalCard
+                    <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {sortedGoals.map((goal, idx) => (
+                            <div
                                 key={goal.id}
-                                goal={goal}
-                                onEdit={handleEdit}
-                                onDelete={deleteGoal}
-                                onPin={toggleGoalPin}
-                            />
+                                className="animate-scale-up"
+                                style={{
+                                    animationDelay: `${idx * STAGGER_DELAY_MS}ms`
+                                }}
+                            >
+                                <GoalCard
+                                    goal={goal}
+                                    onEdit={handleEdit}
+                                    onDelete={deleteGoal}
+                                    onPin={toggleGoalPin}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -204,13 +219,20 @@ const Progress: React.FC = () => {
 
             {/* --- ACHIEVEMENTS VIEW --- */}
             {activeTab === 'achievements' && (
-                <div className="animate-fade-in grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {achievements.map(ach => (
-                        <AchievementBadge
+                <div key={`achievements-${activeTab}`} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {achievements.map((ach, idx) => (
+                        <div
                             key={ach.id}
-                            achievement={ach}
-                            onClick={() => setSelectedAchievement(ach)}
-                        />
+                            className="animate-scale-up"
+                            style={{
+                                animationDelay: `${idx * STAGGER_DELAY_MS}ms`
+                            }}
+                        >
+                            <AchievementBadge
+                                achievement={ach}
+                                onClick={() => setSelectedAchievement(ach)}
+                            />
+                        </div>
                     ))}
                 </div>
             )}

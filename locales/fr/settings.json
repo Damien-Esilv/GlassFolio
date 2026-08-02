@@ -33,6 +33,46 @@
         "notifications": "Notifications",
         "notificationsInfo": "Recevez des mises à jour sur votre portefeuille.",
         "english": "Anglais",
-        "french": "Français"
+        "french": "Français",
+        "dateFormat": "Format de date",
+        "dateFormatInfo": "Choisissez le format d'affichage des dates dans l'application.",
+        "dateFormatFR": "Européen (JJ/MM/AAAA)",
+        "dateFormatUS": "Américain (MM/JJ/AAAA)",
+        "dateFormatISO": "Standard ISO (AAAA-MM-JJ)"
+    },
+    "dataAndBackup": {
+        "title": "Données, Sauvegardes & Confidentialité",
+        "subtitle": "Exportez vos données au format JSON complet pour transférer votre compte, ou téléchargez une archive RGPD (JSON + CSV) compatible Excel.",
+        "exportBackup": "Exporter le Backup (JSON)",
+        "exportBackupInfo": "Sauvegarde complète réimportable",
+        "exportGdpr": "Export RGPD (ZIP / CSV)",
+        "exportGdprInfo": "Archive lisible sur Excel",
+        "restoreBackup": "Restaurer un Backup",
+        "restoreBackupInfo": "Écraser ou fusionner un JSON",
+        "resetDemoTitle": "Réinitialiser les données de démo",
+        "resetDemoInfo": "Efface toutes les données locales et restaure les données de démo initiales.",
+        "reset": "Réinitialiser",
+        "confirmReset": "Confirmer ?",
+        "cancel": "Annuler",
+        "yesReset": "Oui, réinitialiser"
+    },
+    "backupWizard": {
+        "title": "Importer & Restaurer un Backup JSON",
+        "subtitle": "Sélectionnez votre fichier glassfolio-backup.json",
+        "uploadHint": "Cliquez pour charger le fichier de sauvegarde (.json)",
+        "uploadSubhint": "Accepte les sauvegardes au format GlassFolio",
+        "entitiesReady": "entités prêtes à l'importation",
+        "changeFile": "Changer de fichier",
+        "invalidJson": "Fichier JSON invalide",
+        "strategyLabel": "Stratégie d'importation",
+        "modeMergeTitle": "Mode Fusionner (Recommandé)",
+        "modeMergeDesc": "Combine les données du JSON avec vos données actuelles. Permet d'éditer ligne par ligne.",
+        "modeResetTitle": "Mode Écraser & Réinitialiser",
+        "modeResetDesc": "Remplace totalement les données locales actuelles par le contenu du backup.",
+        "executeMerge": "Exécuter la fusion",
+        "executeReset": "Exécuter la restauration complète",
+        "restoreSuccess": "Restauration complète effectuée avec succès !",
+        "mergeSuccess": "Fusion terminée : {{count}} éléments importés ou mis à jour !",
+        "importError": "Erreur lors de l'importation"
     }
 }

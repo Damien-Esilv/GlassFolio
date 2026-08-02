@@ -26,11 +26,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const parsedUser = JSON.parse(storedUser);
       // Ensure preferences exist (for legacy data)
       if (!parsedUser.preferences) {
-        parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en' };
+        parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' };
       }
-      // Add language if missing from legacy data
+      // Add language or dateFormat if missing from legacy data
       if (!parsedUser.preferences.language) {
         parsedUser.preferences.language = 'en';
+      }
+      if (!parsedUser.preferences.dateFormat) {
+        parsedUser.preferences.dateFormat = 'DD/MM/YYYY';
       }
       setUser(parsedUser);
     }
@@ -97,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: 'Alex Trader',
             email: 'demo@glassfolio.com',
             avatar: 'https://i.pravatar.cc/150?u=alex',
-            preferences: { theme: 'night', currency: 'USD', notifications: true, language: 'en' },
+            preferences: { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
             xp: 1250,
             level: 5
           };
@@ -119,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name,
           email,
           avatar: `https://i.pravatar.cc/150?u=${email}`,
-          preferences: { theme: 'night', currency: 'USD', notifications: true, language: 'en' },
+          preferences: { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
           xp: 0,
           level: 1
         };
@@ -149,7 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               theme: data.preferences.theme ?? user.preferences?.theme ?? 'night',
               currency: data.preferences.currency ?? user.preferences?.currency ?? 'USD',
               notifications: data.preferences.notifications ?? user.preferences?.notifications ?? true,
-              language: data.preferences.language ?? user.preferences?.language ?? 'en'
+              language: data.preferences.language ?? user.preferences?.language ?? 'en',
+              dateFormat: data.preferences.dateFormat ?? user.preferences?.dateFormat ?? 'DD/MM/YYYY'
             };
           }
           setUser(updatedUser);

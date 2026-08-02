@@ -118,6 +118,22 @@ export const positions: Position[] = [
     source: 'Chase',
     bankName: 'Chase',
     accountName: 'Savings Account'
+  },
+  {
+    id: 'untracked-demo-1',
+    instrument: 'Untracked Private Startup',
+    symbol: 'UNTRACKED_CORP_XYZ',
+    quantity: 10,
+    avgCost: 100.00,
+    lastPrice: 0.00,
+    marketValue: 1000.00,
+    unrealizedPL: 0.00,
+    unrealizedPLPercent: 0.00,
+    currency: 'EUR',
+    type: 'Equity',
+    source: 'BoursoBank',
+    bankName: 'BoursoBank',
+    accountName: 'BoursoBank PEA'
   }
 ];
 
@@ -137,6 +153,23 @@ export const assetGroups: AssetGroup[] = [
 ];
 
 export const transactions: Transaction[] = [
+  {
+    id: 't-untracked-demo-1',
+    date: '2024-05-10 10:00:00',
+    type: 'Buy',
+    instrument: 'Untracked Private Startup',
+    symbol: 'UNTRACKED_CORP_XYZ',
+    amount: 10,
+    price: 100.00,
+    total: 1000.00,
+    currency: 'EUR',
+    source: 'Boursobank',
+    fees: 0.00,
+    status: 'Completed',
+    assetClass: 'Equity',
+    bankName: 'Boursobank',
+    accountName: 'PEA'
+  },
   {
     id: 't1',
     date: '2022-01-15 08:00:00',
@@ -272,7 +305,7 @@ export const reports: ReportCard[] = [
   },
   {
     id: 'r2',
-    title: 'Realized vs. Unrealized P/L',
+    title: 'Realized vs. Unrealized P&L',
     description: 'Compare your realized profits and losses vs holdings.',
     color: 'bg-gradient-to-br from-emerald-600 to-teal-500'
   },

@@ -216,6 +216,20 @@ export const instruments: Instrument[] = [
         updatedAt: '2024-01-01T00:00:00Z'
     },
     {
+        id: 'instr-untracked-xyz',
+        ownerId: 'default-user',
+        name: 'Untracked Private Startup',
+        type: 'stock',
+        marketIdentifier: {
+            symbol: 'UNTRACKED_CORP_XYZ',
+            exchange: 'UNKNOWN'
+        },
+        isMarketReady: false,
+        denominationCurrency: 'EUR',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z'
+    },
+    {
         id: 'instr-btc',
         ownerId: 'default-user',
         name: 'Bitcoin',
@@ -385,6 +399,31 @@ export const importBatches: ImportBatch[] = [
 // ============================================================================
 
 export const unifiedTransactions: UnifiedTransaction[] = [
+    {
+        id: 'utx-untracked-1',
+        ownerId: 'default-user',
+        accountId: 'acc-bourso-pea',
+        instrumentId: 'instr-untracked-xyz',
+        batchId: 'batch-seed-untracked',
+        rowHash: 'hash-seed-untracked-1',
+        sourceOrigin: 'FILE',
+        isSynthetic: false,
+        isFiscal: true,
+        sourceMode: 'history',
+        transactionDate: '2024-05-10T10:00:00Z',
+        type: 'BUY',
+        rawType: 'Buy',
+        label: 'Untracked Private Startup',
+        rawLabel: 'Achat Untracked Private Startup',
+        amountPrimary: '1000.00',
+        assetSymbol: 'UNTRACKED_CORP_XYZ',
+        priceUnit: '100.00',
+        quantity: '10.00',
+        feeAmount: '0.00',
+        createdAt: '2024-05-10T10:00:00Z',
+        updatedAt: '2024-05-10T10:00:00Z',
+        version: 1
+    },
     // --- Batch 1: Initial Cash Deposits (2 txs) ---
     {
         id: 'utx-seed-1',

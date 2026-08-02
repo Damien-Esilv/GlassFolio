@@ -42,7 +42,28 @@
         "qty": "Qty",
         "gross": "Gross",
         "fee": "Fee",
-        "feeCurrency": "Fee Ccy"
+        "feeCurrency": "Fee Ccy",
+        "actions": "Actions"
+    },
+    "editModal": {
+        "title": "Edit Transaction",
+        "id": "ID",
+        "instrument": "Instrument",
+        "symbol": "Symbol / Ticker",
+        "type": "Action Type",
+        "broker": "Broker / Institution",
+        "account": "Account",
+        "quantity": "Quantity",
+        "price": "Unit Price",
+        "fees": "Fees",
+        "currency": "Currency",
+        "date": "Date (YYYY-MM-DD)",
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "buy": "Buy",
+        "sell": "Sell",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal"
     },
     "summary": {
         "showing": "Showing",
@@ -51,6 +72,8 @@
     },
     "noResults": "No transactions found",
     "loading": "Loading transactions...",
+    "untrackedBadge": "Untracked",
+    "untrackedTooltip": "The price for this asset cannot be automatically fetched via Yahoo Finance",
     "importWizard": {
         "title": "Import Transactions",
         "stepDescription": {

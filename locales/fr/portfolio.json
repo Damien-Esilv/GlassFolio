@@ -2,11 +2,13 @@
     "title": "Résumé du portefeuille",
     "totalValue": "Valeur totale",
     "categories": {
+        "all": "Tous",
         "equities": "Actions",
         "etfs": "ETF",
         "crypto": "Crypto",
         "cash": "Liquidités",
-        "stocks": "Actions & Fonds"
+        "stocks": "Actions & Fonds",
+        "other": "Autres actifs"
     },
     "allocation": "Répartition des actifs",
     "topHoldings": "Principales positions",
@@ -33,11 +35,7 @@
         "other": "Autre",
         "mainAccount": "Compte principal"
     },
-    "emptyState": {
-        "message": "Aucune position trouvée.",
-        "link": "Importez des données",
-        "suffix": "pour commencer."
-    },
+    "emptyState": "Aucune position trouvée.",
     "positions": {
         "filters": {
             "all": "Tout",
@@ -56,14 +54,44 @@
             "price": "Prix",
             "marketValue": "Valeur de marché",
             "unrealizedPl": "P&L latent",
-            "currency": "Devise"
+            "currency": "Devise",
+            "actions": "Actions"
         },
         "badges": {
-            "cash": "LIQUIDITÉS"
+            "cash": "Liquidités",
+            "untracked": "Non tracké",
+            "untrackedTooltip": "Le prix n'est pas mis à jour automatiquement via Yahoo Finance"
+        },
+        "manualModal": {
+            "title": "Saisie Manuelle du Prix",
+            "tickerLabel": "Code Ticker / ISIN (Optionnel)",
+            "tickerInfo": "Si Yahoo Finance ajoute ce Ticker plus tard, il sera tracké automatiquement.",
+            "priceLabel": "Prix Actuel Manuel ({{currency}})",
+            "cancel": "Annuler",
+            "save": "Enregistrer le Prix"
         },
         "fallback": {
-            "mainAccount": "Compte principal",
-            "noSource": "—"
+            "noSource": "Source inconnue",
+            "mainAccount": "Compte principal"
+        }
+    },
+    "hub": {
+        "title": "Portefeuille",
+        "subtitle": "Accédez à la synthèse de vos actifs, au détail de vos positions et à l'historique de vos transactions.",
+        "explore": "Explorer la section",
+        "cards": {
+            "summary": {
+                "title": "Synthèse & Allocation",
+                "desc": "Vue d'ensemble de votre patrimoine net, répartition dynamique par classe d'actifs (Actions, ETF, Crypto, Cash) et comptes par établissement."
+            },
+            "positions": {
+                "title": "Positions & Lignes d'Actifs",
+                "desc": "Liste complète de vos instruments, quantités, prix de revient moyen (PRU), prix réels en direct et plus/moins-values latentes."
+            },
+            "transactions": {
+                "title": "Historique des Transactions",
+                "desc": "Journal chronologique complet de vos opérations d'achat, de vente, retraits, dépôts et ajustements de trésorerie."
+            }
         }
     }
 }

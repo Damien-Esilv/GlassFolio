@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, PieChart, ArrowRightLeft, FileText, Settings, Bell, Hexagon,
-  LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw
+  LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
+  LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
+  TrendingUp, Receipt, Coins, ShieldCheck
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { lastPriceRefresh, forceRefreshPrices } = useData();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPortfolioExpanded, setIsPortfolioExpanded] = useState(true);
+  const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -53,8 +55,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Auto-expand Portfolio section if on a portfolio-related page
   useEffect(() => {
-    if (['/portfolio', '/positions', '/transactions'].includes(location.pathname)) {
+    if (['/portfolio', '/portfolio/summary', '/positions', '/transactions'].includes(location.pathname)) {
       setIsPortfolioExpanded(true);
+    }
+    if (location.pathname.startsWith('/analytics')) {
+      setIsAnalyticsExpanded(true);
     }
   }, [location.pathname]);
 
@@ -64,7 +69,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   const isActive = (path: string) => location.pathname === path;
-  const isPortfolioActive = ['/portfolio', '/positions', '/transactions'].includes(location.pathname);
+  const isPortfolioActive = ['/portfolio', '/portfolio/summary', '/positions', '/transactions'].includes(location.pathname);
+  const isAnalyticsActive = location.pathname.startsWith('/analytics');
 
   const handleLogout = () => {
     logout();
@@ -84,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       onClick={onClick}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${indent ? 'ml-6' : ''
         } ${isActive(path)
-          ? 'bg-primary/10 text-primary'
+          ? 'bg-primary/10 text-primary font-semibold'
           : 'text-secondary hover:bg-subtle hover:text-primary'
         }`}
     >
@@ -96,40 +102,82 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Sidebar content (shared between desktop and mobile)
   const SidebarContent = () => (
     <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-      {/* Dashboard */}
+      {/* 1. Dashboard */}
       <NavItem path="/" icon={LayoutDashboard} name={t('navigation:menu.dashboard')} onClick={() => setIsMobileMenuOpen(false)} />
 
-      {/* Portfolio Section (Collapsible) */}
+      {/* 2. Portfolio Section (Collapsible) */}
       <div>
-        <button
-          onClick={() => setIsPortfolioExpanded(!isPortfolioExpanded)}
-          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${isPortfolioActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-secondary hover:bg-subtle hover:text-primary'
-            }`}
-        >
-          <div className="flex items-center gap-3">
+        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isPortfolioActive
+          ? 'bg-primary/10 text-primary font-semibold'
+          : 'text-secondary hover:bg-subtle hover:text-primary'
+          }`}>
+          {/* Clicking the name navigates to Portfolio Hub */}
+          <Link
+            to="/portfolio"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 flex-1 px-4 py-2.5"
+          >
             <Briefcase size={18} />
             {t('navigation:menu.portfolio')}
-          </div>
-          {isPortfolioExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
+          </Link>
+          {/* Clicking the chevron only toggles the dropdown */}
+          <button
+            onClick={() => setIsPortfolioExpanded(!isPortfolioExpanded)}
+            className="px-3 py-2.5 hover:text-primary"
+            aria-label="Toggle portfolio menu"
+          >
+            {isPortfolioExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        </div>
 
-        {/* Portfolio Sub-items */}
+        {/* Portfolio Sub-items (no Hub item — clicking the name already goes there) */}
         {isPortfolioExpanded && (
           <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
-            <NavItem path="/portfolio" icon={PieChart} name={t('navigation:menu.summary')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/portfolio/summary" icon={PieChart} name={t('navigation:menu.summary')} indent onClick={() => setIsMobileMenuOpen(false)} />
             <NavItem path="/positions" icon={LayoutDashboard} name={t('navigation:menu.positions')} indent onClick={() => setIsMobileMenuOpen(false)} />
             <NavItem path="/transactions" icon={ArrowRightLeft} name={t('navigation:menu.transactions')} indent onClick={() => setIsMobileMenuOpen(false)} />
           </div>
         )}
       </div>
 
-      {/* Progress */}
-      <NavItem path="/progress" icon={Trophy} name={t('navigation:menu.progress')} onClick={() => setIsMobileMenuOpen(false)} />
+      {/* 3. Analytics Section (Collapsible - Placed between Portfolio and Progress) */}
+      <div>
+        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isAnalyticsActive
+          ? 'bg-primary/10 text-primary font-semibold'
+          : 'text-secondary hover:bg-subtle hover:text-primary'
+          }`}>
+          {/* Clicking the name navigates to Analytics Hub */}
+          <Link
+            to="/analytics"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 flex-1 px-4 py-2.5"
+          >
+            <BarChart3 size={18} />
+            {t('navigation:menu.analytics')}
+          </Link>
+          {/* Clicking the chevron only toggles the dropdown */}
+          <button
+            onClick={() => setIsAnalyticsExpanded(!isAnalyticsExpanded)}
+            className="px-3 py-2.5 hover:text-primary"
+            aria-label="Toggle analytics menu"
+          >
+            {isAnalyticsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        </div>
 
-      {/* Reports */}
-      <NavItem path="/reports" icon={FileText} name={t('navigation:menu.reports')} onClick={() => setIsMobileMenuOpen(false)} />
+        {/* Analytics Sub-items (no Hub item — clicking the name already goes there) */}
+        {isAnalyticsExpanded && (
+          <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
+            <NavItem path="/analytics/performance" icon={TrendingUp} name={t('navigation:menu.performance')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/analytics/pl" icon={Receipt} name={t('navigation:menu.pl')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/analytics/fees" icon={Coins} name={t('navigation:menu.fees')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/analytics/tax" icon={ShieldCheck} name={t('navigation:menu.tax')} indent onClick={() => setIsMobileMenuOpen(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* 4. Progress */}
+      <NavItem path="/progress" icon={Trophy} name={t('navigation:menu.progress')} onClick={() => setIsMobileMenuOpen(false)} />
     </nav>
   );
 

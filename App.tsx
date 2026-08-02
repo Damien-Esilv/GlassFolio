@@ -5,7 +5,12 @@ import Dashboard from './pages/Dashboard';
 import Positions from './pages/Positions';
 import Transactions from './pages/Transactions';
 import Portfolio from './pages/Portfolio';
-import Reports from './pages/Reports';
+import PortfolioHub from './pages/PortfolioHub';
+import Analytics from './pages/Analytics';
+import PortfolioPerformance from './pages/PortfolioPerformance';
+import RealizedUnrealizedPL from './pages/RealizedUnrealizedPL';
+import FeeAnalysis from './pages/FeeAnalysis';
+import TaxSummary from './pages/TaxSummary';
 import Settings from './pages/Settings';
 import Progress from './pages/Progress';
 import ImportWizard from './pages/ImportWizard';
@@ -46,14 +51,23 @@ const App: React.FC = () => {
 
               {/* Protected Routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+              <Route path="/portfolio" element={<ProtectedRoute><PortfolioHub /></ProtectedRoute>} />
+              <Route path="/portfolio/summary" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/positions" element={<ProtectedRoute><Positions /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/analytics/performance" element={<ProtectedRoute><PortfolioPerformance /></ProtectedRoute>} />
+              <Route path="/analytics/pl" element={<ProtectedRoute><RealizedUnrealizedPL /></ProtectedRoute>} />
+              <Route path="/analytics/fees" element={<ProtectedRoute><FeeAnalysis /></ProtectedRoute>} />
+              <Route path="/analytics/tax" element={<ProtectedRoute><TaxSummary /></ProtectedRoute>} />
+              
+              {/* Legacy route redirects */}
+              <Route path="/reports" element={<Navigate to="/analytics" replace />} />
+              <Route path="/reports/*" element={<Navigate to="/analytics" replace />} />
+              <Route path="/goals" element={<Navigate to="/progress" replace />} />
+
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-              {/* Legacy route alias */}
-              <Route path="/goals" element={<Navigate to="/progress" replace />} />
               <Route path="/import" element={<ProtectedRoute><ImportWizard /></ProtectedRoute>} />
               <Route path="/import-history" element={<ProtectedRoute><ImportHistory /></ProtectedRoute>} />
 

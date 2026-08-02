@@ -343,6 +343,8 @@ class MockDB {
      */
     resetToInitialData(): void {
         Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+        localStorage.removeItem('glassfolio_price_cache');
+        localStorage.removeItem('gf_manual_price_history');
     }
 }
 

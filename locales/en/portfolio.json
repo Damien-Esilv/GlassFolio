@@ -2,11 +2,13 @@
     "title": "Portfolio Summary",
     "totalValue": "Total Value",
     "categories": {
+        "all": "All",
         "equities": "Equities",
         "etfs": "ETFs",
         "crypto": "Crypto",
         "cash": "Cash",
-        "stocks": "Stocks & Funds"
+        "stocks": "Stocks & Funds",
+        "other": "Other Assets"
     },
     "allocation": "Asset Allocation",
     "topHoldings": "Top Holdings",
@@ -33,11 +35,7 @@
         "other": "Other",
         "mainAccount": "Main account"
     },
-    "emptyState": {
-        "message": "No positions found.",
-        "link": "Import data",
-        "suffix": "to get started."
-    },
+    "emptyState": "No positions found.",
     "positions": {
         "filters": {
             "all": "All",
@@ -52,18 +50,48 @@
             "instrument": "Instrument",
             "sourceBank": "Source / Bank",
             "quantity": "Quantity",
-            "avgCost": "Avg cost",
+            "avgCost": "Avg Cost",
             "price": "Price",
-            "marketValue": "Market value",
+            "marketValue": "Market Value",
             "unrealizedPl": "Unrealized P&L",
-            "currency": "Currency"
+            "currency": "Currency",
+            "actions": "Actions"
         },
         "badges": {
-            "cash": "CASH"
+            "cash": "Cash",
+            "untracked": "Untracked",
+            "untrackedTooltip": "Price is not automatically updated via Yahoo Finance"
+        },
+        "manualModal": {
+            "title": "Manual Price Entry",
+            "tickerLabel": "Ticker / ISIN Code (Optional)",
+            "tickerInfo": "If Yahoo Finance adds this ticker later, it will be tracked automatically.",
+            "priceLabel": "Manual Current Price ({{currency}})",
+            "cancel": "Cancel",
+            "save": "Save Price"
         },
         "fallback": {
-            "mainAccount": "Main account",
-            "noSource": "—"
+            "noSource": "Unknown source",
+            "mainAccount": "Main account"
+        }
+    },
+    "hub": {
+        "title": "Portfolio",
+        "subtitle": "Access your asset summary, detailed holdings, and transaction history.",
+        "explore": "Explore section",
+        "cards": {
+            "summary": {
+                "title": "Summary & Allocation",
+                "desc": "Overview of your net worth, dynamic breakdown by asset class (Equities, ETF, Crypto, Cash) and breakdown by financial institution."
+            },
+            "positions": {
+                "title": "Holdings & Positions",
+                "desc": "Complete list of holdings, quantities, average cost basis (PRU), live market prices, and unrealized gains/losses."
+            },
+            "transactions": {
+                "title": "Transaction History",
+                "desc": "Complete chronological log of buy, sell, withdrawal, deposit operations, and cash balance adjustments."
+            }
         }
     }
 }

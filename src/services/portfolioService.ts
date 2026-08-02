@@ -2,39 +2,35 @@ import { Position, PositionFilter, Transaction, DashboardSummary } from '../../t
 import { db, delay } from './db';
 import { convertToLegacyTransaction } from './transformers';
 import { refreshPositionPrices } from './priceService';
+import { currencyService } from './currencyService';
+import { formatChartDate, DateFormatPattern } from '../../utils/date';
+import { isAssetClassMatch } from '../constants/assetClasses';
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
         await delay(100);
-        let positions = db.getPositions();
+        let allPositions = db.getPositions();
 
-        if (filter) {
-            positions = positions.filter(p => {
-                const normType = p.type?.toLowerCase();
-                const filterNorm = filter.type?.toLowerCase();
-                const matchesType = !filter.type || filter.type === 'All' ||
-                    p.type === filter.type ||
-                    (filterNorm === 'equities' && (normType === 'equity' || normType === 'equities' || normType === 'stock')) ||
-                    (filterNorm === 'etfs' && (normType === 'etf' || normType === 'etfs')) ||
-                    (filterNorm === 'crypto' && normType === 'crypto') ||
-                    (filterNorm === 'cash' && normType === 'cash');
-                const matchesSource = !filter.source || filter.source === 'All' || p.source === filter.source;
-                const matchesCurrency = !filter.currency || filter.currency === 'All' || p.currency === filter.currency;
-                const matchesSearch = !filter.searchQuery ||
-                    p.symbol.toLowerCase().includes(filter.searchQuery.toLowerCase()) ||
-                    p.instrument.toLowerCase().includes(filter.searchQuery.toLowerCase());
+        // Refresh live prices from Yahoo Finance on ALL positions (15-min cache)
+        allPositions = await refreshPositionPrices(allPositions);
 
-                return matchesType && matchesSource && matchesCurrency && matchesSearch;
-            });
+        // Persist updated prices for all positions (never save filtered subset)
+        db.savePositions(allPositions);
+
+        if (!filter) {
+            return allPositions;
         }
 
-        // Refresh live prices from Yahoo Finance (15-min cache)
-        positions = await refreshPositionPrices(positions);
+        return allPositions.filter(p => {
+            const matchesType = !filter.type || filter.type === 'All' || isAssetClassMatch(p.type, filter.type);
+            const matchesSource = !filter.source || filter.source === 'All' || p.source === filter.source || p.bankName === filter.source;
+            const matchesCurrency = !filter.currency || filter.currency === 'All' || p.currency === filter.currency;
+            const matchesSearch = !filter.searchQuery ||
+                p.symbol.toLowerCase().includes(filter.searchQuery.toLowerCase()) ||
+                p.instrument.toLowerCase().includes(filter.searchQuery.toLowerCase());
 
-        // Persist updated positions so all other services (goals, achievements) observe live prices
-        db.savePositions(positions);
-
-        return positions;
+            return matchesType && matchesSource && matchesCurrency && matchesSearch;
+        });
     },
 
     recalculatePositions: async (): Promise<void> => {
@@ -120,7 +116,12 @@ export const portfolioService = {
         db.savePositions(positions);
     },
 
-    getDashboardSummary: async (timeRange: string = '1Y'): Promise<DashboardSummary> => {
+    getDashboardSummary: async (
+        timeRange: string = '1Y',
+        baseCurrency: string = 'EUR',
+        locale: string = 'fr-FR',
+        dateFormatPattern: DateFormatPattern = 'DD/MM/YYYY'
+    ): Promise<DashboardSummary> => {
         await delay(150);
         let positions = db.getPositions();
 
@@ -128,8 +129,21 @@ export const portfolioService = {
         positions = await refreshPositionPrices(positions);
         db.savePositions(positions);
 
-        const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
-        const totalInvested = positions.reduce((sum, p) => sum + (p.quantity * p.avgCost), 0);
+        // Fetch FX exchange rates for position currencies to baseCurrency
+        const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
+        const rates = await currencyService.getExchangeRates(uniqueCurrencies, baseCurrency);
+
+        const totalValue = positions.reduce((sum, p) => {
+            const valInBase = currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
+            return sum + valInBase;
+        }, 0);
+
+        const totalInvested = positions.reduce((sum, p) => {
+            const costBasis = p.quantity * p.avgCost;
+            const costInBase = currencyService.convertAmount(costBasis, p.currency || 'EUR', baseCurrency, rates);
+            return sum + costInBase;
+        }, 0);
+
         const totalPL = totalValue - totalInvested;
         const plPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
@@ -202,26 +216,22 @@ export const portfolioService = {
                 const pos = positions.find(p => p.symbol === symbol);
                 const currentPrice = pos ? pos.lastPrice : 1;
                 const costPrice = pos ? pos.avgCost : 1;
+                const posCurr = pos?.currency || 'EUR';
 
                 // Deterministic subtle market curve so performance looks realistic like Finary
                 const noise = 1 + (Math.sin(i * 1.3 + symbol.length) * 0.012);
                 const simulatedHistoricalPrice = (costPrice + (currentPrice - costPrice) * progress) * noise;
+                const itemValNative = qty * simulatedHistoricalPrice;
+                const itemValBase = currencyService.convertAmount(itemValNative, posCurr, baseCurrency, rates);
 
-                pointValue += qty * simulatedHistoricalPrice;
+                pointValue += itemValBase;
             });
 
             if (txsUpToDate.length === 0) {
                 pointValue = 0;
             }
 
-            let name = '';
-            if (labelFormat === 'hour') {
-                name = pointTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else if (labelFormat === 'month') {
-                name = pointTime.toLocaleDateString([], { month: 'short', year: '2-digit' });
-            } else {
-                name = pointTime.toLocaleDateString([], { month: 'short', day: 'numeric' });
-            }
+            const name = formatChartDate(pointTime, labelFormat, dateFormatPattern, locale);
 
             return {
                 name,

@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw } from 'lucide-react';
+import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences } from '../types';
 import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
+import { SUPPORTED_CURRENCIES } from '../utils/currency';
+import { exportBackupJSON, exportRGPDZip } from '../src/services/exportService';
+import { BackupMergeWizard } from '../components/BackupMergeWizard';
+import { Download, FileText, Database } from 'lucide-react';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
@@ -16,6 +20,7 @@ const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [showBackupWizard, setShowBackupWizard] = useState(false);
 
     // Check URL params for active tab
     useEffect(() => {
@@ -35,7 +40,8 @@ const Settings: React.FC = () => {
         currency: user?.preferences?.currency || 'USD',
         theme: user?.preferences?.theme || 'night',
         notifications: user?.preferences?.notifications ?? true,
-        language: user?.preferences?.language || 'en'
+        language: user?.preferences?.language || 'en',
+        dateFormat: user?.preferences?.dateFormat || 'DD/MM/YYYY'
     });
 
     // Password State
@@ -81,7 +87,7 @@ const Settings: React.FC = () => {
         setIsSaving(true);
         try {
             await updateProfile(profileData);
-            setSuccessMsg('Profile details updated successfully');
+            setSuccessMsg(t('settings:profile.profileUpdated'));
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (error) {
             console.error(error);
@@ -101,7 +107,7 @@ const Settings: React.FC = () => {
         // Simulate API Call
         setTimeout(() => {
             setIsSaving(false);
-            setSuccessMsg('Password changed successfully');
+            setSuccessMsg(t('settings:profile.passwordUpdated'));
             setPasswords({ current: '', new: '', confirm: '' });
             setTimeout(() => setSuccessMsg(''), 3000);
         }, 1000);
@@ -276,16 +282,11 @@ const Settings: React.FC = () => {
                                             onChange={(e) => updatePreference('currency', e.target.value)}
                                             className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[100px]"
                                         >
-                                            <option value="USD">USD ($)</option>
-                                            <option value="EUR">EUR (€)</option>
-                                            <option value="GBP">GBP (£)</option>
-                                            <option value="JPY">JPY (¥)</option>
-                                            <option value="CAD">CAD (C$)</option>
-                                            <option value="CHF">CHF (CHF)</option>
-                                            <option value="AUD">AUD (A$)</option>
-                                            <option value="CNY">CNY (¥)</option>
-                                            <option value="HKD">HKD (HK$)</option>
-                                            <option value="SGD">SGD (S$)</option>
+                                            {SUPPORTED_CURRENCIES.map(curr => (
+                                                <option key={curr.code} value={curr.code}>
+                                                    {curr.label}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
 
@@ -305,6 +306,26 @@ const Settings: React.FC = () => {
                                         >
                                             <option value="en">{t('settings:preferences.english')}</option>
                                             <option value="fr">{t('settings:preferences.french')}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Date Format Selector */}
+                                    <div className="flex items-center justify-between border-t border-border pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-subtle rounded-lg text-secondary"><Calendar size={20} /></div>
+                                            <div>
+                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.dateFormat')}</p>
+                                                <p className="text-xs text-tertiary">{t('settings:preferences.dateFormatInfo')}</p>
+                                            </div>
+                                        </div>
+                                        <select
+                                            value={prefData.dateFormat || 'DD/MM/YYYY'}
+                                            onChange={(e) => updatePreference('dateFormat', e.target.value as any)}
+                                            className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[160px]"
+                                        >
+                                            <option value="DD/MM/YYYY">{t('settings:preferences.dateFormatFR')}</option>
+                                            <option value="MM/DD/YYYY">{t('settings:preferences.dateFormatUS')}</option>
+                                            <option value="YYYY-MM-DD">{t('settings:preferences.dateFormatISO')}</option>
                                         </select>
                                     </div>
 
@@ -369,6 +390,58 @@ const Settings: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Data Export & Backup Section */}
+                            <div className={cardStyle}>
+                                <h2 className="text-xl font-semibold text-primary mb-2 flex items-center gap-2">
+                                    <Database size={20} className="text-primary" />
+                                    {t('settings:dataAndBackup.title')}
+                                </h2>
+                                <p className="text-xs text-tertiary mb-6">
+                                    {t('settings:dataAndBackup.subtitle')}
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <button
+                                        onClick={exportBackupJSON}
+                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                    >
+                                        <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:scale-110 transition-transform">
+                                            <Download size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.exportBackup')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.exportBackupInfo')}</p>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={exportRGPDZip}
+                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                    >
+                                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 w-fit group-hover:scale-110 transition-transform">
+                                            <FileText size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.exportGdpr')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.exportGdprInfo')}</p>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowBackupWizard(true)}
+                                        className="p-4 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-left flex flex-col justify-between gap-3 transition-all group"
+                                    >
+                                        <div className="p-2 rounded-lg bg-primary text-white w-fit group-hover:scale-110 transition-transform">
+                                            <Database size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.restoreBackup')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.restoreBackupInfo')}</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Import History & Rollback Section */}
                             <div className={cardStyle}>
                                 <ImportBatchList compact limit={5} showTitle />
@@ -382,18 +455,18 @@ const Settings: React.FC = () => {
                                             <RotateCcw size={18} />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-primary">Réinitialiser les données de démo</p>
-                                            <p className="text-xs text-tertiary mt-0.5">Efface toutes les données locales et restaure les données de démo initiales.</p>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.resetDemoTitle')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.resetDemoInfo')}</p>
                                         </div>
                                     </div>
                                     {!showResetConfirm ? (
                                         <Button variant="danger" size="sm" onClick={() => setShowResetConfirm(true)}>
-                                            Réinitialiser
+                                            {t('settings:dataAndBackup.reset')}
                                         </Button>
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-rose-500 font-medium">Confirmer ?</span>
-                                            <Button variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>Annuler</Button>
+                                            <span className="text-xs text-rose-500 font-medium">{t('settings:dataAndBackup.confirmReset')}</span>
+                                            <Button variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>{t('settings:dataAndBackup.cancel')}</Button>
                                             <Button
                                                 variant="danger"
                                                 size="sm"
@@ -405,7 +478,7 @@ const Settings: React.FC = () => {
                                                     setShowResetConfirm(false);
                                                 }}
                                             >
-                                                Oui, réinitialiser
+                                                {t('settings:dataAndBackup.yesReset')}
                                             </Button>
                                         </div>
                                     )}
@@ -415,6 +488,16 @@ const Settings: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Backup Merge Wizard Modal */}
+            <BackupMergeWizard
+                isOpen={showBackupWizard}
+                onClose={() => setShowBackupWizard(false)}
+                onSuccess={(msg) => {
+                    setSuccessMsg(msg);
+                    setTimeout(() => setSuccessMsg(''), 4000);
+                }}
+            />
         </div>
     );
 };

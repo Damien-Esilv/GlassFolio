@@ -42,7 +42,28 @@
         "qty": "Qté",
         "gross": "Brut",
         "fee": "Frais",
-        "feeCurrency": "Devise des frais"
+        "feeCurrency": "Devise des frais",
+        "actions": "Actions"
+    },
+    "editModal": {
+        "title": "Modifier la transaction",
+        "id": "ID",
+        "instrument": "Instrument",
+        "symbol": "Symbole / Ticker",
+        "type": "Type d'action",
+        "broker": "Établissement / Broker",
+        "account": "Compte",
+        "quantity": "Quantité",
+        "price": "Prix unitaire",
+        "fees": "Frais",
+        "currency": "Devise",
+        "date": "Date (AAAA-MM-JJ)",
+        "cancel": "Annuler",
+        "save": "Enregistrer les modifications",
+        "buy": "Achat (Buy)",
+        "sell": "Vente (Sell)",
+        "deposit": "Dépôt (Deposit)",
+        "withdrawal": "Retrait (Withdrawal)"
     },
     "summary": {
         "showing": "Affichage de",
@@ -51,6 +72,8 @@
     },
     "noResults": "Aucune transaction trouvée",
     "loading": "Chargement des transactions...",
+    "untrackedBadge": "Non tracké",
+    "untrackedTooltip": "Le cours de cet actif ne peut pas être récupéré automatiquement via Yahoo Finance",
     "importWizard": {
         "title": "Importer des transactions",
         "stepDescription": {

@@ -33,6 +33,46 @@
         "notifications": "Notifications",
         "notificationsInfo": "Receive updates about your portfolio.",
         "english": "English",
-        "french": "French"
+        "french": "French",
+        "dateFormat": "Date Format",
+        "dateFormatInfo": "Choose the display format for dates across the application.",
+        "dateFormatFR": "European (DD/MM/YYYY)",
+        "dateFormatUS": "American (MM/DD/YYYY)",
+        "dateFormatISO": "ISO Standard (YYYY-MM-DD)"
+    },
+    "dataAndBackup": {
+        "title": "Data, Backups & Privacy",
+        "subtitle": "Export your data in full JSON format to transfer your account, or download a GDPR archive (JSON + CSV) compatible with Excel.",
+        "exportBackup": "Export Backup (JSON)",
+        "exportBackupInfo": "Full re-importable backup",
+        "exportGdpr": "GDPR Export (ZIP / CSV)",
+        "exportGdprInfo": "Excel-readable archive",
+        "restoreBackup": "Restore Backup",
+        "restoreBackupInfo": "Overwrite or merge JSON",
+        "resetDemoTitle": "Reset Demo Data",
+        "resetDemoInfo": "Clears all local data and restores initial demo dataset.",
+        "reset": "Reset",
+        "confirmReset": "Confirm?",
+        "cancel": "Cancel",
+        "yesReset": "Yes, reset"
+    },
+    "backupWizard": {
+        "title": "Import & Restore a JSON Backup",
+        "subtitle": "Select your glassfolio-backup.json file",
+        "uploadHint": "Click to load backup file (.json)",
+        "uploadSubhint": "Accepts GlassFolio format backups",
+        "entitiesReady": "entities ready to import",
+        "changeFile": "Change file",
+        "invalidJson": "Invalid JSON file",
+        "strategyLabel": "Import strategy",
+        "modeMergeTitle": "Merge Mode (Recommended)",
+        "modeMergeDesc": "Combines JSON data with your current data. Allows line-by-line editing.",
+        "modeResetTitle": "Reset & Overwrite Mode",
+        "modeResetDesc": "Completely replaces current local data with the backup contents.",
+        "executeMerge": "Execute Merge",
+        "executeReset": "Execute Full Restore",
+        "restoreSuccess": "Full restoration completed successfully!",
+        "mergeSuccess": "Merge completed: {{count}} items imported or updated!",
+        "importError": "Error during importation"
     }
 }

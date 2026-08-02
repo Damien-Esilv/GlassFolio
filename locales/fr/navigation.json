@@ -2,11 +2,18 @@
     "menu": {
         "dashboard": "Tableau de bord",
         "portfolio": "Portefeuille",
-        "summary": "Résumé",
+        "portfolioHub": "Accueil Portefeuille",
+        "summary": "Synthèse",
         "positions": "Positions",
         "transactions": "Transactions",
         "progress": "Progrès",
-        "reports": "Rapports",
+        "analytics": "Analyses",
+        "analyticsHub": "Accueil Analyses",
+        "performance": "Performance Globale",
+        "pl": "P&L Réalisé vs Latent",
+        "fees": "Analyse des Frais",
+        "tax": "Récapitulatif Fiscal",
+        "reports": "Analyses",
         "settings": "Paramètres"
     },
     "header": {

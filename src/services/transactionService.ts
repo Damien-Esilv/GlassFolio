@@ -4,6 +4,7 @@ import { db, delay } from './db';
 import { portfolioService } from './portfolioService';
 import { convertToLegacyTransaction } from './transformers';
 import { instrumentService } from './instrumentService';
+import { isAssetClassMatch } from '../constants/assetClasses';
 
 export const transactionService = {
     getTransactions: async (filter?: TransactionFilter): Promise<Transaction[]> => {
@@ -18,6 +19,10 @@ export const transactionService = {
         let transactions = unifiedTxs.map(tx =>
             convertToLegacyTransaction(tx, accounts, institutes)
         );
+
+        if (transactions.length === 0) {
+            transactions = db.getTransactions();
+        }
 
         if (filter) {
             transactions = transactions.filter(tx => {
@@ -42,9 +47,7 @@ export const transactionService = {
                 }
 
                 if (filter.assetClass && filter.assetClass !== 'All') {
-                    if (filter.assetClass === 'Equities' && tx.assetClass !== 'Equity') return false;
-                    if (filter.assetClass === 'ETFs' && tx.assetClass !== 'ETF') return false;
-                    if (filter.assetClass === 'Crypto' && tx.assetClass !== 'Crypto') return false;
+                    if (!isAssetClassMatch(tx.assetClass, filter.assetClass)) return false;
                 }
 
                 if (filter.side && filter.side !== 'All' && tx.type !== filter.side) return false;
@@ -123,6 +126,87 @@ export const transactionService = {
         const institutes = db.getInstitutes();
 
         return unified.map(tx => convertToLegacyTransaction(tx, accounts, institutes));
+    },
+
+    /**
+     * Update a single transaction in both Unified and Legacy stores
+     */
+    updateTransaction: async (updatedTx: Transaction): Promise<void> => {
+        await delay(150);
+
+        // 1. Find or create the instrument matching the updated symbol
+        const instrument = await instrumentService.findOrCreateInstrument({
+            symbol: updatedTx.symbol,
+            name: updatedTx.instrument
+        });
+
+        // 2. Resolve accountId by first finding the institute from source name,
+        //    then finding the account by accountName or falling back to first account of the institute.
+        const accounts = db.getAccounts();
+        const institutes = db.getInstitutes();
+
+        // Find institute by matching its name to updatedTx.source
+        const matchingInstitute = institutes.find(i =>
+            updatedTx.source && (
+                i.name.toLowerCase() === updatedTx.source.toLowerCase() ||
+                updatedTx.source.toLowerCase().includes(i.name.toLowerCase()) ||
+                i.name.toLowerCase().includes(updatedTx.source.toLowerCase())
+            )
+        );
+
+        // Get accounts belonging to that institute
+        const instituteAccounts = matchingInstitute
+            ? accounts.filter(a => a.instituteId === matchingInstitute.id)
+            : [];
+
+        // Find account by matching accountName, or fall back to first account of the institute,
+        // or fall back to first account of the source text match
+        let matchingAccount = instituteAccounts.find(a =>
+            updatedTx.accountName && a.name.toLowerCase() === updatedTx.accountName.toLowerCase()
+        ) || instituteAccounts[0];
+
+        // Last resort: find any account whose name loosely matches the source
+        if (!matchingAccount) {
+            matchingAccount = accounts.find(a =>
+                updatedTx.source && a.name.toLowerCase().includes(updatedTx.source.toLowerCase())
+            ) || accounts[0];
+        }
+
+        // 3. Update unified transactions — this is the source of truth
+        const unifiedTxs = db.getUnifiedTransactions();
+        const typeMap: Record<string, TransactionType> = {
+            'Buy': 'BUY',
+            'Sell': 'SELL',
+            'Deposit': 'DEPOSIT',
+            'Withdrawal': 'WITHDRAW'
+        };
+
+        const updatedUnified = unifiedTxs.map(u => {
+            if (u.id === updatedTx.id) {
+                return {
+                    ...u,
+                    instrumentId: instrument.id,
+                    accountId: matchingAccount ? matchingAccount.id : u.accountId,
+                    label: updatedTx.instrument,
+                    rawLabel: updatedTx.instrument,
+                    assetSymbol: updatedTx.symbol,
+                    quantity: updatedTx.amount.toString(),
+                    priceUnit: updatedTx.price.toString(),
+                    feeAmount: updatedTx.fees.toString(),
+                    amountPrimary: (updatedTx.total || (updatedTx.amount * updatedTx.price)).toString(),
+                    type: typeMap[updatedTx.type] || u.type,
+                    rawType: updatedTx.type,
+                    transactionDate: updatedTx.date.includes('T') ? updatedTx.date : `${updatedTx.date}T12:00:00Z`,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            return u;
+        });
+
+        db.saveUnifiedTransactions(updatedUnified);
+
+        // 4. Recalculate portfolio positions with the new instrument & ticker
+        await portfolioService.recalculatePositions();
     }
 };
 
