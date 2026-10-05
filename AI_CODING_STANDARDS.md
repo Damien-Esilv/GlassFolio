@@ -184,3 +184,103 @@ The system supports three distinct themes. Your code must support all three auto
 ---
 **End of Standards.**
 *Accessing this file constitutes a binding agreement to adhere to these architectural principles.*
+
+---
+
+## 7. Tests et CI Obligatoires (Filet de Sécurité)
+> **Version:** 1.0 | **Ajouté:** 2026-10-05
+
+**Règle absolue : aucun code cassé ne peut atteindre `main` sans que les gates CI ne l'aient bloqué.**
+
+### 7.1. Infrastructure de Test
+
+| Outil | Usage |
+|---|---|
+| **Vitest** | Framework de tests unitaires (jsdom, globals, v8 coverage) |
+| **@testing-library/react** | Tests composants React |
+| **vitest/coverage-v8** | Rapport de couverture (HTML, LCOV, JSON) |
+| `tests/setup.ts` | Setup global : reset localStorage, Web Crypto polyfill, fetch guard |
+
+### 7.2. Structure des Tests
+
+```
+tests/
+├── setup.ts                          # Vitest global setup
+└── unit/
+    ├── services/
+    │   ├── core/                     # validationService, transactionManager
+    │   ├── import/                   # csvParser
+    │   ├── fiscal/                   # taxCalendarService
+    │   ├── goalService.test.ts
+    │   ├── currencyService.test.ts
+    │   └── priceService.test.ts
+    └── utils/
+        ├── currency.test.ts
+        ├── date.test.ts
+        └── csvUtils.test.ts
+```
+
+### 7.3. Seuils de Couverture (P1+P2)
+
+Définis dans `vitest.config.ts` — **la CI échoue si non respectés** :
+
+| Métrique | Seuil minimal |
+|---|---|
+| Lines | **70%** |
+| Functions | **70%** |
+| Branches | **60%** |
+| Statements | **70%** |
+
+Périmètre : `src/services/**`, `utils/**`, `context/**`, `hooks/**`.
+
+### 7.4. Scripts npm Disponibles
+
+```bash
+npm run test              # Run all tests once (CI mode)
+npm run test:watch        # Watch mode (dev)
+npm run test:coverage     # Run tests + generate coverage report
+npm run check:types       # TypeScript strict check (tsc --noEmit)
+npm run check:i18n        # Audit i18n keys: scans t() usages vs locales/
+npm run lint              # ESLint (--max-warnings 0 en CI)
+npm run lint:fix          # Auto-fix ESLint issues
+```
+
+### 7.5. Règles pour les Tests
+
+1. **Isolation totale** : chaque test doit être indépendant. `localStorage` est vidé entre les tests (via `setup.ts`).
+2. **Mocks obligatoires pour le réseau** : tout appel `fetch` doit être intercepté avec `vi.fn()`. Un `fetch` non mocké lèvera une erreur grâce au guard dans `setup.ts`.
+3. **Pas de modification de logique métier** pour faire passer un test. Si un test révèle un bug → logguer dans Notion Database-Bugs, ne pas corriger silencieusement.
+4. **Imports par chemin relatif correct** : les tests dans `tests/unit/services/core/` utilisent `../../../../src/services/…` (4 niveaux).
+5. **Délai artificiel préservé** : les tests mockent `delay()` mais ne le suppriment pas des services réels.
+
+### 7.6. Pipeline CI/CD (GitHub Actions)
+
+Fichier : `.github/workflows/ci.yml`
+
+```
+push/PR sur main|develop|feat/**|fix/**|refactor/**
+        │
+        ├── 🔷 typecheck  ← tsc --noEmit
+        ├── 🔍 lint       ← ESLint --quiet (erreurs bloquantes uniquement)
+        └── 🧪 test       ← vitest run + coverage (seuils 70%)
+                │
+                └── 🏗️ build ← vite build (uniquement si tous les gates passent)
+                         └── artifact: dist/ (7 jours)
+                         └── artifact: coverage/ (14 jours)
+```
+
+**Concurrence** : les runs en cours sur la même branche sont annulés lors d'un nouveau push.
+
+### 7.7. Conformité Standards (Phase 3)
+
+- **`check:i18n`** : `scripts/check-i18n-keys.mjs` — scan des `t('key')` vs `locales/en/` et `locales/fr/`. Sortie 1 si clé manquante.
+- **ESLint `no-restricted-globals`** : accès direct à `localStorage` interdit hors de `src/services/`, `utils/`, `context/`.
+- **ESLint `react-hooks/rules-of-hooks`** : violation bloquante en CI.
+
+### 7.8. Violations Connues (à corriger dans les prochains sprints)
+
+Loggées dans Notion Database-Bugs :
+- `react-hooks/rules-of-hooks` × 1 : `Dashboard.tsx` line 210 (`useMemo` conditionnel)
+- `no-useless-escape` × ~20 : RegExp dans `csvParser.ts` et `validationService.ts`
+- `@typescript-eslint/no-explicit-any` × N : violations existantes (warn, non bloquantes)
+- i18n : 8 vraies clés manquantes dans `CashImportWizard` (clés `cashWizard.*`)
