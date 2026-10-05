@@ -139,12 +139,15 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
-      - name: Check bundle size (warn if > 2MB)
+      - name: Check bundle size (hard limit 2MB, warn at 1.5MB)
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Bundle size: ${BUNDLE_SIZE}KB"
           if [ $BUNDLE_SIZE -gt 2048 ]; then
-            echo "::warning::Bundle size ${BUNDLE_SIZE}KB exceeds 2MB soft limit"
+            echo "::error::Bundle size ${BUNDLE_SIZE}KB exceeds 2MB hard limit — check for accidental large imports"
+            exit 1
+          elif [ $BUNDLE_SIZE -gt 1536 ]; then
+            echo "::warning::Bundle size ${BUNDLE_SIZE}KB exceeds 1.5MB soft limit — consider tree-shaking"
           fi
 
       - name: Upload build artifact
@@ -153,3 +156,47 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 6 — Security audit
+  # ═══════════════════════════════════════════════════════════════════════════
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    # Run in parallel with other jobs — don't block build on audit result
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies for high/critical vulnerabilities
+        # --audit-level=high: only fail on high or critical CVEs
+        # --omit=dev: only check production dependencies
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Check for secrets / hardcoded tokens
+        # Scans for common secret patterns (API keys, tokens, passwords)
+        run: |
+          echo "Scanning for hardcoded secrets..."
+          PATTERNS=('sk-[a-zA-Z0-9]{32,}' 'pk_live_[a-zA-Z0-9]+' 'AKIA[0-9A-Z]{16}' 'ghp_[a-zA-Z0-9]{36}')
+          FOUND=0
+          for PATTERN in "${PATTERNS[@]}"; do
+            if grep -rE "$PATTERN" src/ --include="*.ts" --include="*.tsx" --include="*.js" 2>/dev/null; then
+              echo "::error::Potential secret pattern detected: $PATTERN"
+              FOUND=1
+            fi
+          done
+          if [ $FOUND -eq 0 ]; then
+            echo "No hardcoded secrets detected."
+          else
+            exit 1
+          fi
+

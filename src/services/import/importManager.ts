@@ -33,6 +33,7 @@ import {
 import { validationService, RowData } from '../core/validationService';
 import { instrumentService } from '../instrumentService';
 import { portfolioService } from '../portfolioService';
+import { validateCSVRow } from '../../types/schemas';
 
 // ============================================================================
 // TYPES
@@ -125,303 +126,29 @@ interface ParsedCSV {
     delimiter: string;
 }
 
-// ============================================================================
-// CSV PARSING
-// ============================================================================
+// Re-export modular components for 100% backward compatibility
+export {
+    PRESET_PATTERNS,
+    detectPreset,
+    getPresetMappings
+} from './presetDetector';
+import { detectPreset } from './presetDetector';
 
-/**
- * Parse CSV text with auto-delimiter detection
- */
-export function parseCSVText(text: string, forcedDelimiter?: string): ParsedCSV {
-    const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
-    if (lines.length < 1) return { headers: [], rows: [], delimiter: ',' };
+export {
+    normalizeTransactionType,
+    inferTransactionSubType,
+    parseDate,
+    parseDecimal
+} from './typeNormalizer';
+import {
+    normalizeTransactionType,
+    inferTransactionSubType,
+    parseDate,
+    parseDecimal
+} from './typeNormalizer';
 
-    const firstLine = lines[0];
-
-    // Detect delimiter if not forced
-    let delimiter = forcedDelimiter || ',';
-    if (!forcedDelimiter) {
-        const delimiters = [',', ';', '\t', '|'];
-        let maxCount = 0;
-        delimiters.forEach(d => {
-            const count = firstLine.split(d).length - 1;
-            if (count > maxCount) {
-                maxCount = count;
-                delimiter = d;
-            }
-        });
-    }
-
-    // Split line respecting quotes
-    const splitLine = (line: string): string[] => {
-        const result: string[] = [];
-        let current = '';
-        let inQuote = false;
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                inQuote = !inQuote;
-            } else if (char === delimiter && !inQuote) {
-                result.push(current.trim().replace(/^"|"$/g, ''));
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        result.push(current.trim().replace(/^"|"$/g, ''));
-        return result;
-    };
-
-    const headers = splitLine(lines[0]);
-    const rows = lines.slice(1).map(splitLine);
-
-    return { headers, rows, delimiter };
-}
-
-// ============================================================================
-// TRANSACTION TYPE NORMALIZATION
-// ============================================================================
-
-/**
- * Normalize raw transaction type string.
- * Returns both the main type and optional sub-type for granular classification.
- */
-export function normalizeTransactionType(rawType: string): TransactionType {
-    if (!rawType) return 'BUY';
-
-    const lower = rawType.toLowerCase().trim();
-
-    // Buy patterns
-    if (lower.includes('buy') || lower.includes('achat') || lower.includes('purchase')) {
-        return 'BUY';
-    }
-
-    // Sell patterns
-    if (lower.includes('sell') || lower.includes('vente') || lower.includes('sold')) {
-        return 'SELL';
-    }
-
-    // Deposit patterns
-    if (lower.includes('deposit') || lower.includes('dépôt') || lower.includes('virement reçu') ||
-        lower.includes('credit') || lower.includes('crédit') || lower.includes('versement')) {
-        return 'DEPOSIT';
-    }
-
-    // Withdraw patterns
-    if (lower.includes('withdraw') || lower.includes('retrait') || lower.includes('virement émis') ||
-        lower.includes('debit') || lower.includes('débit')) {
-        return 'WITHDRAW';
-    }
-
-    // Income patterns (dividends, interest, staking, cashback)
-    if (lower.includes('dividend') || lower.includes('dividende') || lower.includes('interest') ||
-        lower.includes('intérêt') || lower.includes('distribution') || lower.includes('staking') ||
-        lower.includes('reward') || lower.includes('cashback') || lower.includes('saveback') ||
-        lower.includes('airdrop') || lower.includes('mining')) {
-        return 'INCOME';
-    }
-
-    // Expense patterns
-    if (lower.includes('fee') || lower.includes('frais') || lower.includes('commission')) {
-        return 'EXPENSE';
-    }
-
-    // Transfer patterns
-    if (lower.includes('transfer') || lower.includes('virement') || lower.includes('send') ||
-        lower.includes('receive') || lower.includes('envoi')) {
-        return 'TRANSFER';
-    }
-
-    // Swap patterns
-    if (lower.includes('swap') || lower.includes('exchange') || lower.includes('convert') ||
-        lower.includes('small assets') || lower.includes('dust')) {
-        return 'SWAP';
-    }
-
-    // Adjustment patterns
-    if (lower.includes('adjust') || lower.includes('correction') || lower.includes('manual')) {
-        return 'ADJUSTMENT';
-    }
-
-    return 'BUY';
-}
-
-/**
- * Infer transaction sub-type from raw type string.
- * Provides granular classification, especially for crypto operations.
- */
-export function inferTransactionSubType(rawType: string): TransactionSubType | undefined {
-    if (!rawType) return undefined;
-    const lower = rawType.toLowerCase().trim();
-
-    if (lower.includes('dividend') || lower.includes('dividende')) return 'DIVIDEND';
-    if (lower.includes('interest') || lower.includes('intérêt')) return 'INTEREST';
-    if (lower.includes('staking') || lower.includes('stake reward')) return 'STAKING_REWARD';
-    if (lower.includes('airdrop')) return 'AIRDROP';
-    if (lower.includes('mining')) return 'MINING_REWARD';
-    if (lower.includes('cashback') || lower.includes('saveback')) return 'CASHBACK';
-    if (lower.includes('dust') || lower.includes('small assets')) return 'DUST_CONVERSION';
-
-    return undefined;
-}
-
-// ============================================================================
-// DATE PARSING
-// ============================================================================
-
-/**
- * Parse date with format detection
- */
-export function parseDate(dateStr: string, formatHint?: string): string | null {
-    if (!dateStr || dateStr.trim() === '') return null;
-
-    const cleaned = dateStr.trim();
-
-    // Try ISO format first
-    if (/^\d{4}-\d{2}-\d{2}/.test(cleaned)) {
-        const date = new Date(cleaned);
-        if (!isNaN(date.getTime())) {
-            return date.toISOString();
-        }
-    }
-
-    // Try DD/MM/YYYY format (European)
-    const euroMatch = cleaned.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(.*)$/);
-    if (euroMatch) {
-        const [, day, month, year, rest] = euroMatch;
-        let time = '00:00:00';
-        const timeMatch = rest.match(/(\d{2}):(\d{2})(?::(\d{2}))?/);
-        if (timeMatch) {
-            time = `${timeMatch[1]}:${timeMatch[2]}:${timeMatch[3] || '00'}`;
-        }
-        const date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}Z`);
-        if (!isNaN(date.getTime())) {
-            return date.toISOString();
-        }
-    }
-
-    // Fallback
-    const fallback = new Date(cleaned);
-    if (!isNaN(fallback.getTime())) {
-        return fallback.toISOString();
-    }
-
-    return null;
-}
-
-/**
- * Parse decimal with format detection
- */
-export function parseDecimal(value: string | undefined): string | null {
-    if (!value || value.trim() === '') return null;
-
-    let cleaned = value.trim();
-
-    // European format (1.234,56 -> 1234.56)
-    if (/^-?\d{1,3}(\.\d{3})*,\d+$/.test(cleaned)) {
-        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    }
-    // Simple comma decimal (1234,56 -> 1234.56)
-    else if (/^-?\d+,\d+$/.test(cleaned)) {
-        cleaned = cleaned.replace(',', '.');
-    }
-    // US format with thousand separators
-    else if (/^-?\d{1,3}(,\d{3})*(\.\d+)?$/.test(cleaned)) {
-        cleaned = cleaned.replace(/,/g, '');
-    }
-
-    // Remove currency symbols
-    cleaned = cleaned.replace(/[€$£¥\s]/g, '');
-
-    const num = parseFloat(cleaned);
-    if (isNaN(num)) return null;
-
-    return num.toString();
-}
-
-// ============================================================================
-// PRESET DETECTION
-// ============================================================================
-
-const PRESET_PATTERNS: Record<string, string[]> = {
-    'Binance': ['UTC_Time', 'Account', 'Operation', 'Coin', 'Change', 'Remark'],
-    'Binance-Spot': ['Date(UTC)', 'Pair', 'Side', 'Price', 'Executed', 'Amount', 'Fee'],
-    'Bitget': ['Time', 'Symbol', 'Side', 'Price', 'Filled', 'Total', 'Fee'],
-    'Bourso': ['dateOp', 'dateVal', 'label', 'amount', 'accountBalance'],
-    'BoursoBank-Alt': ['Date opération', 'Date valeur', 'Libellé', 'Montant', 'Solde'],
-    'TradeRepublic': ['Date', 'Type', 'ISIN', 'Name', 'Shares', 'Price', 'Amount'],
-    'Coinbase': ['Timestamp', 'Transaction Type', 'Asset', 'Quantity Transacted'],
-    'Kraken': ['txid', 'time', 'type', 'pair', 'price', 'vol', 'fee']
-};
-
-/**
- * Detect preset from headers
- */
-export function detectPreset(headers: string[]): { presetName: string; mappings: FieldMappings } | null {
-    const lowerHeaders = headers.map(h => h.toLowerCase().trim());
-
-    for (const [presetName, patterns] of Object.entries(PRESET_PATTERNS)) {
-        const matches = patterns.filter(p =>
-            lowerHeaders.some(h => h.includes(p.toLowerCase()))
-        );
-
-        if (matches.length >= Math.ceil(patterns.length * 0.6)) {
-            return {
-                presetName,
-                mappings: getPresetMappings(presetName, headers)
-            };
-        }
-    }
-
-    return null;
-}
-
-/**
- * Get mappings for a known preset
- */
-function getPresetMappings(presetName: string, headers: string[]): FieldMappings {
-    const findHeader = (patterns: string[]): string => {
-        for (const pattern of patterns) {
-            const found = headers.find(h => h.toLowerCase().includes(pattern.toLowerCase()));
-            if (found) return found;
-        }
-        return '';
-    };
-
-    switch (presetName) {
-        case 'Binance':
-            return {
-                transactionDate: findHeader(['UTC_Time', 'time']),
-                type: findHeader(['Operation', 'type']),
-                rawType: findHeader(['Operation', 'type']),
-                assetSymbol: findHeader(['Coin', 'asset']),
-                amountPrimary: findHeader(['Change', 'amount']),
-                rawLabel: findHeader(['Remark', 'note'])
-            };
-
-        case 'Bourso':
-        case 'BoursoBank-Alt':
-            return {
-                transactionDate: findHeader(['dateOp', 'Date opération']),
-                valueDate: findHeader(['dateVal', 'Date valeur']),
-                rawLabel: findHeader(['label', 'Libellé']),
-                amountPrimary: findHeader(['amount', 'Montant']),
-                balanceAfter: findHeader(['accountBalance', 'Solde']),
-                assetSymbol: 'EUR'
-            };
-
-        default:
-            return {
-                transactionDate: findHeader(['date', 'time', 'timestamp']),
-                type: findHeader(['type', 'side', 'operation', 'action']),
-                assetSymbol: findHeader(['symbol', 'asset', 'coin', 'ticker']),
-                amountPrimary: findHeader(['amount', 'change', 'quantity', 'total']),
-                priceUnit: findHeader(['price', 'prix']),
-                feeAmount: findHeader(['fee', 'frais', 'commission'])
-            };
-    }
-}
+export { parseCSVText } from './csvParser';
+import { parseCSVText } from './csvParser';
 
 // ============================================================================
 // CORE PARSING
@@ -490,8 +217,9 @@ export async function parseFile(
 
     // Parse each row
     const candidates: StagedTransaction[] = await Promise.all(rows.map(async (row, rowIndex) => {
-        const originalRow: Record<string, string> = {};
-        headers.forEach((h, i) => { originalRow[h] = row[i] || ''; });
+        const rawRowObj: Record<string, string> = {};
+        headers.forEach((h, i) => { rawRowObj[h] = row[i] || ''; });
+        const { sanitized: originalRow } = validateCSVRow(rawRowObj);
 
         // Extract values
         const rawDateStr = getValue(row, mappings!.transactionDate) || '';
@@ -852,52 +580,19 @@ export async function getImportHistory(): Promise<ImportBatch[]> {
 }
 
 // ============================================================================
-// MAPPING TEMPLATES
+// MAPPING TEMPLATES - Delegated to mappingTemplateService
 // ============================================================================
 
-export async function saveMappingTemplate(
-    name: string,
-    mappings: FieldMappings,
-    userId: string = 'default-user',
-    instituteId?: string,
-    dateFormat?: string,
-    delimiter?: string
-): Promise<MappingTemplate> {
-    await delay(200);
-
-    const now = new Date().toISOString();
-    const template: MappingTemplate = {
-        id: `tpl-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        ownerId: userId,
-        name,
-        instituteId,
-        mappings: mappings as unknown as Record<string, string | number>,
-        dateFormat,
-        delimiter,
-        isPreset: false,
-        createdAt: now,
-        updatedAt: now
-    };
-
-    const templates = db.getMappingTemplates();
-    db.saveMappingTemplates([...templates, template]);
-
-    return template;
-}
-
-export async function getMappingTemplates(): Promise<MappingTemplate[]> {
-    await delay(100);
-    return db.getMappingTemplates();
-}
-
-export async function deleteMappingTemplate(id: string): Promise<boolean> {
-    await delay(100);
-    const templates = db.getMappingTemplates();
-    const filtered = templates.filter(t => t.id !== id);
-    if (filtered.length === templates.length) return false;
-    db.saveMappingTemplates(filtered);
-    return true;
-}
+export {
+    saveMappingTemplate,
+    getMappingTemplates,
+    deleteMappingTemplate
+} from './mappingTemplateService';
+import {
+    saveMappingTemplate,
+    getMappingTemplates,
+    deleteMappingTemplate
+} from './mappingTemplateService';
 
 // ============================================================================
 // BACKUP IMPORT & RESTORE (JSON) - Delegated to backupRestoreService
