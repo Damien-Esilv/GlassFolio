@@ -1,0 +1,133 @@
+name: CI — GlassFolio Quality Gate
+
+on:
+  push:
+    branches: [main, develop, 'feat/**', 'fix/**', 'refactor/**']
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-progress runs on the same branch when a new push arrives
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1 — Type checking
+  # ═══════════════════════════════════════════════════════════════════════════
+  typecheck:
+    name: 🔷 TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run check:types
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2 — Linting
+  # ═══════════════════════════════════════════════════════════════════════════
+  lint:
+    name: 🔍 ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint — fail only on errors (warnings allowed)
+        # We gate on errors only during this phase.
+        # Run without --max-warnings 0 to allow existing warnings.
+        # Errors (react-hooks/rules-of-hooks, no-restricted-globals) block CI.
+        run: npx eslint . --ext .ts,.tsx --quiet
+        # --quiet: only report errors, not warnings
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 3 — Unit tests + coverage
+  # ═══════════════════════════════════════════════════════════════════════════
+  test:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Coverage report
+        run: npm run test:coverage
+        continue-on-error: false   # Fail CI if coverage thresholds are not met
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 4 — Production build check
+  # ═══════════════════════════════════════════════════════════════════════════
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, test]   # Only build if all quality gates pass
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Check bundle size (warn if > 2MB)
+        run: |
+          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
+          echo "Bundle size: ${BUNDLE_SIZE}KB"
+          if [ $BUNDLE_SIZE -gt 2048 ]; then
+            echo "::warning::Bundle size ${BUNDLE_SIZE}KB exceeds 2MB soft limit"
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
