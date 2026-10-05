@@ -10,8 +10,8 @@ const safeSubject = subject
   .replace(/[^a-zA-Z0-9-_]/g, '')
   .toLowerCase();
 
-const repoRoot = path.join(__dirname, '..');
-const sessionsDir = path.join(repoRoot, 'docs', 'brain', '05-Sessions-IA');
+const brainPath = process.env.BRAIN_PATH || '/Users/damien/Developpement/brain/GlassFolio';
+const sessionsDir = path.join(brainPath, '05-Sessions-IA');
 const templatePath = path.join(sessionsDir, 'Session-TEMPLATE.md');
 
 if (!fs.existsSync(sessionsDir)) {

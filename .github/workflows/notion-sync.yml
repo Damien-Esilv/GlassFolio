@@ -1,0 +1,30 @@
+name: Notion — Task Auto-Sync
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: notion-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync-notion:
+    name: 📝 Sync Tasks to Notion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Notion Task Sync
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_TASKS_DB_ID: ${{ secrets.NOTION_TASKS_DB_ID || '73594813-9137-82eb-887a-8157fd353c7a' }}
+        run: node scripts/notion-sync.mjs
