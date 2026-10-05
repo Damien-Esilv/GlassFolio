@@ -229,35 +229,36 @@
             "failedToAnalyzeData": "Échec de l'analyse des données",
             "missingAccountOrFile": "Compte ou fichier manquant",
             "importFailed": "Échec de l'import",
-            "failedToCompleteImport": "Échec de la finalisation de l'import"
+            "failedToCompleteImport": "Échec de la finalisation de l'import",
+            "amountRequired": "Le montant est requis"
         },
         "validation": {
             "dateRequired": "La date est requise",
             "amountRequired": "Le montant est requis",
             "assetSymbolRequired": "Le symbole de l'actif est requis",
             "identifierRequired": "Le symbole ou le code ISIN est requis"
+        }
+    },
+    "cashWizard": {
+        "title": "Mise à jour du solde Cash / Liquidités",
+        "subtitle": "Enregistrer le solde actuel pour {{accountName}}",
+        "options": {
+            "title": "Comment souhaitez-vous mettre à jour votre solde ?",
+            "manualTitle": "Saisie Manuelle",
+            "manualDescription": "Saisir rapidement le solde actuel et la date du relevé",
+            "csvTitle": "Import CSV",
+            "csvDescription": "Déposer un fichier CSV contenant l'historique des soldes pour tracer l'évolution dans le temps"
         },
-        "cashWizard": {
-            "title": "Mise à jour du solde Cash / Liquidités",
-            "subtitle": "Enregistrer le solde actuel pour {{accountName}}",
-            "options": {
-                "title": "Comment souhaitez-vous mettre à jour votre solde ?",
-                "manualTitle": "Saisie Manuelle",
-                "manualDescription": "Saisir rapidement le solde actuel et la date du relevé",
-                "csvTitle": "Import CSV",
-                "csvDescription": "Déposer un fichier CSV contenant l'historique des soldes pour tracer l'évolution dans le temps"
-            },
-            "manualForm": {
-                "title": "Saisie manuelle du solde",
-                "dateLabel": "Date du solde / relevé",
-                "amountLabel": "Montant du solde actuel",
-                "saveButton": "Enregistrer le solde",
-                "success": "Solde enregistré avec succès"
-            },
-            "csvMapping": {
-                "title": "Association CSV simplifiée",
-                "description": "Pour suivre l'évolution de vos liquidités dans le temps, veuillez associer uniquement les colonnes Date et Montant du solde de votre CSV."
-            }
+        "manualForm": {
+            "title": "Saisie manuelle du solde",
+            "dateLabel": "Date du solde / relevé",
+            "amountLabel": "Montant du solde actuel",
+            "saveButton": "Enregistrer le solde",
+            "success": "Solde enregistré avec succès"
+        },
+        "csvMapping": {
+            "title": "Association CSV simplifiée",
+            "description": "Pour suivre l'évolution de vos liquidités dans le temps, veuillez associer uniquement les colonnes Date et Montant du solde de votre CSV."
         }
     },
     "importHistory": {

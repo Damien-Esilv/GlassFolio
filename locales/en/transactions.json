@@ -229,35 +229,36 @@
             "failedToAnalyzeData": "Failed to analyze data",
             "missingAccountOrFile": "Missing account or file",
             "importFailed": "Import failed",
-            "failedToCompleteImport": "Failed to complete import"
+            "failedToCompleteImport": "Failed to complete import",
+            "amountRequired": "Amount is required"
         },
         "validation": {
             "dateRequired": "Date is required",
             "amountRequired": "Amount is required",
             "assetSymbolRequired": "Asset symbol is required",
             "identifierRequired": "Symbol or ISIN code is required"
+        }
+    },
+    "cashWizard": {
+        "title": "Cash / Savings Balance Update",
+        "subtitle": "Record the balance of {{accountName}}",
+        "options": {
+            "title": "How would you like to update your balance?",
+            "manualTitle": "Saisie Manuelle (Manual Entry)",
+            "manualDescription": "Quickly type in the current balance and the date of the update",
+            "csvTitle": "Import CSV (File Upload)",
+            "csvDescription": "Upload a CSV file containing date and balance history to see progress over time"
         },
-        "cashWizard": {
-            "title": "Cash / Savings Balance Update",
-            "subtitle": "Record the balance of {{accountName}}",
-            "options": {
-                "title": "How would you like to update your balance?",
-                "manualTitle": "Saisie Manuelle (Manual Entry)",
-                "manualDescription": "Quickly type in the current balance and the date of the update",
-                "csvTitle": "Import CSV (File Upload)",
-                "csvDescription": "Upload a CSV file containing date and balance history to see progress over time"
-            },
-            "manualForm": {
-                "title": "Manual Balance Entry",
-                "dateLabel": "Statement Date",
-                "amountLabel": "Account Balance",
-                "saveButton": "Record Balance",
-                "success": "Balance recorded successfully"
-            },
-            "csvMapping": {
-                "title": "Simplified CSV Mapping",
-                "description": "To track your cash evolution over time, please map only the Date and Balance Amount columns from your CSV."
-            }
+        "manualForm": {
+            "title": "Manual Balance Entry",
+            "dateLabel": "Statement Date",
+            "amountLabel": "Account Balance",
+            "saveButton": "Record Balance",
+            "success": "Balance recorded successfully"
+        },
+        "csvMapping": {
+            "title": "Simplified CSV Mapping",
+            "description": "To track your cash evolution over time, please map only the Date and Balance Amount columns from your CSV."
         }
     },
     "importHistory": {

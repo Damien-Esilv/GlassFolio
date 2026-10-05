@@ -18,8 +18,11 @@
         "createAccount": "Créer un compte",
         "saveChanges": "Enregistrer les modifications",
         "updatePassword": "Mettre à jour le mot de passe",
-        "saveProfile": "Enregistrer le profil"
+        "saveProfile": "Enregistrer le profil",
+        "browse": "Parcourir...",
+        "read": "Lire"
     },
+    "fees": "Frais",
     "actions": {
         "seeAll": "Voir tout",
         "viewReport": "Voir le rapport",

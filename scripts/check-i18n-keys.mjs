@@ -152,8 +152,15 @@ let totalIssues = 0;
 
 for (const locale of SUPPORTED_LOCALES) {
   const missing = [];
+  const keysArray = Array.from(localeKeys[locale]);
   for (const key of usedKeys) {
-    if (!localeKeys[locale].has(key)) {
+    if (key.includes('${')) {
+      const prefix = key.split('${')[0];
+      const hasMatchingPrefix = keysArray.some(k => k.startsWith(prefix));
+      if (!hasMatchingPrefix) {
+        missing.push(key);
+      }
+    } else if (!localeKeys[locale].has(key)) {
       missing.push(key);
     }
   }
@@ -165,12 +172,9 @@ for (const locale of SUPPORTED_LOCALES) {
     totalIssues += missing.length;
 
     if (REPORT_MODE) {
-      for (const key of missing.slice(0, 30)) {
+      for (const key of missing) {
         const origins = keyOrigins.get(key)?.slice(0, 3).join(', ') ?? 'unknown';
         console.log(`       - ${key}  (used in: ${origins})`);
-      }
-      if (missing.length > 30) {
-        console.log(`       … and ${missing.length - 30} more`);
       }
     }
   }

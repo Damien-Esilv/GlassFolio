@@ -18,8 +18,11 @@
         "createAccount": "Create Account",
         "saveChanges": "Save Changes",
         "updatePassword": "Update Password",
-        "saveProfile": "Save Profile"
+        "saveProfile": "Save Profile",
+        "browse": "Browse...",
+        "read": "Read"
     },
+    "fees": "Fees",
     "actions": {
         "seeAll": "See All",
         "viewReport": "View Report",
