@@ -10,6 +10,26 @@
  */
 
 import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+
+// Auto-load .env file if running locally
+try {
+  const envPath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const match = trimmed.match(/^([^=]+)=(.*)$/);
+      if (match && !process.env[match[1].trim()]) {
+        process.env[match[1].trim()] = match[2].trim().replace(/^["']|["']$/g, '');
+      }
+    }
+  }
+} catch {
+  // Ignore error if .env cannot be read
+}
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY || process.env.NOTION_TOKEN;
 const NOTION_TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID || '73594813-9137-82eb-887a-8157fd353c7a';
