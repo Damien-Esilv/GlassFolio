@@ -25,6 +25,8 @@ export default defineConfig({
         'src/services/currencyService.ts',
         'src/services/goalService.ts',
         'src/services/import/csvParser.ts',
+        'src/services/import/backupRestoreService.ts',
+        'src/services/repositories/**/*.ts',
         'utils/**/*.ts',
       ],
       exclude: [

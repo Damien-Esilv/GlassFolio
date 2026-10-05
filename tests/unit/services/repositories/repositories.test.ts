@@ -6,6 +6,7 @@ import {
   transactionRepository,
   portfolioRepository,
   goalRepository,
+  setRepositoryBackend,
 } from '../../../../src/services/repositories';
 import {
   safeParseTransaction,
@@ -164,3 +165,35 @@ describe('Zod Validation Schemas', () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe('Repository Singleton Wrappers & setRepositoryBackend', () => {
+  it('delegates calls to active repositories', async () => {
+    const txList = await transactionRepository.getAll();
+    expect(Array.isArray(txList)).toBe(true);
+
+    const positions = await portfolioRepository.getPositions();
+    expect(Array.isArray(positions)).toBe(true);
+
+    const goals = await goalRepository.getGoals();
+    expect(Array.isArray(goals)).toBe(true);
+  });
+
+  it('allows swapping repository backend dynamically', async () => {
+    const mockTxRepo = {
+      getAll: async () => [{ id: 'mock-1', date: '2026-01-01', type: 'Buy', amount: 1, price: 10, total: 10, currency: 'EUR', source: 'Mock', fees: 0, status: 'Completed' } as any],
+      getById: async () => null,
+      save: async () => {},
+      add: async () => ({} as any),
+      delete: async () => true,
+    };
+
+    setRepositoryBackend({ transactions: mockTxRepo });
+    const items = await transactionRepository.getAll();
+    expect(items.length).toBe(1);
+    expect(items[0].id).toBe('mock-1');
+
+    // Restore default
+    setRepositoryBackend({ transactions: new LocalStorageTransactionRepository() });
+  });
+});
+

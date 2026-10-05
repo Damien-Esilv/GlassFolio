@@ -5,17 +5,18 @@ import { refreshPositionPrices } from './priceService';
 import { currencyService } from './currencyService';
 import { formatChartDate, DateFormatPattern } from '../../utils/date';
 import { isAssetClassMatch } from '../constants/assetClasses';
+import { portfolioRepository, transactionRepository } from './repositories';
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
         await delay(100);
-        let allPositions = db.getPositions();
+        let allPositions = await portfolioRepository.getPositions();
 
         // Refresh live prices from Yahoo Finance on ALL positions (15-min cache)
         allPositions = await refreshPositionPrices(allPositions);
 
         // Persist updated prices for all positions (never save filtered subset)
-        db.savePositions(allPositions);
+        await portfolioRepository.savePositions(allPositions);
 
         if (!filter) {
             return allPositions;
@@ -113,7 +114,7 @@ export const portfolioService = {
         });
 
         // Save calculated positions to DB (cache)
-        db.savePositions(positions);
+        await portfolioRepository.savePositions(positions);
     },
 
     getDashboardSummary: async (
@@ -123,11 +124,11 @@ export const portfolioService = {
         dateFormatPattern: DateFormatPattern = 'DD/MM/YYYY'
     ): Promise<DashboardSummary> => {
         await delay(150);
-        let positions = db.getPositions();
+        let positions = await portfolioRepository.getPositions();
 
         // Ensure live prices are fetched and saved
         positions = await refreshPositionPrices(positions);
-        db.savePositions(positions);
+        await portfolioRepository.savePositions(positions);
 
         // Fetch FX exchange rates for position currencies to baseCurrency
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
@@ -147,7 +148,7 @@ export const portfolioService = {
         const totalPL = totalValue - totalInvested;
         const plPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
-        const transactions = db.getTransactions();
+        const transactions = await transactionRepository.getAll();
         const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         const now = new Date();

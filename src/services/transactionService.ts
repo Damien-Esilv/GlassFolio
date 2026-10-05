@@ -5,6 +5,7 @@ import { portfolioService } from './portfolioService';
 import { convertToLegacyTransaction } from './transformers';
 import { instrumentService } from './instrumentService';
 import { isAssetClassMatch } from '../constants/assetClasses';
+import { transactionRepository } from './repositories';
 
 export const transactionService = {
     getTransactions: async (filter?: TransactionFilter): Promise<Transaction[]> => {
@@ -21,7 +22,7 @@ export const transactionService = {
         );
 
         if (transactions.length === 0) {
-            transactions = db.getTransactions();
+            transactions = await transactionRepository.getAll();
         }
 
         if (filter) {

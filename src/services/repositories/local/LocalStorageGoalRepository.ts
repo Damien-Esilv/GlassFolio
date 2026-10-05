@@ -14,9 +14,8 @@ export class LocalStorageGoalRepository implements IGoalRepository {
   async deleteGoal(id: string): Promise<boolean> {
     const list = db.getGoals();
     const filtered = list.filter(g => g.id !== id);
-    if (filtered.length === list.length) return false;
     db.saveGoals(filtered);
-    return true;
+    return filtered.length !== list.length;
   }
 
   async getAssetGroups(): Promise<AssetGroup[]> {

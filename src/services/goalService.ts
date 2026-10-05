@@ -1,14 +1,15 @@
 import { FinancialGoal, AssetGroup } from '../../types';
-import { db, delay } from './db';
+import { delay } from './db';
 import { currencyService } from './currencyService';
 import { isAssetClassMatch } from '../constants/assetClasses';
+import { goalRepository, portfolioRepository } from './repositories';
 
 export const goalService = {
     getGoals: async (baseCurrency: string = 'EUR'): Promise<FinancialGoal[]> => {
         await delay(300);
-        const goals = db.getGoals();
-        const positions = db.getPositions(); // Need positions to calc progress
-        const assetGroups = db.getAssetGroups();
+        const goals = await goalRepository.getGoals();
+        const positions = await portfolioRepository.getPositions(); // Need positions to calc progress
+        const assetGroups = await goalRepository.getAssetGroups();
 
         // Fetch FX exchange rates for position currencies to baseCurrency
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
@@ -57,7 +58,7 @@ export const goalService = {
 
     saveGoal: async (goalData: FinancialGoal | Omit<FinancialGoal, 'id'>, baseCurrency: string = 'EUR'): Promise<FinancialGoal[]> => {
         await delay(200);
-        const goals = db.getGoals();
+        const goals = await goalRepository.getGoals();
         let updatedGoals;
 
         if ('id' in goalData) {
@@ -72,50 +73,49 @@ export const goalService = {
             updatedGoals = [...goals, newGoal];
         }
 
-        db.saveGoals(updatedGoals);
+        await goalRepository.saveGoals(updatedGoals);
         return goalService.getGoals(baseCurrency); // Return fresh with calculated amounts
     },
 
     deleteGoal: async (id: string): Promise<void> => {
         await delay(200);
-        const goals = db.getGoals();
-        db.saveGoals(goals.filter(g => g.id !== id));
+        await goalRepository.deleteGoal(id);
     },
 
     toggleGoalPin: async (id: string): Promise<void> => {
         await delay(100);
-        const goals = db.getGoals();
-        db.saveGoals(goals.map(g => g.id === id ? { ...g, isPinned: !g.isPinned } : g));
+        const goals = await goalRepository.getGoals();
+        await goalRepository.saveGoals(goals.map(g => g.id === id ? { ...g, isPinned: !g.isPinned } : g));
     },
 
     // --- Asset Groups ---
 
     getAssetGroups: async (): Promise<AssetGroup[]> => {
         await delay(200);
-        return db.getAssetGroups();
+        return goalRepository.getAssetGroups();
     },
 
     saveAssetGroup: async (group: AssetGroup): Promise<AssetGroup[]> => {
         await delay(200);
-        const groups = db.getAssetGroups();
+        const groups = await goalRepository.getAssetGroups();
         const newGroups = [...groups, group];
-        db.saveAssetGroups(newGroups);
+        await goalRepository.saveAssetGroups(newGroups);
         return newGroups;
     },
 
     updateAssetGroup: async (id: string, updates: Partial<AssetGroup>): Promise<AssetGroup[]> => {
         await delay(200);
-        const groups = db.getAssetGroups();
+        const groups = await goalRepository.getAssetGroups();
         const newGroups = groups.map(g => g.id === id ? { ...g, ...updates } : g);
-        db.saveAssetGroups(newGroups);
+        await goalRepository.saveAssetGroups(newGroups);
         return newGroups;
     },
 
     deleteAssetGroup: async (id: string): Promise<AssetGroup[]> => {
         await delay(200);
-        const groups = db.getAssetGroups();
+        const groups = await goalRepository.getAssetGroups();
         const newGroups = groups.filter(g => g.id !== id);
-        db.saveAssetGroups(newGroups);
+        await goalRepository.saveAssetGroups(newGroups);
         return newGroups;
     }
 };
