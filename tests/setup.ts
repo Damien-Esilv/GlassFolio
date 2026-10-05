@@ -21,11 +21,9 @@ afterEach(() => {
 
 // ── Web Crypto polyfill for Node/jsdom ─────────────────────────────────────
 // Vitest runs in Node; jsdom exposes crypto but subtle.digest may be missing.
-// @ts-expect-error – globalThis typing
 if (!globalThis.crypto?.subtle) {
   const { webcrypto } = await import('node:crypto');
-  // @ts-expect-error – patching globalThis
-  globalThis.crypto = webcrypto;
+  globalThis.crypto = webcrypto as unknown as Crypto;
 }
 
 // ── fetch stub ─────────────────────────────────────────────────────────────

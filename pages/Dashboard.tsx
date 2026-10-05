@@ -173,6 +173,20 @@ const Dashboard: React.FC = () => {
     isWorst?: boolean;
     realHistory?: HistoricalPricePoint[];
   }) => {
+    // Real Sparkline price trend data (fallback to interpolated sine curve if API returned empty)
+    const sparklineData = useMemo(() => {
+      if (!position) return [];
+      if (realHistory && realHistory.length >= 2) {
+        return realHistory.map(pt => ({ val: pt.price }));
+      }
+      return Array.from({ length: 15 }, (_, i) => {
+        const progress = i / 14;
+        const base = position.avgCost + (position.lastPrice - position.avgCost) * progress;
+        const noise = 1 + (Math.sin(i * 1.7) * 0.015);
+        return { val: base * noise };
+      });
+    }, [realHistory, position]);
+
     if (!position) {
       return (
         <div className={`${cardStyle} flex flex-col justify-between h-full`}>
@@ -205,19 +219,6 @@ const Dashboard: React.FC = () => {
         strokeColor = 'var(--color-accent-red, #ef4444)';
       }
     }
-
-    // Real Sparkline price trend data (fallback to interpolated sine curve if API returned empty)
-    const sparklineData = useMemo(() => {
-      if (realHistory && realHistory.length >= 2) {
-        return realHistory.map(pt => ({ val: pt.price }));
-      }
-      return Array.from({ length: 15 }, (_, i) => {
-        const progress = i / 14;
-        const base = position.avgCost + (position.lastPrice - position.avgCost) * progress;
-        const noise = 1 + (Math.sin(i * 1.7) * 0.015);
-        return { val: base * noise };
-      });
-    }, [realHistory, position]);
 
     const TrendIcon = isPositive ? TrendingUp : TrendingDown;
 

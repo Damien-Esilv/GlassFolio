@@ -170,7 +170,7 @@ const Positions: React.FC = () => {
                 const convertedPL = currencyService.convertAmount(pos.unrealizedPL, posCurr, prefCurrency);
 
                 // Untracked price detection (detect non-standard symbols like emojis, random text, or un-resolvable Yahoo tickers)
-                const isStandardTicker = /^[A-Za-z0-9\.\-]+$/.test(pos.symbol.trim());
+                const isStandardTicker = /^[A-Za-z0-9.-]+$/.test(pos.symbol.trim());
                 const isUntracked = pos.type !== 'Cash' && (!isStandardTicker || pos.symbol.startsWith('UNTRACKED') || pos.lastPrice === 0 || pos.symbol.includes('MANUAL'));
 
                 return (

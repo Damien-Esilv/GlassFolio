@@ -99,12 +99,12 @@ describe('validateQuantity', () => {
     expect(errors.some(e => e.code === 'QTY_REQUIRED')).toBe(true);
   });
 
-  it('does not require quantity for DIVIDEND', () => {
-    expect(validateQuantity(undefined, 'DIVIDEND')).toHaveLength(0);
+  it('does not require quantity for DEPOSIT', () => {
+    expect(validateQuantity(undefined, 'DEPOSIT')).toHaveLength(0);
   });
 
-  it('does not require quantity for FEE', () => {
-    expect(validateQuantity(undefined, 'FEE')).toHaveLength(0);
+  it('does not require quantity for WITHDRAW', () => {
+    expect(validateQuantity(undefined, 'WITHDRAW')).toHaveLength(0);
   });
 
   it('returns error for non-numeric quantity', () => {
@@ -144,8 +144,8 @@ describe('validatePrice', () => {
     expect(errors.some(e => e.code === 'PRICE_MISSING' && e.severity === 'warning')).toBe(true);
   });
 
-  it('does not require price for DIVIDEND', () => {
-    expect(validatePrice(undefined, 'DIVIDEND')).toHaveLength(0);
+  it('does not require price for DEPOSIT', () => {
+    expect(validatePrice(undefined, 'DEPOSIT')).toHaveLength(0);
   });
 
   it('returns error for non-numeric price', () => {

@@ -44,12 +44,10 @@ import { db } from '../../../src/services/db';
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const makeGoal = (overrides: Partial<FinancialGoal> = {}): FinancialGoal => ({
   id: 'goal-1',
-  name: 'Emergency Fund',
+  title: 'Emergency Fund',
   targetAmount: 10000,
   currentAmount: 0,
-  currency: 'EUR',
-  deadline: '2025-12-31',
-  iconType: 'savings',
+  iconType: 'emergency',
   color: 'blue',
   method: 'manual',
   manualAmount: 5000,
@@ -115,7 +113,7 @@ describe('goalService.saveGoal (create)', () => {
     await goalService.saveGoal(newGoalData as Omit<FinancialGoal, 'id'>);
     expect(db.saveGoals).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ name: 'Emergency Fund', id: expect.any(String) }),
+        expect.objectContaining({ title: 'Emergency Fund', id: expect.any(String) }),
       ])
     );
   });
@@ -131,21 +129,21 @@ describe('goalService.saveGoal (create)', () => {
 
 describe('goalService.saveGoal (update)', () => {
   beforeEach(() => {
-    const existing = makeGoal({ id: 'goal-1', name: 'Old Name' });
+    const existing = makeGoal({ id: 'goal-1', title: 'Old Name' });
     vi.mocked(db.getGoals).mockReturnValue([existing]);
     vi.mocked(db.getPositions).mockReturnValue([]);
     vi.mocked(db.getAssetGroups).mockReturnValue([]);
   });
 
   it('updates existing goal by id', async () => {
-    await goalService.saveGoal(makeGoal({ id: 'goal-1', name: 'New Name' }));
+    await goalService.saveGoal(makeGoal({ id: 'goal-1', title: 'New Name' }));
     const saved = vi.mocked(db.saveGoals).mock.calls[0][0];
     const updated = saved.find((g: FinancialGoal) => g.id === 'goal-1');
-    expect(updated?.name).toBe('New Name');
+    expect(updated?.title).toBe('New Name');
   });
 
   it('does not create a duplicate when updating', async () => {
-    await goalService.saveGoal(makeGoal({ id: 'goal-1', name: 'Updated' }));
+    await goalService.saveGoal(makeGoal({ id: 'goal-1', title: 'Updated' }));
     const saved = vi.mocked(db.saveGoals).mock.calls[0][0];
     expect(saved.filter((g: FinancialGoal) => g.id === 'goal-1')).toHaveLength(1);
   });
@@ -155,7 +153,7 @@ describe('goalService.deleteGoal', () => {
   beforeEach(() => {
     vi.mocked(db.getGoals).mockReturnValue([
       makeGoal({ id: 'goal-1' }),
-      makeGoal({ id: 'goal-2', name: 'Goal 2' }),
+      makeGoal({ id: 'goal-2', title: 'Goal 2' }),
     ]);
   });
 

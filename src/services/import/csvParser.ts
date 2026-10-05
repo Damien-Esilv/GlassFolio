@@ -73,7 +73,7 @@ export function parseDate(dateStr: string, formatHint?: string): string | null {
     }
 
     // Try DD/MM/YYYY format (European)
-    const euroMatch = cleaned.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(.*)$/);
+    const euroMatch = cleaned.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(.*)$/);
     if (euroMatch) {
         const [, day, month, year, rest] = euroMatch;
         let time = '00:00:00';
@@ -88,7 +88,7 @@ export function parseDate(dateStr: string, formatHint?: string): string | null {
     }
 
     // Try MM/DD/YYYY format (US)
-    const usMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(.*)$/);
+    const usMatch = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(.*)$/);
     if (usMatch && formatHint === 'MM/DD/YYYY') {
         const [, month, day, year, rest] = usMatch;
         let time = '00:00:00';
@@ -120,15 +120,15 @@ export function parseDecimal(value: string | undefined): string | null {
     let cleaned = value.trim();
 
     // Handle European format (1.234,56 -> 1234.56)
-    if (/^\-?\d{1,3}(\.\d{3})*,\d+$/.test(cleaned)) {
+    if (/^-?\d{1,3}(\.\d{3})*,\d+$/.test(cleaned)) {
         cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     }
     // Handle simple comma decimal (1234,56 -> 1234.56)
-    else if (/^\-?\d+,\d+$/.test(cleaned)) {
+    else if (/^-?\d+,\d+$/.test(cleaned)) {
         cleaned = cleaned.replace(',', '.');
     }
     // Remove thousand separators for US format
-    else if (/^\-?\d{1,3}(,\d{3})*(\.\d+)?$/.test(cleaned)) {
+    else if (/^-?\d{1,3}(,\d{3})*(\.\d+)?$/.test(cleaned)) {
         cleaned = cleaned.replace(/,/g, '');
     }
 

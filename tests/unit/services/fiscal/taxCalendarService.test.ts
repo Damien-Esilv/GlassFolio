@@ -154,9 +154,9 @@ describe('computeFrenchTaxCalendar', () => {
     const cal = computeFrenchTaxCalendar(2024);
     const dateFields = [
       cal.declarationOpening,
-      cal.zone1Deadline,
-      cal.zone2Deadline,
-      cal.zone3Deadline,
+      cal.zoneDeadlines?.zone1,
+      cal.zoneDeadlines?.zone2,
+      cal.zoneDeadlines?.zone3,
     ];
     for (const d of dateFields) {
       if (d) {

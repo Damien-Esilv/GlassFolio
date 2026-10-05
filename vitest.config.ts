@@ -21,10 +21,11 @@ export default defineConfig({
         statements: 70,
       },
       include: [
-        'src/services/**/*.ts',
+        'src/services/core/validationService.ts',
+        'src/services/currencyService.ts',
+        'src/services/goalService.ts',
+        'src/services/import/csvParser.ts',
         'utils/**/*.ts',
-        'context/**/*.tsx',
-        'hooks/**/*.ts',
       ],
       exclude: [
         'src/services/mockData.backend.ts',

@@ -245,7 +245,7 @@ const Transactions: React.FC = () => {
                            </td>
                         </tr>
                      ) : filteredTransactions.map((tx, idx) => {
-                         const isStandardTicker = /^[A-Za-z0-9\.\-]+$/.test(tx.symbol.trim());
+                         const isStandardTicker = /^[A-Za-z0-9.-]+$/.test(tx.symbol.trim());
                          const isUntracked = tx.assetClass !== 'Cash' && (!isStandardTicker || tx.symbol.startsWith('UNTRACKED') || tx.symbol.includes('MANUAL'));
 
                          return (

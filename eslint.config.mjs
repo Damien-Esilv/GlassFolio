@@ -143,6 +143,23 @@ export default [
     },
   },
 
+  // ── Node.js scripts ────────────────────────────────────────────────────────
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        URL: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
   // ── Test files — relaxed rules ─────────────────────────────────────────────
   {
     files: ['tests/**/*.{ts,tsx}'],
