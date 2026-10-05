@@ -64,6 +64,19 @@ export type SourceOrigin =
 export type ImportMode = 'history' | 'snapshot';
 
 /**
+ * Fiscal wrapper type for accounts.
+ * Determines the applicable tax regime.
+ */
+export type WrapperType =
+    | 'CTO'             // Compte-Titres Ordinaire
+    | 'PEA'             // Plan d'Épargne en Actions
+    | 'PEA_PME'         // PEA-PME (small/mid cap)
+    | 'ASSURANCE_VIE'   // Life insurance contract
+    | 'PER'             // Plan d'Épargne Retraite
+    | 'LIVRET'          // Regulated savings (Livret A, LDDS, etc.)
+    | 'OTHER';          // Unclassified
+
+/**
  * Type of financial institution
  */
 export type InstituteType = 'bank' | 'exchange' | 'wallet' | 'broker' | 'other';
@@ -147,6 +160,13 @@ export interface Institute {
     /** Optional logo URL for display */
     logoUrl?: string;
 
+    /**
+     * ISO 3166-1 alpha-2 country code where the institution is domiciled.
+     * Used for foreign account detection (3916/3916-bis obligations).
+     * Examples: 'FR', 'DE', 'MT', 'US', 'NL'
+     */
+    country?: string;
+
     /** ISO DateTime - when created */
     createdAt: string;
 
@@ -228,6 +248,18 @@ export interface Account {
 
     /** Import mode preference for this account */
     preferredImportMode?: ImportMode;
+
+    /**
+     * Fiscal wrapper type — determines the applicable French tax regime.
+     * Critical for PEA age calculation, tax-exempt status, etc.
+     */
+    wrapperType?: WrapperType;
+
+    /**
+     * ISO 8601 date when this account/envelope was opened.
+     * For PEA: determines the 5-year threshold for tax exemption.
+     */
+    openedAt?: string;
 
     /** ISO DateTime - when created */
     createdAt: string;
@@ -655,4 +687,214 @@ export const VALID_CURRENCIES = [
 
 /** ISIN validation regex (2 country letters + 9 alphanumeric + 1 check digit) */
 export const ISIN_REGEX = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
+
+// ============================================================================
+// FISCAL MODULE TYPES
+// ============================================================================
+
+/**
+ * Confidence level for a fiscal calculation result.
+ * Determines how the UI presents the value to the user.
+ */
+export type FiscalConfidence =
+    | 'determined'         // All data present, deterministic rule
+    | 'estimated'          // One or more assumptions made
+    | 'insufficient_data'  // Critical data missing, cannot compute
+    | 'complex';           // Requires human/professional review
+
+/**
+ * A single taxable event computed from transactions.
+ */
+export interface TaxableEvent {
+    /** Transaction ID(s) that generated this event */
+    transactionIds: string[];
+    /** Fiscal year this event belongs to (e.g. '2024') */
+    fiscalYear: string;
+    /** Type of taxable event */
+    eventType: 'capital_gain' | 'capital_loss' | 'dividend' | 'interest' | 'coupon'
+        | 'crypto_gain' | 'crypto_loss' | 'staking_reward' | 'other_income';
+    /** Instrument symbol */
+    symbol: string;
+    /** Instrument display name */
+    instrumentName: string;
+    /** Account ID */
+    accountId: string;
+    /** Wrapper type of the account (CTO, PEA, etc.) */
+    wrapperType?: WrapperType;
+    /** Gross amount (before taxes) */
+    grossAmount: number;
+    /** Acquisition cost / cost basis */
+    acquisitionCost: number;
+    /** Net taxable amount */
+    taxableAmount: number;
+    /** Fees deducted */
+    fees: number;
+    /** Currency */
+    currency: string;
+    /** Date of the event (ISO 8601) */
+    eventDate: string;
+    /** Calculation confidence level */
+    confidence: FiscalConfidence;
+    /** Explanation of the calculation */
+    explanation: string;
+    /** Legal reference (CGI article, BOFiP) */
+    legalReference?: string;
+    /** Missing data items that affect reliability */
+    missingData?: string[];
+}
+
+/**
+ * Aggregated tax summary for a fiscal year.
+ */
+export interface TaxSummaryResult {
+    fiscalYear: string;
+    /** CTO capital gains/losses */
+    cto: {
+        totalGains: number;
+        totalLosses: number;
+        netResult: number;
+        /** Losses carried forward from previous years */
+        lossCarryforward: number;
+        /** Losses used this year from carryforward */
+        lossesApplied: number;
+        /** Remaining losses to carry forward */
+        remainingCarryforward: number;
+        events: TaxableEvent[];
+    };
+    /** Dividend and interest income */
+    income: {
+        totalDividends: number;
+        totalInterest: number;
+        totalCoupons: number;
+        withholdingTaxPaid: number;
+        events: TaxableEvent[];
+    };
+    /** Crypto-specific results (Art. 150 VH bis) */
+    crypto: {
+        totalCessions: number;
+        totalGains: number;
+        totalLosses: number;
+        netResult: number;
+        /** Whether total annual cessions exceed the 305€ threshold */
+        exceedsThreshold: boolean;
+        thresholdAmount: number;
+        events: TaxableEvent[];
+    };
+    /** PEA events */
+    pea: {
+        withdrawals: TaxableEvent[];
+        taxableGain: number;
+        socialContributions: number;
+    };
+    /** Foreign account obligations */
+    foreignAccounts: ForeignAccountObligation[];
+    /** Form/case mappings */
+    formMappings: FormCaseMapping[];
+    /** Data quality indicators */
+    dataQuality: {
+        totalEvents: number;
+        determinedCount: number;
+        estimatedCount: number;
+        insufficientCount: number;
+        complexCount: number;
+        missingDataSummary: string[];
+    };
+}
+
+/**
+ * Foreign account declaration obligation.
+ */
+export interface ForeignAccountObligation {
+    instituteId: string;
+    instituteName: string;
+    country: string;
+    accountIds: string[];
+    accountNames: string[];
+    /** Applicable form (3916 or 3916-bis) */
+    form: '3916' | '3916-bis';
+    /** Reason for the obligation */
+    reason: string;
+    /** Whether the obligation is certain or potential */
+    certainty: 'certain' | 'probable' | 'to_verify';
+}
+
+/**
+ * Mapping of a computed value to an official tax form case.
+ */
+export interface FormCaseMapping {
+    /** Form number (e.g. '2042', '2042-C', '2086', '3916') */
+    form: string;
+    /** Case identifier (e.g. '3VG', '2DC', '3AN') */
+    caseId: string;
+    /** Description of the case */
+    caseDescription: string;
+    /** Computed value to report */
+    value: number;
+    /** Confidence level */
+    confidence: FiscalConfidence;
+    /** Fiscal year / millésime this mapping applies to */
+    fiscalYear: string;
+    /** Legal reference */
+    legalReference?: string;
+}
+
+/**
+ * User fiscal profile — stored in user preferences.
+ * Required for accurate PFU vs Barème comparison.
+ */
+export interface FiscalProfile {
+    /**
+     * ISO 3166-1 alpha-2 country codes where the user is tax-resident.
+     * Defaults to ['FR']. In the future, a user may be tax-resident in
+     * multiple countries (e.g., cross-border workers, dual residents).
+     * The fiscal engine will apply the rules of each country independently.
+     */
+    taxResidenceCountries?: string[];
+
+    /** Number of fiscal shares (parts) in the household (e.g., 1, 1.5, 2, 2.5, 3) */
+    fiscalShares?: number;
+    /** Estimated marginal tax rate bracket (for quick estimations) */
+    estimatedTMI?: number;
+    /** Marital/family status */
+    familyStatus?: 'single' | 'married' | 'pacs' | 'divorced' | 'widowed';
+    /** Total household taxable income (hors revenus capitaux) for PFU vs Barème comparison */
+    otherTaxableIncome?: number;
+    /** Whether the user has already opted for Barème (2OP) */
+    hasOpted2OP?: boolean;
+    /** Capital loss carryforward from previous years, by year */
+    lossCarryforwards?: Record<string, number>;
+
+    /**
+     * French department of residence (e.g. '75', '13', '69', '2A', or 'non_resident')
+     * Determines the specific online declaration deadline (Zone 1, 2, or 3).
+     */
+    department?: string;
+
+    /**
+     * Resolved French tax zone based on department
+     */
+    taxZone?: 'zone_1' | 'zone_2' | 'zone_3' | 'non_resident';
+}
+
+/**
+ * Fiscal calendar dates and sync metadata
+ */
+export interface FiscalCalendarData {
+    year: string;
+    declarationYear: string;
+    ifuReceptionStart: string;
+    ifuReceptionEnd: string;
+    declarationOpening: string;
+    paperDeclarationDeadline: string;
+    declarationDeadline: string;
+    zoneDeadlines: {
+        zone1: string; // 01 to 19 & non-residents
+        zone2: string; // 20 to 54
+        zone3: string; // 55 to 976 (incl. Paris, DOM)
+    };
+    taxNoticeDate: string;
+    yearEndDeadline: string;
+    source: 'online' | 'computed';
+    lastUpdated: string;
+}
 

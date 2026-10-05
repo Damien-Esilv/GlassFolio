@@ -11,6 +11,7 @@ import transactionsEN from '../locales/en/transactions.json';
 import progressEN from '../locales/en/progress.json';
 import settingsEN from '../locales/en/settings.json';
 import reportsEN from '../locales/en/reports.json';
+import taxEN from '../locales/en/tax.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -21,6 +22,7 @@ import transactionsFR from '../locales/fr/transactions.json';
 import progressFR from '../locales/fr/progress.json';
 import settingsFR from '../locales/fr/settings.json';
 import reportsFR from '../locales/fr/reports.json';
+import taxFR from '../locales/fr/tax.json';
 
 const resources = {
     en: {
@@ -33,6 +35,7 @@ const resources = {
         progress: progressEN,
         settings: settingsEN,
         reports: reportsEN,
+        tax: taxEN,
     },
     fr: {
         common: commonFR,
@@ -44,6 +47,7 @@ const resources = {
         progress: progressFR,
         settings: settingsFR,
         reports: reportsFR,
+        tax: taxFR,
     },
 };
 

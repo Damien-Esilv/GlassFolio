@@ -1,0 +1,369 @@
+{
+    "hub": {
+        "title": "Aide Fiscale",
+        "subtitle": "Outils d'aide à la déclaration, optimisation fiscale et ressources pédagogiques",
+        "disclaimer": "Ce module fournit une aide préparatoire à votre déclaration fiscale. Il ne se substitue PAS aux conseils d'un professionnel. Vérifiez toujours les informations avec la documentation officielle de la DGFiP et votre IFU (Imprimé Fiscal Unique). GlassFolio ne peut être tenu responsable d'erreurs dans les déclarations basées sur ces données.",
+        "disclaimerTitle": "Avertissement important",
+        "fiscalYear": "Année fiscale",
+        "fiscalYearLabel": "Année fiscale {{year}} (déclarée en {{declarationYear}})",
+        "selectFiscalYear": "Choisir l'année fiscale",
+        "quickStats": {
+            "totalTaxableGains": "Plus-values imposables",
+            "totalLosses": "Moins-values totales",
+            "foreignAccounts": "Comptes étrangers",
+            "dataQuality": "Qualité des données"
+        },
+        "cards": {
+            "declaration": {
+                "title": "Aide Déclarative",
+                "desc": "Consultez vos événements imposables, les valeurs pré-remplies (2042, 2042-C, 2086, 3916) et les indicateurs de qualité des données."
+            },
+            "optimization": {
+                "title": "Optimisation Fiscale",
+                "desc": "Comparez PFU vs Barème (2OP), identifiez les opportunités de récolte de pertes et évaluez l'arbitrage d'enveloppes."
+            },
+            "guide": {
+                "title": "Guide Fiscal",
+                "desc": "Référence pédagogique sur la fiscalité française de l'investisseur : CTO, PEA, crypto, dividendes et comptes étrangers."
+            }
+        },
+        "explore": "Ouvrir le module",
+        "profileRequired": "Profil fiscal requis",
+        "profileRequiredDesc": "Veuillez remplir votre profil fiscal dans les Paramètres pour activer les calculs fiscaux personnalisés.",
+        "goToSettings": "Aller aux Paramètres",
+        "profileIncomplete": "Certains champs optionnels du profil fiscal sont manquants",
+        "profileIncompleteDesc": "Pour des résultats plus précis (ex : PFU vs Barème), complétez votre profil fiscal.",
+        "completeProfile": "Compléter le profil"
+    },
+    "declaration": {
+        "title": "Aide Déclarative",
+        "subtitle": "Consultez les événements imposables et les valeurs pré-remplies pour l'année {{year}}",
+        "backToHub": "Retour à l'Aide Fiscale",
+        "tabs": {
+            "cto": "CTO — Plus-values",
+            "dividends": "Dividendes & Revenus",
+            "pea": "PEA",
+            "crypto": "Crypto (Art. 150 VH bis)",
+            "foreign": "Comptes étrangers",
+            "forms": "Récapitulatif formulaires"
+        },
+        "cto": {
+            "title": "Plus-values & Moins-values CTO",
+            "subtitle": "Plus-values et moins-values sur valeurs mobilières en CTO (Art. 150-0 A du CGI)",
+            "totalGains": "Plus-values totales",
+            "totalLosses": "Moins-values totales",
+            "netResult": "Résultat net",
+            "lossCarryforward": "Report de moins-values antérieures",
+            "lossesApplied": "Moins-values imputées cette année",
+            "remainingCarryforward": "Report restant",
+            "eventTable": "Détail des événements",
+            "instrument": "Instrument",
+            "date": "Date",
+            "type": "Type",
+            "grossAmount": "Montant de cession",
+            "costBasis": "Prix de revient (PMP)",
+            "netGain": "Plus/Moins-value nette",
+            "confidence": "Fiabilité",
+            "noEvents": "Aucun événement de plus-value CTO pour cette année fiscale."
+        },
+        "dividends": {
+            "title": "Dividendes & Revenus",
+            "subtitle": "Revenus de dividendes, intérêts et coupons perçus dans l'année",
+            "totalDividends": "Dividendes totaux",
+            "totalInterest": "Intérêts totaux",
+            "totalCoupons": "Coupons totaux",
+            "withholdingTax": "Retenue à la source payée",
+            "noEvents": "Aucun événement de dividende ou revenu pour cette année fiscale."
+        },
+        "pea": {
+            "title": "Événements PEA",
+            "subtitle": "Retraits et événements internes sur comptes PEA / PEA-PME",
+            "planAge": "Âge du plan",
+            "years": "ans",
+            "taxRegime": "Régime fiscal applicable",
+            "noEvents": "Aucun événement de retrait PEA pour cette année fiscale.",
+            "internalNote": "Les opérations internes au PEA (achats, ventes, dividendes) ne sont pas individuellement imposables. Seuls les retraits déclenchent un événement fiscal."
+        },
+        "crypto": {
+            "title": "Actifs numériques (Art. 150 VH bis)",
+            "subtitle": "Cessions crypto vers monnaie fiduciaire imposables sous l'Art. 150 VH bis du CGI",
+            "totalCessions": "Total des cessions",
+            "totalGains": "Plus-values totales",
+            "totalLosses": "Moins-values totales",
+            "netResult": "Résultat net",
+            "threshold": "Seuil annuel",
+            "thresholdExceeded": "Seuil dépassé — les gains sont imposables",
+            "thresholdNotExceeded": "Sous le seuil — gains exonérés mais déclarables",
+            "cryptoCryptoNote": "Les échanges crypto-crypto sont fiscalement neutres selon les règles actuelles.",
+            "noEvents": "Aucune cession crypto pour cette année fiscale.",
+            "portfolioWarning": "La valorisation du portefeuille au moment de la cession est approximée. Pour un calcul précis, les valeurs exactes du portefeuille à chaque date de cession sont nécessaires."
+        },
+        "foreign": {
+            "title": "Obligations — Comptes à l'étranger",
+            "subtitle": "Comptes détenus hors de France nécessitant une déclaration (3916 / 3916-bis)",
+            "institution": "Établissement",
+            "country": "Pays",
+            "accounts": "Comptes",
+            "form": "Formulaire requis",
+            "certainty": "Certitude",
+            "certain": "Certaine",
+            "probable": "Probable",
+            "toVerify": "À vérifier",
+            "penalty": "Amende en cas de non-déclaration",
+            "perAccount": "par compte non déclaré",
+            "noAccounts": "Aucun compte étranger détecté. Tous vos comptes semblent être détenus en France."
+        },
+        "forms": {
+            "title": "Récapitulatif des formulaires",
+            "subtitle": "Valeurs pré-remplies pour vos formulaires de déclaration",
+            "form": "Formulaire",
+            "case": "Case",
+            "description": "Description",
+            "value": "Valeur",
+            "confidence": "Fiabilité",
+            "noMappings": "Aucun mapping de formulaire généré. Cela peut indiquer qu'aucun événement imposable n'a eu lieu.",
+            "downloadNote": "Ces valeurs sont fournies à titre indicatif. Vérifiez toujours avec votre IFU."
+        },
+        "confidence": {
+            "determined": "Déterminé",
+            "determinedDesc": "Toutes les données sont présentes — calcul fiable",
+            "estimated": "Estimé",
+            "estimatedDesc": "Une ou plusieurs hypothèses faites — vérification manuelle recommandée",
+            "insufficient_data": "Données insuffisantes",
+            "insufficient_dataDesc": "Données critiques manquantes — calcul non fiable",
+            "complex": "Complexe",
+            "complexDesc": "Situation nécessitant un avis professionnel"
+        }
+    },
+    "optimization": {
+        "title": "Optimisation Fiscale",
+        "subtitle": "Identifiez les opportunités d'optimisation pour l'année fiscale {{year}}",
+        "backToHub": "Retour à l'Aide Fiscale",
+        "pfuVsBareme": {
+            "title": "PFU vs Barème (Option 2OP)",
+            "subtitle": "Comparez la flat tax (30 %) avec le barème progressif de l'IR",
+            "pfuLabel": "PFU (Flat Tax 30 %)",
+            "baremeLabel": "Barème Progressif",
+            "pfuAmount": "Impôt avec le PFU",
+            "baremeAmount": "Impôt avec le Barème",
+            "savings": "Économie estimée",
+            "recommendation": "Recommandation",
+            "recommendPFU": "Le PFU (flat tax) est plus avantageux pour votre situation",
+            "recommendBareme": "Le barème progressif (2OP) vous ferait économiser de l'argent",
+            "recommendNeutral": "Les deux options donnent des résultats similaires",
+            "needsProfile": "Complétez votre profil fiscal (revenus, parts fiscales) pour une comparaison précise",
+            "pfuDescription": "Prélèvement forfaitaire de 30 % (12,8 % IR + 17,2 % PS). Aucune action requise.",
+            "baremeDescription": "Barème progressif de l'IR avec abattement de 40 % sur les dividendes. Nécessite de cocher la case 2OP. S'applique globalement à TOUS les revenus du capital."
+        },
+        "harvesting": {
+            "title": "Récolte de pertes fiscales",
+            "subtitle": "Compensez les plus-values réalisées avec des moins-values matérialisées",
+            "realizedGains": "Plus-values réalisées (cumul annuel)",
+            "realizedLosses": "Moins-values réalisées (cumul annuel)",
+            "potentialTaxSaved": "Économie fiscale potentielle",
+            "noOpportunities": "Aucune opportunité de récolte de pertes identifiée.",
+            "note": "Les moins-values peuvent être reportées pendant 10 ans pour compenser de futures plus-values."
+        },
+        "envelope": {
+            "title": "Comparaison d'enveloppes",
+            "subtitle": "CTO vs PEA vs Assurance-Vie — quelle est la meilleure pour votre situation ?",
+            "wrapper": "Enveloppe",
+            "taxOnGains": "Fiscalité des gains",
+            "taxOnDividends": "Fiscalité des dividendes",
+            "flexibility": "Flexibilité",
+            "ceiling": "Plafond de versement",
+            "cto": {
+                "name": "CTO (Ordinaire)",
+                "gains": "PFU 30 % ou Barème",
+                "dividends": "PFU 30 % ou Barème",
+                "flexibility": "Totale — aucune restriction",
+                "ceiling": "Aucun"
+            },
+            "pea": {
+                "name": "PEA",
+                "gains": "0 % IR après 5 ans (17,2 % PS uniquement)",
+                "dividends": "Exonérés (capitalisation interne)",
+                "flexibility": "Restreinte — retrait avant 5 ans = clôture",
+                "ceiling": "150 000 €"
+            },
+            "av": {
+                "name": "Assurance-Vie",
+                "gains": "Avantageuse après 8 ans",
+                "dividends": "Capitalisation interne",
+                "flexibility": "Rachats partiels possibles",
+                "ceiling": "Aucun (mais avantages fiscaux plafonnés)"
+            }
+        },
+        "suggestions": {
+            "title": "Suggestions personnalisées",
+            "noSuggestions": "Aucune suggestion d'optimisation spécifique. Votre situation fiscale semble efficiente.",
+            "impact": "Impact estimé",
+            "categories": {
+                "regime": "Régime fiscal",
+                "harvesting": "Récolte de pertes",
+                "compliance": "Conformité",
+                "crypto": "Crypto-actifs",
+                "envelope": "Stratégie d'enveloppe"
+            }
+        }
+    },
+    "guide": {
+        "title": "Guide Fiscal",
+        "subtitle": "Référence pédagogique sur la fiscalité française de l'investisseur particulier",
+        "backToHub": "Retour à l'Aide Fiscale",
+        "disclaimer": "Ce guide présente les principes généraux du droit fiscal français pour les investisseurs particuliers. Il ne constitue pas un conseil fiscal. Consultez les sources officielles (Légifrance, BOFiP, impots.gouv.fr) pour des informations faisant autorité.",
+        "searchPlaceholder": "Rechercher un sujet...",
+        "topics": {
+            "cto": {
+                "title": "CTO — Plus-values mobilières",
+                "desc": "Comment sont imposées les plus-values sur CTO, calcul du PMP et report des moins-values.",
+                "category": "Valeurs mobilières"
+            },
+            "pea": {
+                "title": "PEA — Plan d'Épargne en Actions",
+                "desc": "Enveloppe fiscale avantageuse, seuils d'âge (2/5 ans) et règles de retrait.",
+                "category": "Enveloppes"
+            },
+            "crypto": {
+                "title": "Actifs numériques",
+                "desc": "Art. 150 VH bis, événements imposables vs non imposables, seuil de 305 € et staking.",
+                "category": "Actifs numériques"
+            },
+            "dividends": {
+                "title": "Dividendes & Revenus",
+                "desc": "PFU vs barème, abattement de 40 %, retenue à la source étrangère et crédits d'impôt.",
+                "category": "Revenus"
+            },
+            "foreign": {
+                "title": "Comptes étrangers",
+                "desc": "Obligations déclaratives (3916/3916-bis), sanctions et conformité.",
+                "category": "Conformité"
+            },
+            "pfuBareme": {
+                "title": "PFU vs Barème",
+                "desc": "Quand choisir la flat tax vs le barème progressif, option 2OP et TMI de basculement.",
+                "category": "Régime fiscal"
+            },
+            "losses": {
+                "title": "Moins-values",
+                "desc": "Report sur 10 ans, règles d'imputation et stratégie de récolte de pertes.",
+                "category": "Stratégie"
+            },
+            "calendar": {
+                "title": "Calendrier fiscal",
+                "desc": "Dates clés : IFU, fenêtre de déclaration, avis d'imposition et optimisation de fin d'année.",
+                "category": "Planification"
+            }
+        },
+        "calendar": {
+            "title": "Calendrier fiscal {{year}}",
+            "subtitle": "Échéances officielles DGFiP adaptées à votre département de résidence et modulables dans le temps.",
+            "ifuReception": "Réception de l'IFU",
+            "declarationOpening": "Ouverture de la déclaration en ligne",
+            "declarationDeadline": "Date limite de déclaration",
+            "taxNotice": "Avis d'imposition",
+            "yearEndPlanning": "Date limite de planification fiscale de fin d'année",
+            "paperDeclaration": "Déclaration papier (tous départements)",
+            "selectDepartment": "Département de résidence fiscale",
+            "yourDeadline": "Votre date limite personnalisée",
+            "yourZone": "Votre zone",
+            "zone1": "Zone 1 (Dép. 01 à 19 & Non-résidents)",
+            "zone2": "Zone 2 (Dép. 20 à 54 & Corse)",
+            "zone3": "Zone 3 (Dép. 55 à 976, Paris & DOM)",
+            "syncOnline": "Actualiser depuis Internet",
+            "syncing": "Vérification en cours...",
+            "syncedOnline": "Données synchronisées en ligne",
+            "computedAutonomous": "Mode prédictif autonome pérenne",
+            "lastChecked": "Dernière vérification : {{date}}",
+            "daysRemaining": "{{count}} jours restants",
+            "passed": "Échéance passée",
+            "activeZoneBadge": "Votre zone",
+            "zoneBreakdown": "Découpage officiel par zone en France",
+            "yearSelector": "Année fiscale",
+            "autoUpdating": "Mise à jour automatique pérenne sans ajout manuel futur"
+        },
+        "sources": {
+            "title": "Sources officielles",
+            "legifrance": "Légifrance (CGI)",
+            "bofip": "BOFiP-Impôts",
+            "impots": "impots.gouv.fr",
+            "formulaires": "Formulaires officiels DGFiP"
+        },
+        "topicDetail": {
+            "backToGuide": "Retour au Guide",
+            "legalReferences": "Références juridiques",
+            "examples": "Exemples détaillés",
+            "keyRules": "Règles clés",
+            "relatedTopics": "Sujets connexes"
+        }
+    },
+    "settings": {
+        "title": "Profil Fiscal",
+        "subtitle": "Ces informations sont utilisées pour calculer vos estimations fiscales personnalisées. Elles sont stockées localement et jamais partagées.",
+        "taxResidence": "Résidence fiscale",
+        "taxResidenceInfo": "Pays où vous êtes résident fiscal. Seule la France est actuellement supportée.",
+        "department": "Département de résidence fiscale",
+        "departmentInfo": "Détermine automatiquement votre date limite de déclaration en ligne selon les 3 zones françaises.",
+        "taxZone": "Zone d'échéance déclarative",
+        "familyStatus": "Situation familiale",
+        "familyStatusInfo": "Votre situation matrimoniale/familiale pour l'année fiscale en cours.",
+        "familyStatusOptions": {
+            "single": "Célibataire",
+            "married": "Marié(e) / Union civile",
+            "pacs": "Pacsé(e)",
+            "divorced": "Divorcé(e)",
+            "widowed": "Veuf/Veuve"
+        },
+        "fiscalShares": "Parts fiscales",
+        "fiscalSharesInfo": "Nombre de parts fiscales du foyer (ex : 1 pour célibataire, 2 pour couple, 2,5 avec un enfant).",
+        "otherIncome": "Autres revenus imposables (€)",
+        "otherIncomeInfo": "Votre revenu imposable total HORS revenus du capital. Utilisé pour la comparaison PFU vs Barème.",
+        "estimatedTMI": "TMI estimée",
+        "estimatedTMIInfo": "Votre tranche marginale d'imposition. Calculée automatiquement si les autres revenus et parts sont renseignés.",
+        "tmiValues": {
+            "0": "0 % (jusqu'à {{max}} €)",
+            "11": "11 % ({{min}} € – {{max}} €)",
+            "30": "30 % ({{min}} € – {{max}} €)",
+            "41": "41 % ({{min}} € – {{max}} €)",
+            "45": "45 % (au-delà de {{min}} €)"
+        },
+        "hasOpted2OP": "Option barème (2OP) choisie",
+        "hasOpted2OPInfo": "Cochez si vous avez déjà choisi le barème progressif pour l'ensemble de vos revenus du capital.",
+        "saved": "Profil fiscal enregistré avec succès",
+        "requiredFields": "Champs obligatoires",
+        "optionalFields": "Champs optionnels (améliorent la précision)",
+        "lossCarryforwards": "Report de moins-values",
+        "lossCarryforwardsInfo": "Moins-values des années précédentes pouvant compenser de futures plus-values (limite de 10 ans)."
+    },
+    "common": {
+        "gain": "Plus-value",
+        "loss": "Moins-value",
+        "taxable": "Imposable",
+        "exempt": "Exonéré",
+        "yes": "Oui",
+        "no": "Non",
+        "amount": "Montant",
+        "rate": "Taux",
+        "total": "Total",
+        "details": "Détails",
+        "legalReference": "Référence juridique",
+        "source": "Source",
+        "noData": "Aucune donnée disponible",
+        "loading": "Chargement des données fiscales...",
+        "error": "Une erreur est survenue lors du chargement des données fiscales",
+        "retry": "Réessayer",
+        "country": {
+            "FR": "France",
+            "DE": "Allemagne",
+            "BE": "Belgique",
+            "MT": "Malte",
+            "NL": "Pays-Bas",
+            "US": "États-Unis",
+            "SC": "Seychelles",
+            "LU": "Luxembourg",
+            "IE": "Irlande",
+            "CH": "Suisse",
+            "GB": "Royaume-Uni"
+        }
+    }
+}

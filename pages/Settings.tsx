@@ -1,23 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar } from 'lucide-react';
+import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences } from '../types';
 import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
-import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { exportBackupJSON, exportRGPDZip } from '../src/services/exportService';
 import { BackupMergeWizard } from '../components/BackupMergeWizard';
 import { Download, FileText, Database } from 'lucide-react';
+import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
+import { SUPPORTED_CURRENCIES } from '../utils/currency';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile } = useAuth();
     const { resetToSeedData } = useData();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showBackupWizard, setShowBackupWizard] = useState(false);
@@ -27,6 +28,7 @@ const Settings: React.FC = () => {
         const tab = searchParams.get('tab');
         if (tab === 'preferences') setActiveTab('preferences');
         else if (tab === 'profile') setActiveTab('profile');
+        else if (tab === 'fiscal') setActiveTab('fiscal');
     }, [searchParams]);
 
     // Profile Form State
@@ -42,6 +44,17 @@ const Settings: React.FC = () => {
         notifications: user?.preferences?.notifications ?? true,
         language: user?.preferences?.language || 'en',
         dateFormat: user?.preferences?.dateFormat || 'DD/MM/YYYY'
+    });
+
+    // Fiscal Profile State
+    const [fiscalData, setFiscalData] = useState({
+        familyStatus: user?.preferences?.fiscalProfile?.familyStatus || '',
+        fiscalShares: user?.preferences?.fiscalProfile?.fiscalShares || 1,
+        otherTaxableIncome: user?.preferences?.fiscalProfile?.otherTaxableIncome || 0,
+        hasOpted2OP: user?.preferences?.fiscalProfile?.hasOpted2OP || false,
+        taxResidenceCountries: user?.preferences?.fiscalProfile?.taxResidenceCountries || ['FR'],
+        department: user?.preferences?.fiscalProfile?.department || '75',
+        taxZone: user?.preferences?.fiscalProfile?.taxZone || 'zone_3',
     });
 
     // Password State
@@ -119,6 +132,24 @@ const Settings: React.FC = () => {
         await updateProfile({ preferences: newPrefs });
     };
 
+    const saveFiscalProfile = async () => {
+        setIsSaving(true);
+        try {
+            await updateProfile({
+                preferences: {
+                    ...prefData,
+                    fiscalProfile: fiscalData,
+                }
+            });
+            setSuccessMsg(t('tax:settings.saved'));
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     if (!user) return null;
 
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border";
@@ -144,6 +175,12 @@ const Settings: React.FC = () => {
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'preferences' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
                         <Globe size={18} /> {t('settings:tabs.preferences')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('fiscal')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'fiscal' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                    >
+                        <Scale size={18} /> {t('tax:settings.title')}
                     </button>
                 </div>
 
@@ -390,7 +427,140 @@ const Settings: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Data Export & Backup Section */}
+                            {/* ── Fiscal Profile Card ── */}
+                            <div className={cardStyle}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Scale size={20} className="text-brand" />
+                                    <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
+                                </div>
+                                <p className="text-xs text-tertiary mb-6">{t('tax:settings.subtitle')}</p>
+
+                                <div className="space-y-5">
+                                    {/* Required fields banner */}
+                                    <div className="text-xs font-semibold text-brand uppercase tracking-wide">{t('tax:settings.requiredFields')}</div>
+
+                                    {/* Family Status */}
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.familyStatus')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.familyStatusInfo')}</p>
+                                        </div>
+                                        <select
+                                            value={fiscalData.familyStatus}
+                                            onChange={e => setFiscalData(prev => ({ ...prev, familyStatus: e.target.value as any }))}
+                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[180px] focus:ring-primary focus:border-primary"
+                                        >
+                                            <option value="">—</option>
+                                            {(['single', 'married', 'pacs', 'divorced', 'widowed'] as const).map(s => (
+                                                <option key={s} value={s}>{t(`tax:settings.familyStatusOptions.${s}`)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Fiscal Shares */}
+                                    <div className="flex items-center justify-between border-t border-border pt-5">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.fiscalShares')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.fiscalSharesInfo')}</p>
+                                        </div>
+                                        <select
+                                            value={fiscalData.fiscalShares}
+                                            onChange={e => setFiscalData(prev => ({ ...prev, fiscalShares: parseFloat(e.target.value) }))}
+                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[80px] focus:ring-primary focus:border-primary"
+                                        >
+                                            {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
+                                                <option key={n} value={n}>{n}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Optional fields separator */}
+                                    <div className="border-t border-border pt-5">
+                                        <div className="text-xs font-semibold text-secondary uppercase tracking-wide mb-4">{t('tax:settings.optionalFields')}</div>
+                                    </div>
+
+                                    {/* Other Taxable Income */}
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.otherIncome')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.otherIncomeInfo')}</p>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={1000}
+                                                value={fiscalData.otherTaxableIncome}
+                                                onChange={e => setFiscalData(prev => ({ ...prev, otherTaxableIncome: parseFloat(e.target.value) || 0 }))}
+                                                className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 pr-8 w-36 focus:ring-primary focus:border-primary text-right"
+                                            />
+                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">€</span>
+                                        </div>
+                                    </div>
+
+                                    {/* 2OP Option */}
+                                    <div className="flex items-center justify-between border-t border-border pt-5">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.hasOpted2OP')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.hasOpted2OPInfo')}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setFiscalData(prev => ({ ...prev, hasOpted2OP: !prev.hasOpted2OP }))}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${fiscalData.hasOpted2OP ? 'bg-brand' : 'bg-black/20 dark:bg-white/20'}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${fiscalData.hasOpted2OP ? 'left-7' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+
+                                    {/* French Department & Zone Selector */}
+                                    <div className="border-t border-border pt-5">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.department')}</p>
+                                                <p className="text-xs text-tertiary">{t('tax:settings.departmentInfo')}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={fiscalData.department}
+                                                    onChange={e => {
+                                                        const dept = e.target.value;
+                                                        const zone = getTaxZoneForDepartment(dept);
+                                                        setFiscalData(prev => ({ ...prev, department: dept, taxZone: zone }));
+                                                    }}
+                                                    className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[200px]"
+                                                >
+                                                    {FRENCH_DEPARTMENTS.map(d => (
+                                                        <option key={d.code} value={d.code}>
+                                                            {d.code} - {d.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <span className="px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-bold uppercase shrink-0">
+                                                    {fiscalData.taxZone?.replace('_', ' ') || 'ZONE 3'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Tax Residence Countries */}
+                                    <div className="border-t border-border pt-5">
+                                        <p className="text-sm font-medium text-primary mb-1">{t('tax:settings.taxResidence')}</p>
+                                        <p className="text-xs text-tertiary mb-3">{t('tax:settings.taxResidenceInfo')}</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {fiscalData.taxResidenceCountries.map(c => (
+                                                <span key={c} className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">{t(`tax:common.country.${c}`, { defaultValue: c })}</span>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-tertiary mt-2 italic">Multi-country support coming soon.</p>
+                                    </div>
+
+                                    {/* Save */}
+                                    <div className="flex justify-between items-center border-t border-border pt-5">
+                                        <span className="text-success text-sm font-medium">{successMsg}</span>
+                                        <Button onClick={saveFiscalProfile} isLoading={isSaving}>{t('common:buttons.save')}</Button>
+                                    </div>
+                                </div>
+                            </div>
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-2 flex items-center gap-2">
                                     <Database size={20} className="text-primary" />
@@ -482,6 +652,129 @@ const Settings: React.FC = () => {
                                             </Button>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ================= FISCAL TAB ================= */}
+                    {activeTab === 'fiscal' && (
+                        <div className="animate-fade-in">
+                            <div className={cardStyle}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Scale size={20} className="text-brand" />
+                                    <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
+                                </div>
+                                <p className="text-xs text-tertiary mb-6">{t('tax:settings.subtitle')}</p>
+                                <div className="space-y-5">
+                                    <div className="text-xs font-semibold text-brand uppercase tracking-wide">{t('tax:settings.requiredFields')}</div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.familyStatus')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.familyStatusInfo')}</p>
+                                        </div>
+                                        <select
+                                            value={fiscalData.familyStatus}
+                                            onChange={e => setFiscalData(prev => ({ ...prev, familyStatus: e.target.value as any }))}
+                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[180px] focus:ring-primary focus:border-primary"
+                                        >
+                                            <option value="">—</option>
+                                            {(['single', 'married', 'pacs', 'divorced', 'widowed'] as const).map(s => (
+                                                <option key={s} value={s}>{t(`tax:settings.familyStatusOptions.${s}`)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-border pt-5">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.fiscalShares')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.fiscalSharesInfo')}</p>
+                                        </div>
+                                        <select
+                                            value={fiscalData.fiscalShares}
+                                            onChange={e => setFiscalData(prev => ({ ...prev, fiscalShares: parseFloat(e.target.value) }))}
+                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[80px] focus:ring-primary focus:border-primary"
+                                        >
+                                            {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
+                                                <option key={n} value={n}>{n}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="border-t border-border pt-5">
+                                        <div className="text-xs font-semibold text-secondary uppercase tracking-wide mb-4">{t('tax:settings.optionalFields')}</div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.otherIncome')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.otherIncomeInfo')}</p>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={1000}
+                                                value={fiscalData.otherTaxableIncome}
+                                                onChange={e => setFiscalData(prev => ({ ...prev, otherTaxableIncome: parseFloat(e.target.value) || 0 }))}
+                                                className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 pr-8 w-36 focus:ring-primary focus:border-primary text-right"
+                                            />
+                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">€</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-border pt-5">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary">{t('tax:settings.hasOpted2OP')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.hasOpted2OPInfo')}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setFiscalData(prev => ({ ...prev, hasOpted2OP: !prev.hasOpted2OP }))}
+                                            className={`w-12 h-6 rounded-full transition-colors relative ${fiscalData.hasOpted2OP ? 'bg-brand' : 'bg-black/20 dark:bg-white/20'}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${fiscalData.hasOpted2OP ? 'left-7' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+                                    {/* French Department & Zone Selector */}
+                                    <div className="border-t border-border pt-5">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.department')}</p>
+                                                <p className="text-xs text-tertiary">{t('tax:settings.departmentInfo')}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={fiscalData.department}
+                                                    onChange={e => {
+                                                        const dept = e.target.value;
+                                                        const zone = getTaxZoneForDepartment(dept);
+                                                        setFiscalData(prev => ({ ...prev, department: dept, taxZone: zone }));
+                                                    }}
+                                                    className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[200px]"
+                                                >
+                                                    {FRENCH_DEPARTMENTS.map(d => (
+                                                        <option key={d.code} value={d.code}>
+                                                            {d.code} - {d.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <span className="px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-bold uppercase shrink-0">
+                                                    {fiscalData.taxZone?.replace('_', ' ') || 'ZONE 3'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-border pt-5">
+                                        <p className="text-sm font-medium text-primary mb-1">{t('tax:settings.taxResidence')}</p>
+                                        <p className="text-xs text-tertiary mb-3">{t('tax:settings.taxResidenceInfo')}</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {fiscalData.taxResidenceCountries.map(c => (
+                                                <span key={c} className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">{t(`tax:common.country.${c}`, { defaultValue: c })}</span>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-tertiary mt-2 italic">Multi-country support coming soon.</p>
+                                    </div>
+                                    <div className="flex justify-between items-center border-t border-border pt-5">
+                                        <span className="text-success text-sm font-medium">{successMsg}</span>
+                                        <Button onClick={saveFiscalProfile} isLoading={isSaving}>{t('common:buttons.save')}</Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

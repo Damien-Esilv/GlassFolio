@@ -96,6 +96,9 @@
             "selectInstitution": "1. Sélectionner l'institution",
             "new": "Nouveau",
             "institutionNamePlaceholder": "Nom de l'institution...",
+            "institutionCountry": "Pays de domiciliation",
+            "domesticAccountBadge": "Établissement français (FR) — Aucun formulaire 3916 requis",
+            "foreignAccountBadge": "Établissement étranger — Déclaration obligatoire (Formulaire 3916 / 3916-bis)",
             "instituteTypes": {
                 "bank": "Banque",
                 "broker": "Courtier",
@@ -107,6 +110,12 @@
             "noAccounts": "Aucun compte trouvé. Créez-en un pour continuer.",
             "createNewAccount": "Créer un nouveau compte",
             "accountNamePlaceholder": "Nom du compte...",
+            "wrapperType": "Enveloppe fiscale",
+            "wrappers": {
+                "CTO": "Compte-Titres (CTO)",
+                "PEA": "Plan d'Épargne en Actions (PEA)",
+                "OTHER": "Autre / Crypto / Standard"
+            },
             "accountTypes": {
                 "checking": "Liquidités / Cash",
                 "investment": "Actions / ETF (PEA, CTO)",

@@ -121,7 +121,23 @@ class MockDB {
     // --- Institutes ---
     getInstitutes(): Institute[] {
         const stored = localStorage.getItem(STORAGE_KEYS.INSTITUTES);
-        return stored ? JSON.parse(stored) : initialInstitutes;
+        if (!stored) return initialInstitutes;
+
+        try {
+            const storedList = JSON.parse(stored) as Institute[];
+            const map = new Map<string, Institute>();
+            initialInstitutes.forEach(i => map.set(i.id, i));
+            storedList.forEach(i => {
+                const initial = map.get(i.id);
+                map.set(i.id, {
+                    ...i,
+                    country: i.country || initial?.country || 'FR',
+                });
+            });
+            return Array.from(map.values());
+        } catch {
+            return initialInstitutes;
+        }
     }
 
     saveInstitutes(data: Institute[]) {
@@ -135,7 +151,17 @@ class MockDB {
     // --- Accounts ---
     getAccounts(): Account[] {
         const stored = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-        return stored ? JSON.parse(stored) : initialAccounts;
+        if (!stored) return initialAccounts;
+
+        try {
+            const storedList = JSON.parse(stored) as Account[];
+            const map = new Map<string, Account>();
+            initialAccounts.forEach(a => map.set(a.id, a));
+            storedList.forEach(a => map.set(a.id, a));
+            return Array.from(map.values());
+        } catch {
+            return initialAccounts;
+        }
     }
 
     saveAccounts(data: Account[]) {

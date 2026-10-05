@@ -10,7 +10,10 @@ import Analytics from './pages/Analytics';
 import PortfolioPerformance from './pages/PortfolioPerformance';
 import RealizedUnrealizedPL from './pages/RealizedUnrealizedPL';
 import FeeAnalysis from './pages/FeeAnalysis';
-import TaxSummary from './pages/TaxSummary';
+import TaxHub from './pages/TaxHub';
+import DeclarationAssistant from './pages/DeclarationAssistant';
+import TaxOptimization from './pages/TaxOptimization';
+import TaxGuide from './pages/TaxGuide';
 import Settings from './pages/Settings';
 import Progress from './pages/Progress';
 import ImportWizard from './pages/ImportWizard';
@@ -59,7 +62,14 @@ const App: React.FC = () => {
               <Route path="/analytics/performance" element={<ProtectedRoute><PortfolioPerformance /></ProtectedRoute>} />
               <Route path="/analytics/pl" element={<ProtectedRoute><RealizedUnrealizedPL /></ProtectedRoute>} />
               <Route path="/analytics/fees" element={<ProtectedRoute><FeeAnalysis /></ProtectedRoute>} />
-              <Route path="/analytics/tax" element={<ProtectedRoute><TaxSummary /></ProtectedRoute>} />
+              {/* /analytics/tax → redirect to the new fiscal module */}
+              <Route path="/analytics/tax" element={<Navigate to="/tax" replace />} />
+
+              {/* Fiscalité Module */}
+              <Route path="/tax" element={<ProtectedRoute><TaxHub /></ProtectedRoute>} />
+              <Route path="/tax/declaration" element={<ProtectedRoute><DeclarationAssistant /></ProtectedRoute>} />
+              <Route path="/tax/optimization" element={<ProtectedRoute><TaxOptimization /></ProtectedRoute>} />
+              <Route path="/tax/guide" element={<ProtectedRoute><TaxGuide /></ProtectedRoute>} />
               
               {/* Legacy route redirects */}
               <Route path="/reports" element={<Navigate to="/analytics" replace />} />

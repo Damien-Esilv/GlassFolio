@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { ArrowRight, FileText, Coins, TrendingUp, Receipt, ShieldCheck } from 'lucide-react';
+import { ArrowRight, FileText, Coins, TrendingUp, Receipt } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { STAGGER_DELAY_MS } from '../src/constants/animations';
 
@@ -38,13 +38,6 @@ const Analytics: React.FC = () => {
          titleKey: 'reports:cards.fees.title',
          descKey: 'reports:cards.fees.desc',
          route: '/analytics/fees'
-      },
-      {
-         id: 'tax',
-         icon: ShieldCheck,
-         titleKey: 'reports:cards.tax.title',
-         descKey: 'reports:cards.tax.desc',
-         route: '/analytics/tax'
       }
    ];
 

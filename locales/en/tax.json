@@ -1,0 +1,369 @@
+{
+    "hub": {
+        "title": "Tax Assistant",
+        "subtitle": "French tax declaration tools, optimization, and educational resources",
+        "disclaimer": "This module provides preparatory assistance for your tax declaration. It is NOT a substitute for professional tax advice. Always verify the information against official DGFiP documentation and your IFU (Imprimé Fiscal Unique). GlassFolio cannot be held responsible for errors in declarations based on this data.",
+        "disclaimerTitle": "Important Notice",
+        "fiscalYear": "Fiscal Year",
+        "fiscalYearLabel": "Fiscal Year {{year}} (declared in {{declarationYear}})",
+        "selectFiscalYear": "Select fiscal year",
+        "quickStats": {
+            "totalTaxableGains": "Total Taxable Gains",
+            "totalLosses": "Total Losses",
+            "foreignAccounts": "Foreign Accounts",
+            "dataQuality": "Data Quality"
+        },
+        "cards": {
+            "declaration": {
+                "title": "Declaration Assistant",
+                "desc": "Review your taxable events, form/case pre-fill values (2042, 2042-C, 2086, 3916), and data quality indicators."
+            },
+            "optimization": {
+                "title": "Tax Optimization",
+                "desc": "Compare PFU vs Barème (2OP), identify tax-loss harvesting opportunities, and evaluate envelope arbitrage."
+            },
+            "guide": {
+                "title": "Tax Guide",
+                "desc": "Educational reference on French tax rules for investors: CTO, PEA, crypto, dividends, and foreign accounts."
+            }
+        },
+        "explore": "Open Module",
+        "profileRequired": "Fiscal profile required",
+        "profileRequiredDesc": "Please fill in your fiscal profile in Settings to enable accurate tax calculations.",
+        "goToSettings": "Go to Settings",
+        "profileIncomplete": "Some optional fiscal profile fields are missing",
+        "profileIncompleteDesc": "For more accurate results (e.g., PFU vs Barème), complete your fiscal profile.",
+        "completeProfile": "Complete Profile"
+    },
+    "declaration": {
+        "title": "Declaration Assistant",
+        "subtitle": "Review taxable events and pre-fill form values for fiscal year {{year}}",
+        "backToHub": "Back to Tax Assistant",
+        "tabs": {
+            "cto": "CTO — Capital Gains",
+            "dividends": "Dividends & Income",
+            "pea": "PEA",
+            "crypto": "Crypto (Art. 150 VH bis)",
+            "foreign": "Foreign Accounts",
+            "forms": "Form Summary"
+        },
+        "cto": {
+            "title": "CTO Capital Gains & Losses",
+            "subtitle": "Plus-values and minus-values on CTO securities (Art. 150-0 A CGI)",
+            "totalGains": "Total Gains",
+            "totalLosses": "Total Losses",
+            "netResult": "Net Result",
+            "lossCarryforward": "Prior Loss Carryforward",
+            "lossesApplied": "Losses Applied This Year",
+            "remainingCarryforward": "Remaining Carryforward",
+            "eventTable": "Detailed Events",
+            "instrument": "Instrument",
+            "date": "Date",
+            "type": "Type",
+            "grossAmount": "Sale Amount",
+            "costBasis": "Cost Basis (PMP)",
+            "netGain": "Net Gain/Loss",
+            "confidence": "Reliability",
+            "noEvents": "No CTO capital gain events for this fiscal year."
+        },
+        "dividends": {
+            "title": "Dividends & Income",
+            "subtitle": "Dividend, interest, and coupon income received during the year",
+            "totalDividends": "Total Dividends",
+            "totalInterest": "Total Interest",
+            "totalCoupons": "Total Coupons",
+            "withholdingTax": "Withholding Tax Paid",
+            "noEvents": "No dividend or income events for this fiscal year."
+        },
+        "pea": {
+            "title": "PEA Events",
+            "subtitle": "Withdrawals and internal events on PEA / PEA-PME accounts",
+            "planAge": "Plan Age",
+            "years": "years",
+            "taxRegime": "Applicable Tax Regime",
+            "noEvents": "No PEA withdrawal events for this fiscal year.",
+            "internalNote": "Internal PEA transactions (buys, sells, dividends) are not individually taxable. Only withdrawals trigger tax events."
+        },
+        "crypto": {
+            "title": "Crypto Assets (Art. 150 VH bis)",
+            "subtitle": "Crypto-to-fiat cessions taxable under Art. 150 VH bis CGI",
+            "totalCessions": "Total Cessions",
+            "totalGains": "Total Gains",
+            "totalLosses": "Total Losses",
+            "netResult": "Net Result",
+            "threshold": "Annual Threshold",
+            "thresholdExceeded": "Threshold exceeded — gains are taxable",
+            "thresholdNotExceeded": "Below threshold — gains exempt but still declarable",
+            "cryptoCryptoNote": "Crypto-to-crypto exchanges are tax-neutral under current rules.",
+            "noEvents": "No crypto cession events for this fiscal year.",
+            "portfolioWarning": "Portfolio valuation at cession time is approximated. For precise calculations, exact portfolio values at each cession date are needed."
+        },
+        "foreign": {
+            "title": "Foreign Account Obligations",
+            "subtitle": "Accounts held outside France requiring declaration (3916 / 3916-bis)",
+            "institution": "Institution",
+            "country": "Country",
+            "accounts": "Accounts",
+            "form": "Required Form",
+            "certainty": "Certainty",
+            "certain": "Certain",
+            "probable": "Probable",
+            "toVerify": "To verify",
+            "penalty": "Non-declaration penalty",
+            "perAccount": "per undeclared account",
+            "noAccounts": "No foreign accounts detected. All your accounts appear to be held in France."
+        },
+        "forms": {
+            "title": "Tax Form Summary",
+            "subtitle": "Pre-filled values for your declaration forms",
+            "form": "Form",
+            "case": "Case",
+            "description": "Description",
+            "value": "Value",
+            "confidence": "Reliability",
+            "noMappings": "No form mappings generated. This may indicate no taxable events occurred.",
+            "downloadNote": "These values are for guidance only. Always verify against your IFU."
+        },
+        "confidence": {
+            "determined": "Determined",
+            "determinedDesc": "All data present — calculation is reliable",
+            "estimated": "Estimated",
+            "estimatedDesc": "One or more assumptions made — verify manually",
+            "insufficient_data": "Insufficient Data",
+            "insufficient_dataDesc": "Critical data missing — cannot compute reliably",
+            "complex": "Complex",
+            "complexDesc": "Situation requires professional review"
+        }
+    },
+    "optimization": {
+        "title": "Tax Optimization",
+        "subtitle": "Identify opportunities to optimize your tax situation for fiscal year {{year}}",
+        "backToHub": "Back to Tax Assistant",
+        "pfuVsBareme": {
+            "title": "PFU vs Barème (Option 2OP)",
+            "subtitle": "Compare flat tax (30%) with progressive income tax",
+            "pfuLabel": "PFU (Flat Tax 30%)",
+            "baremeLabel": "Barème Progressif",
+            "pfuAmount": "Tax under PFU",
+            "baremeAmount": "Tax under Barème",
+            "savings": "Estimated Savings",
+            "recommendation": "Recommendation",
+            "recommendPFU": "The PFU (flat tax) is more advantageous for your situation",
+            "recommendBareme": "The barème progressif (2OP) would save you money",
+            "recommendNeutral": "Both options produce similar results",
+            "needsProfile": "Complete your fiscal profile (income, fiscal shares) for an accurate comparison",
+            "pfuDescription": "Automatic flat tax at 30% (12.8% IR + 17.2% social contributions). No action needed.",
+            "baremeDescription": "Progressive income tax with 40% dividend abatement. Requires checking box 2OP. Applies globally to ALL capital income."
+        },
+        "harvesting": {
+            "title": "Tax-Loss Harvesting",
+            "subtitle": "Offset realized gains with realized losses",
+            "realizedGains": "Realized Gains YTD",
+            "realizedLosses": "Realized Losses YTD",
+            "potentialTaxSaved": "Potential Tax Saved",
+            "noOpportunities": "No tax-loss harvesting opportunities identified.",
+            "note": "Capital losses can be carried forward for 10 years to offset future gains."
+        },
+        "envelope": {
+            "title": "Envelope Comparison",
+            "subtitle": "CTO vs PEA vs Assurance-Vie — which is best for your situation?",
+            "wrapper": "Envelope",
+            "taxOnGains": "Tax on Gains",
+            "taxOnDividends": "Tax on Dividends",
+            "flexibility": "Flexibility",
+            "ceiling": "Deposit Ceiling",
+            "cto": {
+                "name": "CTO (Ordinary)",
+                "gains": "PFU 30% or Barème",
+                "dividends": "PFU 30% or Barème",
+                "flexibility": "Full — no restrictions",
+                "ceiling": "None"
+            },
+            "pea": {
+                "name": "PEA",
+                "gains": "0% IR after 5 years (17.2% PS only)",
+                "dividends": "Exempt (internal)",
+                "flexibility": "Restricted — withdrawal before 5Y closes plan",
+                "ceiling": "150,000€"
+            },
+            "av": {
+                "name": "Assurance-Vie",
+                "gains": "Favorable after 8 years",
+                "dividends": "Internal capitalization",
+                "flexibility": "Partial withdrawals possible",
+                "ceiling": "None (but tax advantages capped)"
+            }
+        },
+        "suggestions": {
+            "title": "Personalized Suggestions",
+            "noSuggestions": "No specific optimization suggestions. Your current tax situation appears efficient.",
+            "impact": "Estimated Impact",
+            "categories": {
+                "regime": "Tax Regime",
+                "harvesting": "Loss Harvesting",
+                "compliance": "Compliance",
+                "crypto": "Crypto",
+                "envelope": "Envelope Strategy"
+            }
+        }
+    },
+    "guide": {
+        "title": "Tax Guide",
+        "subtitle": "Educational reference on French taxation for individual investors",
+        "backToHub": "Back to Tax Assistant",
+        "disclaimer": "This guide presents general principles of French tax law for private investors. It does not constitute tax advice. Refer to official sources (Légifrance, BOFiP, impots.gouv.fr) for authoritative information.",
+        "searchPlaceholder": "Search topics...",
+        "topics": {
+            "cto": {
+                "title": "CTO — Capital Gains",
+                "desc": "How capital gains on CTO securities are taxed, PMP calculation, and loss carryforward.",
+                "category": "Securities"
+            },
+            "pea": {
+                "title": "PEA — Plan d'Épargne en Actions",
+                "desc": "Tax-advantaged envelope, age thresholds (2/5 years), and withdrawal rules.",
+                "category": "Envelopes"
+            },
+            "crypto": {
+                "title": "Crypto Assets",
+                "desc": "Art. 150 VH bis, taxable vs non-taxable events, 305€ threshold, and staking.",
+                "category": "Digital Assets"
+            },
+            "dividends": {
+                "title": "Dividends & Income",
+                "desc": "PFU vs barème, 40% abatement, foreign withholding tax, and tax credits.",
+                "category": "Income"
+            },
+            "foreign": {
+                "title": "Foreign Accounts",
+                "desc": "Declaration obligations (3916/3916-bis), penalties, and compliance.",
+                "category": "Compliance"
+            },
+            "pfuBareme": {
+                "title": "PFU vs Barème",
+                "desc": "When to choose the flat tax vs progressive scale, option 2OP, and breakeven TMI.",
+                "category": "Tax Regime"
+            },
+            "losses": {
+                "title": "Capital Losses",
+                "desc": "10-year carryforward, offsetting rules, and tax-loss harvesting strategy.",
+                "category": "Strategy"
+            },
+            "calendar": {
+                "title": "Tax Calendar",
+                "desc": "Key dates: IFU, declaration window, tax notice, and year-end planning.",
+                "category": "Planning"
+            }
+        },
+        "calendar": {
+            "title": "Fiscal Calendar {{year}}",
+            "subtitle": "Official DGFiP deadlines customized to your department of residence and future-proof across years.",
+            "ifuReception": "IFU Tax Forms Reception",
+            "declarationOpening": "Online Declaration Opening",
+            "declarationDeadline": "Declaration Deadline",
+            "taxNotice": "Tax Assessment Notice",
+            "yearEndPlanning": "Year-End Tax Planning Deadline",
+            "paperDeclaration": "Paper Declaration (all departments)",
+            "selectDepartment": "Department of tax residence",
+            "yourDeadline": "Your personalized deadline",
+            "yourZone": "Your zone",
+            "zone1": "Zone 1 (Dept. 01 to 19 & Non-residents)",
+            "zone2": "Zone 2 (Dept. 20 to 54 & Corsica)",
+            "zone3": "Zone 3 (Dept. 55 to 976, Paris & Overseas)",
+            "syncOnline": "Update from Internet",
+            "syncing": "Checking online...",
+            "syncedOnline": "Data synchronized online",
+            "computedAutonomous": "Autonomous predictive model",
+            "lastChecked": "Last checked: {{date}}",
+            "daysRemaining": "{{count}} days remaining",
+            "passed": "Deadline passed",
+            "activeZoneBadge": "Your zone",
+            "zoneBreakdown": "Official French zone breakdown",
+            "yearSelector": "Fiscal year",
+            "autoUpdating": "Dynamic future-proof updates with zero manual config"
+        },
+        "sources": {
+            "title": "Official Sources",
+            "legifrance": "Légifrance (CGI)",
+            "bofip": "BOFiP-Impôts",
+            "impots": "impots.gouv.fr",
+            "formulaires": "Official DGFiP Forms"
+        },
+        "topicDetail": {
+            "backToGuide": "Back to Guide",
+            "legalReferences": "Legal References",
+            "examples": "Worked Examples",
+            "keyRules": "Key Rules",
+            "relatedTopics": "Related Topics"
+        }
+    },
+    "settings": {
+        "title": "Fiscal Profile",
+        "subtitle": "These details are used to compute personalized tax estimates. They are stored locally and never shared.",
+        "taxResidence": "Tax Residence",
+        "taxResidenceInfo": "Country where you are tax-resident. Currently only France is supported.",
+        "department": "Department of residence",
+        "departmentInfo": "Automatically determines your online declaration deadline across the 3 French tax zones.",
+        "taxZone": "Assigned tax zone",
+        "familyStatus": "Family Status",
+        "familyStatusInfo": "Your marital/family situation for the current fiscal year.",
+        "familyStatusOptions": {
+            "single": "Single",
+            "married": "Married / Civil Partnership",
+            "pacs": "PACS",
+            "divorced": "Divorced",
+            "widowed": "Widowed"
+        },
+        "fiscalShares": "Fiscal Shares (Parts)",
+        "fiscalSharesInfo": "Number of fiscal shares in your household (e.g., 1 for single, 2 for couple, 2.5 with one child).",
+        "otherIncome": "Other Taxable Income (€)",
+        "otherIncomeInfo": "Your total taxable income EXCLUDING capital gains and dividends. Used for PFU vs Barème comparison.",
+        "estimatedTMI": "Estimated TMI",
+        "estimatedTMIInfo": "Your marginal tax rate bracket. Auto-calculated if other income and fiscal shares are provided.",
+        "tmiValues": {
+            "0": "0% (up to {{max}}€)",
+            "11": "11% ({{min}}€ – {{max}}€)",
+            "30": "30% ({{min}}€ – {{max}}€)",
+            "41": "41% ({{min}}€ – {{max}}€)",
+            "45": "45% (above {{min}}€)"
+        },
+        "hasOpted2OP": "Opted for Barème (2OP)",
+        "hasOpted2OPInfo": "Check if you have already chosen the progressive tax scale for all your capital income.",
+        "saved": "Fiscal profile saved successfully",
+        "requiredFields": "Required fields",
+        "optionalFields": "Optional fields (improve accuracy)",
+        "lossCarryforwards": "Capital Loss Carryforward",
+        "lossCarryforwardsInfo": "Capital losses from previous years that can offset future gains (10-year limit)."
+    },
+    "common": {
+        "gain": "Gain",
+        "loss": "Loss",
+        "taxable": "Taxable",
+        "exempt": "Exempt",
+        "yes": "Yes",
+        "no": "No",
+        "amount": "Amount",
+        "rate": "Rate",
+        "total": "Total",
+        "details": "Details",
+        "legalReference": "Legal Reference",
+        "source": "Source",
+        "noData": "No data available",
+        "loading": "Loading fiscal data...",
+        "error": "An error occurred while loading fiscal data",
+        "retry": "Retry",
+        "country": {
+            "FR": "France",
+            "DE": "Germany",
+            "BE": "Belgium",
+            "MT": "Malta",
+            "NL": "Netherlands",
+            "US": "United States",
+            "SC": "Seychelles",
+            "LU": "Luxembourg",
+            "IE": "Ireland",
+            "CH": "Switzerland",
+            "GB": "United Kingdom"
+        }
+    }
+}

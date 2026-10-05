@@ -197,10 +197,10 @@ export const useImportWizard = () => {
         updateState({ importMode: mode });
     }, [updateState]);
 
-    const createInstitute = useCallback(async (name: string, type: Institute['type']) => {
+    const createInstitute = useCallback(async (name: string, type: Institute['type'], country: string = 'FR') => {
         updateState({ isLoading: true });
         try {
-            const newInstitute = await instituteService.createInstitute({ name, type });
+            const newInstitute = await instituteService.createInstitute({ name, type, country });
             const institutes = await instituteService.getInstitutes();
             updateState({
                 institutes,
@@ -214,7 +214,7 @@ export const useImportWizard = () => {
         }
     }, [updateState]);
 
-    const createAccount = useCallback(async (name: string, type: Account['type'], currency: string) => {
+    const createAccount = useCallback(async (name: string, type: Account['type'], currency: string, wrapperType?: Account['wrapperType']) => {
         if (!state.selectedInstituteId) return null;
 
         updateState({ isLoading: true });
@@ -223,7 +223,8 @@ export const useImportWizard = () => {
                 instituteId: state.selectedInstituteId,
                 name,
                 type,
-                defaultCurrency: currency
+                defaultCurrency: currency,
+                wrapperType
             });
             const accounts = await accountService.getAccountsByInstitute(state.selectedInstituteId);
             updateState({

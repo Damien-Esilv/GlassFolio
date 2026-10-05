@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
   LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
-  TrendingUp, Receipt, Coins, ShieldCheck
+  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPortfolioExpanded, setIsPortfolioExpanded] = useState(true);
   const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
+  const [isFiscaliteExpanded, setIsFiscaliteExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (location.pathname.startsWith('/analytics')) {
       setIsAnalyticsExpanded(true);
     }
+    if (location.pathname.startsWith('/tax')) {
+      setIsFiscaliteExpanded(true);
+    }
   }, [location.pathname]);
 
   // If not authenticated (e.g. on login page), just show children without the sidebar/header
@@ -71,6 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isActive = (path: string) => location.pathname === path;
   const isPortfolioActive = ['/portfolio', '/portfolio/summary', '/positions', '/transactions'].includes(location.pathname);
   const isAnalyticsActive = location.pathname.startsWith('/analytics');
+  const isFiscaliteActive = location.pathname.startsWith('/tax');
 
   const handleLogout = () => {
     logout();
@@ -171,7 +176,38 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <NavItem path="/analytics/performance" icon={TrendingUp} name={t('navigation:menu.performance')} indent onClick={() => setIsMobileMenuOpen(false)} />
             <NavItem path="/analytics/pl" icon={Receipt} name={t('navigation:menu.pl')} indent onClick={() => setIsMobileMenuOpen(false)} />
             <NavItem path="/analytics/fees" icon={Coins} name={t('navigation:menu.fees')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/analytics/tax" icon={ShieldCheck} name={t('navigation:menu.tax')} indent onClick={() => setIsMobileMenuOpen(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* 4. Fiscalité Section (Collapsible - Top-level) */}
+      <div>
+        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isFiscaliteActive
+          ? 'bg-primary/10 text-primary font-semibold'
+          : 'text-secondary hover:bg-subtle hover:text-primary'
+          }`}>
+          <Link
+            to="/tax"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 flex-1 px-4 py-2.5"
+          >
+            <Scale size={18} />
+            {t('navigation:menu.fiscalite')}
+          </Link>
+          <button
+            onClick={() => setIsFiscaliteExpanded(!isFiscaliteExpanded)}
+            className="px-3 py-2.5 hover:text-primary"
+            aria-label="Toggle fiscalité menu"
+          >
+            {isFiscaliteExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        </div>
+
+        {isFiscaliteExpanded && (
+          <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
+            <NavItem path="/tax/declaration" icon={FileText} name={t('navigation:menu.declaration')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/tax/optimization" icon={Lightbulb} name={t('navigation:menu.optimization')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <NavItem path="/tax/guide" icon={BookOpen} name={t('navigation:menu.taxGuide')} indent onClick={() => setIsMobileMenuOpen(false)} />
           </div>
         )}
       </div>

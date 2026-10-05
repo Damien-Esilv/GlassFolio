@@ -96,6 +96,9 @@
             "selectInstitution": "1. Select Institution",
             "new": "New",
             "institutionNamePlaceholder": "Institution name...",
+            "institutionCountry": "Country of domicile",
+            "domesticAccountBadge": "French institution (FR) — No Form 3916 required",
+            "foreignAccountBadge": "Foreign institution — Mandatory declaration (Form 3916 / 3916-bis)",
             "instituteTypes": {
                 "bank": "Bank",
                 "broker": "Broker",
@@ -107,6 +110,12 @@
             "noAccounts": "No accounts found. Create one to continue.",
             "createNewAccount": "Create new account",
             "accountNamePlaceholder": "Account name...",
+            "wrapperType": "Tax wrapper",
+            "wrappers": {
+                "CTO": "Standard Account (CTO)",
+                "PEA": "Equity Savings Plan (PEA)",
+                "OTHER": "Other / Crypto / Standard"
+            },
             "accountTypes": {
                 "checking": "Cash / Savings",
                 "investment": "Stocks / ETFs (PEA, CTO)",

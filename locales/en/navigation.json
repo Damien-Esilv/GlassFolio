@@ -12,8 +12,12 @@
         "performance": "Global Performance",
         "pl": "Realized vs Unrealized P&L",
         "fees": "Fee Analysis",
-        "tax": "Tax Summary",
         "reports": "Analytics",
+        "fiscalite": "Tax Assistant",
+        "fiscaliteHub": "Tax Assistant Overview",
+        "declaration": "Declaration Assistant",
+        "optimization": "Tax Optimization",
+        "taxGuide": "Tax Guide",
         "settings": "Settings"
     },
     "header": {

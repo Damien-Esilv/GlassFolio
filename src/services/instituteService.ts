@@ -6,6 +6,7 @@
 
 import { db, delay } from './db';
 import { Institute, Account, InstituteType, AccountType } from '../types';
+import { WrapperType } from '../types/types.backend';
 
 // ============================================================================
 // INSTITUTE OPERATIONS
@@ -34,6 +35,7 @@ export const instituteService = {
     createInstitute: async (data: {
         name: string;
         type: InstituteType;
+        country?: string;
         isCustom?: boolean;
         logoUrl?: string;
     }): Promise<Institute> => {
@@ -45,6 +47,7 @@ export const instituteService = {
             ownerId: 'default-user', // TODO: Get from auth context
             name: data.name,
             type: data.type,
+            country: data.country || 'FR',
             isCustom: data.isCustom ?? true, // User-created by default
             logoUrl: data.logoUrl,
             createdAt: now,
@@ -140,6 +143,7 @@ export const accountService = {
         type: AccountType;
         defaultCurrency: string;
         isActive?: boolean;
+        wrapperType?: WrapperType;
     }): Promise<Account> => {
         await delay(200);
 
@@ -152,6 +156,7 @@ export const accountService = {
             type: data.type,
             defaultCurrency: data.defaultCurrency,
             isActive: data.isActive ?? true,
+            wrapperType: data.wrapperType,
             createdAt: now,
             updatedAt: now
         };

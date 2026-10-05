@@ -1,5 +1,6 @@
 import React from 'react';
 import { AssetClass } from './src/constants/assetClasses';
+import { FiscalProfile } from './src/types/types.backend';
 
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'night' | 'system';
@@ -7,6 +8,7 @@ export interface UserPreferences {
   notifications: boolean;
   language?: 'en' | 'fr'; // Language preference for i18n
   dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD'; // Date format preference
+  fiscalProfile?: FiscalProfile; // French tax module fiscal profile
 }
 
 export interface User {

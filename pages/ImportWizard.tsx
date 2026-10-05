@@ -32,10 +32,12 @@ import {
   Save,
   ChevronDown,
   Edit3,
-  Check
+  Check,
+  Globe,
+  CheckCircle2
 } from 'lucide-react';
 import { useImportWizard, MAPPABLE_FIELDS, WizardStep } from '../hooks/importHooks';
-import { InstituteType, AccountType } from '../src/types';
+import { InstituteType, AccountType, WrapperType } from '../src/types';
 import { useTranslation } from 'react-i18next';
 
 // ============================================================================
@@ -200,21 +202,24 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   const [showNewInstitute, setShowNewInstitute] = useState(false);
   const [showNewAccount, setShowNewAccount] = useState(false);
   const [newInstituteName, setNewInstituteName] = useState('');
-  const [newInstituteType, setNewInstituteType] = useState<InstituteType>('bank');
+  const [newInstituteType, setNewInstituteType] = useState<InstituteType>('broker');
+  const [newInstituteCountry, setNewInstituteCountry] = useState('FR');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<AccountType>('investment');
   const [newAccountCurrency, setNewAccountCurrency] = useState('EUR');
+  const [newAccountWrapper, setNewAccountWrapper] = useState<WrapperType>('CTO');
 
   const handleCreateInstitute = async () => {
     if (!newInstituteName.trim()) return;
-    await wizard.createInstitute(newInstituteName.trim(), newInstituteType);
+    await wizard.createInstitute(newInstituteName.trim(), newInstituteType, newInstituteCountry);
     setShowNewInstitute(false);
     setNewInstituteName('');
+    setNewInstituteCountry('FR');
   };
 
   const handleCreateAccount = async () => {
     if (!newAccountName.trim()) return;
-    await wizard.createAccount(newAccountName.trim(), newAccountType, newAccountCurrency);
+    await wizard.createAccount(newAccountName.trim(), newAccountType, newAccountCurrency, newAccountWrapper);
     setShowNewAccount(false);
     setNewAccountName('');
   };
@@ -235,13 +240,26 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 <button
                   key={inst.id}
                   onClick={() => wizard.selectInstitute(inst.id)}
-                  className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedInstituteId === inst.id
+                  className={`p-4 rounded-xl border-2 transition-all text-left flex flex-col justify-between ${wizard.selectedInstituteId === inst.id
                     ? 'border-brand bg-brand/10'
                     : 'border-subtle bg-subtle hover:bg-card-hover'
                     }`}
                 >
-                  <span className="text-primary font-medium">{inst.name}</span>
-                  <span className="block text-xs text-secondary mt-1 capitalize">{inst.type}</span>
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-primary font-medium truncate">{inst.name}</span>
+                      {inst.country && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                          inst.country === 'FR'
+                            ? 'bg-success/10 text-success border-success/20'
+                            : 'bg-warning/10 text-warning border-warning/20'
+                        }`}>
+                          {inst.country}
+                        </span>
+                      )}
+                    </div>
+                    <span className="block text-xs text-secondary capitalize">{inst.type}</span>
+                  </div>
                 </button>
               ))}
 
@@ -264,17 +282,53 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
               className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-1 focus:ring-primary"
               autoFocus
             />
-            <select
-              value={newInstituteType}
-              onChange={e => setNewInstituteType(e.target.value as InstituteType)}
-              className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
-            >
-              <option value="bank">{t('importWizard.context.instituteTypes.bank')}</option>
-              <option value="broker">{t('importWizard.context.instituteTypes.broker')}</option>
-              <option value="exchange">{t('importWizard.context.instituteTypes.exchange')}</option>
-              <option value="wallet">{t('importWizard.context.instituteTypes.wallet')}</option>
-              <option value="other">{t('importWizard.context.instituteTypes.other')}</option>
-            </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                value={newInstituteType}
+                onChange={e => setNewInstituteType(e.target.value as InstituteType)}
+                className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
+              >
+                <option value="broker">{t('importWizard.context.instituteTypes.broker')}</option>
+                <option value="bank">{t('importWizard.context.instituteTypes.bank')}</option>
+                <option value="exchange">{t('importWizard.context.instituteTypes.exchange')}</option>
+                <option value="wallet">{t('importWizard.context.instituteTypes.wallet')}</option>
+                <option value="other">{t('importWizard.context.instituteTypes.other')}</option>
+              </select>
+
+              <select
+                value={newInstituteCountry}
+                onChange={e => setNewInstituteCountry(e.target.value)}
+                className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
+              >
+                <option value="FR">🇫🇷 France (FR)</option>
+                <option value="DE">🇩🇪 Allemagne (DE)</option>
+                <option value="NL">🇳🇱 Pays-Bas (NL)</option>
+                <option value="IE">🇮🇪 Irlande (IE)</option>
+                <option value="US">🇺🇸 États-Unis (US)</option>
+                <option value="GB">🇬🇧 Royaume-Uni (GB)</option>
+                <option value="LU">🇱🇺 Luxembourg (LU)</option>
+                <option value="CH">🇨🇭 Suisse (CH)</option>
+                <option value="MT">🇲🇹 Malte (MT)</option>
+                <option value="CY">🇨🇾 Chypre (CY)</option>
+                <option value="SC">🇸🇨 Seychelles (SC)</option>
+                <option value="SG">🇸🇬 Singapour (SG)</option>
+                <option value="OTHER">🌍 Autre pays étranger</option>
+              </select>
+            </div>
+
+            {/* Foreign vs Domestic account indicator */}
+            {newInstituteCountry === 'FR' ? (
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-success/10 border border-success/20 text-success text-xs font-medium">
+                <CheckCircle2 size={16} className="shrink-0" />
+                <span>{t('importWizard.context.domesticAccountBadge')}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-warning/10 border border-warning/20 text-warning text-xs font-medium">
+                <Globe size={16} className="shrink-0" />
+                <span>{t('importWizard.context.foreignAccountBadge')}</span>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button onClick={handleCreateInstitute} disabled={!newInstituteName.trim()}>
                 {t('common:buttons.create')}
@@ -311,7 +365,9 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                         }`}
                     >
                       <span className="text-primary font-medium">{acc.name}</span>
-                      <span className="block text-xs text-secondary mt-1">{acc.defaultCurrency} · {acc.type}</span>
+                      <span className="block text-xs text-secondary mt-1">
+                        {acc.defaultCurrency} · {acc.wrapperType || acc.type}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -334,7 +390,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-primary"
                 autoFocus
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <select
                   value={newAccountType}
                   onChange={e => setNewAccountType(e.target.value as AccountType)}
@@ -354,6 +410,15 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                   <option value="GBP">GBP</option>
                   <option value="USDT">USDT</option>
                   <option value="BTC">BTC</option>
+                </select>
+                <select
+                  value={newAccountWrapper}
+                  onChange={e => setNewAccountWrapper(e.target.value as WrapperType)}
+                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
+                >
+                  <option value="CTO">{t('importWizard.context.wrappers.CTO')}</option>
+                  <option value="PEA">{t('importWizard.context.wrappers.PEA')}</option>
+                  <option value="OTHER">{t('importWizard.context.wrappers.OTHER')}</option>
                 </select>
               </div>
               <div className="flex gap-2">
