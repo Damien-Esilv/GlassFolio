@@ -440,7 +440,15 @@ export const useImportWizard = () => {
 
         const csvRows = [state.headers.join(',')];
         invalidRows.forEach(row => {
-            csvRows.push(row.originalRowArray.map(v => `"${v.replace(/"/g, '""')}"`).join(','));
+            const sanitizedRow = row.originalRowArray.map(v => {
+                let val = v;
+                // Security: Mitigate CSV Formula Injection (OWASP) by escaping formula trigger characters
+                if (typeof val === 'string' && /^[=+\-@\t\r]/.test(val)) {
+                    val = `'${val}`;
+                }
+                return `"${val.replace(/"/g, '""')}"`;
+            });
+            csvRows.push(sanitizedRow.join(','));
         });
         const csv = csvRows.join('\n');
 
