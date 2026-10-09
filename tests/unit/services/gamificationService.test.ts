@@ -118,8 +118,10 @@ describe('AchievementService Engine', () => {
 });
 
 describe('AI & MCP Gamification Tools', () => {
+  const mockContext = { userId: 'user-demo', language: 'fr' as const, currency: 'EUR' };
+
   it('executes get_gamification_status tool correctly', async () => {
-    const status = await getGamificationStatusTool.execute({});
+    const status = await getGamificationStatusTool.execute({}, mockContext);
     expect(status).toHaveProperty('level');
     expect(status).toHaveProperty('xp');
     expect(status).toHaveProperty('rank');
@@ -128,7 +130,7 @@ describe('AI & MCP Gamification Tools', () => {
   });
 
   it('executes suggest_next_milestone tool correctly', async () => {
-    const suggestion = await suggestNextMilestoneTool.execute({});
+    const suggestion = await suggestNextMilestoneTool.execute({}, mockContext);
     expect(suggestion).toHaveProperty('nextMilestone');
     if (suggestion.nextMilestone) {
       expect(suggestion.nextMilestone).toHaveProperty('badgeTitle');
@@ -137,7 +139,7 @@ describe('AI & MCP Gamification Tools', () => {
   });
 
   it('executes list_quests tool correctly', async () => {
-    const quests = await listQuestsTool.execute({});
+    const quests = await listQuestsTool.execute({}, mockContext);
     expect(Array.isArray(quests)).toBe(true);
     expect(quests.length).toBeGreaterThan(0);
   });

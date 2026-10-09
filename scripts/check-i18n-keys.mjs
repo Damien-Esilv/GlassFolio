@@ -24,6 +24,7 @@ const SRC_DIRS = [
   join(ROOT, 'components'),
   join(ROOT, 'context'),
   join(ROOT, 'hooks'),
+  join(ROOT, 'src'),
   join(ROOT, 'App.tsx'),
 ];
 

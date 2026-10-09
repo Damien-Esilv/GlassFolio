@@ -54,11 +54,10 @@ jobs:
         run: npm ci
 
       - name: Lint — fail only on errors (warnings allowed)
-        # We gate on errors only during this phase.
+        # Gate on errors only during this phase.
         # Run without --max-warnings 0 to allow existing warnings.
         # Errors (react-hooks/rules-of-hooks, no-restricted-globals) block CI.
         run: npx eslint . --ext .ts,.tsx --quiet
-        # --quiet: only report errors, not warnings
 
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 3 — i18n completeness audit
@@ -80,13 +79,13 @@ jobs:
         run: npm ci
 
       - name: Check i18n keys
-        run: npm run check:i18n
+        run: npm run check:i18n || (node scripts/check-i18n-keys.mjs --report && exit 1)
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 4 — Unit tests + coverage
+  # JOB 4 — Design Standards & Theming (Zero-Hex Audit)
   # ═══════════════════════════════════════════════════════════════════════════
-  test:
-    name: 🧪 Unit Tests
+  standards:
+    name: 🎨 Design Standards & Theming
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -101,7 +100,71 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Audit zero hardcoded hex colors (Standard 1.1)
+        run: npm run check:standards
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 5 — MCP Server & AI Tools Verification
+  # ═══════════════════════════════════════════════════════════════════════════
+  mcp:
+    name: 🤖 MCP Server & AI Tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check MCP server
+        run: npm run check:mcp
+
+      - name: Protocol test MCP tools/list
+        run: |
+          RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node mcp-server/index.mjs)
+          echo "MCP tools/list response: $RESPONSE"
+          echo "$RESPONSE" | grep -q "get_gamification_status" || (echo "::error::Missing get_gamification_status tool in MCP server" && exit 1)
+          echo "$RESPONSE" | grep -q "list_quests" || (echo "::error::Missing list_quests tool in MCP server" && exit 1)
+          echo "$RESPONSE" | grep -q "get_portfolio_summary" || (echo "::error::Missing get_portfolio_summary tool in MCP server" && exit 1)
+
+      - name: Protocol test MCP tools/call (Gamification)
+        run: |
+          RESPONSE=$(echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_gamification_status","arguments":{}}}' | node mcp-server/index.mjs)
+          echo "MCP tools/call response: $RESPONSE"
+          echo "$RESPONSE" | grep -q "rank" || (echo "::error::Invalid gamification status response from MCP server" && exit 1)
+
+      - name: Protocol test MCP resources/list
+        run: |
+          RESPONSE=$(echo '{"jsonrpc":"2.0","id":3,"method":"resources/list"}' | node mcp-server/index.mjs)
+          echo "MCP resources/list response: $RESPONSE"
+          echo "$RESPONSE" | grep -q "glassfolio://gamification/status" || (echo "::error::Missing gamification resource in MCP server" && exit 1)
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 6 — Unit tests + coverage
+  # ═══════════════════════════════════════════════════════════════════════════
+  test:
+    name: 🧪 Unit Tests & Gamification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run all tests (including gamification and AI suites)
         run: npm run test
 
       - name: Coverage report
@@ -117,12 +180,12 @@ jobs:
           retention-days: 14
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 5 — Production build check
+  # JOB 7 — Production build check
   # ═══════════════════════════════════════════════════════════════════════════
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, i18n, test]   # Only build if all quality gates pass
+    needs: [typecheck, lint, i18n, standards, mcp, test]   # Only build if all quality gates pass
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -158,7 +221,7 @@ jobs:
           retention-days: 7
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # JOB 6 — Security audit
+  # JOB 8 — Security audit
   # ═══════════════════════════════════════════════════════════════════════════
   security:
     name: 🔒 Security Audit
@@ -199,4 +262,3 @@ jobs:
           else
             exit 1
           fi
-

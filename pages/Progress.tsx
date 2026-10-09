@@ -358,7 +358,7 @@ const Progress: React.FC = () => {
                                         : 'bg-card border-subtle text-secondary hover:text-primary hover:bg-subtle'
                                 }`}
                             >
-                                {cat === 'all' ? t('common:all', { defaultValue: 'All' }) : cat}
+                                {cat === 'all' ? t('common:common.all', { defaultValue: 'All' }) : cat}
                             </button>
                         ))}
                     </div>
@@ -730,10 +730,10 @@ const Progress: React.FC = () => {
                         {/* Footer */}
                         <div className="p-4 border-t border-subtle flex justify-end gap-3 bg-card rounded-b-2xl">
                             <Button onClick={() => setIsModalOpen(false)} variant="ghost">
-                                {t('common:actions.cancel')}
+                                {t('common:buttons.cancel')}
                             </Button>
                             <Button onClick={handleSave} className="flex items-center gap-2">
-                                <Save size={16} /> {t('common:actions.save')}
+                                <Save size={16} /> {t('common:buttons.save')}
                             </Button>
                         </div>
                     </div>
@@ -804,7 +804,7 @@ const Progress: React.FC = () => {
                         </div>
 
                         <Button onClick={handleCloseAchievementModal} className="w-full" variant="secondary">
-                            {t('common:actions.close', { defaultValue: 'Close' })}
+                            {t('common:buttons.close', { defaultValue: 'Close' })}
                         </Button>
                     </div>
                 </div>,

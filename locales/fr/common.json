@@ -30,8 +30,12 @@
         "viewBadges": "Voir les badges",
         "addNew": "Ajouter nouveau",
         "review": "Examiner",
-        "fillDemo": "Utiliser le compte démo"
+        "fillDemo": "Utiliser le compte démo",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "close": "Fermer"
     },
+    "all": "Tout",
     "labels": {
         "search": "Rechercher...",
         "loading": "Chargement...",

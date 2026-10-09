@@ -30,7 +30,7 @@ export interface AIToolDefinition<TParams = Record<string, unknown>, TResult = u
    * it requires explicit user approval (Human-in-the-loop) via an AIActionApprovalCard.
    */
   requiresConfirmation?: boolean;
-  execute: (params: TParams, context: AIExecutionContext) => Promise<TResult>;
+  execute: (params: TParams, context?: AIExecutionContext) => Promise<TResult>;
 }
 
 export type PendingActionType = 'record_transaction' | 'create_goal' | string;

@@ -30,8 +30,12 @@
         "viewBadges": "View Badges",
         "addNew": "Add New",
         "review": "Review",
-        "fillDemo": "Use Demo Account"
+        "fillDemo": "Use Demo Account",
+        "save": "Save",
+        "cancel": "Cancel",
+        "close": "Close"
     },
+    "all": "All",
     "labels": {
         "search": "Search...",
         "loading": "Loading...",

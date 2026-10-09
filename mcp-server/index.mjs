@@ -7,12 +7,6 @@
  */
 
 import readline from 'readline';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Standard MCP tools definition
 const TOOLS = [
@@ -76,6 +70,22 @@ const TOOLS = [
       type: 'object',
       properties: {}
     }
+  },
+  {
+    name: 'get_gamification_status',
+    description: 'Retrieve user gamification level, total XP, investor rank, streak, and unlocked achievements count.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'list_quests',
+    description: 'List active gamified investor quests with progress, target and XP rewards.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
   }
 ];
 
@@ -96,6 +106,12 @@ const RESOURCES = [
     uri: 'glassfolio://transactions/recent',
     name: 'Recent Transactions',
     description: 'Last 20 transactions in the user portfolio',
+    mimeType: 'application/json'
+  },
+  {
+    uri: 'glassfolio://gamification/status',
+    name: 'Gamification Status',
+    description: 'Current investor rank, level, total XP, and unlocked badges count',
     mimeType: 'application/json'
   }
 ];
@@ -185,6 +201,38 @@ async function handleToolCall(name, args) {
         content: [{ type: 'text', text: JSON.stringify(goals, null, 2) }]
       };
     }
+    case 'get_gamification_status': {
+      const gamification = {
+        level: 3,
+        xp: 450,
+        rank: {
+          id: 'rank_3',
+          titleKey: 'ranks.rank_3',
+          levelMin: 3,
+          levelMax: 4
+        },
+        progress: {
+          xpInCurrentLevel: 50,
+          levelRange: 200,
+          progressPercent: 25
+        },
+        unlockedBadgesCount: 4,
+        totalBadgesCount: 16,
+        pinnedBadges: ['first_transaction', 'dca_streak_3']
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(gamification, null, 2) }]
+      };
+    }
+    case 'list_quests': {
+      const quests = [
+        { id: 'quest_portfolio_diversity', titleKey: 'quests.portfolio_diversity.title', xpReward: 50, progress: 3, target: 4, completed: false },
+        { id: 'quest_first_goal', titleKey: 'quests.first_goal.title', xpReward: 30, progress: 1, target: 1, completed: true }
+      ];
+      return {
+        content: [{ type: 'text', text: JSON.stringify(quests, null, 2) }]
+      };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -204,6 +252,11 @@ async function handleResourceRead(uri) {
   if (uri === 'glassfolio://transactions/recent') {
     return {
       contents: [{ uri, mimeType: 'application/json', text: JSON.stringify([{ symbol: 'AAPL', type: 'Buy', amount: 10, total: 1750 }], null, 2) }]
+    };
+  }
+  if (uri === 'glassfolio://gamification/status') {
+    return {
+      contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ level: 3, xp: 450, rank: 'rank_3', unlockedBadgesCount: 4 }, null, 2) }]
     };
   }
   throw new Error(`Resource not found: ${uri}`);
