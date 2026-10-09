@@ -1,0 +1,394 @@
+import { describe, it, expect } from 'vitest';
+import { calculateCryptoGains, EnrichedTransaction } from '../../../../src/services/fiscal/taxEngine';
+import { getFiscalRulesOrThrow } from '../../../../src/services/fiscal/taxRules';
+import { CGI_ARTICLES } from '../../../../src/constants/fiscalConstants';
+
+// Helper to construct EnrichedTransaction objects for testing
+function createMockCryptoTx(overrides: Partial<EnrichedTransaction> = {}): EnrichedTransaction {
+  return {
+    id: 'tx-crypto-1',
+    ownerId: 'user-1',
+    accountId: 'acc-crypto-1',
+    instrumentId: 'inst-btc',
+    batchId: 'batch-1',
+    rowHash: 'hash-1',
+    sourceOrigin: 'FILE',
+    isSynthetic: false,
+    isFiscal: true,
+    sourceMode: 'history',
+    transactionDate: '2024-05-10T10:00:00Z',
+    type: 'BUY',
+    rawType: 'BUY',
+    rawLabel: 'Buy BTC',
+    amountPrimary: '1000',
+    assetSymbol: 'BTC',
+    priceUnit: '1000',
+    quantity: '1',
+    feeAmount: '0',
+    createdAt: '2024-05-10T10:00:00Z',
+    updatedAt: '2024-05-10T10:00:00Z',
+    version: 1,
+    instrument: {
+      id: 'inst-btc',
+      ownerId: 'user-1',
+      name: 'Bitcoin',
+      type: 'crypto',
+      marketIdentifier: { symbol: 'BTC' },
+      isMarketReady: true,
+      denominationCurrency: 'EUR',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    },
+    resolvedWrapperType: 'CTO',
+    ...overrides,
+  };
+}
+
+describe('calculateCryptoGains', () => {
+  const rules2024 = getFiscalRulesOrThrow('2024', 'FR');
+
+  it('returns empty array when no transactions are provided', () => {
+    const events = calculateCryptoGains([], '2024', rules2024);
+    expect(events).toEqual([]);
+  });
+
+  it('ignores non-crypto transactions', () => {
+    const nonCryptoTx = createMockCryptoTx({
+      instrument: {
+        id: 'inst-stock',
+        ownerId: 'user-1',
+        name: 'Apple Inc.',
+        type: 'stock',
+        marketIdentifier: { symbol: 'AAPL' },
+        isMarketReady: true,
+        denominationCurrency: 'USD',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      type: 'SELL',
+      amountPrimary: '500',
+    });
+
+    const events = calculateCryptoGains([nonCryptoTx], '2024', rules2024);
+    expect(events).toEqual([]);
+  });
+
+  it('ignores crypto transactions with isFiscal = false', () => {
+    const nonFiscalTx = createMockCryptoTx({
+      isFiscal: false,
+      type: 'SELL',
+      amountPrimary: '500',
+    });
+
+    const events = calculateCryptoGains([nonFiscalTx], '2024', rules2024);
+    expect(events).toEqual([]);
+  });
+
+  it('calculates a crypto gain accurately for a buy and sell in the same fiscal year', () => {
+    const buyTx = createMockCryptoTx({
+      id: 'tx-buy-btc',
+      transactionDate: '2024-01-15T10:00:00Z',
+      type: 'BUY',
+      quantity: '1',
+      amountPrimary: '30000',
+      feeAmount: '10',
+      assetSymbol: 'BTC',
+    });
+
+    const sellTx = createMockCryptoTx({
+      id: 'tx-sell-btc',
+      transactionDate: '2024-06-20T14:00:00Z',
+      type: 'SELL',
+      quantity: '0.5',
+      amountPrimary: '25000',
+      priceUnit: '50000',
+      feeAmount: '50',
+      assetSymbol: 'BTC',
+    });
+
+    const events = calculateCryptoGains([buyTx, sellTx], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    const event = events[0];
+
+    expect(event.transactionIds).toEqual(['tx-sell-btc']);
+    expect(event.fiscalYear).toBe('2024');
+    expect(event.eventType).toBe('crypto_gain');
+    expect(event.symbol).toBe('BTC');
+    expect(event.instrumentName).toBe('Bitcoin');
+    expect(event.grossAmount).toBe(25000);
+
+    // Total cost basis = 30000 + 10 = 30010
+    // Estimated portfolio value = 1 * 50000 = 50000
+    // Fraction of portfolio = 25000 / 50000 = 0.5
+    // Acquisition cost for cession = 30010 * 0.5 = 15005
+    // Taxable amount = 25000 - 15005 - 50 = 9945
+    expect(event.acquisitionCost).toBeCloseTo(15005, 2);
+    expect(event.taxableAmount).toBeCloseTo(9945, 2);
+    expect(event.fees).toBe(50);
+    expect(event.currency).toBe('EUR');
+    expect(event.confidence).toBe('estimated');
+    expect(event.missingData).toEqual(['portfolio_valuation_approximated']);
+    expect(event.legalReference).toBe(CGI_ARTICLES.ART_150_VH_BIS);
+  });
+
+  it('calculates a crypto loss when sale proceeds are lower than cost basis', () => {
+    const buyTx = createMockCryptoTx({
+      id: 'tx-buy-eth',
+      transactionDate: '2024-02-01T09:00:00Z',
+      type: 'BUY',
+      quantity: '1',
+      amountPrimary: '3000',
+      feeAmount: '0',
+      assetSymbol: 'ETH',
+      instrument: {
+        id: 'inst-eth',
+        ownerId: 'user-1',
+        name: 'Ethereum',
+        type: 'crypto',
+        marketIdentifier: { symbol: 'ETH' },
+        isMarketReady: true,
+        denominationCurrency: 'EUR',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    });
+
+    const sellTx = createMockCryptoTx({
+      id: 'tx-sell-eth',
+      transactionDate: '2024-07-01T15:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '1500',
+      priceUnit: '1500',
+      feeAmount: '10',
+      assetSymbol: 'ETH',
+      instrument: {
+        id: 'inst-eth',
+        ownerId: 'user-1',
+        name: 'Ethereum',
+        type: 'crypto',
+        marketIdentifier: { symbol: 'ETH' },
+        isMarketReady: true,
+        denominationCurrency: 'EUR',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    });
+
+    const events = calculateCryptoGains([buyTx, sellTx], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    const event = events[0];
+
+    expect(event.eventType).toBe('crypto_loss');
+    expect(event.grossAmount).toBe(1500);
+    // Cost basis = 3000, Taxable amount = 1500 - 3000 - 10 = -1510
+    expect(event.acquisitionCost).toBe(3000);
+    expect(event.taxableAmount).toBe(-1510);
+  });
+
+  it('handles crypto DEPOSIT transactions as cost basis additions', () => {
+    const depositTx = createMockCryptoTx({
+      id: 'tx-dep-sol',
+      transactionDate: '2024-03-01T10:00:00Z',
+      type: 'DEPOSIT',
+      quantity: '10',
+      amountPrimary: '1000',
+      feeAmount: '5',
+      assetSymbol: 'SOL',
+    });
+
+    const sellTx = createMockCryptoTx({
+      id: 'tx-sell-sol',
+      transactionDate: '2024-08-01T10:00:00Z',
+      type: 'SELL',
+      quantity: '10',
+      amountPrimary: '1500',
+      priceUnit: '150',
+      feeAmount: '0',
+      assetSymbol: 'SOL',
+    });
+
+    const events = calculateCryptoGains([depositTx, sellTx], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    const event = events[0];
+
+    // Acquisition cost = 1000 + 5 = 1005
+    // Taxable amount = 1500 - 1005 - 0 = 495
+    expect(event.acquisitionCost).toBe(1005);
+    expect(event.taxableAmount).toBe(495);
+  });
+
+  it('accumulates cost basis across multiple years and reports events only for target fiscal year', () => {
+    const buy2023 = createMockCryptoTx({
+      id: 'tx-buy-2023',
+      transactionDate: '2023-05-10T10:00:00Z',
+      type: 'BUY',
+      quantity: '2',
+      amountPrimary: '40000',
+      feeAmount: '0',
+      assetSymbol: 'BTC',
+    });
+
+    const sell2023 = createMockCryptoTx({
+      id: 'tx-sell-2023',
+      transactionDate: '2023-11-10T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '25000',
+      priceUnit: '25000',
+      feeAmount: '0',
+      assetSymbol: 'BTC',
+    });
+
+    const buy2024 = createMockCryptoTx({
+      id: 'tx-buy-2024',
+      transactionDate: '2024-02-10T10:00:00Z',
+      type: 'BUY',
+      quantity: '1',
+      amountPrimary: '50000',
+      feeAmount: '0',
+      assetSymbol: 'BTC',
+    });
+
+    const sell2024 = createMockCryptoTx({
+      id: 'tx-sell-2024',
+      transactionDate: '2024-09-10T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '60000',
+      priceUnit: '60000',
+      feeAmount: '0',
+      assetSymbol: 'BTC',
+    });
+
+    const events = calculateCryptoGains([buy2023, sell2023, buy2024, sell2024], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    const event = events[0];
+
+    expect(event.transactionIds).toEqual(['tx-sell-2024']);
+    expect(event.fiscalYear).toBe('2024');
+
+    // Portfolio state prior to 2024 sell:
+    // buy2023: totalAcquisitionCost = 40000, assetQuantities['BTC'] = 2
+    // sell2023: assetQuantities['BTC'] updated to 1
+    // buy2024: totalAcquisitionCost = 40000 + 50000 = 90000, assetQuantities['BTC'] = 1 + 1 = 2
+    // sell2024: currentQty = 2, priceUnit = 60000 => estimatedPortfolioValue = 120000
+    // fractionOfPortfolio = 60000 / 120000 = 0.5
+    // costBasisForCession = 90000 * 0.5 = 45000
+    // taxableAmount = 60000 - 45000 = 15000
+    expect(event.acquisitionCost).toBe(45000);
+    expect(event.taxableAmount).toBe(15000);
+  });
+
+  it('stops processing when transactions are on or after the end of the fiscal year', () => {
+    const buyTx = createMockCryptoTx({
+      id: 'tx-buy',
+      transactionDate: '2024-01-01T10:00:00Z',
+      type: 'BUY',
+      quantity: '1',
+      amountPrimary: '1000',
+    });
+
+    const futureSellTx = createMockCryptoTx({
+      id: 'tx-future-sell',
+      transactionDate: '2025-01-01T00:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '2000',
+      priceUnit: '2000',
+    });
+
+    const events = calculateCryptoGains([buyTx, futureSellTx], '2024', rules2024);
+    expect(events).toEqual([]);
+  });
+
+  it('returns insufficient_data confidence when priceUnit is missing or 0', () => {
+    const buyTx = createMockCryptoTx({
+      id: 'tx-buy',
+      transactionDate: '2024-01-01T10:00:00Z',
+      type: 'BUY',
+      quantity: '1',
+      amountPrimary: '1000',
+    });
+
+    const sellTx = createMockCryptoTx({
+      id: 'tx-sell-no-price',
+      transactionDate: '2024-05-01T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '1500',
+      priceUnit: '0',
+    });
+
+    const events = calculateCryptoGains([buyTx, sellTx], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    const event = events[0];
+
+    expect(event.confidence).toBe('insufficient_data');
+    expect(event.missingData).toBeUndefined();
+    expect(event.acquisitionCost).toBe(0);
+    expect(event.taxableAmount).toBe(1500);
+  });
+
+  it('falls back to instrument marketIdentifier symbol and instrument name', () => {
+    const txWithoutAssetSymbol = createMockCryptoTx({
+      id: 'tx-no-symbol',
+      transactionDate: '2024-05-01T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '100',
+      priceUnit: '100',
+      assetSymbol: undefined as unknown as string,
+      instrument: {
+        id: 'inst-cardano',
+        ownerId: 'user-1',
+        name: 'Cardano',
+        type: 'crypto',
+        marketIdentifier: { symbol: 'ADA' },
+        isMarketReady: true,
+        denominationCurrency: 'EUR',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    });
+
+    const events = calculateCryptoGains([txWithoutAssetSymbol], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    expect(events[0].symbol).toBe('ADA');
+    expect(events[0].instrumentName).toBe('Cardano');
+  });
+
+  it('falls back to symbol as instrument name when instrument name is missing', () => {
+    const txWithoutInstrumentName = createMockCryptoTx({
+      id: 'tx-no-name',
+      transactionDate: '2024-05-01T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '100',
+      priceUnit: '100',
+      assetSymbol: 'DOT',
+      instrument: {
+        id: 'inst-dot',
+        ownerId: 'user-1',
+        name: '',
+        type: 'crypto',
+        marketIdentifier: { symbol: 'DOT' },
+        isMarketReady: true,
+        denominationCurrency: 'EUR',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    });
+
+    const events = calculateCryptoGains([txWithoutInstrumentName], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    expect(events[0].instrumentName).toBe('DOT');
+  });
+});
