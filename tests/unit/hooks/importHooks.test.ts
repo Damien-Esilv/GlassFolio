@@ -20,8 +20,8 @@ import useImportWizard from '../../../hooks/importHooks';
 // ============================================================================
 
 const mockInstitutes = [
-    { id: 'inst-1', name: 'BNP Paribas', type: 'bank' as const, country: 'FR' },
-    { id: 'inst-2', name: 'Binance', type: 'crypto' as const, country: 'MT' },
+    { id: 'inst-1', ownerId: 'user-1', name: 'BNP Paribas', type: 'bank' as const, isCustom: false, country: 'FR', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+    { id: 'inst-2', ownerId: 'user-1', name: 'Binance', type: 'exchange' as const, isCustom: false, country: 'MT', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
 ];
 
 const mockAccounts = [
@@ -250,7 +250,7 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
             const { instituteService } = await import('../../../src/services/instituteService');
             vi.mocked(instituteService.getInstitutes).mockResolvedValueOnce([
                 ...mockInstitutes,
-                { id: 'inst-new', name: 'Revolut', type: 'bank' as const, country: 'FR' }
+                { id: 'inst-new', ownerId: 'user-1', name: 'Revolut', type: 'bank' as const, isCustom: true, country: 'FR', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }
             ]);
 
             await act(async () => {
