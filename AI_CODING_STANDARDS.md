@@ -284,3 +284,29 @@ Loggées dans Notion Database-Bugs :
 - `no-useless-escape` × ~20 : RegExp dans `csvParser.ts` et `validationService.ts`
 - `@typescript-eslint/no-explicit-any` × N : violations existantes (warn, non bloquantes)
 - i18n : 8 vraies clés manquantes dans `CashImportWizard` (clés `cashWizard.*`)
+
+---
+
+## 8. AI Integration & MCP Standards (Pilier AI-First)
+> **Version:** 1.0 | **Ajouté:** 2026-10-09
+
+**Règle absolue : Toute nouvelle capacité métier doit être immédiatement pilotable par l'IA et exportée sur le serveur MCP sans rétro-ingénierie ultérieure.**
+
+### 8.1. Registre d'Outils Centralisé (`aiToolRegistry`)
+- Emplacement : `src/services/ai/aiToolRegistry.ts`.
+- Tous les outils d'IA (In-App et serveur MCP) partagent le même contrat d'interface `AIToolDefinition`.
+- Chaque domaine métier crée ses outils dans `src/services/ai/tools/<domaine>Tools.ts` et les enregistre auprès du registre.
+
+### 8.2. Spécification d'un Outil IA (`AIToolDefinition`)
+Tout outil doit comporter :
+1. `name` : identifiant snake_case unique (ex: `get_portfolio_summary`, `record_transaction`).
+2. `description` : description sémantique claire orientée pour les LLMs.
+3. `parameters` : schéma JSON / Zod strict des paramètres attendus.
+4. `requiresConfirmation` : **obligatoire à `true`** pour toute création, modification ou suppression de données financières réelles (Human-in-the-loop).
+5. `execute(params, context)` : méthode d'exécution asynchrone appelant la couche `src/services/`.
+
+### 8.3. Sécurité et Garde-fous (Guardrails)
+- **Mode lecture seule par défaut** : aucune écriture silencieuse n'est autorisée.
+- **Human-in-the-loop** : quand `requiresConfirmation === true`, l'action génère une proposition (`PendingActionProposal`) que l'utilisateur doit valider explicitement dans l'UI via le composant `AIActionApprovalCard`.
+- **Clés API BYOK** : les clés privées (OpenAI, Anthropic, OpenRouter) restent stockées côté client de manière sécurisée et ne transitent jamais par un serveur intermédiaire tiers.
+

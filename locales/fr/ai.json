@@ -1,0 +1,136 @@
+{
+  "drawer": {
+    "title": "Assistant IA GlassFolio",
+    "subtitle": "Votre copilote financier souverain et privé",
+    "status": {
+      "demo": "Mode Démo",
+      "ollama": "Ollama Local",
+      "cloud": "Cloud BYOK",
+      "connecting": "Connexion...",
+      "offline": "Hors ligne"
+    },
+    "clearHistory": "Effacer la conversation",
+    "close": "Fermer l'assistant",
+    "openSettings": "Réglages IA & MCP",
+    "emptyConversation": "Posez une question sur votre patrimoine, vos allocations, votre fiscalité ou vos performances."
+  },
+  "chips": {
+    "portfolioSummary": "📊 Bilan du portefeuille",
+    "portfolioSummaryPrompt": "Fais-moi un résumé de mon patrimoine net, mes gains totaux et mes principales positions.",
+    "assetAllocation": "🥧 Allocation d'actifs",
+    "assetAllocationPrompt": "Quelle est la répartition actuelle de mes actifs entre actions, cryptos et liquidités ?",
+    "taxOptimization": "💡 Optimisation fiscale",
+    "taxOptimizationPrompt": "Analyse mes plus-values et propose-moi des conseils d'optimisation fiscale pour la France.",
+    "goalsProgress": "🎯 Avancement des objectifs",
+    "goalsProgressPrompt": "Où en sont mes différents objectifs financiers ?",
+    "recordBuy": "➕ Enregistrer un achat",
+    "recordBuyPrompt": "Aide-moi à enregistrer un ordre d'achat de 10 actions Apple à 175$."
+  },
+  "chat": {
+    "inputPlaceholder": "Posez une question financière ou demandez une action...",
+    "send": "Envoyer",
+    "thinking": "Analyse financière en cours...",
+    "disclaimer": "L'analyse financière fournie par l'IA est indicative. Vérifiez toujours avant toute décision réelle d'investissement.",
+    "errorMessage": "Une erreur est survenue lors du traitement. Veuillez vérifier la configuration de l'assistant.",
+    "toolExecuted": "Outil exécuté : {{toolName}}",
+    "toolExecuting": "Interrogation des données du portefeuille ({{toolName}})..."
+  },
+  "actionCard": {
+    "title": "Validation Requise (Human-in-the-loop)",
+    "subtitle": "L'assistant demande votre accord avant d'enregistrer cette opération :",
+    "confirm": "Valider & Enregistrer",
+    "reject": "Refuser",
+    "confirmed": "Action validée et exécutée",
+    "rejected": "Action refusée",
+    "executing": "Exécution en cours...",
+    "types": {
+      "record_transaction": "Enregistrer une Transaction",
+      "create_goal": "Créer un Objectif Financier"
+    },
+    "fields": {
+      "instrument": "Actif",
+      "symbol": "Ticker",
+      "type": "Opération",
+      "amount": "Quantité",
+      "price": "Prix unitaire",
+      "total": "Montant total",
+      "currency": "Devise",
+      "title": "Titre de l'objectif",
+      "targetAmount": "Montant cible",
+      "deadline": "Date cible"
+    }
+  },
+  "settings": {
+    "tab": "IA & MCP",
+    "title": "Intelligence Artificielle & Serveur MCP",
+    "subtitle": "Configurez votre assistant in-app souverain et le serveur Model Context Protocol externe.",
+    "providerCard": {
+      "title": "Fournisseur de Modèle (LLM)",
+      "description": "Choisissez entre une IA locale privée (Ollama), une clé cloud personnelle (BYOK) ou le simulateur intégré.",
+      "selectLabel": "Fournisseur actif"
+    },
+    "providers": {
+      "mock": {
+        "name": "Simulateur Intelligent GlassFolio",
+        "description": "Aucune configuration requise. Intelligence financière locale fonctionnant hors ligne."
+      },
+      "ollama": {
+        "name": "Ollama (100% Local & Souverain)",
+        "description": "Tourne sur votre machine via localhost:11434. Gratuit, zéro fuite de données."
+      },
+      "openai": {
+        "name": "OpenAI (BYOK)",
+        "description": "Utilisez votre propre clé API OpenAI (GPT-4o, GPT-4o-mini)."
+      },
+      "anthropic": {
+        "name": "Anthropic Claude (BYOK)",
+        "description": "Utilisez votre propre clé API Anthropic (Claude 3.5 Sonnet)."
+      },
+      "openrouter": {
+        "name": "OpenRouter (BYOK)",
+        "description": "Accédez à tous les modèles ouverts et propriétaires via OpenRouter."
+      },
+      "groq": {
+        "name": "Groq (Ultra-rapide BYOK)",
+        "description": "Inférence ultra-basse latence avec Llama 3 / Mixtral."
+      }
+    },
+    "ollama": {
+      "endpoint": "URL d'accès Ollama",
+      "endpointPlaceholder": "http://localhost:11434",
+      "model": "Nom du modèle",
+      "modelPlaceholder": "llama3.2:latest",
+      "testConnection": "Tester la connexion",
+      "testing": "Test en cours...",
+      "success": "Connexion réussie ! {{count}} modèle(s) détecté(s).",
+      "failure": "Impossible de joindre Ollama. Vérifiez que l'application est bien lancée.",
+      "availableModels": "Modèles disponibles"
+    },
+    "cloud": {
+      "apiKey": "Clé API (Stockée localement dans votre navigateur)",
+      "apiKeyPlaceholder": "sk-...",
+      "model": "Identifiant du modèle",
+      "modelPlaceholder": "gpt-4o-mini"
+    },
+    "security": {
+      "title": "Garde-fous & Mode d'Autorisation",
+      "description": "Définissez les permissions accordées à l'assistant IA.",
+      "modeLabel": "Mode d'exécution",
+      "supervised": "Supervisé (Human-in-the-loop)",
+      "supervisedDesc": "L'assistant peut proposer des modifications, mais chaque transaction requiert votre accord explicite.",
+      "readOnly": "Lecture Seule Stricte",
+      "readOnlyDesc": "L'assistant ne peut proposer ni enregistrer aucune modification financière."
+    },
+    "mcp": {
+      "title": "Serveur Model Context Protocol (MCP)",
+      "description": "Connectez Claude Desktop, Cursor ou Antigravity à votre instance GlassFolio.",
+      "statusReady": "Prêt pour la connexion",
+      "serverCommand": "Commande d'exécution",
+      "configLabel": "Configuration Claude Desktop (claude_desktop_config.json)",
+      "copyConfig": "Copier la configuration",
+      "copied": "Copié !"
+    },
+    "save": "Enregistrer les Préférences IA",
+    "saved": "Configuration IA enregistrée avec succès."
+  }
+}

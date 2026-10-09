@@ -355,6 +355,8 @@ export const achievements: Achievement[] = [
   {
     id: 'ac1',
     title: 'Executioner',
+    badgeKey: 'executioner',
+    category: 'explorer',
     iconType: 'rocket',
     color: 'indigo',
     conditionType: 'transaction_count',
@@ -371,6 +373,8 @@ export const achievements: Achievement[] = [
   {
     id: 'ac2',
     title: 'High Roller',
+    badgeKey: 'highRoller',
+    category: 'wealth',
     iconType: 'diamond',
     color: 'blue',
     conditionType: 'total_value',
@@ -387,17 +391,109 @@ export const achievements: Achievement[] = [
   {
     id: 'ac3',
     title: 'Diversified',
+    badgeKey: 'diversified',
+    category: 'discipline',
     iconType: 'chart',
     color: 'emerald',
     conditionType: 'asset_count',
     currentLevel: 1,
     unlocked: true,
     levels: [
-      { level: 1, targetValue: 2, description: 'Hold 2 different assets', xpReward: 150 },
-      { level: 2, targetValue: 5, description: 'Hold 5 different assets', xpReward: 300 },
-      { level: 3, targetValue: 10, description: 'Hold 10 different assets', xpReward: 600 },
-      { level: 4, targetValue: 20, description: 'Hold 20 different assets', xpReward: 1200 },
-      { level: 5, targetValue: 50, description: 'Hold 50 different assets', xpReward: 3000 }
+      { level: 1, targetValue: 2, description: 'Hold 2 different asset classes', xpReward: 150 },
+      { level: 2, targetValue: 3, description: 'Hold 3 different asset classes', xpReward: 300 },
+      { level: 3, targetValue: 4, description: 'Hold 4 different asset classes', xpReward: 600 },
+      { level: 4, targetValue: 5, description: 'Hold 5 different asset classes', xpReward: 1200 },
+      { level: 5, targetValue: 6, description: 'Hold 6 different asset classes', xpReward: 3000 }
+    ]
+  },
+  {
+    id: 'ac4',
+    title: 'DCA Disciplined',
+    badgeKey: 'dcaDisciplined',
+    category: 'discipline',
+    iconType: 'calendar',
+    color: 'emerald',
+    conditionType: 'dca_streak',
+    currentLevel: 1,
+    unlocked: true,
+    levels: [
+      { level: 1, targetValue: 1, description: 'Invest 1 month consistently', xpReward: 150 },
+      { level: 2, targetValue: 3, description: 'Invest 3 months in a row', xpReward: 400 },
+      { level: 3, targetValue: 6, description: 'Invest 6 consecutive months', xpReward: 900 },
+      { level: 4, targetValue: 12, description: '12 months continuous DCA streak', xpReward: 2000 },
+      { level: 5, targetValue: 24, description: '24 months long-term discipline', xpReward: 5000 }
+    ]
+  },
+  {
+    id: 'ac5',
+    title: 'Emergency Fortress',
+    badgeKey: 'emergencyFortress',
+    category: 'discipline',
+    iconType: 'shield',
+    color: 'blue',
+    conditionType: 'emergency_fund',
+    currentLevel: 0,
+    unlocked: false,
+    levels: [
+      { level: 1, targetValue: 1000, description: 'Hold $1,000 in liquid safety reserves', xpReward: 150 },
+      { level: 2, targetValue: 3000, description: 'Hold $3,000 in safety liquidity', xpReward: 350 },
+      { level: 3, targetValue: 6000, description: 'Hold $6,000 in liquid reserves (3+ months)', xpReward: 750 },
+      { level: 4, targetValue: 12000, description: 'Hold $12,000 in emergency cushions', xpReward: 1800 },
+      { level: 5, targetValue: 25000, description: 'Hold $25,000 impregnable fortress', xpReward: 4000 }
+    ]
+  },
+  {
+    id: 'ac6',
+    title: 'Diamond Hands',
+    badgeKey: 'diamondHands',
+    category: 'mastery',
+    iconType: 'diamond',
+    color: 'indigo',
+    conditionType: 'hodl_duration',
+    currentLevel: 0,
+    unlocked: false,
+    levels: [
+      { level: 1, targetValue: 3, description: 'Hold positions for 3 months without panic-selling', xpReward: 200 },
+      { level: 2, targetValue: 6, description: 'Hold positions for 6 months', xpReward: 500 },
+      { level: 3, targetValue: 12, description: 'Hold positions for 1 full year', xpReward: 1200 },
+      { level: 4, targetValue: 24, description: 'Hold positions for 2 years', xpReward: 2500 },
+      { level: 5, targetValue: 36, description: 'Hold positions for 3 years master HODLer', xpReward: 6000 }
+    ]
+  },
+  {
+    id: 'ac7',
+    title: 'Goal Crusher',
+    badgeKey: 'goalCrusher',
+    category: 'mastery',
+    iconType: 'trophy',
+    color: 'orange',
+    conditionType: 'goal_completed',
+    currentLevel: 0,
+    unlocked: false,
+    levels: [
+      { level: 1, targetValue: 1, description: 'Fully achieve your first financial goal', xpReward: 300 },
+      { level: 2, targetValue: 2, description: 'Achieve 2 financial goals', xpReward: 700 },
+      { level: 3, targetValue: 3, description: 'Achieve 3 financial goals', xpReward: 1500 },
+      { level: 4, targetValue: 5, description: 'Achieve 5 financial goals', xpReward: 3000 },
+      { level: 5, targetValue: 10, description: 'Achieve 10 financial milestones', xpReward: 7000 }
+    ]
+  },
+  {
+    id: 'ac8',
+    title: 'Portfolio Pioneer',
+    badgeKey: 'portfolioPioneer',
+    category: 'explorer',
+    iconType: 'flame',
+    color: 'rose',
+    conditionType: 'streak',
+    currentLevel: 1,
+    unlocked: true,
+    levels: [
+      { level: 1, targetValue: 2, description: 'Track portfolio for 2 active weeks', xpReward: 100 },
+      { level: 2, targetValue: 4, description: 'Track portfolio for 4 active weeks', xpReward: 250 },
+      { level: 3, targetValue: 8, description: 'Track portfolio for 8 active weeks', xpReward: 600 },
+      { level: 4, targetValue: 16, description: 'Track portfolio for 16 active weeks', xpReward: 1400 },
+      { level: 5, targetValue: 52, description: 'Complete a full year of active tracking', xpReward: 3500 }
     ]
   }
 ];

@@ -14,7 +14,8 @@
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
-    "notion:sync": "node scripts/notion-sync.mjs"
+    "notion:sync": "node scripts/notion-sync.mjs",
+    "mcp": "node mcp-server/index.mjs"
   },
   "dependencies": {
     "i18next": "^25.8.4",

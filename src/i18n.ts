@@ -9,9 +9,11 @@ import dashboardEN from '../locales/en/dashboard.json';
 import portfolioEN from '../locales/en/portfolio.json';
 import transactionsEN from '../locales/en/transactions.json';
 import progressEN from '../locales/en/progress.json';
+import gamificationEN from '../locales/en/gamification.json';
 import settingsEN from '../locales/en/settings.json';
 import reportsEN from '../locales/en/reports.json';
 import taxEN from '../locales/en/tax.json';
+import aiEN from '../locales/en/ai.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -20,9 +22,11 @@ import dashboardFR from '../locales/fr/dashboard.json';
 import portfolioFR from '../locales/fr/portfolio.json';
 import transactionsFR from '../locales/fr/transactions.json';
 import progressFR from '../locales/fr/progress.json';
+import gamificationFR from '../locales/fr/gamification.json';
 import settingsFR from '../locales/fr/settings.json';
 import reportsFR from '../locales/fr/reports.json';
 import taxFR from '../locales/fr/tax.json';
+import aiFR from '../locales/fr/ai.json';
 
 const resources = {
     en: {
@@ -33,9 +37,11 @@ const resources = {
         portfolio: portfolioEN,
         transactions: transactionsEN,
         progress: progressEN,
+        gamification: gamificationEN,
         settings: settingsEN,
         reports: reportsEN,
         tax: taxEN,
+        ai: aiEN,
     },
     fr: {
         common: commonFR,
@@ -45,9 +51,11 @@ const resources = {
         portfolio: portfolioFR,
         transactions: transactionsFR,
         progress: progressFR,
+        gamification: gamificationFR,
         settings: settingsFR,
         reports: reportsFR,
         tax: taxFR,
+        ai: aiFR,
     },
 };
 

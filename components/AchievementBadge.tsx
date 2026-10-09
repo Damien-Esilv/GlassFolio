@@ -1,14 +1,36 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Achievement } from '../types';
-import { Trophy, Wallet, BarChart3, ArrowUpRight, Star } from 'lucide-react';
+import { 
+    Trophy, 
+    Wallet, 
+    BarChart3, 
+    ArrowUpRight, 
+    Star, 
+    Shield, 
+    Flame, 
+    Calendar, 
+    Zap, 
+    Pin 
+} from 'lucide-react';
 
 interface AchievementBadgeProps {
     achievement: Achievement;
     onClick?: () => void;
     compact?: boolean;
+    isPinned?: boolean;
+    onTogglePin?: (e: React.MouseEvent) => void;
 }
 
-const AchievementBadge: React.FC<AchievementBadgeProps> = ({ achievement: ach, onClick, compact = false }) => {
+const AchievementBadge: React.FC<AchievementBadgeProps> = ({ 
+    achievement: ach, 
+    onClick, 
+    compact = false,
+    isPinned = false,
+    onTogglePin
+}) => {
+    const { t } = useTranslation(['gamification']);
+
     // Determine next level
     const nextLevelData = ach.levels.find(l => l.level === ach.currentLevel + 1);
     const currentLevelData = ach.levels.find(l => l.level === ach.currentLevel);
@@ -27,49 +49,91 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({ achievement: ach, o
         progressPercent = 100;
     }
 
-    const Icon = ach.iconType === 'rocket' ? Trophy :
-        ach.iconType === 'diamond' ? Wallet :
-            ach.iconType === 'chart' ? BarChart3 :
-                ach.iconType === 'trophy' ? Trophy :
-                    ach.iconType === 'star' ? ArrowUpRight : Star;
+    const getIcon = () => {
+        switch (ach.iconType) {
+            case 'rocket': return Trophy;
+            case 'diamond': return Wallet;
+            case 'chart': return BarChart3;
+            case 'trophy': return Trophy;
+            case 'star': return Star;
+            case 'shield': return Shield;
+            case 'flame': return Flame;
+            case 'calendar': return Calendar;
+            case 'zap': return Zap;
+            default: return ArrowUpRight;
+        }
+    };
+
+    const Icon = getIcon();
 
     let colorClass = 'text-secondary bg-subtle';
     let progressColor = 'bg-brand/50';
 
     if (ach.unlocked) {
-        if (ach.color === 'indigo') { colorClass = 'text-indigo-500 bg-indigo-500/10'; progressColor = 'bg-indigo-500'; }
-        if (ach.color === 'blue') { colorClass = 'text-blue-500 bg-blue-500/10'; progressColor = 'bg-blue-500'; }
-        if (ach.color === 'emerald') { colorClass = 'text-emerald-500 bg-emerald-500/10'; progressColor = 'bg-emerald-500'; }
-        if (ach.color === 'orange') { colorClass = 'text-orange-500 bg-orange-500/10'; progressColor = 'bg-orange-500'; }
-        if (ach.color === 'rose') { colorClass = 'text-rose-500 bg-rose-500/10'; progressColor = 'bg-rose-500'; }
+        if (ach.color === 'indigo') { colorClass = 'text-indigo-400 bg-indigo-500/10'; progressColor = 'bg-indigo-500'; }
+        else if (ach.color === 'blue') { colorClass = 'text-blue-400 bg-blue-500/10'; progressColor = 'bg-blue-500'; }
+        else if (ach.color === 'emerald') { colorClass = 'text-emerald-400 bg-emerald-500/10'; progressColor = 'bg-emerald-500'; }
+        else if (ach.color === 'orange') { colorClass = 'text-amber-400 bg-amber-500/10'; progressColor = 'bg-amber-500'; }
+        else if (ach.color === 'rose') { colorClass = 'text-rose-400 bg-rose-500/10'; progressColor = 'bg-rose-500'; }
+        else { colorClass = 'text-brand bg-brand/10'; progressColor = 'bg-brand'; }
     }
 
+    const badgeTitle = ach.badgeKey 
+        ? t(`gamification:badges.${ach.badgeKey}.title`, { defaultValue: ach.title })
+        : ach.title;
+
     return (
-        <button
-            onClick={onClick}
-            className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full ${
-                compact ? 'min-h-[140px]' : 'p-6'
-            } ${
-                ach.unlocked ? 'bg-card border-border hover:border-strong' : 'bg-subtle/50 border-transparent opacity-60 hover:opacity-100'
-            }`}
-        >
-            {/* Rounded Icon Container */}
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 shrink-0 ${colorClass}`}>
-                <Icon size={22} />
-            </div>
+        <div className="relative group w-full">
+            <button
+                type="button"
+                onClick={onClick}
+                className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full ${
+                    compact ? 'min-h-[140px]' : 'p-6'
+                } ${
+                    ach.unlocked 
+                        ? 'bg-card border-border hover:border-strong shadow-sm' 
+                        : 'bg-subtle/40 border-subtle opacity-70 hover:opacity-100'
+                }`}
+            >
+                {/* Pin Action (Top right) */}
+                {onTogglePin && (
+                    <button
+                        type="button"
+                        onClick={onTogglePin}
+                        title={isPinned ? t('gamification:unpinBadge') : t('gamification:pinBadge')}
+                        className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${
+                            isPinned 
+                                ? 'text-brand bg-brand/10 opacity-100' 
+                                : 'text-tertiary hover:text-primary opacity-0 group-hover:opacity-100 hover:bg-subtle'
+                        }`}
+                    >
+                        <Pin size={13} className={isPinned ? 'fill-current' : ''} />
+                    </button>
+                )}
 
-            <div className="w-full text-center flex-1 flex flex-col justify-center">
-                <h3 className="font-bold text-primary text-xs leading-tight truncate w-full" title={ach.title}>
-                    {ach.title}
-                </h3>
-                <p className="text-[10px] text-tertiary mt-0.5">Lvl {ach.currentLevel}</p>
-            </div>
+                {/* Rounded Icon Container */}
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 shrink-0 ${colorClass}`}>
+                    <Icon size={22} />
+                </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden mt-3 shrink-0">
-                <div className={`h-full transition-all duration-1000 ${progressColor}`} style={{ width: `${progressPercent}%` }}></div>
-            </div>
-        </button>
+                <div className="w-full text-center flex-1 flex flex-col justify-center px-1">
+                    <h3 className="font-bold text-primary text-xs leading-tight truncate w-full" title={badgeTitle}>
+                        {badgeTitle}
+                    </h3>
+                    <p className="text-[10px] text-tertiary mt-0.5 font-medium">
+                        {t('gamification:level')} {ach.currentLevel}
+                    </p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden mt-3 shrink-0">
+                    <div 
+                        className={`h-full transition-all duration-700 ${progressColor}`} 
+                        style={{ width: `${progressPercent}%` }} 
+                    />
+                </div>
+            </button>
+        </div>
     );
 };
 

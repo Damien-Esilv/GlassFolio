@@ -9,16 +9,17 @@ import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
 import { exportBackupJSON, exportRGPDZip } from '../src/services/exportService';
 import { BackupMergeWizard } from '../components/BackupMergeWizard';
-import { Download, FileText, Database } from 'lucide-react';
+import { Download, FileText, Database, Sparkles } from 'lucide-react';
 import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
+import { AISettingsTab } from '../components/ai/AISettingsTab';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile } = useAuth();
     const { resetToSeedData } = useData();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showBackupWizard, setShowBackupWizard] = useState(false);
@@ -29,6 +30,7 @@ const Settings: React.FC = () => {
         if (tab === 'preferences') setActiveTab('preferences');
         else if (tab === 'profile') setActiveTab('profile');
         else if (tab === 'fiscal') setActiveTab('fiscal');
+        else if (tab === 'ai') setActiveTab('ai');
     }, [searchParams]);
 
     // Profile Form State
@@ -181,6 +183,12 @@ const Settings: React.FC = () => {
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'fiscal' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
                         <Scale size={18} /> {t('tax:settings.title')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('ai')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'ai' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                    >
+                        <Sparkles size={18} /> {t('ai:settings.tab')}
                     </button>
                 </div>
 
@@ -777,6 +785,13 @@ const Settings: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* ================= AI & MCP TAB ================= */}
+                    {activeTab === 'ai' && (
+                        <div className="space-y-6 animate-fade-in">
+                            <AISettingsTab />
                         </div>
                     )}
                 </div>

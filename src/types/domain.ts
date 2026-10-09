@@ -8,6 +8,7 @@ export interface UserPreferences {
   language?: 'en' | 'fr';
   dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   fiscalProfile?: FiscalProfile;
+  pinnedBadgeIds?: string[];
 }
 
 export interface User {
@@ -116,13 +117,45 @@ export interface Achievement {
   id: string;
   ownerId?: string;
   title: string;
-  iconType: 'trophy' | 'wallet' | 'chart' | 'star' | 'rocket' | 'diamond';
+  iconType: 'trophy' | 'wallet' | 'chart' | 'star' | 'rocket' | 'diamond' | 'shield' | 'flame' | 'calendar' | 'zap';
   color: string;
-  conditionType: 'total_value' | 'transaction_count' | 'asset_count' | 'streak';
+  conditionType: 'total_value' | 'transaction_count' | 'asset_count' | 'streak' | 'dca_streak' | 'emergency_fund' | 'goal_completed' | 'hodl_duration';
   levels: AchievementLevel[];
   currentLevel: number;
   currentValue?: number;
   unlocked: boolean;
+  category?: 'discipline' | 'wealth' | 'explorer' | 'mastery';
+  badgeKey?: string;
+}
+
+export interface InvestorRank {
+  rankId: string;
+  levelMin: number;
+  levelMax: number;
+  titleKey: string;
+  descriptionKey: string;
+  color: string;
+}
+
+export interface GamificationQuest {
+  id: string;
+  titleKey: string;
+  descriptionKey: string;
+  rewardXp: number;
+  frequency: 'monthly' | 'quarterly' | 'onboarding';
+  completed: boolean;
+  progress: number;
+  target: number;
+  expiryDate?: string;
+}
+
+export interface ThemeReward {
+  id: string;
+  themeKey: string;
+  nameKey: string;
+  requiredLevel: number;
+  unlocked: boolean;
+  previewColors: string[];
 }
 
 export interface DashboardSummary {

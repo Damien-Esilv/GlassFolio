@@ -13,7 +13,7 @@ import {
     achievements as initialAchievements,
     assetGroups as initialAssetGroups
 } from '../../mockData';
-import { Transaction, Position, Alert, FinancialGoal, Achievement, AssetGroup } from '../../types';
+import { Transaction, Position, Alert, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../../types';
 
 // Backend entity types and mock data
 import {
@@ -42,6 +42,8 @@ const STORAGE_KEYS = {
     GOALS: 'glassfolio_goals',
     ACHIEVEMENTS: 'glassfolio_achievements',
     ASSET_GROUPS: 'glassfolio_asset_groups',
+    QUESTS: 'glassfolio_quests',
+    PINNED_BADGES: 'glassfolio_pinned_badges',
     // New multi-asset architecture keys
     INSTITUTES: 'glassfolio_institutes',
     ACCOUNTS: 'glassfolio_accounts',
@@ -89,11 +91,49 @@ class MockDB {
 
     getAchievements(): Achievement[] {
         const stored = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
-        return stored ? JSON.parse(stored) : initialAchievements;
+        if (!stored) return initialAchievements;
+
+        try {
+            const storedList = JSON.parse(stored) as Achievement[];
+            const map = new Map<string, Achievement>();
+            initialAchievements.forEach(a => map.set(a.id, a));
+            storedList.forEach(a => {
+                const initial = map.get(a.id);
+                map.set(a.id, {
+                    ...(initial || a),
+                    ...a,
+                    levels: initial?.levels || a.levels,
+                    category: initial?.category || a.category,
+                    badgeKey: initial?.badgeKey || a.badgeKey,
+                    iconType: initial?.iconType || a.iconType
+                });
+            });
+            return Array.from(map.values());
+        } catch {
+            return initialAchievements;
+        }
     }
 
     saveAchievements(data: Achievement[]) {
         localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(data));
+    }
+
+    getQuests(): GamificationQuest[] {
+        const stored = localStorage.getItem(STORAGE_KEYS.QUESTS);
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    saveQuests(data: GamificationQuest[]) {
+        localStorage.setItem(STORAGE_KEYS.QUESTS, JSON.stringify(data));
+    }
+
+    getPinnedBadges(): string[] {
+        const stored = localStorage.getItem(STORAGE_KEYS.PINNED_BADGES);
+        return stored ? JSON.parse(stored) : ['ac4', 'ac3', 'ac1'];
+    }
+
+    savePinnedBadges(ids: string[]) {
+        localStorage.setItem(STORAGE_KEYS.PINNED_BADGES, JSON.stringify(ids));
     }
 
     getAlerts(): Alert[] {

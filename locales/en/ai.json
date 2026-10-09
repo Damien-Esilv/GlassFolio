@@ -1,0 +1,136 @@
+{
+  "drawer": {
+    "title": "GlassFolio AI Assistant",
+    "subtitle": "Your sovereign private financial copilot",
+    "status": {
+      "demo": "Demo Mode",
+      "ollama": "Local Ollama",
+      "cloud": "Cloud BYOK",
+      "connecting": "Connecting...",
+      "offline": "Offline"
+    },
+    "clearHistory": "Clear conversation",
+    "close": "Close assistant",
+    "openSettings": "AI & MCP Settings",
+    "emptyConversation": "Ask any question about your assets, allocations, taxes, or performance."
+  },
+  "chips": {
+    "portfolioSummary": "📊 Portfolio Summary",
+    "portfolioSummaryPrompt": "Give me a summary of my net wealth, total gain/loss and top holdings.",
+    "assetAllocation": "🥧 Asset Allocation",
+    "assetAllocationPrompt": "What is my current asset allocation across stocks, cryptos, and cash?",
+    "taxOptimization": "💡 Tax Optimization",
+    "taxOptimizationPrompt": "Analyze my capital gains and give me tax optimization recommendations for France.",
+    "goalsProgress": "🎯 Goals Progress",
+    "goalsProgressPrompt": "What is the progress on my financial goals?",
+    "recordBuy": "➕ Record Buy Transaction",
+    "recordBuyPrompt": "Help me record a buy transaction of 10 shares of Apple at $175."
+  },
+  "chat": {
+    "inputPlaceholder": "Ask a financial question or request an action...",
+    "send": "Send",
+    "thinking": "Analyzing financial data...",
+    "disclaimer": "AI financial analysis is informative. Always double-check before making actual investment decisions.",
+    "errorMessage": "An error occurred while processing your request. Please check your AI settings.",
+    "toolExecuted": "Executed tool: {{toolName}}",
+    "toolExecuting": "Querying portfolio data ({{toolName}})..."
+  },
+  "actionCard": {
+    "title": "Action Confirmation Required",
+    "subtitle": "The assistant requests your authorization to record this change:",
+    "confirm": "Approve & Execute",
+    "reject": "Decline",
+    "confirmed": "Action Approved & Executed",
+    "rejected": "Action Declined",
+    "executing": "Executing action...",
+    "types": {
+      "record_transaction": "Record Financial Transaction",
+      "create_goal": "Create Financial Goal"
+    },
+    "fields": {
+      "instrument": "Asset",
+      "symbol": "Ticker",
+      "type": "Operation",
+      "amount": "Quantity",
+      "price": "Unit Price",
+      "total": "Total Amount",
+      "currency": "Currency",
+      "title": "Goal Title",
+      "targetAmount": "Target Amount",
+      "deadline": "Target Date"
+    }
+  },
+  "settings": {
+    "tab": "AI & MCP",
+    "title": "Artificial Intelligence & MCP Engine",
+    "subtitle": "Configure your sovereign in-app assistant and external Model Context Protocol server.",
+    "providerCard": {
+      "title": "LLM Provider",
+      "description": "Choose between private local AI (Ollama), cloud Bring-Your-Own-Key, or the built-in simulator.",
+      "selectLabel": "Active Provider"
+    },
+    "providers": {
+      "mock": {
+        "name": "GlassFolio Smart Simulator",
+        "description": "Zero setup required. Rule-based offline financial intelligence running locally."
+      },
+      "ollama": {
+        "name": "Ollama (100% Local & Sovereign)",
+        "description": "Runs on your machine via localhost:11434. No API fees, 100% data privacy."
+      },
+      "openai": {
+        "name": "OpenAI (BYOK)",
+        "description": "Use your personal OpenAI API key (GPT-4o, GPT-4o-mini)."
+      },
+      "anthropic": {
+        "name": "Anthropic Claude (BYOK)",
+        "description": "Use your personal Anthropic API key (Claude 3.5 Sonnet)."
+      },
+      "openrouter": {
+        "name": "OpenRouter (BYOK)",
+        "description": "Access any open or proprietary model through OpenRouter."
+      },
+      "groq": {
+        "name": "Groq (Ultra-fast BYOK)",
+        "description": "Ultra-low latency inference with Llama 3 / Mixtral."
+      }
+    },
+    "ollama": {
+      "endpoint": "Ollama Endpoint URL",
+      "endpointPlaceholder": "http://localhost:11434",
+      "model": "Model Name",
+      "modelPlaceholder": "llama3.2:latest",
+      "testConnection": "Test Connection",
+      "testing": "Testing...",
+      "success": "Connected successfully! {{count}} model(s) detected.",
+      "failure": "Unable to connect to Ollama. Make sure Ollama is running.",
+      "availableModels": "Available Models"
+    },
+    "cloud": {
+      "apiKey": "API Key (Stored locally in your browser)",
+      "apiKeyPlaceholder": "sk-...",
+      "model": "Model ID",
+      "modelPlaceholder": "gpt-4o-mini"
+    },
+    "security": {
+      "title": "Guardrails & Authorization Mode",
+      "description": "Define permissions granted to the AI assistant.",
+      "modeLabel": "Execution Mode",
+      "supervised": "Supervised (Human-in-the-loop)",
+      "supervisedDesc": "The assistant can suggest modifications, but every single transaction requires explicit confirmation.",
+      "readOnly": "Strict Read-Only",
+      "readOnlyDesc": "The assistant cannot suggest or create any financial mutations."
+    },
+    "mcp": {
+      "title": "Model Context Protocol (MCP) Server",
+      "description": "Connect Claude Desktop, Cursor, or Antigravity to your GlassFolio instance.",
+      "statusReady": "Ready for connection",
+      "serverCommand": "Execution command",
+      "configLabel": "Claude Desktop configuration (claude_desktop_config.json)",
+      "copyConfig": "Copy Configuration",
+      "copied": "Copied!"
+    },
+    "save": "Save AI Preferences",
+    "saved": "AI configuration saved successfully."
+  }
+}

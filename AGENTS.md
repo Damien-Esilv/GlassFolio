@@ -55,6 +55,10 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
 - **Dates** : stocker/transporter en **ISO 8601 string** ; ne pas persister de `Date` brute dans le mock DB.
 - **Typage strict** : pas de `any` ; types explicites, retours explicites sur les services.
 - **Latence simulée** : ne pas supprimer le `delay(ms)` des services/mock DB.
+- **AI-First & Compatibilité MCP Systématique** :
+  - **Toute nouvelle fonctionnalité ou entité métier** (ex: emprunts, actifs, alertes, budgets) **DOIT obligatoirement** déclarer ses outils IA correspondants dans `src/services/ai/tools/` et les enregistrer dans `aiToolRegistry`.
+  - **Human-in-the-loop obligatoire** : Toute action provoquant une modification ou création de données financières réelles **DOIT** définir `requiresConfirmation: true` afin d'exiger une validation explicite de l'utilisateur avant exécution.
+  - **Objectif zéro rétro-ingénierie** : Tout nouveau développement doit être immédiatement exploitable par l'assistant In-App et les clients MCP externes (Claude Desktop, Cursor, Antigravity) dès son implémentation.
 
 ---
 

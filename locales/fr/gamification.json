@@ -1,0 +1,118 @@
+{
+  "hub": {
+    "title": "Hub de Progrès & Gamification",
+    "subtitle": "Valorisez votre discipline financière, franchissez des étapes et élevez votre rang d'investisseur."
+  },
+  "tabs": {
+    "goals": "Objectifs",
+    "achievements": "Badges & Succès",
+    "quests": "Missions",
+    "ranks": "Rangs & Récompenses"
+  },
+  "level": "Niveau",
+  "xp": "XP",
+  "xpToNext": "{{xp}} XP restant pour le Niveau {{nextLevel}}",
+  "unlocked": "Débloqué",
+  "locked": "Verrouillé",
+  "pinBadge": "Épingler en vitrine",
+  "unpinBadge": "Détacher",
+  "pinnedMax": "Vous pouvez épingler jusqu'à 3 badges",
+  "showcase": {
+    "title": "Badges en Vedette",
+    "empty": "Épinglez jusqu'à 3 succès pour les afficher fièrement en haut de votre profil."
+  },
+  "celebration": {
+    "levelUpTitle": "Niveau Supérieur !",
+    "levelUpSubtitle": "Félicitations ! Vous avez atteint le Niveau {{level}}",
+    "badgeTitle": "Badge Débloqué !",
+    "newRankTitle": "Nouveau Rang d'Investisseur Débloqué !",
+    "rewardGained": "+{{xp}} XP Gagnés",
+    "continue": "Super !",
+    "viewBadge": "Voir le badge"
+  },
+  "ranks": {
+    "title": "Rangs d'Investisseur",
+    "currentRank": "Rang Actuel",
+    "novice": {
+      "title": "Épargnant Novice",
+      "description": "Premiers pas dans l'organisation de ses finances et la régularité de l'épargne."
+    },
+    "prudent": {
+      "title": "Stratège Prudent",
+      "description": "Fonds de sécurité constitué, premières diversifications d'actifs et versements réguliers."
+    },
+    "navigator": {
+      "title": "Navigateur de Marché",
+      "description": "Suivi multi-actifs rigoureux, résistance à la volatilité, optimisation des enveloppes."
+    },
+    "alchemist": {
+      "title": "Alchimiste des Intérêts Composés",
+      "description": "Effet boule de neige activé grâce à une discipline pluri-annuelle et un portefeuille équilibré."
+    },
+    "sovereign": {
+      "title": "Architecte Financier Souverain",
+      "description": "Maîtrise totale du patrimoine, indépendance financière et vision à long terme."
+    }
+  },
+  "themes": {
+    "title": "Thèmes Déblocables",
+    "defaultDark": "Ardoise Sombre",
+    "midnightVelvet": "Velours de Minuit",
+    "emeraldPrestige": "Émeraude Prestige",
+    "cyberNeon": "Néon Cyber Glass",
+    "unlockAt": "Déblocage au Niveau {{level}}"
+  },
+  "quests": {
+    "title": "Missions en Cours",
+    "subtitle": "Accomplissez des routines financières positives pour remporter des XP bonus.",
+    "claim": "Réclamer +{{xp}} XP",
+    "completed": "Complété",
+    "inProgress": "En cours",
+    "monthlyReview": {
+      "title": "Bilan Patrimonial Mensuel",
+      "description": "Consultez votre tableau de bord et vérifiez vos performances en début de mois."
+    },
+    "dcaHabit": {
+      "title": "Régularité des Versements (DCA)",
+      "description": "Réalisez au moins 2 opérations d'achat ou de dépôt ce mois-ci."
+    },
+    "allocationAudit": {
+      "title": "Audit de Diversification",
+      "description": "Détenez des positions réparties sur au moins 3 classes d'actifs distinctes."
+    }
+  },
+  "badges": {
+    "executioner": {
+      "title": "Exécuteur",
+      "description": "Réaliser des opérations et transactions financières"
+    },
+    "highRoller": {
+      "title": "Gros Calibre",
+      "description": "Développer la valeur totale de votre portefeuille"
+    },
+    "diversified": {
+      "title": "Diversifié",
+      "description": "Détenir plusieurs classes d'actifs distinctes"
+    },
+    "dcaDisciplined": {
+      "title": "DCA Discipliné",
+      "description": "Investir régulièrement mois après mois"
+    },
+    "emergencyFortress": {
+      "title": "Forteresse de Sécurité",
+      "description": "Conserver une épargne de précaution liquide"
+    },
+    "diamondHands": {
+      "title": "Mains de Diamant",
+      "description": "Conserver des positions long terme sans paniquer"
+    },
+    "goalCrusher": {
+      "title": "Chasseur d'Objectifs",
+      "description": "Atteindre 100% de vos objectifs financiers définis"
+    },
+    "portfolioPioneer": {
+      "title": "Pionnier du Suivi",
+      "description": "Maintenir un suivi actif et régulier dans la durée"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { GamificationQuest } from '../types';
+import { CheckCircle2, Clock, Zap } from 'lucide-react';
+import Button from './Button';
+
+interface QuestCardProps {
+    quest: GamificationQuest;
+    onClaim?: (questId: string) => void;
+}
+
+const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
+    const { t } = useTranslation(['gamification']);
+
+    const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+
+    return (
+        <div className={`p-5 rounded-2xl border transition-all ${
+            quest.completed 
+                ? 'bg-card border-brand/40 shadow-sm' 
+                : 'bg-card/70 border-subtle'
+        }`}>
+            <div className="flex items-start justify-between gap-4 mb-3">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            quest.frequency === 'monthly' 
+                                ? 'bg-indigo-500/10 text-indigo-400' 
+                                : 'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                            {quest.frequency}
+                        </span>
+                        {quest.completed && (
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                                <CheckCircle2 size={12} />
+                                {t('gamification:quests.completed')}
+                            </span>
+                        )}
+                    </div>
+                    <h4 className="text-sm font-bold text-primary">
+                        {t(quest.titleKey, { defaultValue: quest.id })}
+                    </h4>
+                    <p className="text-xs text-secondary mt-1">
+                        {t(quest.descriptionKey, { defaultValue: '' })}
+                    </p>
+                </div>
+
+                <div className="flex flex-col items-end shrink-0">
+                    <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand/10 text-brand text-xs font-bold">
+                        <Zap size={12} className="fill-current" />
+                        +{quest.rewardXp} XP
+                    </span>
+                </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="space-y-1.5 mt-4">
+                <div className="flex justify-between text-[11px] font-bold text-secondary">
+                    <span>{quest.progress} / {quest.target}</span>
+                    <span>{percent}%</span>
+                </div>
+                <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
+                    <div 
+                        className={`h-full transition-all duration-500 ${
+                            quest.completed ? 'bg-brand' : 'bg-brand/60'
+                        }`} 
+                        style={{ width: `${percent}%` }}
+                    />
+                </div>
+            </div>
+
+            {quest.completed && onClaim && (
+                <div className="mt-4 pt-3 border-t border-subtle flex justify-end">
+                    <Button 
+                        size="sm" 
+                        onClick={() => onClaim(quest.id)}
+                        className="text-xs font-bold shadow-md shadow-brand/20"
+                    >
+                        {t('gamification:quests.claim', { xp: quest.rewardXp })}
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default QuestCard;

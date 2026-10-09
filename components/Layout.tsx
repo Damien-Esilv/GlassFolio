@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
   LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
-  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb
+  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { AIChatDrawer } from './ai/AIChatDrawer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isFiscaliteExpanded, setIsFiscaliteExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   /** Human-readable freshness label */
@@ -308,8 +310,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* Right Actions (Notifications + Profile) */}
+          {/* Right Actions (AI Assistant + Notifications + Profile) */}
           <div className="flex items-center gap-3 ml-auto">
+            <button
+              onClick={() => setIsAIChatOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors text-xs font-semibold"
+              aria-label="Assistant IA"
+              title={t('ai:drawer.title')}
+            >
+              <Sparkles size={14} className="text-primary" />
+              <span className="hidden sm:inline">Assistant IA</span>
+            </button>
+
             <button className="p-2 text-secondary hover:bg-subtle rounded-full transition-colors relative" aria-label="Notifications">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-card"></span>
@@ -379,6 +391,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* In-App AI Assistant Drawer */}
+      <AIChatDrawer isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
     </div>
   );
 };

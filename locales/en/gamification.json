@@ -1,0 +1,118 @@
+{
+  "hub": {
+    "title": "Progress & Wealth Hub",
+    "subtitle": "Track your financial discipline, achieve milestones, and level up your investor rank."
+  },
+  "tabs": {
+    "goals": "Goals",
+    "achievements": "Achievements",
+    "quests": "Missions",
+    "ranks": "Ranks & Rewards"
+  },
+  "level": "Level",
+  "xp": "XP",
+  "xpToNext": "{{xp}} XP to Level {{nextLevel}}",
+  "unlocked": "Unlocked",
+  "locked": "Locked",
+  "pinBadge": "Pin to showcase",
+  "unpinBadge": "Unpin",
+  "pinnedMax": "You can pin up to 3 badges",
+  "showcase": {
+    "title": "Featured Badges",
+    "empty": "Pin up to 3 achievements to showcase them on your profile."
+  },
+  "celebration": {
+    "levelUpTitle": "Level Up!",
+    "levelUpSubtitle": "Congratulations! You have reached Level {{level}}",
+    "badgeTitle": "Achievement Unlocked!",
+    "newRankTitle": "New Investor Rank Unlocked!",
+    "rewardGained": "+{{xp}} XP Earned",
+    "continue": "Awesome!",
+    "viewBadge": "View Details"
+  },
+  "ranks": {
+    "title": "Investor Ranks",
+    "currentRank": "Current Rank",
+    "novice": {
+      "title": "Apprentice Saver",
+      "description": "Taking first steps in organizing accounts and consistent savings habits."
+    },
+    "prudent": {
+      "title": "Prudent Allocator",
+      "description": "Established emergency cushion, initial asset diversification, and regular monthly contributions."
+    },
+    "navigator": {
+      "title": "Market Navigator",
+      "description": "Disciplined multi-asset holder, resilient in volatility, optimizing accounts and taxes."
+    },
+    "alchemist": {
+      "title": "Compound Interest Alchemist",
+      "description": "Harnessing compound interest with multi-year discipline and balanced allocation."
+    },
+    "sovereign": {
+      "title": "Financial Sovereign",
+      "description": "Full mastery of personal net worth, long-term vision, and financial independence."
+    }
+  },
+  "themes": {
+    "title": "Unlockable Themes",
+    "defaultDark": "Midnight Slate",
+    "midnightVelvet": "Midnight Velvet",
+    "emeraldPrestige": "Emerald Prestige",
+    "cyberNeon": "Cyber Neon Glass",
+    "unlockAt": "Unlocks at Level {{level}}"
+  },
+  "quests": {
+    "title": "Active Missions",
+    "subtitle": "Complete non-intrusive financial habits to earn bonus XP.",
+    "claim": "Claim +{{xp}} XP",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "monthlyReview": {
+      "title": "Monthly Wealth Check-in",
+      "description": "Review your dashboard summary and performance at the start of the month."
+    },
+    "dcaHabit": {
+      "title": "DCA Discipline Habit",
+      "description": "Execute at least 2 completed buy or deposit operations this month."
+    },
+    "allocationAudit": {
+      "title": "Asset Class Diversification",
+      "description": "Hold positions across at least 3 distinct asset classes."
+    }
+  },
+  "badges": {
+    "executioner": {
+      "title": "Executioner",
+      "description": "Execute investment transactions"
+    },
+    "highRoller": {
+      "title": "High Roller",
+      "description": "Grow overall portfolio valuation"
+    },
+    "diversified": {
+      "title": "Diversified",
+      "description": "Hold multiple asset classes"
+    },
+    "dcaDisciplined": {
+      "title": "DCA Disciplined",
+      "description": "Invest regularly month after month"
+    },
+    "emergencyFortress": {
+      "title": "Emergency Fortress",
+      "description": "Hold safe liquid reserves in Cash or Livrets"
+    },
+    "diamondHands": {
+      "title": "Diamond Hands",
+      "description": "Hold positions long-term without panic selling"
+    },
+    "goalCrusher": {
+      "title": "Goal Crusher",
+      "description": "Achieve your defined financial milestones"
+    },
+    "portfolioPioneer": {
+      "title": "Portfolio Pioneer",
+      "description": "Maintain active portfolio tracking consistency"
+    }
+  }
+}
