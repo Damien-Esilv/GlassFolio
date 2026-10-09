@@ -8,6 +8,7 @@ import {
   SUPPORTED_CURRENCIES,
   CURRENCY_SYMBOLS,
   formatCurrency,
+  roundCurrency,
 } from '../../../utils/currency';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -128,5 +129,44 @@ describe('formatCurrency', () => {
   it('defaults to USD when no currency specified', () => {
     const result = formatCurrency(100);
     expect(result).toContain('$');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// roundCurrency
+// ══════════════════════════════════════════════════════════════════════════════
+describe('roundCurrency', () => {
+  it('rounds numbers to 2 decimal places by default', () => {
+    expect(roundCurrency(123.456)).toBe(123.46);
+    expect(roundCurrency(123.454)).toBe(123.45);
+    expect(roundCurrency(100)).toBe(100);
+  });
+
+  it('handles custom decimal precision', () => {
+    expect(roundCurrency(123.45678, 4)).toBe(123.4568);
+    expect(roundCurrency(123.45678, 0)).toBe(123);
+    expect(roundCurrency(123.45678, 1)).toBe(123.5);
+  });
+
+  it('corrects floating point inaccuracies', () => {
+    const sum = 0.1 + 0.2; // 0.30000000000000004
+    expect(roundCurrency(sum, 2)).toBe(0.3);
+    expect(roundCurrency(1.005, 2)).toBe(1.01);
+  });
+
+  it('handles negative numbers', () => {
+    expect(roundCurrency(-50.256)).toBe(-50.26);
+    expect(roundCurrency(-50.254)).toBe(-50.25);
+  });
+
+  it('returns 0 for NaN, Infinity, -Infinity', () => {
+    expect(roundCurrency(NaN)).toBe(0);
+    expect(roundCurrency(Infinity)).toBe(0);
+    expect(roundCurrency(-Infinity)).toBe(0);
+  });
+
+  it('returns 0 for 0 and -0', () => {
+    expect(roundCurrency(0)).toBe(0);
+    expect(roundCurrency(-0)).toBe(0);
   });
 });

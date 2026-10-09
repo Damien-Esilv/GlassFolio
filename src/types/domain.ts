@@ -22,6 +22,7 @@ export interface User {
 
 export interface Position {
   id: string;
+  ownerId?: string;
   instrument: string;
   symbol: string;
   isin?: string;
@@ -41,6 +42,7 @@ export interface Position {
 
 export interface Transaction {
   id: string;
+  ownerId?: string;
   date: string;
   type: 'Buy' | 'Sell' | 'Deposit' | 'Withdrawal';
   instrument: string;
@@ -59,6 +61,7 @@ export interface Transaction {
 
 export interface Alert {
   id: string;
+  ownerId?: string;
   type: 'warning' | 'error' | 'success' | 'info';
   title: string;
   message: string;
@@ -82,6 +85,7 @@ export interface LinkedAsset {
 
 export interface AssetGroup {
   id: string;
+  ownerId?: string;
   name: string;
   symbols: string[];
   color: string;
@@ -89,6 +93,7 @@ export interface AssetGroup {
 
 export interface FinancialGoal {
   id: string;
+  ownerId?: string;
   title: string;
   targetAmount: number;
   isPinned: boolean;
@@ -109,6 +114,7 @@ export interface AchievementLevel {
 
 export interface Achievement {
   id: string;
+  ownerId?: string;
   title: string;
   iconType: 'trophy' | 'wallet' | 'chart' | 'star' | 'rocket' | 'diamond';
   color: string;

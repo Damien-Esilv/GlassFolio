@@ -56,12 +56,17 @@ const PortfolioPerformance: React.FC = () => {
 
    // Helper to retrieve consistent hex color for asset categories or searched tickers
    const getItemColor = (itemKey: string, customList?: string[]): string => {
-      if (itemKey === 'All' || itemKey === 'Global Portfolio') return '#6366f1';
+      if (itemKey === 'All' || itemKey === 'Global Portfolio') return 'var(--color-accent-indigo)';
       const config = ASSET_CLASSES_CONFIG.find(c => c.id.toLowerCase() === itemKey.toLowerCase());
       if (config && config.hex) return config.hex;
       
       // Distinctive 4-color palette for custom reference assets (Slot 1: Red, Slot 2: Pink, Slot 3: Cyan, Slot 4: Vivid Orange)
-      const customAssetColors = ['#ef4444', '#ec4899', '#06b6d4', '#f97316'];
+      const customAssetColors = [
+         'var(--color-accent-red)',
+         'var(--color-accent-rose)',
+         'var(--color-accent-cyan)',
+         'var(--color-accent-amber)'
+      ];
       const refList = customList || selectedReferenceAssets;
       const refIndex = refList.indexOf(itemKey);
 
@@ -555,8 +560,8 @@ const PortfolioPerformance: React.FC = () => {
                            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0.0} />
                         </linearGradient>
                         <linearGradient id="colorBenchmark" x1="0" y1="0" x2="0" y2="1">
-                           <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
-                           <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                           <stop offset="5%" stopColor="var(--color-accent-amber)" stopOpacity={0.25} />
+                           <stop offset="95%" stopColor="var(--color-accent-amber)" stopOpacity={0.0} />
                         </linearGradient>
                      </defs>
                      <XAxis
@@ -634,7 +639,7 @@ const PortfolioPerformance: React.FC = () => {
                         type="monotone"
                         name="benchmarkValue"
                         dataKey="benchmarkValue"
-                        stroke="#f59e0b"
+                        stroke="var(--color-accent-amber)"
                         strokeWidth={2.5}
                         strokeDasharray="4 4"
                         fillOpacity={1}
@@ -711,9 +716,9 @@ const PortfolioPerformance: React.FC = () => {
                      onClick={() => toggleCompareItem('All')}
                      className="px-3 py-1 text-xs font-bold rounded-lg border transition-all"
                      style={{
-                        borderColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? '#6366f1' : 'var(--border-subtle)',
-                        backgroundColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? '#6366f118' : 'var(--bg-card)',
-                        color: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? '#6366f1' : 'var(--text-tertiary)'
+                        borderColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo)' : 'var(--border-subtle)',
+                        backgroundColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo-subtle, rgba(99, 102, 241, 0.1))' : 'var(--bg-card)',
+                        color: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo)' : 'var(--text-tertiary)'
                      }}
                   >
                      {t('reports:performance.globalPortfolio')}
@@ -916,7 +921,7 @@ const PortfolioPerformance: React.FC = () => {
                                        type="monotone"
                                        name={t('reports:performance.globalPortfolio')}
                                        dataKey="All"
-                                       stroke="#3b82f6"
+                                       stroke="var(--color-accent-blue)"
                                        strokeWidth={3}
                                        dot={false}
                                        isAnimationActive={true}
@@ -1048,7 +1053,7 @@ const PortfolioPerformance: React.FC = () => {
                                        type="monotone"
                                        name={t('reports:performance.globalPortfolio')}
                                        dataKey="All_base100"
-                                       stroke="#3b82f6"
+                                       stroke="var(--color-accent-blue)"
                                        strokeWidth={3}
                                        dot={false}
                                        isAnimationActive={true}

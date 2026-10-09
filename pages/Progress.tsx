@@ -3,39 +3,30 @@ import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
-import { FinancialGoal, Achievement, LinkedAsset, AssetGroup } from '../types';
-import { Home, Plane, Car, Shield, Wallet, PlusCircle, Pin, Trash2, Edit2, X, Zap, Link as LinkIcon, Target, Trophy, Lock, Medal, BarChart3, Star, CheckCircle, Settings, ChevronLeft, Plus, ArrowUpRight, Save } from 'lucide-react';
+import { FinancialGoal, Achievement, AssetGroup } from '../types';
+import { Home, Plane, Car, Shield, Wallet, PlusCircle, Target, Trophy, CheckCircle, Settings, Plus, Save } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
 import { useAuth } from '../context/AuthContext';
-import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../utils/currency';
-import { ANIMATION_DURATION_MS, ANIMATION_EASING, STAGGER_DELAY_MS } from '../src/constants/animations';
+import { STAGGER_DELAY_MS } from '../src/constants/animations';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
-    blue: '#3b82f6',
-    indigo: '#6366f1',
-    emerald: '#10b981',
-    orange: '#f97316',
-    rose: '#f43f5e'
+    blue: 'var(--color-accent-blue)',
+    indigo: 'var(--color-accent-indigo)',
+    emerald: 'var(--color-accent-green)',
+    orange: 'var(--color-accent-amber)',
+    rose: 'var(--color-accent-red)'
 };
 
 const Progress: React.FC = () => {
-    const { t } = useTranslation();
-    const { goals, positions, achievements, assetGroups, saveGoal, deleteGoal, toggleGoalPin, addAssetGroup, updateAssetGroup, deleteAssetGroup } = useData();
+    const { goals, positions, achievements, assetGroups, saveGoal, deleteGoal, toggleGoalPin, addAssetGroup, updateAssetGroup } = useData();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
     const currency = user?.preferences?.currency || 'USD';
     const [activeTab, setActiveTab] = useState<'goals' | 'achievements'>('goals');
     const [searchParams, setSearchParams] = useSearchParams();
-    const [animActive, setAnimActive] = useState(false);
-
-    useEffect(() => {
-        setAnimActive(false);
-        const timer = setTimeout(() => setAnimActive(true), 50);
-        return () => clearTimeout(timer);
-    }, [activeTab]);
 
     // --- GOAL MODAL STATE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -279,7 +270,7 @@ const Progress: React.FC = () => {
                                                 <button
                                                     key={key}
                                                     type="button"
-                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as any })}
+                                                    onClick={() => setEditingGoal({ ...editingGoal, iconType: key as keyof typeof ICON_MAP })}
                                                     className={`p-2.5 rounded-lg border transition-all ${isSelected ? 'bg-brand/10 border-brand text-brand' : 'border-subtle text-secondary hover:bg-subtle'}`}
                                                 >
                                                     <Icon size={18} />
@@ -294,13 +285,13 @@ const Progress: React.FC = () => {
                                     <div className="flex gap-2">
                                         {Object.keys(GOAL_COLOR_TOKENS).map((c) => {
                                             const isSelected = editingGoal.color === c;
-                                            const hex = GOAL_COLOR_TOKENS[c];
+                                            const colorValue = GOAL_COLOR_TOKENS[c];
                                             return (
                                                 <button
                                                     key={c}
                                                     type="button"
                                                     onClick={() => setEditingGoal({ ...editingGoal, color: c })}
-                                                    style={{ backgroundColor: hex }}
+                                                    style={{ backgroundColor: colorValue }}
                                                     className={`w-8 h-8 rounded-lg transition-transform ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-110' : 'opacity-80 hover:opacity-100'}`}
                                                 />
                                             );
@@ -318,7 +309,7 @@ const Progress: React.FC = () => {
                                         onClick={() => setEditingGoal({ ...editingGoal, method: 'dynamic' })}
                                         className={`p-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 transition-all ${editingGoal.method === 'dynamic' ? 'bg-card border-brand text-brand shadow-sm' : 'border-subtle text-secondary hover:bg-subtle'}`}
                                     >
-                                        <Zap size={14} /> Auto-Track Assets
+                                        <PlusCircle size={14} /> Auto-Track Assets
                                     </button>
                                     <button
                                         type="button"

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { userRepository } from '../src/services/repositories';
 
 interface AuthContextType {
   user: User | null;
@@ -19,25 +20,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check local storage on mount
+  // Check repository on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('glassfolio_user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // Ensure preferences exist (for legacy data)
-      if (!parsedUser.preferences) {
-        parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' };
+    const loadUser = async () => {
+      try {
+        const storedUser = await userRepository.getUser();
+        if (storedUser) {
+          const parsedUser = { ...storedUser };
+          // Ensure preferences exist (for legacy data)
+          if (!parsedUser.preferences) {
+            parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' };
+          }
+          if (!parsedUser.preferences.language) {
+            parsedUser.preferences.language = 'en';
+          }
+          if (!parsedUser.preferences.dateFormat) {
+            parsedUser.preferences.dateFormat = 'DD/MM/YYYY';
+          }
+          setUser(parsedUser);
+        }
+      } catch (err) {
+        console.error('Failed to load user from repository', err);
+      } finally {
+        setIsLoading(false);
       }
-      // Add language or dateFormat if missing from legacy data
-      if (!parsedUser.preferences.language) {
-        parsedUser.preferences.language = 'en';
-      }
-      if (!parsedUser.preferences.dateFormat) {
-        parsedUser.preferences.dateFormat = 'DD/MM/YYYY';
-      }
-      setUser(parsedUser);
-    }
-    setIsLoading(false);
+    };
+    loadUser();
   }, []);
 
   // Theme Effect
@@ -92,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         // Demo Credentials
         if (email === 'demo@glassfolio.com' && password === 'password') {
           const demoUser: User = {
@@ -105,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             level: 5
           };
           setUser(demoUser);
-          localStorage.setItem('glassfolio_user', JSON.stringify(demoUser));
+          await userRepository.saveUser(demoUser);
           resolve();
         } else {
           reject(new Error('Invalid email or password. Try demo@glassfolio.com / password'));
@@ -116,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, name: string): Promise<void> => {
     return new Promise((resolve) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         const newUser: User = {
           id: Math.random().toString(36).substr(2, 9),
           name,
@@ -127,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           level: 1
         };
         setUser(newUser);
-        localStorage.setItem('glassfolio_user', JSON.stringify(newUser));
+        await userRepository.saveUser(newUser);
         resolve();
       }, 1000);
     });
@@ -135,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('glassfolio_user');
+    userRepository.clearUser();
     // Reset to default styling on logout
     document.documentElement.classList.add('dark');
     document.documentElement.setAttribute('data-theme', 'night');
@@ -143,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfile = async (data: Partial<User>): Promise<void> => {
     return new Promise((resolve) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (user) {
           const updatedUser = { ...user, ...data };
           // If preferences are partial, merge them
@@ -157,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
           }
           setUser(updatedUser);
-          localStorage.setItem('glassfolio_user', JSON.stringify(updatedUser));
+          await userRepository.saveUser(updatedUser);
         }
         resolve();
       }, 500); // Simulate network delay
