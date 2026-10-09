@@ -42,7 +42,7 @@ import {
 // HELPER TYPES
 // ============================================================================
 
-interface EnrichedTransaction extends UnifiedTransaction {
+export interface EnrichedTransaction extends UnifiedTransaction {
     account?: Account;
     institute?: Institute;
     instrument?: Instrument;
