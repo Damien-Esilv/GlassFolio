@@ -5,14 +5,11 @@ import {
    ArrowLeft,
    Coins,
    ExternalLink,
-   Sparkles,
    Scale,
    Percent,
    CheckCircle2,
-   ShieldCheck,
    ArrowRight,
    Layers,
-   Check,
    Globe,
    PieChart
 } from 'lucide-react';
@@ -168,7 +165,7 @@ const FeeAnalysis: React.FC = () => {
 
       return Array.from(keysMap.entries()).map(([key, labelKey]) => {
          const row: Record<string, string | number> = {
-            categoryName: t(`reports:feeAnalysis.${labelKey}` as any) || key
+            categoryName: t(`reports:feeAnalysis.${labelKey}` as keyof typeof t) || key
          };
 
          selectedCompareSymbols.forEach(sym => {
@@ -183,7 +180,15 @@ const FeeAnalysis: React.FC = () => {
    }, [selectedCompareSymbols, allocationTab, t]);
 
    const cardStyle = "rounded-2xl bg-card p-6 shadow-lg border border-border";
-   const ETF_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+   const ETF_COLORS = [
+      'var(--color-accent-blue)',
+      'var(--color-accent-green)',
+      'var(--color-accent-amber)',
+      'var(--color-accent-indigo)',
+      'var(--color-accent-rose)',
+      'var(--color-accent-cyan)',
+      'var(--color-accent-orange)'
+   ];
 
    return (
       <div className="space-y-8">
@@ -236,7 +241,7 @@ const FeeAnalysis: React.FC = () => {
             <div className={cardStyle}>
                <div className="flex items-center justify-between mb-2">
                   <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:feeAnalysis.potentialAnnualSavings')}</span>
-                  <Sparkles size={18} className="text-accent-green" />
+                  <Coins size={18} className="text-accent-green" />
                </div>
                <div className="text-3xl font-extrabold text-accent-green">
                   <AnimatedCounter value={feeAnalysis.potentialAnnualSavings} currency={currency} locale={locale} />
@@ -260,13 +265,13 @@ const FeeAnalysis: React.FC = () => {
             <div className={`${cardStyle} border-accent-green/30 bg-accent-green/5 space-y-6`}>
                <div className="flex items-start gap-4">
                   <div className="p-3 rounded-2xl bg-accent-green/10 text-accent-green shrink-0">
-                     <ShieldCheck size={28} />
+                     <Coins size={28} />
                   </div>
                   <div>
                      <div className="flex items-center gap-2">
                         <h3 className="text-xl font-bold text-primary">{t('reports:feeAnalysis.allOptimizedTitle')}</h3>
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-accent-green/10 text-accent-green text-xs font-bold">
-                           <Check size={12} />
+                           <CheckCircle2 size={12} />
                            100% TER Optimal
                         </span>
                      </div>
@@ -669,7 +674,7 @@ const FeeAnalysis: React.FC = () => {
                               {sym} — {allocationTab === 'sectors' ? t('reports:feeAnalysis.topSector') : t('reports:feeAnalysis.topRegion')}
                            </span>
                            <span className="text-sm font-extrabold text-primary" style={{ color }}>
-                              {t(`reports:feeAnalysis.${topItem.labelKey}` as any) || topItem.labelKey}
+                              {t(`reports:feeAnalysis.${topItem.labelKey}` as keyof typeof t) || topItem.labelKey}
                            </span>
                         </div>
                         <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-card border border-subtle text-primary">
@@ -828,8 +833,8 @@ const FeeAnalysis: React.FC = () => {
                   <AreaChart key={horizonYears} data={feeDragPoints} margin={{ top: 10, right: 30, left: 20, bottom: 25 }}>
                      <defs>
                         <linearGradient id="colorOptimized" x1="0" y1="0" x2="0" y2="1">
-                           <stop offset="5%" stopColor="var(--color-accent-green, #10b981)" stopOpacity={0.3} />
-                           <stop offset="95%" stopColor="var(--color-accent-green, #10b981)" stopOpacity={0.0} />
+                           <stop offset="5%" stopColor="var(--color-accent-green)" stopOpacity={0.3} />
+                           <stop offset="95%" stopColor="var(--color-accent-green)" stopOpacity={0.0} />
                         </linearGradient>
                         <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.25} />
@@ -895,7 +900,7 @@ const FeeAnalysis: React.FC = () => {
                         type="monotone"
                         name="optimizedFeeValue"
                         dataKey="optimizedFeeValue"
-                        stroke="var(--color-accent-green, #10b981)"
+                        stroke="var(--color-accent-green)"
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorOptimized)"

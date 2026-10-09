@@ -36,6 +36,15 @@ export const CURRENCY_SYMBOLS: Record<string, string> = SUPPORTED_CURRENCIES.red
 );
 
 /**
+ * Standard rounding helper for monetary calculations to avoid floating point inaccuracies.
+ */
+export function roundCurrency(value: number, decimals: number = 2): number {
+  if (isNaN(value) || !isFinite(value)) return 0;
+  const factor = Math.pow(10, decimals);
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+/**
  * Format a number as currency
  * @param value The numeric value to format
  * @param currency Code such as USD, EUR, etc.
@@ -57,7 +66,7 @@ export function formatCurrency(
       currency: upperCurrency,
       ...options,
     }).format(value);
-  } catch (e) {
+  } catch {
     // Fallback if Intl doesn't support the code (e.g. some crypto symbols or custom currencies)
     const symbol = CURRENCY_SYMBOLS[upperCurrency] || upperCurrency;
     const formattedNum = value.toLocaleString(locale, {

@@ -1,9 +1,9 @@
-import { Position, PositionFilter, Transaction, DashboardSummary } from '../../types';
+import { Position, PositionFilter, DashboardSummary } from '../../types';
 import { db, delay } from './db';
-import { convertToLegacyTransaction } from './transformers';
 import { refreshPositionPrices } from './priceService';
 import { currencyService } from './currencyService';
 import { formatChartDate, DateFormatPattern } from '../../utils/date';
+import { roundCurrency } from '../../utils/currency';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
 
@@ -107,10 +107,10 @@ export const portfolioService = {
 
         // Calculate PL
         positions.forEach(p => {
-            p.marketValue = p.quantity * p.lastPrice;
-            p.unrealizedPL = p.marketValue - (p.quantity * p.avgCost);
+            p.marketValue = roundCurrency(p.quantity * p.lastPrice);
+            p.unrealizedPL = roundCurrency(p.marketValue - (p.quantity * p.avgCost));
             const invested = p.quantity * p.avgCost;
-            p.unrealizedPLPercent = invested > 0 ? (p.unrealizedPL / invested) * 100 : 0;
+            p.unrealizedPLPercent = invested > 0 ? roundCurrency((p.unrealizedPL / invested) * 100) : 0;
         });
 
         // Save calculated positions to DB (cache)
@@ -134,19 +134,21 @@ export const portfolioService = {
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
         const rates = await currencyService.getExchangeRates(uniqueCurrencies, baseCurrency);
 
-        const totalValue = positions.reduce((sum, p) => {
+        const rawTotalValue = positions.reduce((sum, p) => {
             const valInBase = currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
             return sum + valInBase;
         }, 0);
+        const totalValue = roundCurrency(rawTotalValue);
 
-        const totalInvested = positions.reduce((sum, p) => {
+        const rawTotalInvested = positions.reduce((sum, p) => {
             const costBasis = p.quantity * p.avgCost;
             const costInBase = currencyService.convertAmount(costBasis, p.currency || 'EUR', baseCurrency, rates);
             return sum + costInBase;
         }, 0);
+        const totalInvested = roundCurrency(rawTotalInvested);
 
-        const totalPL = totalValue - totalInvested;
-        const plPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
+        const totalPL = roundCurrency(totalValue - totalInvested);
+        const plPercent = totalInvested > 0 ? roundCurrency((totalPL / totalInvested) * 100) : 0;
 
         const transactions = await transactionRepository.getAll();
         const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -236,7 +238,7 @@ export const portfolioService = {
 
             return {
                 name,
-                value: Math.round(pointValue * 100) / 100
+                value: roundCurrency(pointValue)
             };
         });
 

@@ -30,13 +30,6 @@ const RealizedUnrealizedPL: React.FC = () => {
       return positions.filter(p => selectedCategories.some(cat => isAssetClassMatch(p.type, cat)));
    }, [positions, selectedCategories]);
 
-   const filteredTransactions = useMemo(() => {
-      // NOTE: This assumes transactions have a type or we can link them, but in our mock we just apply a ratio if filtered
-      if (selectedCategories.length === 0) return transactions;
-      // If transactions don't have asset class directly, this is a mock workaround
-      return transactions;
-   }, [transactions, selectedCategories]);
-
    // Calculate total Unrealized P&L from current positions
    const unrealizedPL = useMemo(() => {
       return filteredPositions.reduce((sum, p) => {
@@ -145,17 +138,17 @@ const RealizedUnrealizedPL: React.FC = () => {
    const distributionData = useMemo(() => {
       if (plMode === 'REALIZED') {
          return [
-            { name: t('reports:pl.realizedPL'), value: Math.max(0, realizedPL), color: '#10b981' }
+            { name: t('reports:pl.realizedPL'), value: Math.max(0, realizedPL), color: 'var(--color-accent-green)' }
          ];
       }
       if (plMode === 'UNREALIZED') {
          return [
-            { name: t('reports:pl.unrealizedPL'), value: Math.max(0, unrealizedPL), color: '#3b82f6' }
+            { name: t('reports:pl.unrealizedPL'), value: Math.max(0, unrealizedPL), color: 'var(--color-accent-blue)' }
          ];
       }
       return [
-         { name: t('reports:pl.realizedPL'), value: Math.max(0, realizedPL), color: '#10b981' },
-         { name: t('reports:pl.unrealizedPL'), value: Math.max(0, unrealizedPL), color: '#3b82f6' }
+         { name: t('reports:pl.realizedPL'), value: Math.max(0, realizedPL), color: 'var(--color-accent-green)' },
+         { name: t('reports:pl.unrealizedPL'), value: Math.max(0, unrealizedPL), color: 'var(--color-accent-blue)' }
       ];
    }, [realizedPL, unrealizedPL, plMode, t]);
 
@@ -358,7 +351,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                         {periodicPLData.map((entry, index) => (
                            <Cell
                               key={`cell-${index}`}
-                              fill={entry.pl >= 0 ? 'var(--color-accent-green, #10b981)' : 'var(--color-accent-red, #ef4444)'}
+                              fill={entry.pl >= 0 ? 'var(--color-accent-green)' : 'var(--color-accent-red)'}
                            />
                         ))}
                      </Bar>
@@ -458,7 +451,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                            {positionPLChartData.map((entry, index) => (
                               <Cell
                                  key={`cell-${index}`}
-                                 fill={entry.pl >= 0 ? 'var(--color-accent-green, #10b981)' : 'var(--color-accent-red, #ef4444)'}
+                                 fill={entry.pl >= 0 ? 'var(--color-accent-green)' : 'var(--color-accent-red)'}
                               />
                            ))}
                         </Bar>

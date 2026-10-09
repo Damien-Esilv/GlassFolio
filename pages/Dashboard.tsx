@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, PieChart, Pie, Cell, XAxis } from 'recharts';
-import { ArrowUpRight, Trophy, Wallet, AlertTriangle, Star, BarChart3, PlusCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight, AlertTriangle, PlusCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
-import { Achievement, DashboardSummary, Position } from '../types';
+import { DashboardSummary, Position } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { portfolioService } from '../src/services/portfolioService';
 import { currencyService } from '../src/services/currencyService';
@@ -84,7 +84,7 @@ const Dashboard: React.FC = () => {
         type: assetClassId,
         value: val,
         percentage: (val / total) * 100,
-        color: config?.hex || '#3b82f6'
+        color: config?.hex || 'var(--color-accent-blue)'
       };
     }).sort((a, b) => b.value - a.value);
   }, [positions, currency, t]);
@@ -202,21 +202,21 @@ const Dashboard: React.FC = () => {
     // Best Performer: Green if positive, Red if negative
     // Worst Performer: Red if negative, ORANGE if positive
     let badgeBg = 'bg-accent-green/10 text-accent-green';
-    let strokeColor = 'var(--color-accent-green, #10b981)';
+    let strokeColor = 'var(--color-accent-green)';
     const gradientId = `sparkGradient-${position.id}-${isWorst ? 'worst' : 'best'}`;
 
     if (isWorst) {
       if (isPositive) {
         badgeBg = 'bg-amber-500/10 text-amber-500';
-        strokeColor = '#f59e0b';
+        strokeColor = 'var(--color-accent-amber)';
       } else {
         badgeBg = 'bg-accent-red/10 text-accent-red';
-        strokeColor = 'var(--color-accent-red, #ef4444)';
+        strokeColor = 'var(--color-accent-red)';
       }
     } else {
       if (!isPositive) {
         badgeBg = 'bg-accent-red/10 text-accent-red';
-        strokeColor = 'var(--color-accent-red, #ef4444)';
+        strokeColor = 'var(--color-accent-red)';
       }
     }
 
