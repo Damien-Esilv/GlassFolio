@@ -22,7 +22,7 @@ interface AchievementBadgeProps {
     onTogglePin?: (e: React.MouseEvent) => void;
 }
 
-const AchievementBadge: React.FC<AchievementBadgeProps> = ({ 
+const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
     achievement: ach, 
     onClick, 
     compact = false,
@@ -137,4 +137,6 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
     );
 };
 
+// Memoize AchievementBadge to avoid unnecessary re-renders when parent lists or dashboards re-render
+export const AchievementBadge = React.memo(AchievementBadgeComponent);
 export default AchievementBadge;
