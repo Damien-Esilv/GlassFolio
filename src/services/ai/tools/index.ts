@@ -9,6 +9,12 @@ import {
   suggestNextMilestoneTool, 
   listQuestsTool 
 } from './gamificationTools';
+import {
+  getSecurityStatusTool,
+  listVaultSecretsTool,
+  lockVaultTool,
+  rotateEncryptionKeyTool,
+} from './securityTools';
 
 /**
  * Initializes and registers all standard GlassFolio AI / MCP tools.
@@ -27,6 +33,10 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getGamificationStatusTool);
   aiToolRegistry.registerTool(suggestNextMilestoneTool);
   aiToolRegistry.registerTool(listQuestsTool);
+  aiToolRegistry.registerTool(getSecurityStatusTool);
+  aiToolRegistry.registerTool(listVaultSecretsTool);
+  aiToolRegistry.registerTool(lockVaultTool);
+  aiToolRegistry.registerTool(rotateEncryptionKeyTool);
 }
 
 // Auto-register on import
@@ -45,4 +55,8 @@ export {
   getGamificationStatusTool,
   suggestNextMilestoneTool,
   listQuestsTool,
+  getSecurityStatusTool,
+  listVaultSecretsTool,
+  lockVaultTool,
+  rotateEncryptionKeyTool,
 };

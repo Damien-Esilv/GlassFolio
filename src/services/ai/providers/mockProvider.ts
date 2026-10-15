@@ -6,6 +6,8 @@ import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
  * Allows instant, zero-config testing and offline demos without requiring an external API key.
  */
 export class MockProvider implements AIProvider {
+  constructor(private enableThinking: boolean = true) {}
+
   public async sendMessage(
     messages: ChatMessage[],
     _tools: unknown[],
@@ -21,7 +23,17 @@ export class MockProvider implements AIProvider {
 
     // 1. If previous step was a tool execution response, synthesize the answer
     if (lastMessage.role === 'tool') {
-      return this.synthesizeToolResult(lastMessage);
+      const res = this.synthesizeToolResult(lastMessage);
+      if (this.enableThinking && !res.content.startsWith('<think>')) {
+        const thought =
+          `<think>\n` +
+          `1. Analyse des données brutes renvoyées par l'outil "${lastMessage.toolName}".\n` +
+          `2. Calcul des ratios et agrégations financières pour la synthèse.\n` +
+          `3. Formatage de la réponse en Markdown avec métriques clés.\n` +
+          `</think>\n\n`;
+        return { ...res, content: `${thought}${res.content}` };
+      }
+      return res;
     }
 
     // 2. Analyze user intent to trigger relevant tools

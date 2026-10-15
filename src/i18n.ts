@@ -14,6 +14,7 @@ import settingsEN from '../locales/en/settings.json';
 import reportsEN from '../locales/en/reports.json';
 import taxEN from '../locales/en/tax.json';
 import aiEN from '../locales/en/ai.json';
+import securityEN from '../locales/en/security.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -27,6 +28,7 @@ import settingsFR from '../locales/fr/settings.json';
 import reportsFR from '../locales/fr/reports.json';
 import taxFR from '../locales/fr/tax.json';
 import aiFR from '../locales/fr/ai.json';
+import securityFR from '../locales/fr/security.json';
 
 const resources = {
     en: {
@@ -42,6 +44,7 @@ const resources = {
         reports: reportsEN,
         tax: taxEN,
         ai: aiEN,
+        security: securityEN,
     },
     fr: {
         common: commonFR,
@@ -56,6 +59,7 @@ const resources = {
         reports: reportsFR,
         tax: taxFR,
         ai: aiFR,
+        security: securityFR,
     },
 };
 

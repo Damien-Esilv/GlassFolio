@@ -30,14 +30,14 @@ const TaxSummary: React.FC = () => {
             {/* Under Construction Hero Card */}
             <div className="rounded-3xl bg-card border border-subtle p-8 md:p-12 shadow-xl text-center flex flex-col items-center justify-center max-w-3xl mx-auto relative overflow-hidden">
                 {/* Background glow */}
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-warning-subtle rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="p-4 rounded-2xl bg-amber-500/10 text-amber-500 mb-6 flex items-center justify-center">
+                <div className="p-4 rounded-2xl bg-warning-subtle text-warning mb-6 flex items-center justify-center">
                     <HardHat size={48} className="animate-bounce" />
                 </div>
 
-                <span className="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 mb-4">
+                <span className="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-warning-subtle text-warning border border-warning/20 mb-4">
                     {t('reports:tax.underConstructionBadge')}
                 </span>
 

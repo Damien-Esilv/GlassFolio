@@ -87,6 +87,57 @@ class GuardrailsService {
   public clear(): void {
     this.pendingActions.clear();
   }
+
+  /**
+   * Redacts sensitive secrets, recovery keys, and vault envelopes from text before sending to LLM context.
+   */
+  public redactSensitiveExfiltrations(content: string): string {
+    if (!content) return content;
+
+    let sanitized = content;
+
+    // 1. API Keys (OpenAI, Anthropic, Gemini, AWS)
+    sanitized = sanitized.replace(/sk-[a-zA-Z0-9_-]{20,}/g, '[REDACTED_API_KEY]');
+    sanitized = sanitized.replace(/AIzaSy[a-zA-Z0-9_-]{30,}/g, '[REDACTED_API_KEY]');
+    sanitized = sanitized.replace(/AKIA[0-9A-Z]{16}/g, '[REDACTED_API_KEY]');
+
+    // 2. Recovery keys (8 groups of 4 uppercase alphanumeric chars)
+    sanitized = sanitized.replace(
+      /\b([A-Z0-9]{4}-){7}[A-Z0-9]{4}\b/g,
+      '[REDACTED_RECOVERY_KEY]'
+    );
+
+    // 3. TOTP secrets / URIs
+    sanitized = sanitized.replace(/otpauth:\/\/[^\s"']+/g, '[REDACTED_TOTP_URI]');
+    sanitized = sanitized.replace(/secret=[A-Z2-7]{20,}/g, 'secret=[REDACTED_TOTP_SEED]');
+
+    // 4. Encrypted vault envelopes / header payloads
+    sanitized = sanitized.replace(/\{"v":1,"alg":"A256GCM"[^}]+\}/g, '[REDACTED_ENCRYPTED_ENVELOPE]');
+    sanitized = sanitized.replace(/"wrappedKeys":\{[^}]+\}/g, '"wrappedKeys":[REDACTED_VAULT_KEYS]');
+    sanitized = sanitized.replace(/gf_vault_header["']?\s*[:=]\s*\{[^}]+\}/gi, 'gf_vault_header:[REDACTED_VAULT_HEADER]');
+
+    return sanitized;
+  }
+
+  /**
+   * Asserts that a context or tool output does not leak raw secrets, recovery keys, or vault envelopes.
+   * Throws an Error if an exfiltration risk is detected.
+   */
+  public assertSafeContext(content: string): void {
+    if (!content) return;
+
+    if (/sk-[a-zA-Z0-9_-]{20,}/.test(content) || /AIzaSy[a-zA-Z0-9_-]{30,}/.test(content)) {
+      throw new Error('Potential API key exfiltration detected in AI context');
+    }
+
+    if (/\b([A-Z0-9]{4}-){7}[A-Z0-9]{4}\b/.test(content)) {
+      throw new Error('Potential Master Recovery Key exfiltration detected in AI context');
+    }
+
+    if (/"wrappedKeys":\{/.test(content) || /gf_vault_header/i.test(content)) {
+      throw new Error('Potential Vault Header/DEK exfiltration detected in AI context');
+    }
+  }
 }
 
 export const guardrailsService = new GuardrailsService();

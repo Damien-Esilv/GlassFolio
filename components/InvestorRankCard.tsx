@@ -101,7 +101,7 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                                         Lv. {rank.levelMin} - {rank.levelMax === 999 ? '∞' : rank.levelMax}
                                     </span>
                                     {isUnlocked ? (
-                                        <CheckCircle2 size={16} className="text-emerald-400" />
+                                        <CheckCircle2 size={16} className="text-positive" />
                                     ) : (
                                         <Lock size={14} className="text-tertiary" />
                                     )}
@@ -148,7 +148,7 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                                             ))}
                                         </div>
                                         {theme.unlocked ? (
-                                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                            <span className="text-[10px] font-bold text-positive bg-positive-subtle px-2 py-0.5 rounded-full">
                                                 {t('gamification:unlocked')}
                                             </span>
                                         ) : (

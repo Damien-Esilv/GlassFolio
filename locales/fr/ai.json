@@ -30,6 +30,10 @@
     "inputPlaceholder": "Posez une question financière ou demandez une action...",
     "send": "Envoyer",
     "thinking": "Analyse financière en cours...",
+    "ollamaLoadingModel": "Chargement du modèle Ollama ({{model}}) en mémoire...",
+    "ollamaLoadingVram": "Initialisation des poids du modèle en VRAM... Le premier lancement peut prendre un instant.",
+    "ollamaModelColdStart": "Le modèle Ollama ({{model}}) n'est pas encore en mémoire. Initialisation en cours...",
+    "ollamaModelWarm": "Modèle Ollama actif. Génération de la réponse...",
     "disclaimer": "L'analyse financière fournie par l'IA est indicative. Vérifiez toujours avant toute décision réelle d'investissement.",
     "errorMessage": "Une erreur est survenue lors du traitement. Veuillez vérifier la configuration de l'assistant.",
     "toolExecuted": "Outil exécuté : {{toolName}}",
@@ -131,6 +135,53 @@
       "copied": "Copié !"
     },
     "save": "Enregistrer les Préférences IA",
-    "saved": "Configuration IA enregistrée avec succès."
+    "saved": "Configuration IA enregistrée avec succès.",
+    "ollamaConfigTitle": "Configuration Ollama Local",
+    "cloudConfigTitle": "Configuration Clé API (BYOK)",
+    "thinkingMode": {
+      "title": "Mode Réflexion / Raisonnement (<think>)",
+      "description": "Active le raisonnement pas-à-pas pour les modèles compatibles (DeepSeek-R1, Qwen 2.5, Ollama). Affiche la pensée en direct avant la réponse finale.",
+      "enabled": "Mode réflexion activé",
+      "disabled": "Mode réflexion désactivé"
+    }
+  },
+  "markdown": {
+    "thoughtProcess": "Processus de réflexion",
+    "showThought": "Afficher la réflexion",
+    "hideThought": "Masquer la réflexion",
+    "thinkingLive": "Raisonnement en cours...",
+    "thoughtCompleted": "Processus de réflexion terminé",
+    "expandModal": "Agrandir le processus de réflexion",
+    "collapseInline": "Réduire",
+    "expandInline": "Déplier",
+    "copyThought": "Copier la réflexion",
+    "thoughtCopied": "Réflexion copiée !",
+    "copyCode": "Copier le code",
+    "copied": "Copié !"
+  },
+  "thoughtModal": {
+    "title": "Processus de Réflexion & Raisonnement de l'IA",
+    "subtitle": "Chaîne de réflexion intérieure étape par étape générée avant la réponse finale.",
+    "close": "Fermer",
+    "copy": "Copier la réflexion",
+    "copied": "Copié !",
+    "status": "Raisonnement achevé",
+    "words": "{{count}} mots"
+  },
+  "edit": {
+    "editMessage": "Modifier le message",
+    "saveAndSubmit": "Enregistrer & Envoyer",
+    "cancel": "Annuler",
+    "edited": "modifié"
+  },
+  "errors": {
+    "ollamaConnectionFailedTitle": "Connexion à Ollama impossible",
+    "ollamaConnectionFailedBody": "L'assistant n'a pas pu joindre votre serveur local Ollama sur `{{endpoint}}`.\n\n**Comment résoudre ce problème ?**\n- **Vérifiez qu'Ollama est bien lancé :** Ouvrez l'application Ollama ou exécutez `ollama serve` dans votre terminal.\n- **Vérifiez l'adresse :** Dans **Réglages > IA & MCP**, vérifiez l'URL de connexion (par défaut : `http://localhost:11434`).\n- **Testez la connexion :** Utilisez le bouton « Tester la connexion » dans les Réglages pour vous assurer de la liaison.",
+    "ollamaModelNotFoundTitle": "Modèle Ollama '{{model}}' introuvable",
+    "ollamaModelNotFoundBody": "Le modèle configuré (`{{model}}`) n'est pas installé sur votre instance locale Ollama.\n\n**Pour le télécharger :**\nExécutez cette commande dans votre terminal :\n```bash\nollama pull {{model}}\n```\n*Astuce : Vous pouvez aussi vous rendre dans **Réglages > IA & MCP** pour choisir parmi les modèles déjà installés sur votre machine.*",
+    "ollamaModelNotFoundWithAvailable": "Le modèle `{{model}}` n'est pas installé sur votre machine.\n\n**Modèles actuellement installés sur votre ordinateur :**\n{{available}}\n\n**Pour télécharger `{{model}}` :**\n```bash\nollama pull {{model}}\n```\nOu sélectionnez l'un de vos modèles installés dans **Réglages > IA & MCP**.",
+    "ollamaServerErrorTitle": "Erreur retournée par Ollama (HTTP {{status}})",
+    "ollamaServerResponseBody": "{{message}}\n\n*Conseil : Vérifiez la console Ollama ou choisissez un autre modèle dans **Réglages > IA & MCP**.*",
+    "generalError": "Une erreur est survenue lors de l'échange avec l'assistant : {{error}}"
   }
 }

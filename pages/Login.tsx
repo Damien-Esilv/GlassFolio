@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { authService } from '../src/services/security/authService';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
@@ -14,13 +15,79 @@ const Login: React.FC = () => {
    const [password, setPassword] = useState('');
    const [error, setError] = useState('');
    const [isLoading, setIsLoading] = useState(false);
+   const [lockoutSeconds, setLockoutSeconds] = useState(() => authService.getLockoutRemainingSeconds());
+
+   useEffect(() => {
+      if (lockoutSeconds <= 0) return;
+      const interval = setInterval(() => {
+         const remaining = authService.getLockoutRemainingSeconds();
+         setLockoutSeconds(remaining);
+         if (remaining <= 0) {
+            clearInterval(interval);
+            setError('');
+         }
+      }, 1000);
+      return () => clearInterval(interval);
+   }, [lockoutSeconds]);
 
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
+
+      const remaining = authService.getLockoutRemainingSeconds();
+      if (remaining > 0) {
+         setLockoutSeconds(remaining);
+         setError(t('auth:login.accountLocked', { seconds: remaining }));
+         return;
+      }
+
       setIsLoading(true);
       try {
          await login(email, password);
+         navigate('/');
+      } catch (err: unknown) {
+         const currentLockout = authService.getLockoutRemainingSeconds();
+         if (currentLockout > 0) {
+            setLockoutSeconds(currentLockout);
+            setError(t('auth:login.accountLocked', { seconds: currentLockout }));
+         } else {
+            const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
+            setError(message);
+         }
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
+   const handleGoogleLogin = async () => {
+      setError('');
+      setIsLoading(true);
+      try {
+         await authService.signInWithOAuth('google');
+      } catch {
+         setError(t('auth:login.googleSandboxError'));
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
+   const handleAppleLogin = async () => {
+      setError('');
+      setIsLoading(true);
+      try {
+         await authService.signInWithOAuth('apple');
+      } catch {
+         setError(t('auth:login.appleSandboxError'));
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
+   const handleExploreDemo = async () => {
+      setError('');
+      setIsLoading(true);
+      try {
+         await login('demo@glassfolio.com', 'password');
          navigate('/');
       } catch (err: unknown) {
          const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
@@ -28,20 +95,6 @@ const Login: React.FC = () => {
       } finally {
          setIsLoading(false);
       }
-   };
-
-   const handleGoogleLogin = () => {
-      // Visual simulation
-      setIsLoading(true);
-      setTimeout(() => {
-         setIsLoading(false);
-         setError(t('auth:login.googleSandboxError'));
-      }, 800);
-   };
-
-   const fillDemo = () => {
-      setEmail('demo@glassfolio.com');
-      setPassword('password');
    };
 
    return (
@@ -53,9 +106,8 @@ const Login: React.FC = () => {
          </div>
 
          <div className="relative w-full max-w-md bg-card/50 border border-subtle backdrop-blur-xl rounded-2xl p-8 shadow-2xl">
-
             <div className="flex flex-col items-center mb-8">
-               <div className="w-12 h-12 bg-brand rounded-xl flex items-center justify-center transform rotate-45 mb-4 shadow-lg shadow-brand/20">
+               <div className="w-12 h-12 bg-brand-static rounded-xl flex items-center justify-center transform rotate-45 mb-4 shadow-lg shadow-brand/20">
                   <div className="transform -rotate-45 text-white font-bold text-xl">
                      <Hexagon size={24} fill="currentColor" />
                   </div>
@@ -66,8 +118,15 @@ const Login: React.FC = () => {
 
             {error && (
                <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-sm">
-                  <AlertCircle size={16} />
-                  {error}
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{error}</span>
+               </div>
+            )}
+
+            {lockoutSeconds > 0 && (
+               <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-center gap-2 text-warning text-xs">
+                  <ShieldAlert size={16} className="shrink-0" />
+                  <span>{t('auth:login.accountLocked', { seconds: lockoutSeconds })}</span>
                </div>
             )}
 
@@ -83,7 +142,7 @@ const Login: React.FC = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                         placeholder={t('auth:login.emailPlaceholder')}
-                      />
+                     />
                   </div>
                </div>
                <div>
@@ -105,13 +164,16 @@ const Login: React.FC = () => {
                   <Link to="#" className="text-xs text-brand hover:text-brand/80">{t('auth:login.forgotPassword')}</Link>
                </div>
 
-               <Button type="submit" className="w-full" isLoading={isLoading}>{t('auth:login.signInButton')}</Button>
+               <Button type="submit" className="w-full" isLoading={isLoading} disabled={lockoutSeconds > 0}>
+                  {t('auth:login.signInButton')}
+               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-subtle">
+            <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
                <button
+                  type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center gap-3 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium mb-3"
+                  className="w-full flex items-center justify-center gap-3 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium"
                >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                      <path className="text-brand" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
@@ -121,11 +183,26 @@ const Login: React.FC = () => {
                   </svg>
                   {t('auth:login.signInWithGoogle')}
                </button>
+
                <button
-                  onClick={fillDemo}
-                  className="w-full text-xs text-secondary hover:text-primary underline"
+                  type="button"
+                  onClick={handleAppleLogin}
+                  className="w-full flex items-center justify-center gap-3 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium"
                >
-                  {t('auth:login.useDemoAccount')}
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.42c.67-.82 1.13-1.96.99-3.12-1 .04-2.22.67-2.93 1.5-.63.73-1.18 1.9-1.03 3.02 1.12.09 2.29-.58 2.97-1.4z" />
+                  </svg>
+                  {t('auth:login.signInWithApple')}
+               </button>
+
+               <button
+                  type="button"
+                  onClick={handleExploreDemo}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm"
+               >
+                  <Sparkles size={16} />
+                  {t('auth:login.exploreDemoAccount')}
                </button>
             </div>
 

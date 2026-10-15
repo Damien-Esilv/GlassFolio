@@ -13,6 +13,7 @@ import { formatChartDate } from '../utils/date';
 import AnimatedCounter from '../components/AnimatedCounter';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../src/constants/animations';
 import { ASSET_CLASSES, ASSET_CLASSES_CONFIG } from '../src/constants/assetClasses';
+import { CHART_SERIES_PALETTE, getAssetStableColor } from '../src/constants/themeTokens';
 
 const PortfolioPerformance: React.FC = () => {
    const { t } = useTranslation();
@@ -54,30 +55,20 @@ const PortfolioPerformance: React.FC = () => {
       return selectedCompareItems.filter(i => !isAssetCategory(i) && i !== 'All' && i !== 'Global Portfolio');
    }, [selectedCompareItems]);
 
-   // Helper to retrieve consistent hex color for asset categories or searched tickers
+   // Helper to retrieve consistent color for asset categories or searched tickers
    const getItemColor = (itemKey: string, customList?: string[]): string => {
       if (itemKey === 'All' || itemKey === 'Global Portfolio') return 'var(--color-accent-indigo)';
       const config = ASSET_CLASSES_CONFIG.find(c => c.id.toLowerCase() === itemKey.toLowerCase());
       if (config && config.hex) return config.hex;
       
-      // Distinctive 4-color palette for custom reference assets (Slot 1: Red, Slot 2: Pink, Slot 3: Cyan, Slot 4: Vivid Orange)
-      const customAssetColors = [
-         'var(--color-accent-red)',
-         'var(--color-accent-rose)',
-         'var(--color-accent-cyan)',
-         'var(--color-accent-amber)'
-      ];
       const refList = customList || selectedReferenceAssets;
       const refIndex = refList.indexOf(itemKey);
 
       if (refIndex !== -1) {
-         return customAssetColors[refIndex % customAssetColors.length];
+         return CHART_SERIES_PALETTE[refIndex % CHART_SERIES_PALETTE.length].cssVar;
       }
 
-      // Fallback deterministic seed for unselected items
-      let seed = 0;
-      for (let c = 0; c < itemKey.length; c++) seed += itemKey.charCodeAt(c);
-      return customAssetColors[seed % customAssetColors.length];
+      return getAssetStableColor(itemKey).cssVar;
    };
 
    useEffect(() => {
@@ -495,10 +486,10 @@ const PortfolioPerformance: React.FC = () => {
                   {isOutperforming ? t('reports:performance.outperformance') : t('reports:performance.underperformance')}
                </span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className={`text-2xl font-extrabold ${isOutperforming ? 'text-accent-green' : 'text-accent-red'}`}>
+                  <span className={`text-2xl font-extrabold ${isOutperforming ? 'text-positive' : 'text-negative'}`}>
                      {isOutperforming ? '+' : ''}{outperformancePct.toFixed(2)}%
                   </span>
-                  {isOutperforming ? <Award size={20} className="text-amber-500" /> : <ShieldAlert size={20} className="text-accent-red" />}
+                  {isOutperforming ? <Award size={20} className="text-warning" /> : <ShieldAlert size={20} className="text-negative" />}
                </div>
                <p className="text-tertiary text-[10px] mt-1">vs Benchmark @ {benchmarkRate}%</p>
             </div>
@@ -597,16 +588,16 @@ const PortfolioPerformance: React.FC = () => {
                                        </span>
                                        <span>{formatCurrency(Number(pVal), currency, locale, { maximumFractionDigits: 0 })}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-amber-500 font-bold">
+                                    <div className="flex justify-between items-center text-warning font-bold">
                                        <span className="flex items-center gap-1.5">
-                                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                                          <span className="w-2.5 h-2.5 rounded-full bg-warning inline-block" />
                                           Benchmark ({benchmarkRate}%)
                                        </span>
                                        <span>{formatCurrency(Number(bVal), currency, locale, { maximumFractionDigits: 0 })}</span>
                                     </div>
                                     <div className="pt-1.5 border-t border-subtle flex justify-between text-[11px] font-bold">
                                        <span className="text-tertiary">Delta</span>
-                                       <span className={diff >= 0 ? 'text-accent-green' : 'text-accent-red'}>
+                                       <span className={diff >= 0 ? 'text-positive' : 'text-negative'}>
                                           {diff >= 0 ? '+' : ''}{formatCurrency(diff, currency, locale, { maximumFractionDigits: 0 })}
                                        </span>
                                     </div>
@@ -717,7 +708,7 @@ const PortfolioPerformance: React.FC = () => {
                      className="px-3 py-1 text-xs font-bold rounded-lg border transition-all"
                      style={{
                         borderColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo)' : 'var(--border-subtle)',
-                        backgroundColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo-subtle, rgba(99, 102, 241, 0.1))' : 'var(--bg-card)',
+                        backgroundColor: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo-subtle)' : 'var(--bg-card)',
                         color: (selectedCompareItems.includes('All') || selectedCompareItems.includes('Global Portfolio')) ? 'var(--color-accent-indigo)' : 'var(--text-tertiary)'
                      }}
                   >
@@ -738,7 +729,7 @@ const PortfolioPerformance: React.FC = () => {
                            className="px-3 py-1 text-xs font-bold rounded-lg border transition-all"
                            style={{
                               borderColor: isSelected ? hexColor : 'var(--border-subtle)',
-                              backgroundColor: isSelected ? `${hexColor}18` : 'var(--bg-card)',
+                              backgroundColor: isSelected ? `color-mix(in srgb, ${hexColor} 18%, transparent)` : 'var(--bg-card)',
                               color: isSelected ? hexColor : 'var(--text-tertiary)'
                            }}
                         >
@@ -757,7 +748,7 @@ const PortfolioPerformance: React.FC = () => {
                            className="px-3 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 shadow-sm"
                            style={{
                               borderColor: hexColor,
-                              backgroundColor: `${hexColor}18`,
+                              backgroundColor: `color-mix(in srgb, ${hexColor} 18%, transparent)`,
                               color: hexColor
                            }}
                         >
@@ -986,7 +977,7 @@ const PortfolioPerformance: React.FC = () => {
                <div>
                   <div className="flex items-center justify-between mb-3 px-1">
                      <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+                        <span className="w-2 h-2 rounded-full bg-accent-purple inline-block" />
                         {t('reports:performance.indexEvolution')}
                      </span>
                   </div>
@@ -1211,7 +1202,7 @@ const PortfolioPerformance: React.FC = () => {
                            {t('reports:performance.selectedCount', { count: tempCatalogSelection.length })}
                         </span>
                         {tempCatalogSelection.length >= 4 && (
-                           <span className="text-[11px] font-bold text-amber-500">
+                           <span className="text-[11px] font-bold text-warning">
                               ({t('reports:performance.maxSelectedNotice')})
                            </span>
                         )}

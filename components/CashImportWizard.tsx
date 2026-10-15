@@ -285,7 +285,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       </div>
 
       {error && (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-rose-400 text-sm flex gap-2">
+        <div className="bg-negative-subtle border border-negative/20 rounded-xl p-4 text-negative text-sm flex gap-2">
           <AlertTriangle size={18} /> {error}
         </div>
       )}
@@ -409,7 +409,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-secondary uppercase flex items-center gap-1">
-                  {t('importWizard.fields.transactionDate')} <span className="text-rose-500">*</span>
+                  {t('importWizard.fields.transactionDate')} <span className="text-negative">*</span>
                 </label>
                 <select
                   value={dateMapping}
@@ -423,7 +423,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-secondary uppercase flex items-center gap-1">
-                  {t('importWizard.fields.amountPrimary')} <span className="text-rose-500">*</span>
+                  {t('importWizard.fields.amountPrimary')} <span className="text-negative">*</span>
                 </label>
                 <select
                   value={amountMapping}

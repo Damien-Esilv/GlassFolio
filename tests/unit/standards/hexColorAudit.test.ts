@@ -5,7 +5,7 @@ import path from 'path';
 /**
  * Section 1.1 Enforcement Test:
  * AI_CODING_STANDARDS.md Section 1.1 states:
- * "Never use hex codes (e.g., #3b82f6) or RGB values directly in React components (.tsx) or inline styles.
+ * "Never use hex codes (e.g., #137fec) or RGB values directly in React components (.tsx) or inline styles.
  * Scanning the codebase for # followed by 6 hex digits outside of index.html or mockData should return 0 results."
  */
 

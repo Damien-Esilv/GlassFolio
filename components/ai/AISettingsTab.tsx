@@ -11,6 +11,7 @@ import {
   EyeOff,
   RefreshCw,
   Cpu,
+  Brain,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { aiSettingsService } from '../../src/services/ai/aiSettingsService';
@@ -127,7 +128,7 @@ export const AISettingsTab: React.FC = () => {
           </div>
         </div>
 
-        <Button type="submit" variant="primary" className="shrink-0">
+        <Button type="submit" variant="primary" size="sm" className="shrink-0 whitespace-nowrap">
           {saveSuccess ? (
             <span className="flex items-center gap-2">
               <Check size={16} />
@@ -170,12 +171,59 @@ export const AISettingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Provider Specific Configurations */}
+      {/* 3. Reasoning & Thinking Mode (<think>) */}
+      <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain size={18} className="text-brand shrink-0" />
+            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</h3>
+          </div>
+          <span
+            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+              settings.enableThinking
+                ? 'bg-primary/10 text-primary border-primary/25'
+                : 'bg-subtle text-tertiary border-subtle'
+            }`}
+          >
+            {settings.enableThinking
+              ? t('ai:settings.thinkingMode.enabled')
+              : t('ai:settings.thinkingMode.disabled')}
+          </span>
+        </div>
+
+        <p className="text-xs text-secondary leading-relaxed">
+          {t('ai:settings.thinkingMode.description')}
+        </p>
+
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
+          <div className="space-y-0.5 pr-4">
+            <span className="text-xs font-semibold text-primary">
+              {settings.enableThinking
+                ? t('ai:settings.thinkingMode.enabled')
+                : t('ai:settings.thinkingMode.disabled')}
+            </span>
+            <p className="text-[11px] text-tertiary">
+              {t('ai:settings.thinkingMode.description')}
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <input
+              type="checkbox"
+              checked={settings.enableThinking}
+              onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
+          </label>
+        </div>
+      </div>
+
+      {/* 4. Provider Specific Configurations */}
       {settings.activeProvider === 'ollama' && (
         <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
           <div className="flex items-center gap-2">
             <Server size={18} className="text-primary" />
-            <h3 className="text-sm font-semibold text-primary">Configuration Ollama Local</h3>
+            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.ollamaConfigTitle')}</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -227,6 +275,28 @@ export const AISettingsTab: React.FC = () => {
             </div>
           </div>
 
+          {/* Thinking / Reasoning Mode Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <Brain size={15} className="text-brand shrink-0" />
+                <span className="text-xs font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</span>
+              </div>
+              <p className="text-[11px] text-secondary leading-relaxed">
+                {t('ai:settings.thinkingMode.description')}
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={settings.enableThinking}
+                onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
+            </label>
+          </div>
+
           {ollamaResult && (
             <div
               className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
@@ -249,7 +319,7 @@ export const AISettingsTab: React.FC = () => {
         <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
           <div className="flex items-center gap-2">
             <Key size={18} className="text-primary" />
-            <h3 className="text-sm font-semibold text-primary">Configuration Clé API (BYOK)</h3>
+            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.cloudConfigTitle')}</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,6 +353,28 @@ export const AISettingsTab: React.FC = () => {
                 className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
               />
             </div>
+          </div>
+
+          {/* Thinking / Reasoning Mode Toggle for Cloud */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <Brain size={15} className="text-brand shrink-0" />
+                <span className="text-xs font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</span>
+              </div>
+              <p className="text-[11px] text-secondary leading-relaxed">
+                {t('ai:settings.thinkingMode.description')}
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={settings.enableThinking}
+                onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
+            </label>
           </div>
         </div>
       )}

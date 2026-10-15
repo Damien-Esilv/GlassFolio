@@ -60,7 +60,8 @@
         "filterAll": "Tous",
         "modeAll": "Tous",
         "modeRealized": "P&L Réalisé",
-        "modeUnrealized": "P&L Latent"
+        "modeUnrealized": "P&L Latent",
+        "assetBreakdown": "P&L latent par actif"
     },
     "feeAnalysis": {
         "title": "Analyse & Optimisation des Frais",

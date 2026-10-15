@@ -24,17 +24,17 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, show
     const safeCurrent = goal.currentAmount || 0;
     const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
 
-    let colorClass = 'bg-blue-500';
-    if (goal.color === 'emerald') colorClass = 'bg-emerald-500';
-    if (goal.color === 'rose') colorClass = 'bg-rose-500';
-    if (goal.color === 'orange') colorClass = 'bg-orange-500';
-    if (goal.color === 'indigo') colorClass = 'bg-indigo-500';
+    let colorClass = 'bg-accent-blue';
+    if (goal.color === 'emerald') colorClass = 'bg-accent-green';
+    if (goal.color === 'rose') colorClass = 'bg-accent-rose';
+    if (goal.color === 'orange') colorClass = 'bg-accent-orange';
+    if (goal.color === 'indigo') colorClass = 'bg-accent-indigo';
 
-    let iconBgClass = 'bg-blue-500/10 text-blue-500';
-    if (goal.color === 'emerald') iconBgClass = 'bg-emerald-500/10 text-emerald-500';
-    if (goal.color === 'rose') iconBgClass = 'bg-rose-500/10 text-rose-500';
-    if (goal.color === 'orange') iconBgClass = 'bg-orange-500/10 text-orange-500';
-    if (goal.color === 'indigo') iconBgClass = 'bg-indigo-500/10 text-indigo-500';
+    let iconBgClass = 'bg-accent-blue/10 text-accent-blue';
+    if (goal.color === 'emerald') iconBgClass = 'bg-accent-green/10 text-accent-green';
+    if (goal.color === 'rose') iconBgClass = 'bg-accent-rose/10 text-accent-rose';
+    if (goal.color === 'orange') iconBgClass = 'bg-accent-orange/10 text-accent-orange';
+    if (goal.color === 'indigo') iconBgClass = 'bg-accent-indigo/10 text-accent-indigo';
 
     return (
         <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-border hover:border-strong transition-all">

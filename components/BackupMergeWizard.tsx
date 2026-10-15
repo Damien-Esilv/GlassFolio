@@ -174,7 +174,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                     )}
 
                     {validationError && (
-                        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center gap-3 text-rose-500 text-sm">
+                        <div className="p-4 bg-negative-subtle border border-negative/30 rounded-xl flex items-center gap-3 text-negative text-sm">
                             <AlertTriangle size={18} className="shrink-0" />
                             <span>{validationError}</span>
                         </div>
@@ -207,7 +207,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                                     onClick={() => setMode('reset')}
                                     className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3 ${
                                         mode === 'reset' 
-                                            ? 'bg-rose-500/10 border-rose-500 text-rose-500 shadow-md' 
+                                            ? 'bg-negative-subtle border-negative text-negative shadow-md' 
                                             : 'bg-subtle border-transparent text-secondary hover:border-border'
                                     }`}
                                 >
@@ -281,7 +281,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                                                             <td className="p-2.5 text-right">
                                                                 <button 
                                                                     onClick={() => handleDeleteRow(activeEntityTab, idx)}
-                                                                    className="p-1 rounded hover:bg-rose-500/10 text-rose-500"
+                                                                    className="p-1 rounded hover:bg-negative-subtle text-negative"
                                                                     title={t('common:buttons.delete')}
                                                                 >
                                                                     <Trash2 size={14} />
@@ -307,7 +307,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                         disabled={!backupData} 
                         isLoading={isImporting} 
                         onClick={handleExecuteImport}
-                        className={mode === 'reset' ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-primary text-white'}
+                        className={mode === 'reset' ? 'bg-negative hover:bg-negative/90 text-white' : 'bg-primary text-white'}
                     >
                         {mode === 'reset' ? t('settings:backupWizard.executeReset') : t('settings:backupWizard.executeMerge')}
                     </Button>

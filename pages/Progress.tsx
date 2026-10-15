@@ -778,7 +778,7 @@ const Progress: React.FC = () => {
                                         key={lvl.level} 
                                         className={`p-4 rounded-xl border flex justify-between items-center ${
                                             isCompleted 
-                                                ? 'bg-emerald-500/10 border-emerald-500/30' 
+                                                ? 'bg-positive-subtle border-positive/30' 
                                                 : isCurrent 
                                                     ? 'bg-brand/10 border-brand/50' 
                                                     : 'bg-subtle border-subtle'
@@ -786,7 +786,7 @@ const Progress: React.FC = () => {
                                     >
                                         <div>
                                             <p className={`text-sm font-bold ${
-                                                isCompleted ? 'text-emerald-400' : isCurrent ? 'text-brand' : 'text-secondary'
+                                                isCompleted ? 'text-positive' : isCurrent ? 'text-brand' : 'text-secondary'
                                             }`}>
                                                 {t('gamification:level')} {lvl.level}
                                             </p>
@@ -796,7 +796,7 @@ const Progress: React.FC = () => {
                                         </div>
                                         <div className="flex flex-col items-end shrink-0">
                                             <span className="text-xs font-bold text-secondary">+{lvl.xpReward} XP</span>
-                                            {isCompleted && <CheckCircle size={16} className="text-emerald-400 mt-1" />}
+                                            {isCompleted && <CheckCircle size={16} className="text-positive mt-1" />}
                                         </div>
                                     </div>
                                 );

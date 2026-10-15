@@ -215,7 +215,7 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
                                             <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <span className={`text-xs font-medium px-2 py-1 rounded ${
                                                     batch.importMode === 'history'
-                                                        ? 'bg-purple-500/20 text-purple-400'
+                                                        ? 'bg-accent-purple/20 text-accent-purple'
                                                         : 'bg-brand/20 text-brand'
                                                 }`}>
                                                     {batch.importMode === 'history'

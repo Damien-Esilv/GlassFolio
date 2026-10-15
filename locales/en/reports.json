@@ -60,7 +60,8 @@
         "filterAll": "All",
         "modeAll": "All",
         "modeRealized": "Realized P&L",
-        "modeUnrealized": "Unrealized P&L"
+        "modeUnrealized": "Unrealized P&L",
+        "assetBreakdown": "Unrealized P&L by Asset"
     },
     "feeAnalysis": {
         "title": "Fee Analysis & Optimization",

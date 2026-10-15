@@ -25,6 +25,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import './src/i18n'; // Initialize i18n
 
+import { VaultGate } from './components/security/VaultGate';
+
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
@@ -39,7 +41,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  return <VaultGate>{children}</VaultGate>;
 };
 
 const App: React.FC = () => {

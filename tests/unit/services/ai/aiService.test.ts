@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { aiService } from '../../../../src/services/ai/aiService';
 import { aiSettingsService } from '../../../../src/services/ai/aiSettingsService';
 import '../../../../src/services/ai/tools';
@@ -55,5 +55,63 @@ describe('aiService', () => {
 
     expect(lastMsg.pendingAction).toBeUndefined();
     expect(lastMsg.content).toContain('Lecture Seule Stricte');
+  });
+
+  it('allows editing a previous message, forks history and regenerates the response', async () => {
+    // 1. Initial conversation turn
+    const turn1 = await aiService.sendMessage('Question 1 initiale');
+    const initialUserMsg = turn1.find((m) => m.role === 'user')!;
+    expect(turn1.length).toBeGreaterThanOrEqual(2);
+
+    // 2. Second turn
+    const turn2 = await aiService.sendMessage('Question 2 secondaire');
+    expect(turn2.length).toBeGreaterThanOrEqual(4);
+
+    // 3. Edit Question 1: conversation must prune Question 2 and its answers
+    const forked = await aiService.editMessageAndRegenerate(initialUserMsg.id, 'Question 1 modifiée');
+    
+    // Should now contain only the edited user message and its new assistant reply
+    expect(forked.length).toBe(2);
+    expect(forked[0].role).toBe('user');
+    expect(forked[0].content).toBe('Question 1 modifiée');
+    expect(forked[1].role).toBe('assistant');
+  });
+
+  it('formats Ollama connection error with actionable advice when Ollama is unreachable', async () => {
+    aiSettingsService.saveSettings({ activeProvider: 'ollama' });
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Failed to fetch'));
+
+    const messages = await aiService.sendMessage('hello');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toContain('Connexion à Ollama impossible');
+    expect(lastMsg.content).toContain('ollama serve');
+  });
+
+  it('formats Ollama model not found error with available models', async () => {
+    aiSettingsService.saveSettings({ activeProvider: 'ollama', ollamaModel: 'uninstalled:latest' });
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "model 'uninstalled:latest' not found" }), {
+          status: 404,
+          statusText: 'Not Found',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ models: [{ name: 'ministral-3:3b' }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const messages = await aiService.sendMessage('hello');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toContain('Modèle Ollama');
+    expect(lastMsg.content).toContain('ministral-3:3b');
+    expect(lastMsg.content).toContain('ollama pull');
   });
 });

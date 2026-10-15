@@ -201,22 +201,22 @@ const Dashboard: React.FC = () => {
     // Color logic according to user guidelines:
     // Best Performer: Green if positive, Red if negative
     // Worst Performer: Red if negative, ORANGE if positive
-    let badgeBg = 'bg-accent-green/10 text-accent-green';
-    let strokeColor = 'var(--color-accent-green)';
+    let badgeBg = 'bg-positive-subtle text-positive';
+    let strokeColor = 'var(--color-positive)';
     const gradientId = `sparkGradient-${position.id}-${isWorst ? 'worst' : 'best'}`;
 
     if (isWorst) {
       if (isPositive) {
-        badgeBg = 'bg-amber-500/10 text-amber-500';
-        strokeColor = 'var(--color-accent-amber)';
+        badgeBg = 'bg-warning-subtle text-warning';
+        strokeColor = 'var(--color-warning)';
       } else {
-        badgeBg = 'bg-accent-red/10 text-accent-red';
-        strokeColor = 'var(--color-accent-red)';
+        badgeBg = 'bg-negative-subtle text-negative';
+        strokeColor = 'var(--color-negative)';
       }
     } else {
       if (!isPositive) {
-        badgeBg = 'bg-accent-red/10 text-accent-red';
-        strokeColor = 'var(--color-accent-red)';
+        badgeBg = 'bg-negative-subtle text-negative';
+        strokeColor = 'var(--color-negative)';
       }
     }
 
@@ -241,7 +241,7 @@ const Dashboard: React.FC = () => {
 
         <div className="mt-3 z-10 flex justify-between items-baseline">
           <span className="text-xl font-bold text-primary">{formatCurrency(convertedMarketValue, currency, locale)}</span>
-          <span className={`text-xs font-semibold ${isPositive ? (isWorst ? 'text-amber-500' : 'text-accent-green') : 'text-accent-red'}`}>
+          <span className={`text-xs font-semibold ${isPositive ? (isWorst ? 'text-warning' : 'text-positive') : 'text-negative'}`}>
             {isPositive ? '+' : ''}{formatCurrency(convertedUnrealizedPL, currency, locale)}
           </span>
         </div>
@@ -554,7 +554,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-4xl font-black text-primary tracking-tighter">{transactions.length}</p>
                 <div className="h-1.5 w-12 bg-primary/20 mt-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full shadow-[0_0_8px_rgba(19,127,236,0.5)] transition-all"
+                    className="h-full bg-primary rounded-full shadow-sm transition-all"
                     style={{
                       width: animActive ? '80%' : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -568,10 +568,10 @@ const Dashboard: React.FC = () => {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <p className="text-4xl font-black text-accent-red tracking-tighter">5</p>
-                <div className="h-1.5 w-12 bg-accent-red/20 mt-2 rounded-full overflow-hidden">
+                <p className="text-4xl font-black text-negative tracking-tighter">5</p>
+                <div className="h-1.5 w-12 bg-negative/20 mt-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-accent-red rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)] transition-all"
+                    className="h-full bg-negative rounded-full shadow-sm transition-all"
                     style={{
                       width: animActive ? '20%' : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -585,10 +585,10 @@ const Dashboard: React.FC = () => {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <p className="text-4xl font-black text-accent-green tracking-tighter">500</p>
-                <div className="h-1.5 w-12 bg-accent-green/20 mt-2 rounded-full overflow-hidden">
+                <p className="text-4xl font-black text-positive tracking-tighter">500</p>
+                <div className="h-1.5 w-12 bg-positive/20 mt-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-accent-green rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all"
+                    className="h-full bg-positive rounded-full shadow-sm transition-all"
                     style={{
                       width: animActive ? '50%' : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -613,7 +613,7 @@ const Dashboard: React.FC = () => {
           {alerts.slice(0, 2).map((alert, idx) => (
             <div
               key={alert.id}
-              className={`flex items-center justify-between p-3 rounded-xl transition-all ${alert.type === 'warning' ? 'bg-yellow-500/5 ring-1 ring-yellow-500/20' : 'bg-accent-green/5 ring-1 ring-accent-green/20'}`}
+              className={`flex items-center justify-between p-3 rounded-xl transition-all ${alert.type === 'warning' ? 'bg-warning-subtle ring-1 ring-warning/20' : 'bg-positive-subtle ring-1 ring-positive/20'}`}
               style={{
                 opacity: animActive ? 1 : 0,
                 transform: animActive ? 'scale(1)' : 'scale(0.92)',
@@ -623,7 +623,7 @@ const Dashboard: React.FC = () => {
               }}
             >
               <div className="flex items-center gap-3">
-                <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-yellow-500' : 'text-accent-green'} />
+                <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-warning' : 'text-positive'} />
                 <div>
                   <p className="font-bold text-xs text-primary">{alert.title}</p>
                   <p className="text-[10px] text-tertiary">{alert.message}</p>

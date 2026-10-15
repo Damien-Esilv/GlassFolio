@@ -6,7 +6,7 @@
  * Enables injection of:
  *   - LocalStorageProvider  (offline-first, current default)
  *   - InMemoryStorageProvider (tests — zero I/O, ultra-fast)
- *   - EncryptedStorageProvider (future E2EE feature)
+ *   - EncryptedStorageProvider (E2EE — src/services/storage/EncryptedStorageProvider.ts)
  */
 
 // ============================================================================
@@ -18,6 +18,8 @@ export interface IStorageProvider {
     setItem(key: string, value: string): void;
     removeItem(key: string): void;
     clear(): void;
+    /** Lists every key currently held by the provider. */
+    keys(): string[];
 }
 
 // ============================================================================
@@ -36,6 +38,14 @@ export class LocalStorageProvider implements IStorageProvider {
     }
     clear(): void {
         localStorage.clear();
+    }
+    keys(): string[] {
+        const result: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key !== null) result.push(key);
+        }
+        return result;
     }
 }
 
@@ -57,5 +67,8 @@ export class InMemoryStorageProvider implements IStorageProvider {
     }
     clear(): void {
         this.store.clear();
+    }
+    keys(): string[] {
+        return Array.from(this.store.keys());
     }
 }

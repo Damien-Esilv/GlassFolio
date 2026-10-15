@@ -16,13 +16,26 @@
           colors: {
             brand: 'var(--color-primary)',
             'brand-static': 'var(--color-brand-static)',
-            success: 'var(--color-success)',
-            error: 'var(--color-error)',
+            // Business Intent Tokens
+            positive: 'var(--color-positive)',
+            negative: 'var(--color-negative)',
+            'positive-subtle': 'var(--color-positive-subtle)',
+            'negative-subtle': 'var(--color-negative-subtle)',
+            'warning-subtle': 'var(--color-warning-subtle)',
+            success: 'var(--color-positive)',
+            error: 'var(--color-negative)',
             warning: 'var(--color-warning)',
             info: 'var(--color-info)',
-            // Aliases
-            'accent-green': 'var(--color-success)',
-            'accent-red': 'var(--color-error)',
+            // Chart & Categorical Palette Tokens
+            'accent-green': 'var(--color-accent-green)',
+            'accent-red': 'var(--color-accent-red)',
+            'accent-amber': 'var(--color-accent-amber)',
+            'accent-blue': 'var(--color-accent-blue)',
+            'accent-indigo': 'var(--color-accent-indigo)',
+            'accent-purple': 'var(--color-accent-purple)',
+            'accent-rose': 'var(--color-accent-rose)',
+            'accent-cyan': 'var(--color-accent-cyan)',
+            'accent-orange': 'var(--color-accent-orange)',
           },
           textColor: {
             primary: 'var(--text-primary)',
@@ -30,11 +43,21 @@
             tertiary: 'var(--text-tertiary)',
             brand: 'var(--color-primary)',
             'brand-static': 'var(--color-brand-static)',
-            success: 'var(--color-success)',
-            error: 'var(--color-error)',
+            // Business Intent Tokens
+            positive: 'var(--color-positive)',
+            negative: 'var(--color-negative)',
+            success: 'var(--color-positive)',
+            error: 'var(--color-negative)',
             warning: 'var(--color-warning)',
-            'accent-green': 'var(--color-success)',
-            'accent-red': 'var(--color-error)',
+            'accent-green': 'var(--color-accent-green)',
+            'accent-red': 'var(--color-accent-red)',
+            'accent-amber': 'var(--color-accent-amber)',
+            'accent-blue': 'var(--color-accent-blue)',
+            'accent-indigo': 'var(--color-accent-indigo)',
+            'accent-purple': 'var(--color-accent-purple)',
+            'accent-rose': 'var(--color-accent-rose)',
+            'accent-cyan': 'var(--color-accent-cyan)',
+            'accent-orange': 'var(--color-accent-orange)',
           },
           backgroundColor: {
             canvas: 'var(--bg-canvas)',
@@ -47,20 +70,40 @@
             brand: 'var(--color-primary)',
             'brand-static': 'var(--color-brand-static)',
 
-            // Status
-            success: 'var(--color-success)',
-            error: 'var(--color-error)',
+            // Business Intent Tokens
+            positive: 'var(--color-positive)',
+            negative: 'var(--color-negative)',
+            'positive-subtle': 'var(--color-positive-subtle)',
+            'negative-subtle': 'var(--color-negative-subtle)',
+            'warning-subtle': 'var(--color-warning-subtle)',
+            success: 'var(--color-positive)',
+            error: 'var(--color-negative)',
             warning: 'var(--color-warning)',
             info: 'var(--color-info)',
-            'accent-green': 'var(--color-success)',
-            'accent-red': 'var(--color-error)',
+            'accent-green': 'var(--color-accent-green)',
+            'accent-red': 'var(--color-accent-red)',
+            'accent-amber': 'var(--color-accent-amber)',
+            'accent-blue': 'var(--color-accent-blue)',
+            'accent-indigo': 'var(--color-accent-indigo)',
+            'accent-purple': 'var(--color-accent-purple)',
+            'accent-rose': 'var(--color-accent-rose)',
+            'accent-cyan': 'var(--color-accent-cyan)',
+            'accent-orange': 'var(--color-accent-orange)',
           },
           borderColor: {
             border: 'var(--border-subtle)',
             strong: 'var(--border-strong)',
             brand: 'var(--color-primary)',
-            'accent-green': 'var(--color-success)',
-            'accent-red': 'var(--color-error)',
+            // Business Intent Tokens
+            positive: 'var(--color-positive)',
+            negative: 'var(--color-negative)',
+            warning: 'var(--color-warning)',
+            'accent-green': 'var(--color-accent-green)',
+            'accent-red': 'var(--color-accent-red)',
+            'accent-amber': 'var(--color-accent-amber)',
+            'accent-blue': 'var(--color-accent-blue)',
+            'accent-indigo': 'var(--color-accent-indigo)',
+            'accent-purple': 'var(--color-accent-purple)',
             subtle: 'var(--border-subtle)',
           },
           fontFamily: {
@@ -83,6 +126,7 @@
       /* Slate 100 */
       --bg-subtle: #f1f5f9;
       /* Slate 100 */
+      --bg-app: #f8fafc;
 
       --text-primary: #0f172a;
       /* Slate 900 */
@@ -96,17 +140,37 @@
       --border-strong: #cbd5e1;
       /* Slate 300 */
 
-      --color-primary: #3b82f6;
-      /* Blue 500 */
-      --color-primary-hover: #2563eb;
-      /* Blue 600 */
-      --color-brand-static: #3b82f6;
-      /* CONSTANT BLUE */
+      --color-primary: #137fec;
+      /* GlassFolio Logo Blue */
+      --color-primary-hover: #0f6fd1;
+      /* Primary Blue Hover */
+      --color-brand: #137fec;
+      --color-brand-static: #137fec;
+      /* CONSTANT BRAND BLUE */
 
-      --color-success: #10b981;
-      --color-error: #ef4444;
+      /* Business Intent Tokens (Single Source of Truth) */
+      --color-positive: #10b981;
+      --color-positive-subtle: rgba(16, 185, 129, 0.1);
+      --color-negative: #ef4444;
+      --color-negative-subtle: rgba(239, 68, 68, 0.1);
+      --color-warning-subtle: rgba(245, 158, 11, 0.1);
+
+      --color-success: var(--color-positive);
+      --color-error: var(--color-negative);
       --color-warning: #f59e0b;
-      --color-info: #3b82f6;
+      --color-info: #137fec;
+
+      /* Chart & Accent Palette Tokens */
+      --color-accent-green: var(--color-positive);
+      --color-accent-red: var(--color-negative);
+      --color-accent-amber: #f59e0b;
+      --color-accent-blue: #137fec;
+      --color-accent-indigo: #6366f1;
+      --color-accent-purple: #8b5cf6;
+      --color-accent-rose: #f43f5e;
+      --color-accent-cyan: #06b6d4;
+      --color-accent-orange: #f97316;
+      --color-accent-indigo-subtle: rgba(99, 102, 241, 0.1);
     }
 
     /* Dark Mode (Zinc/Slate Mix) */
@@ -120,6 +184,7 @@
       /* Zinc 800 */
       --bg-subtle: #27272a;
       /* Zinc 800 */
+      --bg-app: #09090b;
 
       --text-primary: #f8fafc;
       /* Slate 50 */
@@ -133,10 +198,36 @@
       --border-strong: #3f3f46;
       /* Zinc 700 */
 
-      --color-primary: #3b82f6;
-      /* Blue 500 - Matches Light Mode */
-      --color-primary-hover: #2563eb;
-      /* Blue 600 */
+      --color-primary: #137fec;
+      /* GlassFolio Logo Blue */
+      --color-primary-hover: #0f6fd1;
+      /* Primary Blue Hover */
+      --color-brand: #137fec;
+      --color-brand-static: #137fec;
+
+      /* Business Intent Tokens */
+      --color-positive: #10b981;
+      --color-positive-subtle: rgba(16, 185, 129, 0.15);
+      --color-negative: #ef4444;
+      --color-negative-subtle: rgba(239, 68, 68, 0.15);
+      --color-warning-subtle: rgba(245, 158, 11, 0.15);
+
+      --color-success: var(--color-positive);
+      --color-error: var(--color-negative);
+      --color-warning: #f59e0b;
+      --color-info: #137fec;
+
+      /* Chart & Accent Palette Tokens */
+      --color-accent-green: var(--color-positive);
+      --color-accent-red: var(--color-negative);
+      --color-accent-amber: #f59e0b;
+      --color-accent-blue: #137fec;
+      --color-accent-indigo: #6366f1;
+      --color-accent-purple: #8b5cf6;
+      --color-accent-rose: #f43f5e;
+      --color-accent-cyan: #06b6d4;
+      --color-accent-orange: #f97316;
+      --color-accent-indigo-subtle: rgba(99, 102, 241, 0.15);
     }
 
     /* Night Mode (Deep Blue) */
@@ -149,6 +240,7 @@
       /* Slate 800 */
       --bg-subtle: #1e293b;
       /* Slate 800 */
+      --bg-app: #020617;
 
       --text-primary: #f8fafc;
       /* Slate 50 */
@@ -161,6 +253,37 @@
       /* Slate 800 */
       --border-strong: #334155;
       /* Slate 700 */
+
+      --color-primary: #137fec;
+      /* GlassFolio Logo Blue */
+      --color-primary-hover: #0f6fd1;
+      /* Primary Blue Hover */
+      --color-brand: #137fec;
+      --color-brand-static: #137fec;
+
+      /* Business Intent Tokens */
+      --color-positive: #10b981;
+      --color-positive-subtle: rgba(16, 185, 129, 0.15);
+      --color-negative: #f43f5e;
+      --color-negative-subtle: rgba(244, 63, 94, 0.15);
+      --color-warning-subtle: rgba(251, 191, 36, 0.15);
+
+      --color-success: var(--color-positive);
+      --color-error: var(--color-negative);
+      --color-warning: #fbbf24;
+      --color-info: #137fec;
+
+      /* Chart & Accent Palette Tokens */
+      --color-accent-green: var(--color-positive);
+      --color-accent-red: var(--color-negative);
+      --color-accent-amber: #fbbf24;
+      --color-accent-blue: #137fec;
+      --color-accent-indigo: #818cf8;
+      --color-accent-purple: #a78bfa;
+      --color-accent-rose: #fb7185;
+      --color-accent-cyan: #22d3ee;
+      --color-accent-orange: #fb923c;
+      --color-accent-indigo-subtle: rgba(129, 140, 248, 0.15);
     }
 
     body {

@@ -257,8 +257,8 @@ const Transactions: React.FC = () => {
                                <td className="px-6 py-4 whitespace-nowrap">{tx.date}</td>
                                <td className="px-6 py-4">{tx.source}</td>
                                <td className="px-6 py-4">
-                                  <span className={`px-2 py-1 rounded text-xs font-semibold ${tx.type === 'Buy' ? 'bg-accent-green/10 text-accent-green' :
-                                     tx.type === 'Sell' ? 'bg-accent-red/10 text-accent-red' :
+                                  <span className={`px-2 py-1 rounded text-xs font-semibold ${tx.type === 'Buy' ? 'bg-positive-subtle text-positive border border-positive/20' :
+                                     tx.type === 'Sell' ? 'bg-negative-subtle text-negative border border-negative/20' :
                                         'bg-primary/10 text-primary'
                                      }`}>
                                      {typeLabels[tx.type] ?? tx.type}
@@ -269,7 +269,7 @@ const Transactions: React.FC = () => {
                                      <span>{tx.instrument}</span>
                                      {isUntracked && (
                                         <div 
-                                           className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/20"
+                                           className="inline-flex items-center gap-1 bg-warning-subtle text-warning text-[10px] font-semibold px-2 py-0.5 rounded-full border border-warning/20"
                                            title={t('transactions:untrackedTooltip')}
                                         >
                                            <AlertTriangle size={12} />

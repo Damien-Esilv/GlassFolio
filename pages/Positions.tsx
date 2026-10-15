@@ -185,7 +185,7 @@ const Positions: React.FC = () => {
                           <span className="font-bold">{pos.instrument}</span>
                           {isUntracked && (
                             <div 
-                              className="flex items-center gap-1 bg-amber-500/10 text-amber-500 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/20"
+                              className="flex items-center gap-1 bg-warning-subtle text-warning text-[10px] font-semibold px-2 py-0.5 rounded-full border border-warning/20"
                               title={t('positions.badges.untrackedTooltip')}
                             >
                               <AlertTriangle size={12} />

@@ -8,21 +8,30 @@ This project is an advanced financial dashboard ("GlassFolio"). Homogeneity, aes
 ---
 
 ## 1. UI/UX Architecture & Theming
-**Goal:** A "Premium" feel with zero hardcoded values.
+**Goal:** A "Premium" feel with zero hardcoded values and single-source-of-truth semantic cascading.
 
-### 1.1. No Hardcoding (Hex/RGB)
-*   **STRICT PROHIBITION:** Never use hex codes (e.g., `#3b82f6`) or RGB values directly in React components (`.tsx`) or inline styles.
-*   **ENFORCEMENT:** Scanning the codebase for `#` followed by 6 hex digits outside of `index.html` or `mockData` should return 0 results.
+### 1.1. No Hardcoding (Hex/RGB/Raw Tailwind Palette)
+*   **STRICT PROHIBITION:** Never use hex codes (e.g., `#137fec`), raw RGB/RGBA values (`rgba(16, 185, 129, 0.1)`), or raw Tailwind palette color classes (e.g., `text-emerald-500`, `bg-rose-500`, `text-amber-500`) directly in React components (`.tsx`) or inline styles.
+*   **ENFORCEMENT:** Automated CI gates `npm run check:theming` and `npm run check:standards` scan all source files. Any violation will fail the build immediately.
 
 ### 1.2. Design System & Tokens
-*   **Technology:** Tailwind CSS (via CDN/Script injection in `index.html`).
-*   **Variables:** Styling relies on CSS variables defined in `index.html`.
-*   **Usage Rule:** Use Tailwind semantic utility classes that map to these variables.
-    *   ✅ `bg-card` (maps to `var(--bg-card)`)
-    *   ✅ `text-secondary` (maps to `var(--text-secondary)`)
-    *   ✅ `border-subtle` (maps to `var(--border-subtle)`)
-    *   ❌ `bg-[#1e293b]` (Forbidden)
-    *   ❌ `text-gray-500` (Avoid generic colors; use semantic `text-secondary` or `text-tertiary`)
+*   **Technology:** Tailwind CSS (via CDN/Script injection in `index.html`) + CSS Variables + typed token registry (`src/constants/themeTokens.ts`).
+*   **Semantic Intent Tokens (`THEME_INTENT`):**
+    Represent financial and contextual meaning. Changing `--color-positive` in `index.html` cascades across all screens, badges, and charts:
+    *   `positive` (`text-positive`, `bg-positive`, `bg-positive-subtle`, `border-positive`): Gains, profits, outperformance, success.
+    *   `negative` (`text-negative`, `bg-negative`, `bg-negative-subtle`, `border-negative`): Losses, outflows, underperformance, errors.
+    *   `warning` (`text-warning`, `bg-warning`, `bg-warning-subtle`, `border-warning`): Alerts, cautions, untracked holdings, fee notices.
+    *   `neutral` (`text-secondary`, `bg-subtle`, `border-subtle`): Baseline, zero delta.
+    *   `brand` (`text-brand`, `bg-primary`, `border-brand`): Primary accents and actions.
+*   **Categorical & Multi-Series Chart Palette (`CHART_SERIES_PALETTE`):**
+    For asset/ETF comparisons (e.g., CW8 vs WPEA vs SWDA vs VWCE) requiring up to 8 distinct curves:
+    *   Provides 8 coordinated slots using `--color-accent-*` (blue, amber, indigo, rose, cyan, purple, orange, green).
+    *   Identifiers are strictly decoupled from financial gains/losses to avoid semantic contradictions.
+    *   Use `getComparisonSeriesTokens(index)` for stable series indexing (wrapping modulo 8).
+    *   Use `getAssetStableColor(symbol)` for deterministic, permanent ticker color consistency across all charts and tables.
+*   **UI Micro-Primitives:**
+    *   `<TrendValue value={delta} format="currency" showIcon />`: Standardized P&L value renderer with automatic signs, colors, and `TrendingUp`/`TrendingDown` icons.
+    *   `<TrendBadge value={delta} isPercent />`: Standardized variation badge with semantic subtle background and colored text.
 
 ### 1.3. Form Elements (Inputs & Dropdowns)
 *   **Problem:** Browser default inputs often have white backgrounds or unreadable text in Dark Mode if transparency is used wrongly.

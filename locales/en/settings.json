@@ -3,7 +3,8 @@
     "subtitle": "Manage your profile settings and application preferences.",
     "tabs": {
         "profile": "Profile",
-        "preferences": "Preferences"
+        "preferences": "Preferences",
+        "security": "Security & Access"
     },
     "profile": {
         "publicProfile": "Public Profile",

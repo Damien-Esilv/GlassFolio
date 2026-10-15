@@ -25,13 +25,13 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
                     <div className="flex items-center gap-2 mb-1">
                         <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                             quest.frequency === 'monthly' 
-                                ? 'bg-indigo-500/10 text-indigo-400' 
-                                : 'bg-emerald-500/10 text-emerald-400'
+                                ? 'bg-accent-indigo/10 text-accent-indigo' 
+                                : 'bg-positive-subtle text-positive'
                         }`}>
                             {quest.frequency}
                         </span>
                         {quest.completed && (
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-positive">
                                 <CheckCircle2 size={12} />
                                 {t('gamification:quests.completed')}
                             </span>
