@@ -198,40 +198,53 @@ export const portfolioService = {
         const timeStepMs = Math.max(1000, (now.getTime() - startDate.getTime()) / Math.max(1, pointCount - 1));
         const totalDuration = Math.max(1, now.getTime() - startDate.getTime());
 
+        // BOLT OPTIMIZATION:
+        // 1. Pre-parse dates once to eliminate thousands of repeated `new Date()` allocations inside loops.
+        // 2. Use a running index pointer (txIdx) over date-sorted transactions to incrementally accumulate asset quantities across consecutive chart points (O(N + M) instead of O(M * N)).
+        // 3. Cache positions in an O(1) Map lookup to replace linear Array.find() calls inside the chart rendering loop.
+        const txsWithTime = sortedTxs.map(tx => ({
+            ...tx,
+            time: new Date(tx.date).getTime()
+        }));
+        const positionMap = new Map(positions.map(p => [p.symbol, p]));
+
+        let txIdx = 0;
+        const assetQuantities: Record<string, number> = {};
+
         const chartData = Array.from({ length: pointCount }, (_, i) => {
-            const pointTime = new Date(startDate.getTime() + i * timeStepMs);
-            const txsUpToDate = sortedTxs.filter(tx => new Date(tx.date) <= pointTime);
+            const pointTimeMs = startDate.getTime() + i * timeStepMs;
+            const pointTime = new Date(pointTimeMs);
 
-            let pointValue = 0;
-            const assetQuantities: Record<string, number> = {};
-
-            for (const tx of txsUpToDate) {
+            // Incrementally accumulate transactions up to pointTimeMs
+            while (txIdx < txsWithTime.length && txsWithTime[txIdx].time <= pointTimeMs) {
+                const tx = txsWithTime[txIdx];
                 if (tx.type === 'Buy' || tx.type === 'Deposit') {
                     assetQuantities[tx.symbol] = (assetQuantities[tx.symbol] || 0) + tx.amount;
                 } else if (tx.type === 'Sell' || tx.type === 'Withdrawal') {
                     assetQuantities[tx.symbol] = Math.max(0, (assetQuantities[tx.symbol] || 0) - tx.amount);
                 }
+                txIdx++;
             }
 
-            const progress = (pointTime.getTime() - startDate.getTime()) / totalDuration;
+            let pointValue = 0;
 
-            Object.entries(assetQuantities).forEach(([symbol, qty]) => {
-                const pos = positions.find(p => p.symbol === symbol);
-                const currentPrice = pos ? pos.lastPrice : 1;
-                const costPrice = pos ? pos.avgCost : 1;
-                const posCurr = pos?.currency || 'EUR';
+            if (txIdx > 0) {
+                const progress = (pointTimeMs - startDate.getTime()) / totalDuration;
 
-                // Deterministic subtle market curve so performance looks realistic like Finary
-                const noise = 1 + (Math.sin(i * 1.3 + symbol.length) * 0.012);
-                const simulatedHistoricalPrice = (costPrice + (currentPrice - costPrice) * progress) * noise;
-                const itemValNative = qty * simulatedHistoricalPrice;
-                const itemValBase = currencyService.convertAmount(itemValNative, posCurr, baseCurrency, rates);
+                Object.entries(assetQuantities).forEach(([symbol, qty]) => {
+                    const pos = positionMap.get(symbol);
+                    const currentPrice = pos ? pos.lastPrice : 1;
+                    const costPrice = pos ? pos.avgCost : 1;
+                    const posCurr = pos?.currency || 'EUR';
 
-                pointValue += itemValBase;
-            });
+                    // Deterministic subtle market curve so performance looks realistic like Finary
+                    const noise = 1 + (Math.sin(i * 1.3 + symbol.length) * 0.012);
+                    const simulatedHistoricalPrice = (costPrice + (currentPrice - costPrice) * progress) * noise;
+                    const itemValNative = qty * simulatedHistoricalPrice;
+                    const itemValBase = currencyService.convertAmount(itemValNative, posCurr, baseCurrency, rates);
 
-            if (txsUpToDate.length === 0) {
-                pointValue = 0;
+                    pointValue += itemValBase;
+                });
             }
 
             const name = formatChartDate(pointTime, labelFormat, dateFormatPattern, locale);
