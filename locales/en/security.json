@@ -88,5 +88,30 @@
         "verifyButton": "Confirm",
         "cancel": "Cancel",
         "invalid": "Invalid code or already used backup code"
+    },
+    "secrets": {
+        "title": "Secrets Vault (API Keys)",
+        "subtitle": "Store your AI and market provider credentials encrypted locally under your vault",
+        "addSecretButton": "Add Secret Key",
+        "noSecrets": "No API keys configured yet",
+        "providerLabel": "Provider",
+        "labelField": "Label",
+        "valueField": "API Key / Secret Value",
+        "valuePlaceholder": "sk-... or secret token",
+        "saveSecret": "Save Encrypted Secret",
+        "cancel": "Cancel",
+        "deleteConfirm": "Are you sure you want to delete this API key?",
+        "savedSuccess": "Secret key securely saved in vault."
+    },
+    "audit": {
+        "title": "Security Audit Log",
+        "subtitle": "Append-only trace of authentication events, key modifications, and access attempts",
+        "noEvents": "No security events recorded yet",
+        "clearButton": "Clear Log",
+        "clearConfirm": "Are you sure you want to clear the security audit log?",
+        "event": "Event",
+        "details": "Details",
+        "timestamp": "Timestamp",
+        "severity": "Severity"
     }
 }

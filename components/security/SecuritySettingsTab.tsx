@@ -7,6 +7,8 @@ import { vaultService } from '../../src/services/security/vaultService';
 import { totpService } from '../../src/services/security/totpService';
 import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { PasskeyManager } from './PasskeyManager';
+import { SecretsVaultPanel } from './SecretsVaultPanel';
+import { SessionAuditPanel } from './SessionAuditPanel';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { evaluatePassword } from '../../src/services/security/passwordValidator';
 
@@ -191,6 +193,16 @@ export const SecuritySettingsTab: React.FC = () => {
             {/* 3. WebAuthn Passkeys Section */}
             <div className={cardStyle}>
                 <PasskeyManager />
+            </div>
+
+            {/* 4. Secrets Vault (API Keys) Section */}
+            <div className={cardStyle}>
+                <SecretsVaultPanel />
+            </div>
+
+            {/* 5. Security Audit Log Section */}
+            <div className={cardStyle}>
+                <SessionAuditPanel />
             </div>
 
             {/* Change Master Password Modal */}

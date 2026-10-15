@@ -88,5 +88,30 @@
         "verifyButton": "Confirmer",
         "cancel": "Annuler",
         "invalid": "Code invalide ou code de secours déjà utilisé"
+    },
+    "secrets": {
+        "title": "Coffre de secrets (Clés d'API)",
+        "subtitle": "Stockez vos clés d'API IA et fournisseurs de marché chiffrées localement dans votre coffre",
+        "addSecretButton": "Ajouter une clé secrète",
+        "noSecrets": "Aucune clé d'API configurée pour le moment",
+        "providerLabel": "Fournisseur",
+        "labelField": "Libellé",
+        "valueField": "Clé d'API / Valeur secrète",
+        "valuePlaceholder": "sk-... ou jeton secret",
+        "saveSecret": "Enregistrer le secret chiffré",
+        "cancel": "Annuler",
+        "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette clé d'API ?",
+        "savedSuccess": "Clé secrète enregistrée en toute sécurité dans le coffre."
+    },
+    "audit": {
+        "title": "Journal d'audit de sécurité",
+        "subtitle": "Trace horodatée des événements d'authentification, modifications de clés et accès",
+        "noEvents": "Aucun événement de sécurité enregistré pour le moment",
+        "clearButton": "Purger le journal",
+        "clearConfirm": "Êtes-vous sûr de vouloir purger le journal d'audit de sécurité ?",
+        "event": "Événement",
+        "details": "Détails",
+        "timestamp": "Horodatage",
+        "severity": "Gravité"
     }
 }
