@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LocalAuthProvider, createAuthProvider } from '../../../../src/services/security/authService';
+import { createBackingStorage } from '../../../../src/services/storage/storageFactory';
+import { LocalStorageProvider } from '../../../../src/types/storage';
 import { vaultService } from '../../../../src/services/security/vaultService';
 import { userRepository } from '../../../../src/services/repositories';
 
-describe('authService (LocalAuthProvider)', () => {
+describe('authService & Access Control Security (TGLA-047)', () => {
     let auth: LocalAuthProvider;
 
     beforeEach(async () => {
@@ -12,7 +14,7 @@ describe('authService (LocalAuthProvider)', () => {
         await userRepository.clearUser();
     });
 
-    it('rejects signup with weak password', async () => {
+    it('rejects signup with weak password based on NIST SP 800-63B policy', async () => {
         await expect(
             auth.signUp('test@example.com', 'weak', 'Test User')
         ).rejects.toThrow(/NIST/i);
@@ -42,19 +44,20 @@ describe('authService (LocalAuthProvider)', () => {
         expect(vaultService.isUnlocked()).toBe(true);
     });
 
-    it('locks out user after multiple failed login attempts', async () => {
+    it('enforces brute-force lockout with exponential backoff after 5 consecutive failed attempts', async () => {
         expect(auth.getLockoutRemainingSeconds()).toBe(0);
 
+        // 4 failed attempts do not lock out yet
         for (let i = 0; i < 4; i++) {
             await expect(auth.signIn('random@glassfolio.com', 'wrongpassword')).rejects.toThrow();
             expect(auth.getLockoutRemainingSeconds()).toBe(0);
         }
 
-        // 5th attempt triggers lockout
+        // 5th failed attempt triggers lockout
         await expect(auth.signIn('random@glassfolio.com', 'wrongpassword')).rejects.toThrow();
         expect(auth.getLockoutRemainingSeconds()).toBeGreaterThan(0);
 
-        // Immediate subsequent attempt fails fast due to lockout
+        // Immediate subsequent attempt fails fast due to active lockout
         await expect(auth.signIn('random@glassfolio.com', 'wrongpassword')).rejects.toThrow(/temporarily locked/i);
     });
 
@@ -73,11 +76,19 @@ describe('authService (LocalAuthProvider)', () => {
         expect(currentUser).toBeNull();
     });
 
-    it('creates provider via factory based on mode', () => {
-        const local = createAuthProvider('local');
-        expect(local).toBeInstanceOf(LocalAuthProvider);
+    describe('Dual-Mode Factory (VITE_DEPLOYMENT_MODE)', () => {
+        it('instantiates expected IAuthProvider and IStorageProvider for local and cloud modes', () => {
+            const localAuth = createAuthProvider('local');
+            expect(localAuth).toBeInstanceOf(LocalAuthProvider);
 
-        const cloud = createAuthProvider('cloud');
-        expect(cloud).toBeInstanceOf(LocalAuthProvider);
+            const cloudAuth = createAuthProvider('cloud');
+            expect(cloudAuth).toBeInstanceOf(LocalAuthProvider);
+
+            const localStorage = createBackingStorage('local');
+            expect(localStorage).toBeInstanceOf(LocalStorageProvider);
+
+            const cloudStorage = createBackingStorage('cloud');
+            expect(cloudStorage).toBeInstanceOf(LocalStorageProvider);
+        });
     });
 });

@@ -19,6 +19,12 @@ export default defineConfig({
         functions: 70,
         branches: 60,
         statements: 70,
+        'src/services/security/**': {
+          lines: 90,
+          functions: 90,
+          branches: 78,
+          statements: 90,
+        },
       },
       include: [
         'src/services/core/validationService.ts',
@@ -27,6 +33,7 @@ export default defineConfig({
         'src/services/import/csvParser.ts',
         'src/services/import/backupRestoreService.ts',
         'src/services/repositories/**/*.ts',
+        'src/services/security/**/*.ts',
         'utils/**/*.ts',
       ],
       exclude: [
@@ -35,6 +42,8 @@ export default defineConfig({
         'src/services/import/index.ts',
         'src/services/core/index.ts',
         'src/services/fiscal/index.ts',
+        'src/services/**/*Types.ts',
+        'src/services/**/contracts/**',
         'node_modules/**',
         'dist/**',
         'tests/**',

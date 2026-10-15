@@ -13,6 +13,7 @@
  */
 
 import { Position } from '../../types';
+import { appStorage } from './storage/appStorage';
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
@@ -142,18 +143,18 @@ export function saveManualPrice(symbol: string, price: number): void {
 
     // 1. Update active cache
     try {
-        const raw = localStorage.getItem(CACHE_KEY);
+        const raw = appStorage.getItem(CACHE_KEY);
         const parsed: PriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
         parsed.data[cleanSymbol] = price;
         parsed.fetchedAt = new Date().toISOString();
-        localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+        appStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
     } catch {
         // Storage fallback
     }
 
     // 2. Record historical price point
     try {
-        const rawHistory = localStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        const rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
         const historyMap: Record<string, ManualPricePoint[]> = rawHistory ? JSON.parse(rawHistory) : {};
         const symbolHistory = historyMap[cleanSymbol] ?? [];
 
@@ -163,7 +164,7 @@ export function saveManualPrice(symbol: string, price: number): void {
         });
 
         historyMap[cleanSymbol] = symbolHistory;
-        localStorage.setItem(MANUAL_PRICE_HISTORY_KEY, JSON.stringify(historyMap));
+        appStorage.setItem(MANUAL_PRICE_HISTORY_KEY, JSON.stringify(historyMap));
     } catch {
         // Storage fallback
     }
@@ -172,7 +173,7 @@ export function saveManualPrice(symbol: string, price: number): void {
 export function getManualPriceHistory(symbol: string): ManualPricePoint[] {
     try {
         const cleanSymbol = symbol.trim().toUpperCase();
-        const rawHistory = localStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        const rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
         if (!rawHistory) return [];
         const historyMap: Record<string, ManualPricePoint[]> = JSON.parse(rawHistory);
         return historyMap[cleanSymbol] ?? [];
@@ -183,7 +184,7 @@ export function getManualPriceHistory(symbol: string): ManualPricePoint[] {
 
 function readCache(): PriceCache | null {
     try {
-        const raw = localStorage.getItem(CACHE_KEY);
+        const raw = appStorage.getItem(CACHE_KEY);
         if (!raw) return null;
         const parsed: PriceCache = JSON.parse(raw);
         const age = Date.now() - new Date(parsed.fetchedAt).getTime();
@@ -202,20 +203,20 @@ function writeCache(data: Record<string, number>): void {
             data: merged,
             fetchedAt: new Date().toISOString()
         };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+        appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
     } catch {
         // Storage limit or disabled
     }
 }
 
 export function clearPriceCache(): void {
-    localStorage.removeItem(CACHE_KEY);
-    localStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
+    appStorage.removeItem(CACHE_KEY);
+    appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
 }
 
 export function getLastPriceFetchTime(): string | null {
     try {
-        const raw = localStorage.getItem(CACHE_KEY);
+        const raw = appStorage.getItem(CACHE_KEY);
         if (!raw) return null;
         const parsed: PriceCache = JSON.parse(raw);
         return parsed.fetchedAt;
@@ -394,7 +395,7 @@ export async function fetchRealPriceHistory(
 
     // 1. Try reading from cache
     try {
-        const raw = localStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
+        const raw = appStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
         if (raw) {
             const parsed: HistoricalPriceCache = JSON.parse(raw);
             const age = Date.now() - new Date(parsed.fetchedAt).getTime();
@@ -487,11 +488,11 @@ export async function fetchRealPriceHistory(
     // 4. Save to cache if points fetched
     if (points.length > 0) {
         try {
-            const raw = localStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
+            const raw = appStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
             const parsed: HistoricalPriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
             parsed.data[cacheKey] = points;
             parsed.fetchedAt = new Date().toISOString();
-            localStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(parsed));
+            appStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(parsed));
         } catch {
             // Ignore storage errors
         }

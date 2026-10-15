@@ -54,4 +54,35 @@ describe('secretsService', () => {
             secretsService.saveSecret('gemini', 'Empty', '   ')
         ).rejects.toThrow();
     });
+
+    it('updates existing secret for same provider', async () => {
+        await secretsService.saveSecret('gemini', 'Old Label', 'AIzaOldValue1234');
+        const updated = await secretsService.saveSecret('gemini', 'New Label', 'AIzaNewValue5678');
+        expect(updated.label).toBe('New Label');
+        expect(updated.value).toBe('AIzaNewValue5678');
+
+        const list = await secretsService.listSecrets();
+        expect(list).toHaveLength(1);
+    });
+
+    it('gracefully handles corrupted JSON in storage', async () => {
+        appStorage.setItem('gf_api_secrets', '{not valid json');
+
+        expect(await secretsService.listSecrets()).toEqual([]);
+        expect(await secretsService.getSecret('any')).toBeNull();
+        expect(await secretsService.getSecretByProvider('gemini')).toBeNull();
+
+        // Saving overwrites corrupted data cleanly
+        const item = await secretsService.saveSecret('gemini', 'Clean Key', 'AIza123456');
+        expect(item.provider).toBe('gemini');
+        expect(await secretsService.listSecrets()).toHaveLength(1);
+
+        // Clear works cleanly
+        await secretsService.clear();
+        expect(await secretsService.listSecrets()).toEqual([]);
+    });
+
+    it('no-ops when deleting with empty storage', async () => {
+        await expect(secretsService.deleteSecret('nonexistent')).resolves.not.toThrow();
+    });
 });

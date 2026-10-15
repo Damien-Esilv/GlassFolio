@@ -17,6 +17,7 @@ import { isGlassFolioKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import {
     createKdfParams,
     deriveMasterKeys,
+    derivePasskeyKek,
     deriveRecoveryKek,
     formatRecoveryKey,
     generateExtractableDek,
@@ -173,6 +174,7 @@ export class VaultService {
 
         // 7. Initialize EncryptedStorageProvider (which also encrypts any existing plaintext)
         const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+        await encrypted.flush();
         appStorage.attachEncrypted(encrypted);
 
         // Wipe sensitive raw buffers
@@ -208,6 +210,7 @@ export class VaultService {
 
             // 3. Hydrate EncryptedStorageProvider and attach
             const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            await encrypted.flush();
             appStorage.attachEncrypted(encrypted);
 
             this.setStatus('unlocked');
@@ -244,12 +247,97 @@ export class VaultService {
 
             const runtimeDek = await unwrapDek(header.wrappedKeys.recovery.wrapped, recoveryKek, false);
             const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            await encrypted.flush();
             appStorage.attachEncrypted(encrypted);
 
             this.setStatus('unlocked');
             this.resetAutoLockTimer();
 
             // When unlocking with recovery key, authKey can be a sentinel or zeroed bytes
+            return { authKey: new Uint8Array(32) };
+        } catch {
+            throw new InvalidVaultCredentialsError();
+        }
+    }
+
+    /**
+     * Enrolls a WebAuthn PRF-derived encryption key to unlock the vault.
+     */
+    public async enrollPasskeyPrf(
+        credentialId: string,
+        label: string,
+        prfSecret: Uint8Array,
+        masterPassword?: string
+    ): Promise<void> {
+        await delay(300);
+        const header = this.getVaultHeader();
+        if (!header) throw new VaultNotInitializedError();
+
+        if (!masterPassword) {
+            throw new Error('Master password is required to enroll passkey PRF wrapping.');
+        }
+
+        const derived = await deriveMasterKeys(masterPassword, header.kdf);
+        let extractableDek: CryptoKey;
+        try {
+            extractableDek = await unwrapDek(header.wrappedKeys.password.wrapped, derived.kek, true);
+        } catch {
+            throw new InvalidVaultCredentialsError();
+        }
+
+        const passkeyKek = await derivePasskeyKek(prfSecret, header.kdf.salt);
+        const wrappedPasskey = await wrapDek(extractableDek, passkeyKek);
+
+        const existingPasskeys = header.wrappedKeys.passkeys || [];
+        const updatedPasskeys = [
+            ...existingPasskeys.filter(p => p.credentialId !== credentialId),
+            {
+                alg: 'AES-KW' as const,
+                wrapped: wrappedPasskey,
+                credentialId,
+                label,
+                createdAt: new Date().toISOString(),
+            },
+        ];
+
+        const updatedHeader: VaultHeader = {
+            ...header,
+            wrappedKeys: {
+                ...header.wrappedKeys,
+                passkeys: updatedPasskeys,
+            },
+            updatedAt: new Date().toISOString(),
+        };
+
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+    }
+
+    /**
+     * Unlocks the vault using WebAuthn PRF output.
+     */
+    public async unlockWithPasskeyPrf(
+        credentialId: string,
+        prfSecret: Uint8Array
+    ): Promise<VaultUnlockResult> {
+        await delay(500);
+
+        const header = this.getVaultHeader();
+        if (!header) throw new VaultNotInitializedError();
+
+        const passkeys = header.wrappedKeys.passkeys || [];
+        const entry = passkeys.find(p => p.credentialId === credentialId);
+        if (!entry) throw new InvalidVaultCredentialsError();
+
+        try {
+            const passkeyKek = await derivePasskeyKek(prfSecret, header.kdf.salt);
+            const runtimeDek = await unwrapDek(entry.wrapped, passkeyKek, false);
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            await encrypted.flush();
+            appStorage.attachEncrypted(encrypted);
+
+            this.setStatus('unlocked');
+            this.resetAutoLockTimer();
+
             return { authKey: new Uint8Array(32) };
         } catch {
             throw new InvalidVaultCredentialsError();

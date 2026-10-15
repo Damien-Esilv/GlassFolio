@@ -50,7 +50,30 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
 - **Milestone Tracking**: Define custom savings and net worth targets with dynamic progress bars.
 - **Achievements & Badges**: Unlockable financial habits milestones (first investment, diversification, regular DCA investing, emergency fund threshold).
 
-### 🔒 7. Privacy & Data Portability
+### 🔒 7. Zero-Knowledge Security & Access Architecture (Epic E11)
+- **Client-Side Envelope Encryption (E2EE)**:
+  - All sensitive financial entities (`transactions`, `holdings`, `wallets`, `goals`, `loans`, `audit_log`, `secrets`) are encrypted in the browser with **AES-256-GCM** using a dedicated Data Encryption Key (`DEK`).
+  - Unique 96-bit IVs generated per write operation via `crypto.getRandomValues`.
+  - Authenticated Additional Data (`AAD`) binding each ciphertext to its storage key, preventing ciphertext swapping attacks.
+- **Dual-Key KDF Derivation (PBKDF2 600k + HKDF)**:
+  - Single master password processed through native Web Crypto PBKDF2-SHA256 (600,000 iterations + 16-byte random salt).
+  - Expanded via HKDF-SHA256 with distinct domain separation into:
+    - `KEK` (`gf-vault-kek-v1`): Strictly used in memory to wrap/unwrap the DEK via AES-KeyWrap (RFC 3394).
+    - `AuthKey` (`gf-auth-key-v1`): Dedicated challenge verification key for authentication without decryption capabilities.
+- **Multi-Factor Authentication (2FA) & WebAuthn PRF Passkeys**:
+  - **RFC 6238 TOTP**: 160-bit Base32 secret, HMAC-SHA1, 30s step, ±1 step clock drift, anti-replay window, and single-use SHA-256 hashed backup codes.
+  - **Autonomous QR Engine**: Zero-dependency inline SVG matrix generator (`qrCode.ts`).
+  - **WebAuthn PRF Passkeys**: Hardware-bound biometric authentication deriving a dedicated KEK via the WebAuthn PRF extension (`hmac-get-secret`), enabling instant zero-knowledge vault unlock.
+  - **Emergency Recovery Key**: 256-bit entropy backup code (`XXXX-XXXX-...`).
+- **Encrypted Secrets Vault (BYOK)**:
+  - Securely store and mask third-party AI keys (OpenAI, Gemini, Anthropic) for in-app assistant features.
+- **AI & MCP Exfiltration Guardrails**:
+  - `guardrailsService` automatically detects and redacts sensitive API keys, recovery keys, TOTP seeds, and vault header envelopes before dispatching prompts to LLM contexts.
+  - Human-in-the-loop requirement (`requiresConfirmation: true`) for destructive actions (`lock_vault`, `rotate_encryption_key`).
+- **Single-Repo Dual-Mode Architecture**:
+  - Seamlessly switch between `local` (offline-first browser storage) and `cloud` (ready for InstantDB/cloud sync) via `VITE_DEPLOYMENT_MODE`.
+
+### 🛡️ 8. Privacy & Data Portability
 - **100% Offline-First**: No external servers hold your financial balances or personal data.
 - **Full JSON Backup & Restore**: One-click complete export and restore of all portfolio entities, settings, and transaction records.
 
@@ -79,7 +102,9 @@ GlassFolio follows strict UI and aesthetic standards:
 | **Charts & Visualizations** | [Recharts 3](https://recharts.org/) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Internationalization** | [i18next 25](https://www.i18next.com/) & [react-i18next 16](https://react.i18next.com/) |
-| **Data Layer** | LocalStorage mock database (`db.ts`) architected for future [InstantDB](https://www.instantdb.com/) real-time sync |
+| **Zero-Knowledge Security** | Web Crypto API (PBKDF2 600k, HKDF-SHA256, AES-KW, AES-256-GCM, WebAuthn PRF) |
+| **Data & Storage Layer** | Dual-Mode `IStorageProvider` ([EncryptedStorageProvider](file:///Users/damien/Developpement/Side-Projects/Builds/GlassFolio/src/services/storage/EncryptedStorageProvider.ts)), ready for InstantDB |
+| **Testing & CI/CD** | [Vitest 5](https://vitest.dev/), GitHub Actions (5 quality gates, least privilege, bundle budget) |
 
 ---
 
@@ -105,17 +130,18 @@ GlassFolio follows strict UI and aesthetic standards:
 │                              │                            │
 │                              ▼                            │
 │  ┌─────────────────────────────────────────────────────┐  │
-│  │             Database Abstraction (`db.ts`)          │  │
-│  │  - 12 Entity Collections (Accounts, Txns, etc.)     │  │
-│  │  - Artificial `delay(ms)` network latency simulator │  │
-│  │  - Row-Level-Security readiness (`ownerId`)         │  │
-│  │  - Strict ISO 8601 serialized dates                 │  │
+│  │          Encrypted Storage Layer (appStorage)       │  │
+│  │  - Synchronous In-Memory Decrypted Cache            │  │
+│  │  - Serialized Async Envelope Encryption Queue       │  │
+│  │  - AES-256-GCM + 96-bit Unique IVs + AAD            │  │
+│  │  - Instant Memory Wipe on Vault Lock                │  │
 │  └───────────────────────────┬─────────────────────────┘  │
 │                              │                            │
 │                              ▼                            │
 │  ┌─────────────────────────────────────────────────────┐  │
-│  │          Browser LocalStorage (Current)             │  │
-│  │            -> Target: InstantDB (Future)            │  │
+│  │      Physical Persistence (Dual-Mode Factory)       │  │
+│  │      - Local Mode : localStorage Encrypted Envelopes│  │
+│  │      - Cloud Mode : InstantDB / Encrypted Sync      │  │
 │  └─────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────────────┘
 ```

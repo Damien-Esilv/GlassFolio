@@ -12,6 +12,7 @@
  */
 
 import { SUPPORTED_CURRENCIES } from '../../utils/currency';
+import { appStorage } from './storage/appStorage';
 
 interface FxCache {
   data: Record<string, number>; // e.g. { 'USD_EUR': 0.92, 'EUR_USD': 1.08 }
@@ -23,7 +24,7 @@ const FX_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function readFxCache(): FxCache | null {
   try {
-    const raw = localStorage.getItem(FX_CACHE_KEY);
+    const raw = appStorage.getItem(FX_CACHE_KEY);
     if (!raw) return null;
     const parsed: FxCache = JSON.parse(raw);
     const age = Date.now() - new Date(parsed.fetchedAt).getTime();
@@ -42,7 +43,7 @@ function writeFxCache(data: Record<string, number>): void {
       data: merged,
       fetchedAt: new Date().toISOString()
     };
-    localStorage.setItem(FX_CACHE_KEY, JSON.stringify(cache));
+    appStorage.setItem(FX_CACHE_KEY, JSON.stringify(cache));
   } catch {
     // Storage limit or disabled
   }

@@ -25,6 +25,7 @@ export const HKDF_INFO = {
     KEK: 'gf-vault-kek-v1',
     AUTH: 'gf-auth-key-v1',
     RECOVERY_KEK: 'gf-vault-recovery-kek-v1',
+    PASSKEY_KEK: 'gf-vault-passkey-kek-v1',
 } as const;
 
 export class CryptoUnavailableError extends Error {
@@ -115,6 +116,19 @@ export const deriveRecoveryKek = async (recoveryBytes: Bytes, saltB64: string): 
     const base = await s.importKey('raw', recoveryBytes, 'HKDF', false, ['deriveKey']);
     return s.deriveKey(
         hkdfParams(HKDF_INFO.RECOVERY_KEK, fromBase64(saltB64)),
+        base,
+        { name: 'AES-KW', length: KEY_BITS },
+        false,
+        ['wrapKey', 'unwrapKey']
+    );
+};
+
+/** Derives the passkey KEK from the high-entropy WebAuthn PRF output. */
+export const derivePasskeyKek = async (prfSecret: Bytes, saltB64: string): Promise<CryptoKey> => {
+    const s = subtle();
+    const base = await s.importKey('raw', prfSecret, 'HKDF', false, ['deriveKey']);
+    return s.deriveKey(
+        hkdfParams(HKDF_INFO.PASSKEY_KEK, fromBase64(saltB64)),
         base,
         { name: 'AES-KW', length: KEY_BITS },
         false,
