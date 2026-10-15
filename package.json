@@ -14,7 +14,7 @@
     "check:types": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "check:theming": "vitest run tests/unit/standards tests/unit/components/theming",
-    "check:standards": "node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts",
+    "check:standards": "node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
     "check:mcp": "node --check mcp-server/index.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

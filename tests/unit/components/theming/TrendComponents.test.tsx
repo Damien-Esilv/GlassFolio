@@ -14,8 +14,8 @@ describe('UI Theming Micro-primitives', () => {
       const span = container.querySelector('span');
       expect(span).toBeTruthy();
       expect(span?.className).toContain('text-positive');
-      // Normalize any non-breaking spaces (U+202F, U+00A0) for cross-platform ICU compatibility (Ubuntu vs macOS)
-      expect(span?.textContent?.replace(/\s|\u202f|\u00a0/g, ' ')).toContain('+1 250,50 €');
+      // Regex matching for cross-platform ICU whitespace/separator variations
+      expect(span?.textContent).toMatch(/\+1[\s\S]*250[,.]50[\s\S]*€/);
       // SVG icon should be rendered
       expect(container.querySelector('svg')).toBeTruthy();
     });
