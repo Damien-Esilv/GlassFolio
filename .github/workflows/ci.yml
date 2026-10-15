@@ -103,11 +103,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit design standards & zero direct storage bypass (Vitest)
-        run: npm run check:standards
-
       - name: Standalone standards verification script
         run: node scripts/check-standards.mjs
+
+      - name: Audit design standards (Vitest)
+        run: npx vitest run tests/unit/standards --reporter=verbose
+
+      - name: Theming components tests (Vitest)
+        run: npx vitest run tests/unit/components/theming --reporter=verbose
+
+      - name: Architecture & storage invariants (Vitest)
+        run: npx vitest run tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose
 
   # ═══════════════════════════════════════════════════════════════════════════
   # GATE 4 — Security & Unit Test Suite
