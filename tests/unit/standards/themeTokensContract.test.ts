@@ -7,9 +7,10 @@ import {
   CHART_SERIES_PALETTE,
   getComparisonSeriesTokens,
   getAssetStableColor,
+  THEME_PALETTES,
 } from '../../../src/constants/themeTokens';
 
-describe('Theme Tokens Contract & HTML Synchronization', () => {
+describe('Theme Tokens Contract & HTML Synchronization (Critique 4 SSOT)', () => {
   describe('Business Intent Tokens Contract', () => {
     it('should define all 5 required business intent categories with complete token properties', () => {
       const requiredIntents = ['positive', 'negative', 'warning', 'neutral', 'brand'] as const;
@@ -82,49 +83,83 @@ describe('Theme Tokens Contract & HTML Synchronization', () => {
     });
   });
 
-  describe('HTML & Tailwind CDN Synchronization Contract', () => {
+  describe('HTML & Tailwind CDN Synchronization Contract (SSOT)', () => {
     const indexPath = path.join(process.cwd(), 'index.html');
     const indexContent = fs.readFileSync(indexPath, 'utf-8');
 
-    it('should declare all Business Intent CSS variables in index.html across all 3 themes', () => {
-      const intentVars = [
-        '--color-positive',
-        '--color-negative',
-        '--color-positive-subtle',
-        '--color-negative-subtle',
-        '--color-warning-subtle',
-      ];
+    function parseCssVars(block: string): Record<string, string> {
+      const vars: Record<string, string> = {};
+      const regex = /(--[\w-]+)\s*:\s*([^;]+);/g;
+      let match;
+      while ((match = regex.exec(block)) !== null) {
+        vars[match[1].trim()] = match[2].trim();
+      }
+      return vars;
+    }
 
-      // Extract sections for :root (Light), [data-theme='dark'] (Dark), and [data-theme='night'] (Midnight)
-      const lightTheme = indexContent.match(/:root\s*\{([^}]+)\}/)?.[1] || '';
-      const darkTheme = indexContent.match(/\[data-theme=['"]dark['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
-      const nightTheme = indexContent.match(/\[data-theme=['"]night['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
+    function toCssVarName(prop: string): string {
+      const kebab = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+      return `--color-${kebab}`;
+    }
 
-      expect(lightTheme).toBeTruthy();
-      expect(darkTheme).toBeTruthy();
-      expect(nightTheme).toBeTruthy();
+    const lightBlock = indexContent.match(/:root\s*\{([^}]+)\}/)?.[1] || '';
+    const darkBlock = indexContent.match(/\[data-theme=['"]dark['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
+    const nightBlock = indexContent.match(/\[data-theme=['"]night['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
 
-      intentVars.forEach((cssVar) => {
-        expect(lightTheme, `Missing ${cssVar} in Light (:root)`).toContain(cssVar);
-        expect(darkTheme, `Missing ${cssVar} in Dark ([data-theme='dark'])`).toContain(cssVar);
-        expect(nightTheme, `Missing ${cssVar} in Midnight ([data-theme='night'])`).toContain(cssVar);
+    const lightVars = parseCssVars(lightBlock);
+    const darkVars = parseCssVars(darkBlock);
+    const nightVars = parseCssVars(nightBlock);
+
+    it('should extract CSS variables successfully for all 3 themes', () => {
+      expect(Object.keys(lightVars).length).toBeGreaterThan(15);
+      expect(Object.keys(darkVars).length).toBeGreaterThan(15);
+      expect(Object.keys(nightVars).length).toBeGreaterThan(15);
+    });
+
+    it('should guarantee 100% of tokens in THEME_PALETTES exist and match in index.html across all 3 themes', () => {
+      const themes = [
+        { name: 'light', vars: lightVars, palette: THEME_PALETTES.light },
+        { name: 'dark', vars: darkVars, palette: THEME_PALETTES.dark },
+        { name: 'night', vars: nightVars, palette: THEME_PALETTES.night },
+      ] as const;
+
+      themes.forEach(({ name, vars, palette }) => {
+        Object.entries(palette).forEach(([key, expectedValue]) => {
+          const cssVarName = toCssVarName(key);
+          const rawActual = vars[cssVarName];
+          expect(rawActual, `Missing ${cssVarName} in theme ${name}`).toBeDefined();
+
+          // Resolve alias if actual value is var(--another-var)
+          let resolvedActual = rawActual;
+          if (rawActual.startsWith('var(')) {
+            const aliasedVar = rawActual.replace(/^var\(|\)$/g, '').trim();
+            resolvedActual = vars[aliasedVar] || rawActual;
+          }
+
+          expect(
+            resolvedActual.toLowerCase(),
+            `Mismatch for ${cssVarName} in theme ${name}: expected ${expectedValue}, got ${resolvedActual}`
+          ).toBe(expectedValue.toLowerCase());
+        });
       });
     });
 
-    it('should declare all 8 Chart Series CSS variables in index.html across all 3 themes', () => {
-      const requiredAccentVars = CHART_SERIES_PALETTE.map((slot) => {
-        return slot.cssVar.replace(/^var\(|\)$/g, '');
-      });
+    it('should ensure brandStatic, brand, primary, and accent-blue all equal GlassFolio deep blue (#137fec)', () => {
+      const authenticBlue = '#137fec';
+      expect(THEME_PALETTES.light.primary).toBe(authenticBlue);
+      expect(THEME_PALETTES.light.brand).toBe(authenticBlue);
+      expect(THEME_PALETTES.light.brandStatic).toBe(authenticBlue);
+      expect(THEME_PALETTES.light.accentBlue).toBe(authenticBlue);
 
-      const lightTheme = indexContent.match(/:root\s*\{([^}]+)\}/)?.[1] || '';
-      const darkTheme = indexContent.match(/\[data-theme=['"]dark['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
-      const nightTheme = indexContent.match(/\[data-theme=['"]night['"]\][^\{]*\{([^}]+)\}/)?.[1] || '';
+      expect(THEME_PALETTES.dark.primary).toBe(authenticBlue);
+      expect(THEME_PALETTES.dark.brand).toBe(authenticBlue);
+      expect(THEME_PALETTES.dark.brandStatic).toBe(authenticBlue);
+      expect(THEME_PALETTES.dark.accentBlue).toBe(authenticBlue);
 
-      requiredAccentVars.forEach((accentVar) => {
-        expect(lightTheme, `Missing ${accentVar} in Light theme`).toContain(accentVar);
-        expect(darkTheme, `Missing ${accentVar} in Dark theme`).toContain(accentVar);
-        expect(nightTheme, `Missing ${accentVar} in Midnight theme`).toContain(accentVar);
-      });
+      expect(THEME_PALETTES.night.primary).toBe(authenticBlue);
+      expect(THEME_PALETTES.night.brand).toBe(authenticBlue);
+      expect(THEME_PALETTES.night.brandStatic).toBe(authenticBlue);
+      expect(THEME_PALETTES.night.accentBlue).toBe(authenticBlue);
     });
 
     it('should configure extended semantic colors in tailwind.config inside index.html', () => {
@@ -133,6 +168,7 @@ describe('Theme Tokens Contract & HTML Synchronization', () => {
       expect(indexContent).toMatch(/(['"])?positive-subtle\1\s*:\s*['"]var\(--color-positive-subtle\)['"]/);
       expect(indexContent).toMatch(/(['"])?negative-subtle\1\s*:\s*['"]var\(--color-negative-subtle\)['"]/);
       expect(indexContent).toMatch(/(['"])?warning-subtle\1\s*:\s*['"]var\(--color-warning-subtle\)['"]/);
+      expect(indexContent).toMatch(/(['"])?brand-static\1\s*:\s*['"]var\(--color-brand-static\)['"]/);
     });
   });
 });

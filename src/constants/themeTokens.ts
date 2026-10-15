@@ -23,6 +23,103 @@ export interface ChartSeriesTokenSet {
   border: string;
 }
 
+export interface ThemeColorPalette {
+  readonly primary: string;
+  readonly primaryHover: string;
+  readonly brand: string;
+  readonly brandStatic: string;
+  readonly positive: string;
+  readonly positiveSubtle: string;
+  readonly negative: string;
+  readonly negativeSubtle: string;
+  readonly warning: string;
+  readonly warningSubtle: string;
+  readonly info: string;
+  readonly accentGreen: string;
+  readonly accentRed: string;
+  readonly accentAmber: string;
+  readonly accentBlue: string;
+  readonly accentIndigo: string;
+  readonly accentPurple: string;
+  readonly accentRose: string;
+  readonly accentCyan: string;
+  readonly accentOrange: string;
+}
+
+/**
+ * Single Source of Truth (SSOT) for GlassFolio Theme Palettes.
+ * Typed strictly with `as const` to guarantee contract enforcement across React, Recharts and index.html CSS.
+ * GlassFolio authentic brand logo blue is #137fec (hover #0f6fd1).
+ */
+export const THEME_PALETTES = {
+  light: {
+    primary: '#137fec',
+    primaryHover: '#0f6fd1',
+    brand: '#137fec',
+    brandStatic: '#137fec',
+    positive: '#10b981',
+    positiveSubtle: 'rgba(16, 185, 129, 0.1)',
+    negative: '#ef4444',
+    negativeSubtle: 'rgba(239, 68, 68, 0.1)',
+    warning: '#f59e0b',
+    warningSubtle: 'rgba(245, 158, 11, 0.1)',
+    info: '#137fec',
+    accentGreen: '#10b981',
+    accentRed: '#ef4444',
+    accentAmber: '#f59e0b',
+    accentBlue: '#137fec',
+    accentIndigo: '#6366f1',
+    accentPurple: '#8b5cf6',
+    accentRose: '#f43f5e',
+    accentCyan: '#06b6d4',
+    accentOrange: '#f97316',
+  },
+  dark: {
+    primary: '#137fec',
+    primaryHover: '#0f6fd1',
+    brand: '#137fec',
+    brandStatic: '#137fec',
+    positive: '#10b981',
+    positiveSubtle: 'rgba(16, 185, 129, 0.15)',
+    negative: '#ef4444',
+    negativeSubtle: 'rgba(239, 68, 68, 0.15)',
+    warning: '#f59e0b',
+    warningSubtle: 'rgba(245, 158, 11, 0.15)',
+    info: '#137fec',
+    accentGreen: '#10b981',
+    accentRed: '#ef4444',
+    accentAmber: '#f59e0b',
+    accentBlue: '#137fec',
+    accentIndigo: '#6366f1',
+    accentPurple: '#8b5cf6',
+    accentRose: '#f43f5e',
+    accentCyan: '#06b6d4',
+    accentOrange: '#f97316',
+  },
+  night: {
+    primary: '#137fec',
+    primaryHover: '#0f6fd1',
+    brand: '#137fec',
+    brandStatic: '#137fec',
+    positive: '#10b981',
+    positiveSubtle: 'rgba(16, 185, 129, 0.15)',
+    negative: '#f43f5e',
+    negativeSubtle: 'rgba(244, 63, 94, 0.15)',
+    warning: '#fbbf24',
+    warningSubtle: 'rgba(251, 191, 36, 0.15)',
+    info: '#137fec',
+    accentGreen: '#10b981',
+    accentRed: '#f43f5e',
+    accentAmber: '#fbbf24',
+    accentBlue: '#137fec',
+    accentIndigo: '#818cf8',
+    accentPurple: '#a78bfa',
+    accentRose: '#fb7185',
+    accentCyan: '#22d3ee',
+    accentOrange: '#fb923c',
+  },
+} as const;
+
 /**
  * 1. Business Intent Tokens
  * Represents financial meaning (gains vs losses, warnings, neutral).

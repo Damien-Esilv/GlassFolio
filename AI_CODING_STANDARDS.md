@@ -11,7 +11,7 @@ This project is an advanced financial dashboard ("GlassFolio"). Homogeneity, aes
 **Goal:** A "Premium" feel with zero hardcoded values and single-source-of-truth semantic cascading.
 
 ### 1.1. No Hardcoding (Hex/RGB/Raw Tailwind Palette)
-*   **STRICT PROHIBITION:** Never use hex codes (e.g., `#3b82f6`), raw RGB/RGBA values (`rgba(16, 185, 129, 0.1)`), or raw Tailwind palette color classes (e.g., `text-emerald-500`, `bg-rose-500`, `text-amber-500`) directly in React components (`.tsx`) or inline styles.
+*   **STRICT PROHIBITION:** Never use hex codes (e.g., `#137fec`), raw RGB/RGBA values (`rgba(16, 185, 129, 0.1)`), or raw Tailwind palette color classes (e.g., `text-emerald-500`, `bg-rose-500`, `text-amber-500`) directly in React components (`.tsx`) or inline styles.
 *   **ENFORCEMENT:** Automated CI gates `npm run check:theming` and `npm run check:standards` scan all source files. Any violation will fail the build immediately.
 
 ### 1.2. Design System & Tokens

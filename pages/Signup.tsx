@@ -56,7 +56,7 @@ const Signup: React.FC = () => {
 
          <div className="relative w-full max-w-md bg-card/50 border border-subtle backdrop-blur-xl rounded-2xl p-8 shadow-2xl">
             <div className="flex flex-col items-center mb-8">
-               <div className="w-12 h-12 bg-brand rounded-xl flex items-center justify-center transform rotate-45 mb-4 shadow-lg shadow-brand/20">
+               <div className="w-12 h-12 bg-brand-static rounded-xl flex items-center justify-center transform rotate-45 mb-4 shadow-lg shadow-brand/20">
                   <div className="transform -rotate-45 text-white font-bold text-xl">
                      <Hexagon size={24} fill="currentColor" />
                   </div>
