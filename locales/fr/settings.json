@@ -3,7 +3,8 @@
     "subtitle": "Gérez vos paramètres de profil et les préférences de l'application.",
     "tabs": {
         "profile": "Profil",
-        "preferences": "Préférences"
+        "preferences": "Préférences",
+        "security": "Sécurité & Accès"
     },
     "profile": {
         "publicProfile": "Profil public",

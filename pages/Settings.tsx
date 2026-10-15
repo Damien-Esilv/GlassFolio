@@ -13,13 +13,14 @@ import { Download, FileText, Database, Sparkles } from 'lucide-react';
 import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
+import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile } = useAuth();
     const { resetToSeedData } = useData();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showBackupWizard, setShowBackupWizard] = useState(false);
@@ -31,6 +32,7 @@ const Settings: React.FC = () => {
         else if (tab === 'profile') setActiveTab('profile');
         else if (tab === 'fiscal') setActiveTab('fiscal');
         else if (tab === 'ai') setActiveTab('ai');
+        else if (tab === 'security') setActiveTab('security');
     }, [searchParams]);
 
     // Profile Form State
@@ -189,6 +191,12 @@ const Settings: React.FC = () => {
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'ai' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
                         <Sparkles size={18} /> {t('ai:settings.tab')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('security')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                    >
+                        <Lock size={18} /> {t('settings:tabs.security')}
                     </button>
                 </div>
 
@@ -793,6 +801,11 @@ const Settings: React.FC = () => {
                         <div className="space-y-6 animate-fade-in">
                             <AISettingsTab />
                         </div>
+                    )}
+
+                    {/* ================= SECURITY & ACCESS TAB ================= */}
+                    {activeTab === 'security' && (
+                        <SecuritySettingsTab />
                     )}
                 </div>
             </div>

@@ -26,7 +26,11 @@ export const toBase64 = (bytes: Uint8Array): string => {
 };
 
 export const fromBase64 = (value: string): Bytes => {
-    const binary = atob(value);
+    let standard = value.replace(/-/g, '+').replace(/_/g, '/');
+    while (standard.length % 4 !== 0) {
+        standard += '=';
+    }
+    const binary = atob(standard);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
         bytes[i] = binary.charCodeAt(i);
