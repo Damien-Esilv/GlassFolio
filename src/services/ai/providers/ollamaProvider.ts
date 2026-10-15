@@ -84,7 +84,9 @@ export class OllamaProvider implements AIProvider {
       try {
         const json = JSON.parse(errText);
         if (json.error) errMsg = json.error;
-      } catch {}
+      } catch {
+        // Ignore JSON parse failure and fallback to raw text
+      }
 
       // If the model does not support the 'think' option, automatically retry without it
       if (payload.think && errMsg.toLowerCase().includes('does not support thinking')) {
@@ -108,7 +110,9 @@ export class OllamaProvider implements AIProvider {
           try {
             const rJson = JSON.parse(retryErrText);
             if (rJson.error) retryErrMsg = rJson.error;
-          } catch {}
+          } catch {
+            // Ignore JSON parse failure and fallback to raw text
+          }
           throw new OllamaGeneralError(response.status, retryErrMsg);
         }
       } else if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
@@ -124,7 +128,9 @@ export class OllamaProvider implements AIProvider {
                 .filter(Boolean);
             }
           }
-        } catch {}
+        } catch {
+          // Ignore network failure when fetching model tags list
+        }
         throw new OllamaModelNotFoundError(this.model, this.endpoint, availableModels);
       } else {
         throw new OllamaGeneralError(response.status, errMsg);
