@@ -15,7 +15,7 @@ interface GoalCardProps {
     showDetailTags?: boolean;
 }
 
-const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, showDetailTags = true }) => {
+const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, showDetailTags = true }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
@@ -101,4 +101,6 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, onPin, show
     );
 };
 
+// Memoize GoalCard to prevent unnecessary re-renders when parent components (e.g. Dashboard, Progress) update state (timer ticks, chart hovers, filter changes)
+export const GoalCard = React.memo(GoalCardComponent);
 export default GoalCard;
