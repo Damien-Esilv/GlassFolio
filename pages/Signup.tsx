@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, User } from 'lucide-react';
+import { Hexagon, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { PasswordStrengthMeter } from '../components/security/PasswordStrengthMeter';
+import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
+import { evaluatePassword } from '../src/services/security/passwordValidator';
 
 const Signup: React.FC = () => {
    const { t } = useTranslation();
@@ -13,14 +16,34 @@ const Signup: React.FC = () => {
    const [name, setName] = useState('');
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
+   const [error, setError] = useState('');
    const [isLoading, setIsLoading] = useState(false);
+   const [pendingRecoveryKey, setPendingRecoveryKey] = useState<string | null>(null);
 
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      setError('');
+
+      const evalResult = evaluatePassword(password);
+      if (!evalResult.isValid) {
+         setError(t('auth:signup.passwordWeakError'));
+         return;
+      }
+
       setIsLoading(true);
-      await signup(email, password, name);
-      setIsLoading(false);
-      navigate('/');
+      try {
+         const recoveryKey = await signup(email, password, name);
+         if (recoveryKey) {
+            setPendingRecoveryKey(recoveryKey);
+         } else {
+            navigate('/');
+         }
+      } catch (err: unknown) {
+         const message = err instanceof Error ? err.message : t('auth:signup.failedToSignup');
+         setError(message);
+      } finally {
+         setIsLoading(false);
+      }
    };
 
    return (
@@ -32,7 +55,6 @@ const Signup: React.FC = () => {
          </div>
 
          <div className="relative w-full max-w-md bg-card/50 border border-subtle backdrop-blur-xl rounded-2xl p-8 shadow-2xl">
-
             <div className="flex flex-col items-center mb-8">
                <div className="w-12 h-12 bg-brand rounded-xl flex items-center justify-center transform rotate-45 mb-4 shadow-lg shadow-brand/20">
                   <div className="transform -rotate-45 text-white font-bold text-xl">
@@ -42,6 +64,13 @@ const Signup: React.FC = () => {
                <h1 className="text-2xl font-bold text-primary">{t('auth:signup.title')}</h1>
                <p className="text-secondary mt-1">{t('auth:signup.subtitle')}</p>
             </div>
+
+            {error && (
+               <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-sm">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{error}</span>
+               </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                <div>
@@ -85,6 +114,7 @@ const Signup: React.FC = () => {
                         placeholder={t('auth:signup.passwordPlaceholder')}
                      />
                   </div>
+                  <PasswordStrengthMeter password={password} />
                </div>
 
                <div className="text-xs text-secondary mt-2">
@@ -98,6 +128,17 @@ const Signup: React.FC = () => {
                {t('auth:signup.hasAccount')} <Link to="/login" className="text-brand hover:text-brand/80 font-medium">{t('auth:signup.loginLink')}</Link>
             </p>
          </div>
+
+         {/* Emergency Recovery Key Modal */}
+         {pendingRecoveryKey && (
+            <RecoveryKeyDialog
+               recoveryKey={pendingRecoveryKey}
+               onConfirmed={() => {
+                  setPendingRecoveryKey(null);
+                  navigate('/');
+               }}
+            />
+         )}
       </div>
    );
 };
