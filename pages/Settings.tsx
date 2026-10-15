@@ -159,49 +159,54 @@ const Settings: React.FC = () => {
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border";
 
     return (
-        <div className="max-w-4xl mx-auto pb-12">
+        <div className="max-w-5xl mx-auto pb-12">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-primary mb-2">{t('settings:title')}</h1>
                 <p className="text-secondary">{t('settings:subtitle')}</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
                 {/* Sidebar Navigation */}
-                <div className="space-y-2 lg:col-span-1">
+                <div className="w-full md:w-60 lg:w-64 shrink-0 space-y-2">
                     <button
                         onClick={() => setActiveTab('profile')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <User size={18} /> {t('settings:tabs.profile')}
+                        <User size={18} className="shrink-0" />
+                        <span>{t('settings:tabs.profile')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('preferences')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'preferences' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'preferences' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <Globe size={18} /> {t('settings:tabs.preferences')}
+                        <Globe size={18} className="shrink-0" />
+                        <span>{t('settings:tabs.preferences')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('fiscal')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'fiscal' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'fiscal' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <Scale size={18} /> {t('tax:settings.title')}
+                        <Scale size={18} className="shrink-0" />
+                        <span>{t('tax:settings.title')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('ai')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'ai' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'ai' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <Sparkles size={18} /> {t('ai:settings.tab')}
+                        <Sparkles size={18} className="shrink-0" />
+                        <span>{t('ai:settings.tab')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('security')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
-                        <Lock size={18} /> {t('settings:tabs.security')}
+                        <Lock size={18} className="shrink-0" />
+                        <span>{t('settings:tabs.security')}</span>
                     </button>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="lg:col-span-3 space-y-6">
+                <div className="flex-1 min-w-0 space-y-6">
 
                     {/* ================= PROFILE TAB ================= */}
                     {activeTab === 'profile' && (
@@ -604,7 +609,7 @@ const Settings: React.FC = () => {
                                         onClick={exportRGPDZip}
                                         className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
                                     >
-                                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 w-fit group-hover:scale-110 transition-transform">
+                                        <div className="p-2 rounded-lg bg-positive-subtle text-positive w-fit group-hover:scale-110 transition-transform">
                                             <FileText size={20} />
                                         </div>
                                         <div>
@@ -634,10 +639,10 @@ const Settings: React.FC = () => {
                             </div>
 
                             {/* Reset Demo Data */}
-                            <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5">
+                            <div className="p-4 rounded-xl border border-negative/30 bg-negative-subtle">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500">
+                                        <div className="p-2 rounded-lg bg-negative-subtle text-negative">
                                             <RotateCcw size={18} />
                                         </div>
                                         <div>
@@ -651,7 +656,7 @@ const Settings: React.FC = () => {
                                         </Button>
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-rose-500 font-medium">{t('settings:dataAndBackup.confirmReset')}</span>
+                                            <span className="text-xs text-negative font-medium">{t('settings:dataAndBackup.confirmReset')}</span>
                                             <Button variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>{t('settings:dataAndBackup.cancel')}</Button>
                                             <Button
                                                 variant="danger"

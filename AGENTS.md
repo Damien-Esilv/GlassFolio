@@ -49,7 +49,11 @@ GlassFolio/
 Les détails complets sont dans `AI_CODING_STANDARDS.md`.
 
 - **Zéro texte UI en dur** : tout texte visible passe par i18n (`t('namespace:key')`) et doit exister en `locales/en` + `locales/fr`.
-- **Zéro valeur visuelle codée en dur** : pas de hex/RGB dans les `.tsx`. Utiliser uniquement les classes sémantiques (ex: `bg-card`, `text-secondary`, `border-subtle`).
+- **Zéro valeur visuelle codée en dur & Tokens sémantiques d'intention** :
+  - Pas de hex, raw RGB/RGBA, ni classes Tailwind brutes (`text-emerald-*`, `bg-rose-*`, `text-amber-*`, etc.) dans les `.tsx`.
+  - Utiliser obligatoirement les tokens d'intention `positive`, `negative`, `warning`, `neutral`, `brand` (`THEME_INTENT` de `src/constants/themeTokens.ts`) et les micro-composants `<TrendValue>` / `<TrendBadge>`.
+  - Pour les comparatifs multi-courbes et dashboards comparatifs (jusqu'à 8 couleurs sans confusion avec les gains/pertes), utiliser `CHART_SERIES_PALETTE` via `getComparisonSeriesTokens(index)` ou `getAssetStableColor(symbol)`.
+  - Toute modification de `--color-positive` dans `index.html` doit cascader sur l'ensemble des écrans sans contradiction sémantique.
 - **Form elements** : respecter le pattern `bg-subtle text-primary border-subtle focus:ring-primary focus:border-primary`.
 - **Data access** : les composants/pages ne touchent jamais `localStorage` directement ; passer par `src/services/`.
 - **Dates** : stocker/transporter en **ISO 8601 string** ; ne pas persister de `Date` brute dans le mock DB.
@@ -151,8 +155,13 @@ Le graphe Memory persisté dans `/Users/damien/Developpement/memory/glassfolio.j
 ---
 
 ## Commandes de développement
-
+ 
 - `npm install` : installer les dépendances
 - `npm run dev` : lancer le serveur local (port 3000)
+- `npm run check:theming` : valider la conformité des tokens visuels et micro-primitives
+- `npm run check:standards` : valider l'ensemble des standards visuels, d'architecture et de sécurité
+- `npm run check:types` : validation TypeScript stricte (tsc)
+- `npm run check:i18n` : contrôle d'exhaustivité des clés i18n FR/EN
+- `npm test` : exécuter la suite de tests unitaires (Vitest)
 - `npm run build` : build de prod
 - `npm run preview` : prévisualisation du build

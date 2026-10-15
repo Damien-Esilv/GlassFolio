@@ -86,7 +86,7 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion }> = ({ sugg
         harvesting: 'text-success bg-success/10',
         compliance: 'text-error bg-error/10',
         crypto: 'text-warning bg-warning/10',
-        envelope: 'text-purple-400 bg-purple-400/10',
+        envelope: 'text-accent-purple bg-accent-purple/10',
     };
     const categoryIcons: Record<OptimizationSuggestion['category'], React.ReactNode> = {
         regime: <TrendingUp size={16} />,

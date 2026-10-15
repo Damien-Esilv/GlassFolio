@@ -30,6 +30,10 @@
     "inputPlaceholder": "Ask a financial question or request an action...",
     "send": "Send",
     "thinking": "Analyzing financial data...",
+    "ollamaLoadingModel": "Loading Ollama model ({{model}}) into memory...",
+    "ollamaLoadingVram": "Initializing model weights in VRAM... First launch may take a moment.",
+    "ollamaModelColdStart": "Ollama model ({{model}}) is not loaded in memory yet. Initializing...",
+    "ollamaModelWarm": "Ollama model active. Generating response...",
     "disclaimer": "AI financial analysis is informative. Always double-check before making actual investment decisions.",
     "errorMessage": "An error occurred while processing your request. Please check your AI settings.",
     "toolExecuted": "Executed tool: {{toolName}}",
@@ -131,6 +135,53 @@
       "copied": "Copied!"
     },
     "save": "Save AI Preferences",
-    "saved": "AI configuration saved successfully."
+    "saved": "AI configuration saved successfully.",
+    "ollamaConfigTitle": "Local Ollama Configuration",
+    "cloudConfigTitle": "API Key Configuration (BYOK)",
+    "thinkingMode": {
+      "title": "Reasoning / Thinking Mode (<think>)",
+      "description": "Enables step-by-step reasoning for models that support it (DeepSeek-R1, Qwen 2.5, Ollama). Displays real-time thoughts before the final answer.",
+      "enabled": "Thinking mode enabled",
+      "disabled": "Thinking mode disabled"
+    }
+  },
+  "markdown": {
+    "thoughtProcess": "Thought Process",
+    "showThought": "Show thought process",
+    "hideThought": "Hide thought process",
+    "thinkingLive": "Reasoning in progress...",
+    "thoughtCompleted": "Thought process completed",
+    "expandModal": "Expand thought process",
+    "collapseInline": "Collapse",
+    "expandInline": "Expand",
+    "copyThought": "Copy thought process",
+    "thoughtCopied": "Thoughts copied!",
+    "copyCode": "Copy code",
+    "copied": "Copied!"
+  },
+  "thoughtModal": {
+    "title": "AI Thought Process & Reasoning",
+    "subtitle": "Internal chain of thought and step-by-step reasoning generated before the final response.",
+    "close": "Close",
+    "copy": "Copy thoughts",
+    "copied": "Copied!",
+    "status": "Reasoning completed",
+    "words": "{{count}} words"
+  },
+  "edit": {
+    "editMessage": "Edit message",
+    "saveAndSubmit": "Save & Submit",
+    "cancel": "Cancel",
+    "edited": "edited"
+  },
+  "errors": {
+    "ollamaConnectionFailedTitle": "Unable to connect to Ollama",
+    "ollamaConnectionFailedBody": "The assistant could not reach your local Ollama server at `{{endpoint}}`.\n\n**How to resolve this?**\n- **Check that Ollama is running:** Open the Ollama application on your computer or run `ollama serve` in your terminal.\n- **Check the address:** In **Settings > AI & MCP**, verify the endpoint URL (default: `http://localhost:11434`).\n- **Test Connection:** Click the **Test Connection** button in Settings to verify connectivity.",
+    "ollamaModelNotFoundTitle": "Ollama model '{{model}}' not found",
+    "ollamaModelNotFoundBody": "The configured model (`{{model}}`) is not installed on your local Ollama instance.\n\n**To download it:**\nRun this command in your terminal:\n```bash\nollama pull {{model}}\n```\n*Tip: You can also go to **Settings > AI & MCP** and click 'Test Connection' to select from models already installed on your computer.*",
+    "ollamaModelNotFoundWithAvailable": "The model `{{model}}` is not installed on your machine.\n\n**Models currently installed on your computer:**\n{{available}}\n\n**To download `{{model}}`:**\n```bash\nollama pull {{model}}\n```\nOr select one of your installed models in **Settings > AI & MCP**.",
+    "ollamaServerErrorTitle": "Ollama Error (HTTP {{status}})",
+    "ollamaServerResponseBody": "{{message}}\n\n*Tip: Check the Ollama terminal logs or choose another model in **Settings > AI & MCP**.*",
+    "generalError": "An error occurred while communicating with the assistant: {{error}}"
   }
 }

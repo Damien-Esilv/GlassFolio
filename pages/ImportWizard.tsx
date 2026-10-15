@@ -847,10 +847,10 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
 const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => {
   const colorClasses: Record<string, string> = {
     blue: 'text-brand',
-    emerald: 'text-success',
+    emerald: 'text-positive',
     amber: 'text-warning',
-    rose: 'text-error',
-    purple: 'text-purple-500'
+    rose: 'text-negative',
+    purple: 'text-accent-purple'
   };
 
   return (
@@ -869,10 +869,10 @@ const StagingRow: React.FC<{
   const isEditing = wizard.editingRowId === tx.id;
 
   const statusBadge = {
-    valid: { icon: CheckCircle, color: 'text-emerald-500', label: t('importWizard.staging.status.valid') },
-    warning: { icon: AlertTriangle, color: 'text-amber-500', label: t('importWizard.staging.status.warning') },
-    error: { icon: AlertCircle, color: 'text-rose-500', label: t('importWizard.staging.status.error') },
-    duplicate: { icon: AlertTriangle, color: 'text-purple-500', label: t('importWizard.staging.status.duplicate') }
+    valid: { icon: CheckCircle, color: 'text-positive', label: t('importWizard.staging.status.valid') },
+    warning: { icon: AlertTriangle, color: 'text-warning', label: t('importWizard.staging.status.warning') },
+    error: { icon: AlertCircle, color: 'text-negative', label: t('importWizard.staging.status.error') },
+    duplicate: { icon: AlertTriangle, color: 'text-accent-purple', label: t('importWizard.staging.status.duplicate') }
   }[tx.status];
 
   const StatusIcon = statusBadge.icon;

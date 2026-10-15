@@ -64,6 +64,7 @@ export interface ChatMessage {
   toolCallId?: string;
   toolName?: string;
   pendingAction?: PendingActionProposal;
+  thought?: string;
 }
 
 export type AIProviderType = 'mock' | 'ollama' | 'openai' | 'anthropic' | 'openrouter' | 'groq';
@@ -77,9 +78,11 @@ export interface AISettings {
   ollamaModel: string;
   apiKey: string;
   cloudModel: string;
+  enableThinking: boolean;
 }
 
 export interface LLMResponse {
   content: string;
   toolCalls?: ToolCallRequest[];
+  thought?: string;
 }

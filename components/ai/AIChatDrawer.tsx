@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, Send, Trash2, Settings, Bot, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, X, Send, Trash2, Settings, Bot, Loader2, AlertCircle, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { aiService } from '../../src/services/ai/aiService';
 import { aiSettingsService } from '../../src/services/ai/aiSettingsService';
 import { ChatMessage } from '../../src/services/ai/types';
 import { AIActionApprovalCard } from './AIActionApprovalCard';
+import { AIMarkdownRenderer } from './AIMarkdownRenderer';
 
 interface AIChatDrawerProps {
   isOpen: boolean;
@@ -17,9 +18,36 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isOllamaColdStart, setIsOllamaColdStart] = useState(false);
+  const [isLongLoading, setIsLongLoading] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const settings = aiSettingsService.getSettings();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isLoading) {
+      if (settings.activeProvider === 'ollama') {
+        aiSettingsService
+          .checkOllamaModelLoaded(settings.ollamaEndpoint, settings.ollamaModel)
+          .then((isLoaded) => {
+            setIsOllamaColdStart(!isLoaded);
+          })
+          .catch(() => {});
+        timer = setTimeout(() => {
+          setIsLongLoading(true);
+        }, 3500);
+      }
+    } else {
+      setIsOllamaColdStart(false);
+      setIsLongLoading(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isLoading, settings.activeProvider, settings.ollamaEndpoint, settings.ollamaModel]);
 
   useEffect(() => {
     setMessages(aiService.getMessages());
@@ -38,8 +66,51 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
     setInputValue('');
     setIsLoading(true);
 
+    // 1. Immediately record and display user message in UI
+    aiService.addUserMessage(text);
+    setMessages([...aiService.getMessages()]);
+
     try {
-      const updated = await aiService.sendMessage(text, {
+      const updated = await aiService.processAssistantTurn({
+        language: i18n.language === 'en' ? 'en' : 'fr',
+        currency: 'EUR',
+      });
+      setMessages([...updated]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartEdit = (msg: ChatMessage) => {
+    setEditingMessageId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async (messageId: string) => {
+    const text = editContent.trim();
+    if (!text || isLoading) return;
+
+    setEditingMessageId(null);
+    setIsLoading(true);
+
+    // Truncate in local UI immediately to show the edited prompt + thinking state
+    const targetIdx = messages.findIndex((m) => m.id === messageId);
+    const prefix = targetIdx !== -1 ? messages.slice(0, targetIdx) : [];
+    const tempUserMsg: ChatMessage = {
+      id: messageId,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([...prefix, tempUserMsg]);
+
+    try {
+      const updated = await aiService.editMessageAndRegenerate(messageId, text, {
         language: i18n.language === 'en' ? 'en' : 'fr',
         currency: 'EUR',
       });
@@ -59,6 +130,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
   const handleClearHistory = () => {
     aiService.clearMessages();
     setMessages([]);
+    setEditingMessageId(null);
   };
 
   const handleApproveAction = async (actionId: string) => {
@@ -100,9 +172,9 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
       />
 
       {/* Drawer Panel */}
-      <aside className="fixed inset-y-0 right-0 w-full sm:w-[420px] md:w-[480px] bg-card border-l border-subtle z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+      <aside className="fixed inset-y-0 right-0 w-full sm:w-[420px] md:w-[500px] bg-card border-l border-subtle z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="h-16 px-4 border-b border-subtle flex items-center justify-between bg-card/80 backdrop-blur">
+        <div className="h-16 px-4 border-b border-subtle flex items-center justify-between bg-card/80 backdrop-blur shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
               <Sparkles size={20} />
@@ -207,20 +279,63 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
                 if (msg.role === 'tool') return null;
 
                 const isUser = msg.role === 'user';
+                const isEditingThis = editingMessageId === msg.id;
 
+                if (isUser) {
+                  return (
+                    <div key={msg.id} className="flex flex-col items-end space-y-1">
+                      {isEditingThis ? (
+                        <div className="w-full max-w-[92%] rounded-2xl p-3 bg-card border border-primary/40 space-y-2.5 shadow-lg">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={3}
+                            autoFocus
+                            className="w-full bg-subtle border border-subtle text-primary rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-2.5 py-1 text-xs font-medium text-secondary hover:text-primary rounded-lg hover:bg-subtle transition-colors"
+                            >
+                              {t('ai:edit.cancel')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(msg.id)}
+                              className="px-3 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:opacity-90 transition-opacity"
+                            >
+                              {t('ai:edit.saveAndSubmit')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group flex items-center gap-1.5 max-w-[88%]">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(msg)}
+                            disabled={isLoading}
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-tertiary hover:text-primary hover:bg-subtle rounded-lg transition-all disabled:hidden"
+                            title={t('ai:edit.editMessage')}
+                            aria-label={t('ai:edit.editMessage')}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <div className="rounded-2xl p-3 text-xs leading-relaxed bg-primary/10 text-primary font-medium rounded-tr-sm border border-primary/20">
+                            <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Assistant Message
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
-                  >
-                    <div
-                      className={`max-w-[88%] rounded-2xl p-3 text-xs leading-relaxed ${
-                        isUser
-                          ? 'bg-primary/10 text-primary font-medium rounded-tr-sm border border-primary/20'
-                          : 'bg-subtle text-primary rounded-tl-sm border border-subtle'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+                  <div key={msg.id} className="flex flex-col items-start space-y-1">
+                    <div className="max-w-[90%] rounded-2xl p-3 text-xs leading-relaxed bg-subtle text-primary rounded-tl-sm border border-subtle">
+                      <AIMarkdownRenderer content={msg.content} />
 
                       {msg.pendingAction && (
                         <AIActionApprovalCard
@@ -234,10 +349,24 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
                 );
               })}
 
+              {/* Thinking / Processing bubble right below the last message */}
               {isLoading && (
-                <div className="flex items-center gap-2 p-3 rounded-2xl bg-subtle border border-subtle text-xs text-secondary max-w-[70%]">
-                  <Loader2 size={14} className="animate-spin text-primary" />
-                  <span>{t('ai:chat.thinking')}</span>
+                <div className="flex flex-col space-y-1.5 p-3 rounded-2xl bg-subtle border border-subtle text-xs max-w-[85%] animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-primary shrink-0" />
+                    <span className="font-semibold text-primary">
+                      {settings.activeProvider === 'ollama'
+                        ? isOllamaColdStart
+                          ? t('ai:chat.ollamaModelColdStart', { model: settings.ollamaModel })
+                          : t('ai:chat.ollamaLoadingModel', { model: settings.ollamaModel })
+                        : t('ai:chat.thinking')}
+                    </span>
+                  </div>
+                  {settings.activeProvider === 'ollama' && isLongLoading && (
+                    <p className="text-[11px] text-tertiary pl-5 leading-relaxed">
+                      {t('ai:chat.ollamaLoadingVram')}
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -246,7 +375,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Footer Input Area */}
-        <div className="p-3 border-t border-subtle bg-card/90 space-y-2">
+        <div className="p-3 border-t border-subtle bg-card/90 space-y-2 shrink-0">
           <div className="relative flex items-center rounded-xl bg-subtle border border-subtle focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
             <textarea
               value={inputValue}

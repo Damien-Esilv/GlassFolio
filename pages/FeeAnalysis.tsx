@@ -20,6 +20,7 @@ import { etfFeeService, KNOWN_ETF_DB, ETFRecommendation } from '../src/services/
 import { formatCurrency } from '../utils/currency';
 import AnimatedCounter from '../components/AnimatedCounter';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../src/constants/animations';
+import { CHART_SERIES_PALETTE } from '../src/constants/themeTokens';
 
 const FeeAnalysis: React.FC = () => {
    const { t } = useTranslation();
@@ -180,15 +181,7 @@ const FeeAnalysis: React.FC = () => {
    }, [selectedCompareSymbols, allocationTab, t]);
 
    const cardStyle = "rounded-2xl bg-card p-6 shadow-lg border border-border";
-   const ETF_COLORS = [
-      'var(--color-accent-blue)',
-      'var(--color-accent-green)',
-      'var(--color-accent-amber)',
-      'var(--color-accent-indigo)',
-      'var(--color-accent-rose)',
-      'var(--color-accent-cyan)',
-      'var(--color-accent-orange)'
-   ];
+   const ETF_COLORS = CHART_SERIES_PALETTE.map(slot => slot.cssVar);
 
    return (
       <div className="space-y-8">

@@ -85,9 +85,10 @@ export const PasskeyManager: React.FC = () => {
                 {isSupported && (
                     <Button
                         type="button"
+                        size="sm"
                         onClick={handleAddPasskey}
                         isLoading={isLoading}
-                        className="text-xs shrink-0 inline-flex items-center gap-1.5"
+                        className="text-xs shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap"
                     >
                         <Plus size={14} />
                         {t('security:passkeys.addPasskeyButton')}

@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS: AISettings = {
   ollamaModel: 'llama3.2:latest',
   apiKey: '',
   cloudModel: 'gpt-4o-mini',
+  enableThinking: true,
 };
 
 /**
@@ -80,6 +81,37 @@ class AISettingsService {
         models: [],
         error: err instanceof Error ? err.message : String(err),
       };
+    }
+  }
+
+  /**
+   * Checks if the specified model is currently loaded in Ollama's active VRAM memory via /api/ps.
+   */
+  public async checkOllamaModelLoaded(
+    endpoint: string = DEFAULT_SETTINGS.ollamaEndpoint,
+    modelName: string = DEFAULT_SETTINGS.ollamaModel
+  ): Promise<boolean> {
+    try {
+      const cleanUrl = endpoint.replace(/\/+$/, '');
+      const response = await fetch(`${cleanUrl}/api/ps`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) return false;
+      const data = await response.json();
+      if (Array.isArray(data?.models)) {
+        return data.models.some(
+          (m: { name?: string; model?: string }) =>
+            m.name === modelName ||
+            m.model === modelName ||
+            m.name?.startsWith(modelName) ||
+            modelName.startsWith(m.name || '')
+        );
+      }
+      return false;
+    } catch {
+      return false;
     }
   }
 }

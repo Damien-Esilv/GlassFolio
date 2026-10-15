@@ -4,10 +4,10 @@ export interface AssetClassConfig {
     id: string;              // Canonical ID (e.g. 'Equities', 'ETFs', 'Crypto', 'Cash')
     i18nKey: string;         // Translation key under portfolio:categories (e.g. 'equities', 'etfs', 'crypto', 'cash')
     icon: LucideIcon;        // Icon component
-    color: string;           // Color key ('blue', 'violet', 'amber', 'emerald')
-    hex: string;             // Hex color for SVG / Recharts charts ('#3b82f6', '#8b5cf6', '#f59e0b', '#10b981')
-    bgClass: string;         // Tailwind background class ('bg-blue-500', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500')
-    textClass: string;       // Tailwind text class ('text-blue-500', 'text-violet-500', 'text-amber-500', 'text-emerald-500')
+    color: string;           // Color key ('accent-blue', 'accent-purple', 'accent-amber', 'accent-green')
+    hex: string;             // CSS Variable for SVG / Recharts charts (e.g. 'var(--color-accent-blue)')
+    bgClass: string;         // Tailwind semantic background class ('bg-accent-blue/10', etc.)
+    textClass: string;       // Tailwind semantic text class ('text-accent-blue', etc.)
     matchingTypes: string[]; // Variations of position/instrument types that map to this asset class
 }
 
@@ -16,40 +16,40 @@ export const ASSET_CLASSES_CONFIG: AssetClassConfig[] = [
         id: 'Equities', 
         i18nKey: 'equities', 
         icon: TrendingUp, 
-        color: 'blue',
-        hex: '#3b82f6',
-        bgClass: 'bg-blue-500',
-        textClass: 'text-blue-500',
+        color: 'accent-blue',
+        hex: 'var(--color-accent-blue)',
+        bgClass: 'bg-accent-blue/10',
+        textClass: 'text-accent-blue',
         matchingTypes: ['Equities', 'Equity', 'stock', 'Stock', 'Action', 'Actions']
     },
     { 
         id: 'ETFs', 
         i18nKey: 'etfs', 
         icon: TrendingUp, 
-        color: 'violet',
-        hex: '#8b5cf6',
-        bgClass: 'bg-violet-500',
-        textClass: 'text-violet-500',
+        color: 'accent-purple',
+        hex: 'var(--color-accent-purple)',
+        bgClass: 'bg-accent-purple/10',
+        textClass: 'text-accent-purple',
         matchingTypes: ['ETFs', 'ETF', 'etf']
     },
     { 
         id: 'Crypto', 
         i18nKey: 'crypto', 
         icon: Coins, 
-        color: 'amber',
-        hex: '#f59e0b',
-        bgClass: 'bg-amber-500',
-        textClass: 'text-amber-500',
+        color: 'accent-amber',
+        hex: 'var(--color-accent-amber)',
+        bgClass: 'bg-accent-amber/10',
+        textClass: 'text-accent-amber',
         matchingTypes: ['Crypto', 'crypto', 'CryptoSpot', 'CryptoEarn']
     },
     { 
         id: 'Cash', 
         i18nKey: 'cash', 
         icon: Building2, 
-        color: 'emerald',
-        hex: '#10b981',
-        bgClass: 'bg-emerald-500',
-        textClass: 'text-emerald-500',
+        color: 'accent-green',
+        hex: 'var(--color-accent-green)',
+        bgClass: 'bg-accent-green/10',
+        textClass: 'text-accent-green',
         matchingTypes: ['Cash', 'cash', 'Livret', 'Savings']
     }
 ];
@@ -58,10 +58,10 @@ export const DEFAULT_OTHER_CONFIG: AssetClassConfig = {
     id: 'Other',
     i18nKey: 'other',
     icon: Building2,
-    color: 'slate',
-    hex: '#64748b',
-    bgClass: 'bg-slate-500',
-    textClass: 'text-slate-500',
+    color: 'neutral',
+    hex: 'var(--text-secondary)',
+    bgClass: 'bg-subtle',
+    textClass: 'text-secondary',
     matchingTypes: ['Other', 'other', 'RealEstate', 'Immobilier', 'Bond', 'Bonds', 'Commodity', 'Commodities']
 };
 

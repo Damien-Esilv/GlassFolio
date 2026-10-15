@@ -70,11 +70,11 @@ const AchievementBadge: React.FC<AchievementBadgeProps> = ({
     let progressColor = 'bg-brand/50';
 
     if (ach.unlocked) {
-        if (ach.color === 'indigo') { colorClass = 'text-indigo-400 bg-indigo-500/10'; progressColor = 'bg-indigo-500'; }
-        else if (ach.color === 'blue') { colorClass = 'text-blue-400 bg-blue-500/10'; progressColor = 'bg-blue-500'; }
-        else if (ach.color === 'emerald') { colorClass = 'text-emerald-400 bg-emerald-500/10'; progressColor = 'bg-emerald-500'; }
-        else if (ach.color === 'orange') { colorClass = 'text-amber-400 bg-amber-500/10'; progressColor = 'bg-amber-500'; }
-        else if (ach.color === 'rose') { colorClass = 'text-rose-400 bg-rose-500/10'; progressColor = 'bg-rose-500'; }
+        if (ach.color === 'indigo') { colorClass = 'text-accent-indigo bg-accent-indigo/10'; progressColor = 'bg-accent-indigo'; }
+        else if (ach.color === 'blue') { colorClass = 'text-accent-blue bg-accent-blue/10'; progressColor = 'bg-accent-blue'; }
+        else if (ach.color === 'emerald') { colorClass = 'text-positive bg-positive-subtle'; progressColor = 'bg-positive'; }
+        else if (ach.color === 'orange') { colorClass = 'text-accent-amber bg-accent-amber/10'; progressColor = 'bg-accent-amber'; }
+        else if (ach.color === 'rose') { colorClass = 'text-accent-rose bg-accent-rose/10'; progressColor = 'bg-accent-rose'; }
         else { colorClass = 'text-brand bg-brand/10'; progressColor = 'bg-brand'; }
     }
 

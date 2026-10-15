@@ -2,9 +2,15 @@ import { ChatMessage, AIExecutionContext, PendingActionProposal } from './types'
 import { aiToolRegistry } from './aiToolRegistry';
 import { guardrailsService } from './guardrailsService';
 import { aiSettingsService } from './aiSettingsService';
+import i18n from '../../i18n';
 import { AIProvider } from './providers/types';
 import { MockProvider } from './providers/mockProvider';
-import { OllamaProvider } from './providers/ollamaProvider';
+import {
+  OllamaProvider,
+  OllamaConnectionError,
+  OllamaModelNotFoundError,
+  OllamaGeneralError,
+} from './providers/ollamaProvider';
 import { OpenAICompatibleProvider } from './providers/openAICompatibleProvider';
 import { AnthropicProvider } from './providers/anthropicProvider';
 // Ensure all standard tools are registered
@@ -38,7 +44,11 @@ class AIService {
 
     switch (settings.activeProvider) {
       case 'ollama':
-        return new OllamaProvider(settings.ollamaEndpoint, settings.ollamaModel);
+        return new OllamaProvider(
+          settings.ollamaEndpoint,
+          settings.ollamaModel,
+          settings.enableThinking
+        );
       case 'openai':
         return new OpenAICompatibleProvider(
           settings.apiKey,
@@ -64,17 +74,14 @@ class AIService {
         );
       case 'mock':
       default:
-        return new MockProvider();
+        return new MockProvider(settings.enableThinking);
     }
   }
 
   /**
-   * Main conversation turn: sends a message, executes tools if needed, and returns the updated messages.
+   * Adds a user message to the conversation history immediately and returns it.
    */
-  public async sendMessage(
-    content: string,
-    context: AIExecutionContext = { language: 'fr', currency: 'EUR' }
-  ): Promise<ChatMessage[]> {
+  public addUserMessage(content: string): ChatMessage {
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}_u`,
       role: 'user',
@@ -82,7 +89,15 @@ class AIService {
       timestamp: new Date().toISOString(),
     };
     this.messages.push(userMsg);
+    return userMsg;
+  }
 
+  /**
+   * Processes the assistant turn against current messages, handling tools and guardrails.
+   */
+  public async processAssistantTurn(
+    context: AIExecutionContext = { language: 'fr', currency: 'EUR' }
+  ): Promise<ChatMessage[]> {
     const provider = this.getActiveProvider();
     const tools = aiToolRegistry.getAllTools().map((t) => ({
       name: t.name,
@@ -110,7 +125,7 @@ class AIService {
                 timestamp: new Date().toISOString(),
               };
               this.messages.push(blockedMsg);
-              return this.messages;
+              return [...this.messages];
             }
 
             // Create Pending Action for Human-in-the-loop approval
@@ -131,7 +146,7 @@ class AIService {
               pendingAction: proposal,
             };
             this.messages.push(assistantMsg);
-            return this.messages;
+            return [...this.messages];
           }
 
           // Read-only tool execution
@@ -178,16 +193,78 @@ class AIService {
         this.messages.push(assistantMsg);
       }
     } catch (err) {
+      const lng = context.language || (i18n.language === 'en' ? 'en' : 'fr');
+      let errorContent = '';
+
+      if (err instanceof OllamaConnectionError) {
+        errorContent =
+          `### ⚠️ ${i18n.t('ai:errors.ollamaConnectionFailedTitle', { lng })}\n\n` +
+          i18n.t('ai:errors.ollamaConnectionFailedBody', { lng, endpoint: err.endpoint });
+      } else if (err instanceof OllamaModelNotFoundError) {
+        if (err.availableModels && err.availableModels.length > 0) {
+          const listStr = err.availableModels.map((m) => `- \`${m}\``).join('\n');
+          errorContent =
+            `### ⚠️ ${i18n.t('ai:errors.ollamaModelNotFoundTitle', { lng, model: err.model })}\n\n` +
+            i18n.t('ai:errors.ollamaModelNotFoundWithAvailable', {
+              lng,
+              model: err.model,
+              available: listStr,
+            });
+        } else {
+          errorContent =
+            `### ⚠️ ${i18n.t('ai:errors.ollamaModelNotFoundTitle', { lng, model: err.model })}\n\n` +
+            i18n.t('ai:errors.ollamaModelNotFoundBody', { lng, model: err.model });
+        }
+      } else if (err instanceof OllamaGeneralError) {
+        errorContent =
+          `### ⚠️ ${i18n.t('ai:errors.ollamaServerErrorTitle', { lng, status: err.status })}\n\n` +
+          i18n.t('ai:errors.ollamaServerResponseBody', { lng, message: err.serverMessage });
+      } else {
+        errorContent = i18n.t('ai:errors.generalError', {
+          lng,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
       const errorMsg: ChatMessage = {
         id: `msg_${Date.now()}_err`,
         role: 'assistant',
-        content: `Une erreur est survenue lors de l'échange avec l'assistant : ${err instanceof Error ? err.message : String(err)}`,
+        content: errorContent,
         timestamp: new Date().toISOString(),
       };
       this.messages.push(errorMsg);
     }
 
-    return this.messages;
+    return [...this.messages];
+  }
+
+  /**
+   * Main conversation turn: sends a message, executes tools if needed, and returns the updated messages.
+   */
+  public async sendMessage(
+    content: string,
+    context: AIExecutionContext = { language: 'fr', currency: 'EUR' }
+  ): Promise<ChatMessage[]> {
+    this.addUserMessage(content);
+    return this.processAssistantTurn(context);
+  }
+
+  /**
+   * Modifies a previous user message, truncates conversation history from that point forward,
+   * and regenerates the assistant response with the updated context.
+   */
+  public async editMessageAndRegenerate(
+    messageId: string,
+    newContent: string,
+    context: AIExecutionContext = { language: 'fr', currency: 'EUR' }
+  ): Promise<ChatMessage[]> {
+    const targetIdx = this.messages.findIndex((m) => m.id === messageId);
+    if (targetIdx !== -1) {
+      // Fork history: discard everything from that message onwards
+      this.messages = this.messages.slice(0, targetIdx);
+    }
+    this.addUserMessage(newContent);
+    return this.processAssistantTurn(context);
   }
 
   /**

@@ -413,7 +413,7 @@ const RealizedUnrealizedPL: React.FC = () => {
 
             {/* Position P&L Bar Chart */}
             <div className={`${cardStyle} lg:col-span-2 flex flex-col justify-between`}>
-               <h3 className="text-lg font-bold text-primary mb-4">Unrealized P&L by Asset</h3>
+               <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.assetBreakdown')}</h3>
                <div className="h-[280px] w-full -mx-2">
                   <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={positionPLChartData} margin={{ top: 10, right: 20, left: 20, bottom: 25 }}>

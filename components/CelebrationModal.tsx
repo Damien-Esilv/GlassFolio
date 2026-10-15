@@ -35,14 +35,15 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, da
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        const computedTheme = getComputedStyle(document.documentElement);
         const colors = [
-            'hsl(239, 84%, 67%)',
-            'hsl(160, 84%, 39%)',
-            'hsl(38, 92%, 50%)',
-            'hsl(330, 81%, 60%)',
-            'hsl(217, 91%, 60%)',
-            'hsl(270, 76%, 60%)'
-        ];
+            computedTheme.getPropertyValue('--color-accent-blue').trim(),
+            computedTheme.getPropertyValue('--color-accent-green').trim(),
+            computedTheme.getPropertyValue('--color-accent-amber').trim(),
+            computedTheme.getPropertyValue('--color-accent-rose').trim(),
+            computedTheme.getPropertyValue('--color-accent-indigo').trim(),
+            computedTheme.getPropertyValue('--color-accent-purple').trim()
+        ].filter(Boolean);
         const particles: Array<{
             x: number;
             y: number;

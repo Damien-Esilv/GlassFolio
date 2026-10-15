@@ -94,17 +94,17 @@ export const SecuritySettingsTab: React.FC = () => {
         <div className="space-y-6 animate-fade-in">
             {/* 1. Zero-Knowledge Vault Section */}
             <div className={cardStyle}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
                             <Lock size={22} />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm font-semibold text-primary">
                                     {t('security:vaultSection.title')}
                                 </h3>
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/10 text-success border border-success/20">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/10 text-success border border-success/20 shrink-0">
                                     <ShieldCheck size={12} />
                                     {t('security:vaultSection.statusActive')}
                                 </span>
@@ -115,23 +115,25 @@ export const SecuritySettingsTab: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
                         <Button
                             type="button"
                             variant="secondary"
+                            size="sm"
                             onClick={() => setShowChangePassword(true)}
-                            className="text-xs"
+                            className="text-xs whitespace-nowrap"
                         >
-                            <KeyRound size={14} />
+                            <KeyRound size={14} className="mr-1.5" />
                             {t('security:vaultSection.changeMasterPassword')}
                         </Button>
                         <Button
                             type="button"
                             variant="secondary"
+                            size="sm"
                             onClick={() => lockVault()}
-                            className="text-xs"
+                            className="text-xs whitespace-nowrap"
                         >
-                            <Lock size={14} />
+                            <Lock size={14} className="mr-1.5" />
                             {t('security:vaultSection.lockNow')}
                         </Button>
                     </div>
@@ -140,18 +142,18 @@ export const SecuritySettingsTab: React.FC = () => {
 
             {/* 2. Two-Factor Authentication (TOTP) Section */}
             <div className={cardStyle}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
                             {isTotpEnabled ? <ShieldCheck size={22} className="text-success" /> : <ShieldAlert size={22} />}
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm font-semibold text-primary">
                                     {t('security:totp.title')}
                                 </h3>
                                 <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
                                         isTotpEnabled
                                             ? 'bg-success/10 text-success border border-success/20'
                                             : 'bg-subtle text-tertiary border border-subtle'
@@ -166,23 +168,25 @@ export const SecuritySettingsTab: React.FC = () => {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="shrink-0">
                         {isTotpEnabled ? (
                             <Button
                                 type="button"
                                 variant="danger"
+                                size="sm"
                                 onClick={handleDisableTotp}
-                                className="text-xs"
+                                className="text-xs whitespace-nowrap"
                             >
                                 {t('security:totp.disableButton')}
                             </Button>
                         ) : (
                             <Button
                                 type="button"
+                                size="sm"
                                 onClick={() => setShowEnrollDialog(true)}
-                                className="text-xs"
+                                className="text-xs whitespace-nowrap"
                             >
-                                <ShieldCheck size={14} />
+                                <ShieldCheck size={14} className="mr-1.5" />
                                 {t('security:totp.enableButton')}
                             </Button>
                         )}
