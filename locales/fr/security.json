@@ -1,0 +1,28 @@
+{
+    "lockScreen": {
+        "title": "Coffre-fort verrouillé",
+        "subtitle": "Le chiffrement Zero-Knowledge est actif. Entrez votre mot de passe maître pour déchiffrer vos données financières.",
+        "passwordLabel": "Mot de passe maître",
+        "passwordPlaceholder": "Entrez votre mot de passe maître",
+        "unlockButton": "Déverrouiller le coffre",
+        "unlocking": "Déchiffrement en cours...",
+        "useRecoveryKey": "Mot de passe oublié ? Utiliser la clé de secours",
+        "usePassword": "Retour au mot de passe maître",
+        "recoveryKeyLabel": "Clé de secours",
+        "recoveryKeyPlaceholder": "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX",
+        "recoveryKeyHint": "Entrez la clé de secours de 32 caractères générée lors de l'initialisation du coffre.",
+        "forgotPrompt": "Mot de passe oublié et clé de secours égarée ?",
+        "resetButton": "Réinitialiser le coffre & recharger les données démo",
+        "resetConfirmTitle": "Réinitialiser le coffre Zero-Knowledge ?",
+        "resetConfirmMessage": "Attention : En architecture Zero-Knowledge, les données sont irrécupérables sans mot de passe ni clé de secours. La réinitialisation supprimera définitivement le stockage chiffré local et restaurera les données démo par défaut.",
+        "resetConfirmButton": "Oui, effacer et restaurer la démo",
+        "cancel": "Annuler",
+        "invalidCredentials": "Le mot de passe maître ou la clé de secours est incorrect.",
+        "lockVault": "Verrouiller le coffre",
+        "vaultStatusUnlocked": "Coffre déverrouillé (AES-256-GCM)",
+        "vaultStatusLocked": "Coffre verrouillé"
+    },
+    "header": {
+        "lockVaultTooltip": "Verrouiller immédiatement le coffre zero-knowledge"
+    }
+}

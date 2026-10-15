@@ -10,6 +10,7 @@
 
 import { FiscalCalendarData } from '../../types/types.backend';
 import { delay } from '../db';
+import { appStorage } from '../storage/appStorage';
 
 export interface FrenchDepartment {
     code: string;
@@ -278,7 +279,7 @@ export function computeFrenchTaxCalendar(fiscalYear: number | string): FiscalCal
  */
 export function getCachedTaxCalendar(year: string): FiscalCalendarData | null {
     try {
-        const stored = localStorage.getItem(`${STORAGE_CALENDAR_KEY}_${year}`);
+        const stored = appStorage.getItem(`${STORAGE_CALENDAR_KEY}_${year}`);
         if (!stored) return null;
         return JSON.parse(stored) as FiscalCalendarData;
     } catch {
@@ -291,7 +292,7 @@ export function getCachedTaxCalendar(year: string): FiscalCalendarData | null {
  */
 export function saveCachedTaxCalendar(calendar: FiscalCalendarData): void {
     try {
-        localStorage.setItem(`${STORAGE_CALENDAR_KEY}_${calendar.year}`, JSON.stringify(calendar));
+        appStorage.setItem(`${STORAGE_CALENDAR_KEY}_${calendar.year}`, JSON.stringify(calendar));
     } catch (e) {
         console.warn('Failed to cache tax calendar:', e);
     }

@@ -1,14 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { userRepository } from '../src/services/repositories';
+import { vaultService } from '../src/services/security/vaultService';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
+  lockVault: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   isAuthenticated: boolean;
+  isVaultLocked: boolean;
   isLoading: boolean;
 }
 
@@ -19,28 +22,46 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [vaultStatus, setVaultStatus] = useState<string>(() => vaultService.getStatus());
+
+  const loadUserFromRepo = async () => {
+    try {
+      const storedUser = await userRepository.getUser();
+      if (storedUser) {
+        const parsedUser = { ...storedUser };
+        // Ensure preferences exist (for legacy data)
+        if (!parsedUser.preferences) {
+          parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' };
+        }
+        if (!parsedUser.preferences.language) {
+          parsedUser.preferences.language = 'en';
+        }
+        if (!parsedUser.preferences.dateFormat) {
+          parsedUser.preferences.dateFormat = 'DD/MM/YYYY';
+        }
+        setUser(parsedUser);
+      }
+    } catch (err) {
+      console.error('Failed to load user from repository', err);
+    }
+  };
+
+  // Subscribe to vault status changes
+  useEffect(() => {
+    const unsub = vaultService.subscribeStatus((newStatus) => {
+      setVaultStatus(newStatus);
+      if (newStatus === 'unlocked') {
+        loadUserFromRepo();
+      }
+    });
+    return unsub;
+  }, []);
 
   // Check repository on mount
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const storedUser = await userRepository.getUser();
-        if (storedUser) {
-          const parsedUser = { ...storedUser };
-          // Ensure preferences exist (for legacy data)
-          if (!parsedUser.preferences) {
-            parsedUser.preferences = { theme: 'night', currency: 'USD', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' };
-          }
-          if (!parsedUser.preferences.language) {
-            parsedUser.preferences.language = 'en';
-          }
-          if (!parsedUser.preferences.dateFormat) {
-            parsedUser.preferences.dateFormat = 'DD/MM/YYYY';
-          }
-          setUser(parsedUser);
-        }
-      } catch (err) {
-        console.error('Failed to load user from repository', err);
+        await loadUserFromRepo();
       } finally {
         setIsLoading(false);
       }
@@ -103,6 +124,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTimeout(async () => {
         // Demo Credentials
         if (email === 'demo@glassfolio.com' && password === 'password') {
+          try {
+            if (!vaultService.isInitialized()) {
+              await vaultService.setup('password');
+            } else if (vaultService.getStatus() === 'locked') {
+              await vaultService.unlock('password');
+            }
+          } catch (err) {
+            console.error('Failed to unlock demo vault', err);
+          }
+
           const demoUser: User = {
             id: 'demo-123',
             name: 'Alex Trader',
@@ -116,15 +147,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await userRepository.saveUser(demoUser);
           resolve();
         } else {
+          // Custom account login
+          try {
+            if (vaultService.isInitialized() && vaultService.getStatus() === 'locked') {
+              await vaultService.unlock(password);
+            }
+            const existingUser = await userRepository.getUser();
+            if (existingUser && existingUser.email === email) {
+              setUser(existingUser);
+              resolve();
+              return;
+            }
+          } catch {
+            // credentials invalid for vault
+          }
           reject(new Error('Invalid email or password. Try demo@glassfolio.com / password'));
         }
-      }, 1000); // Simulate network delay
+      }, 800); // Simulate network delay
     });
   };
 
   const signup = async (email: string, password: string, name: string): Promise<void> => {
     return new Promise((resolve) => {
       setTimeout(async () => {
+        try {
+          if (!vaultService.isInitialized()) {
+            await vaultService.setup(password);
+          }
+        } catch (err) {
+          console.error('Failed to setup vault on signup', err);
+        }
+
         const newUser: User = {
           id: Math.random().toString(36).substr(2, 9),
           name,
@@ -137,16 +190,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newUser);
         await userRepository.saveUser(newUser);
         resolve();
-      }, 1000);
+      }, 800);
     });
   };
 
   const logout = () => {
     setUser(null);
     userRepository.clearUser();
+    vaultService.lock().catch(err => console.error('Error locking vault on logout', err));
     // Reset to default styling on logout
     document.documentElement.classList.add('dark');
     document.documentElement.setAttribute('data-theme', 'night');
+  };
+
+  const lockVault = async () => {
+    await vaultService.lock();
   };
 
   const updateProfile = async (data: Partial<User>): Promise<void> => {
@@ -178,8 +236,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       signup,
       logout,
+      lockVault,
       updateProfile,
       isAuthenticated: !!user,
+      isVaultLocked: vaultStatus === 'locked',
       isLoading
     }}>
       {children}

@@ -1,4 +1,5 @@
 import { AISettings } from './types';
+import { appStorage } from '../storage/appStorage';
 
 const STORAGE_KEY = 'glassfolio_ai_settings';
 
@@ -20,7 +21,7 @@ class AISettingsService {
    */
   public getSettings(): AISettings {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = appStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...DEFAULT_SETTINGS };
       const parsed = JSON.parse(raw);
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -36,9 +37,9 @@ class AISettingsService {
     const current = this.getSettings();
     const updated: AISettings = { ...current, ...settings };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      appStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch {
-      // Ignore localStorage quotas / private browsing errors
+      // Ignore storage quotas / private browsing errors
     }
     return updated;
   }

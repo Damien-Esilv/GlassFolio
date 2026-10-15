@@ -33,6 +33,7 @@ import {
     mappingTemplates as initialMappingTemplates,
     instruments as initialInstruments
 } from './mockData.backend';
+import { appStorage } from './storage/appStorage';
 
 const STORAGE_KEYS = {
     // Legacy keys (existing functionality)
@@ -63,34 +64,34 @@ class MockDB {
     // =========================================================================
 
     getTransactions(): Transaction[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        const stored = appStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
         return stored ? JSON.parse(stored) : initialTransactions;
     }
 
     saveTransactions(data: Transaction[]) {
-        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(data));
     }
 
     getPositions(): Position[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.POSITIONS);
+        const stored = appStorage.getItem(STORAGE_KEYS.POSITIONS);
         return stored ? JSON.parse(stored) : initialPositions;
     }
 
     savePositions(data: Position[]) {
-        localStorage.setItem(STORAGE_KEYS.POSITIONS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.POSITIONS, JSON.stringify(data));
     }
 
     getGoals(): FinancialGoal[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.GOALS);
+        const stored = appStorage.getItem(STORAGE_KEYS.GOALS);
         return stored ? JSON.parse(stored) : initialGoals;
     }
 
     saveGoals(data: FinancialGoal[]) {
-        localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(data));
     }
 
     getAchievements(): Achievement[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
+        const stored = appStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
         if (!stored) return initialAchievements;
 
         try {
@@ -115,43 +116,43 @@ class MockDB {
     }
 
     saveAchievements(data: Achievement[]) {
-        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(data));
     }
 
     getQuests(): GamificationQuest[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.QUESTS);
+        const stored = appStorage.getItem(STORAGE_KEYS.QUESTS);
         return stored ? JSON.parse(stored) : [];
     }
 
     saveQuests(data: GamificationQuest[]) {
-        localStorage.setItem(STORAGE_KEYS.QUESTS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.QUESTS, JSON.stringify(data));
     }
 
     getPinnedBadges(): string[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.PINNED_BADGES);
+        const stored = appStorage.getItem(STORAGE_KEYS.PINNED_BADGES);
         return stored ? JSON.parse(stored) : ['ac4', 'ac3', 'ac1'];
     }
 
     savePinnedBadges(ids: string[]) {
-        localStorage.setItem(STORAGE_KEYS.PINNED_BADGES, JSON.stringify(ids));
+        appStorage.setItem(STORAGE_KEYS.PINNED_BADGES, JSON.stringify(ids));
     }
 
     getAlerts(): Alert[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.ALERTS);
+        const stored = appStorage.getItem(STORAGE_KEYS.ALERTS);
         return stored ? JSON.parse(stored) : initialAlerts;
     }
 
     saveAlerts(data: Alert[]) {
-        localStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(data));
     }
 
     getAssetGroups(): AssetGroup[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.ASSET_GROUPS);
+        const stored = appStorage.getItem(STORAGE_KEYS.ASSET_GROUPS);
         return stored ? JSON.parse(stored) : initialAssetGroups;
     }
 
     saveAssetGroups(data: AssetGroup[]) {
-        localStorage.setItem(STORAGE_KEYS.ASSET_GROUPS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.ASSET_GROUPS, JSON.stringify(data));
     }
 
     // =========================================================================
@@ -160,7 +161,7 @@ class MockDB {
 
     // --- Institutes ---
     getInstitutes(): Institute[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.INSTITUTES);
+        const stored = appStorage.getItem(STORAGE_KEYS.INSTITUTES);
         if (!stored) return initialInstitutes;
 
         try {
@@ -181,7 +182,7 @@ class MockDB {
     }
 
     saveInstitutes(data: Institute[]) {
-        localStorage.setItem(STORAGE_KEYS.INSTITUTES, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.INSTITUTES, JSON.stringify(data));
     }
 
     getInstituteById(id: string): Institute | undefined {
@@ -190,7 +191,7 @@ class MockDB {
 
     // --- Accounts ---
     getAccounts(): Account[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+        const stored = appStorage.getItem(STORAGE_KEYS.ACCOUNTS);
         if (!stored) return initialAccounts;
 
         try {
@@ -205,7 +206,7 @@ class MockDB {
     }
 
     saveAccounts(data: Account[]) {
-        localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(data));
     }
 
     getAccountById(id: string): Account | undefined {
@@ -218,7 +219,7 @@ class MockDB {
 
     // --- Import Batches ---
     getImportBatches(): ImportBatch[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.IMPORT_BATCHES);
+        const stored = appStorage.getItem(STORAGE_KEYS.IMPORT_BATCHES);
         if (!stored) return initialImportBatches;
 
         // Migrate old batches to new schema if needed
@@ -234,7 +235,7 @@ class MockDB {
     }
 
     saveImportBatches(data: ImportBatch[]) {
-        localStorage.setItem(STORAGE_KEYS.IMPORT_BATCHES, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.IMPORT_BATCHES, JSON.stringify(data));
     }
 
     getImportBatchById(id: string): ImportBatch | undefined {
@@ -251,7 +252,7 @@ class MockDB {
 
     // --- Unified Transactions ---
     getUnifiedTransactions(): UnifiedTransaction[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
+        const stored = appStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
         if (!stored) return initialUnifiedTransactions;
 
         // Migrate old transactions to new schema if needed
@@ -271,7 +272,7 @@ class MockDB {
     }
 
     saveUnifiedTransactions(data: UnifiedTransaction[]) {
-        localStorage.setItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS, JSON.stringify(data));
     }
 
     getUnifiedTransactionsByBatch(batchId: string): UnifiedTransaction[] {
@@ -295,7 +296,7 @@ class MockDB {
 
     // --- Mapping Templates ---
     getMappingTemplates(): MappingTemplate[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.MAPPING_TEMPLATES);
+        const stored = appStorage.getItem(STORAGE_KEYS.MAPPING_TEMPLATES);
         if (!stored) return initialMappingTemplates;
 
         const templates = JSON.parse(stored) as MappingTemplate[];
@@ -307,7 +308,7 @@ class MockDB {
     }
 
     saveMappingTemplates(data: MappingTemplate[]) {
-        localStorage.setItem(STORAGE_KEYS.MAPPING_TEMPLATES, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.MAPPING_TEMPLATES, JSON.stringify(data));
     }
 
     getMappingTemplateById(id: string): MappingTemplate | undefined {
@@ -316,12 +317,12 @@ class MockDB {
 
     // --- Asset Positions (Derived/Cached) ---
     getAssetPositions(): AssetPosition[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.ASSET_POSITIONS);
+        const stored = appStorage.getItem(STORAGE_KEYS.ASSET_POSITIONS);
         return stored ? JSON.parse(stored) : [];
     }
 
     saveAssetPositions(data: AssetPosition[]) {
-        localStorage.setItem(STORAGE_KEYS.ASSET_POSITIONS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.ASSET_POSITIONS, JSON.stringify(data));
     }
 
     getAssetPositionsByAccount(accountId: string): AssetPosition[] {
@@ -330,12 +331,12 @@ class MockDB {
 
     // --- Instruments ---
     getInstruments(): Instrument[] {
-        const stored = localStorage.getItem(STORAGE_KEYS.INSTRUMENTS);
+        const stored = appStorage.getItem(STORAGE_KEYS.INSTRUMENTS);
         return stored ? JSON.parse(stored) : initialInstruments;
     }
 
     saveInstruments(data: Instrument[]) {
-        localStorage.setItem(STORAGE_KEYS.INSTRUMENTS, JSON.stringify(data));
+        appStorage.setItem(STORAGE_KEYS.INSTRUMENTS, JSON.stringify(data));
     }
 
     getInstrumentById(id: string): Instrument | undefined {
@@ -378,7 +379,7 @@ class MockDB {
      */
     clearAll() {
         Object.values(STORAGE_KEYS).forEach(key => {
-            localStorage.removeItem(key);
+            appStorage.removeItem(key);
         });
     }
 
@@ -408,9 +409,9 @@ class MockDB {
      * to initial seed / mock data on next load.
      */
     resetToInitialData(): void {
-        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-        localStorage.removeItem('glassfolio_price_cache');
-        localStorage.removeItem('gf_manual_price_history');
+        Object.values(STORAGE_KEYS).forEach(key => appStorage.removeItem(key));
+        appStorage.removeItem('glassfolio_price_cache');
+        appStorage.removeItem('gf_manual_price_history');
     }
 }
 

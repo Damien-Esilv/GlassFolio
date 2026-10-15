@@ -1,0 +1,28 @@
+{
+    "lockScreen": {
+        "title": "Vault Locked",
+        "subtitle": "Zero-knowledge encryption is active. Enter your master password to decrypt your financial data.",
+        "passwordLabel": "Master Password",
+        "passwordPlaceholder": "Enter your master password",
+        "unlockButton": "Unlock Vault",
+        "unlocking": "Decrypting...",
+        "useRecoveryKey": "Lost password? Use Recovery Key",
+        "usePassword": "Back to Master Password",
+        "recoveryKeyLabel": "Recovery Key",
+        "recoveryKeyPlaceholder": "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX",
+        "recoveryKeyHint": "Enter the 32-character recovery key generated when your vault was created.",
+        "forgotPrompt": "Forgot password and lost your recovery key?",
+        "resetButton": "Reset Vault & Reload Demo Data",
+        "resetConfirmTitle": "Reset Zero-Knowledge Vault?",
+        "resetConfirmMessage": "Warning: True zero-knowledge architecture means data cannot be recovered without the password or recovery key. Resetting will permanently wipe your encrypted local storage and restore default demo data.",
+        "resetConfirmButton": "Yes, wipe & reset to demo",
+        "cancel": "Cancel",
+        "invalidCredentials": "The master password or recovery key is incorrect.",
+        "lockVault": "Lock Vault",
+        "vaultStatusUnlocked": "Vault Unlocked (AES-256-GCM)",
+        "vaultStatusLocked": "Vault Locked"
+    },
+    "header": {
+        "lockVaultTooltip": "Lock zero-knowledge vault immediately"
+    }
+}

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
   LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
-  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles
+  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles, Lock
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, lockVault } = useAuth();
   const { lastPriceRefresh, forceRefreshPrices } = useData();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPortfolioExpanded, setIsPortfolioExpanded] = useState(true);
@@ -82,6 +82,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleLockVault = async () => {
+    setIsUserMenuOpen(false);
+    await lockVault();
   };
 
   // Sidebar nav item component
@@ -327,6 +332,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-card"></span>
             </button>
 
+            {/* Lock Vault button */}
+            <button
+              onClick={handleLockVault}
+              className="p-2 text-secondary hover:bg-subtle hover:text-primary rounded-full transition-colors relative"
+              title={t('security:header.lockVaultTooltip')}
+              aria-label={t('security:lockScreen.lockVault')}
+            >
+              <Lock size={18} />
+            </button>
+
             {/* User Menu Dropdown */}
             <div className="relative" ref={userMenuRef}>
               <button
@@ -372,6 +387,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </Link>
 
                   <div className="border-t border-subtle mt-1 pt-1">
+                    <button
+                      onClick={handleLockVault}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-subtle hover:text-primary transition-colors text-left"
+                    >
+                      <Lock size={16} />
+                      {t('security:lockScreen.lockVault')}
+                    </button>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-subtle transition-colors text-left"

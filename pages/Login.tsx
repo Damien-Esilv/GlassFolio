@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Hexagon, Mail, Lock, AlertCircle, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Login: React.FC = () => {
@@ -39,9 +39,18 @@ const Login: React.FC = () => {
       }, 800);
    };
 
-   const fillDemo = () => {
-      setEmail('demo@glassfolio.com');
-      setPassword('password');
+   const handleExploreDemo = async () => {
+      setError('');
+      setIsLoading(true);
+      try {
+         await login('demo@glassfolio.com', 'password');
+         navigate('/');
+      } catch (err: unknown) {
+         const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
+         setError(message);
+      } finally {
+         setIsLoading(false);
+      }
    };
 
    return (
@@ -122,10 +131,13 @@ const Login: React.FC = () => {
                   {t('auth:login.signInWithGoogle')}
                </button>
                <button
-                  onClick={fillDemo}
-                  className="w-full text-xs text-secondary hover:text-primary underline"
+                  type="button"
+                  onClick={handleExploreDemo}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm"
                >
-                  {t('auth:login.useDemoAccount')}
+                  <Sparkles size={16} />
+                  {t('auth:login.exploreDemoAccount')}
                </button>
             </div>
 
