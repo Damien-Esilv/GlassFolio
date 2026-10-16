@@ -19,27 +19,40 @@ function instrumentTypeToAssetClass(type: InstrumentType): 'Equity' | 'ETF' | 'C
 }
 
 /**
+ * Helper to lookup entity by ID from either Map<string, T> or T[]
+ */
+function lookupEntity<T extends { id: string }>(
+    container: T[] | Map<string, T> | undefined,
+    id: string | undefined
+): T | undefined {
+    if (!id || !container) return undefined;
+    if (container instanceof Map) return container.get(id);
+    return container.find(x => x.id === id);
+}
+
+/**
  * Convert UnifiedTransaction to legacy Transaction format.
  * Uses the Instrument entity for asset classification and symbol resolution.
+ * Supports pre-built Map lookups or arrays for O(1) performance during batch conversions.
  */
 export function convertToLegacyTransaction(
     unified: UnifiedTransaction,
-    accounts: Account[],
-    institutes: Institute[],
-    instruments?: Instrument[]
+    accounts: Account[] | Map<string, Account>,
+    institutes: Institute[] | Map<string, Institute>,
+    instruments?: Instrument[] | Map<string, Instrument>
 ): Transaction {
-    // Find account and institute for source info
-    let account = accounts.find(a => a.id === unified.accountId);
+    // Find account and institute for source info using O(1) Map lookup when available
+    let account = lookupEntity(accounts, unified.accountId);
     if (!account) {
-        account = accounts.find(a => a.id === unified.batchId);
+        account = lookupEntity(accounts, unified.batchId);
     }
-    const institute = account ? institutes.find(i => i.id === account.instituteId) : null;
+    const institute = account ? lookupEntity(institutes, account.instituteId) : null;
 
     // Resolve instrument for asset classification
     let instrument: Instrument | undefined;
     if (unified.instrumentId) {
         instrument = instruments
-            ? instruments.find(i => i.id === unified.instrumentId)
+            ? lookupEntity(instruments, unified.instrumentId)
             : db.getInstrumentById(unified.instrumentId);
     }
 
