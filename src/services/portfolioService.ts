@@ -40,6 +40,12 @@ export const portfolioService = {
         const institutes = db.getInstitutes();
         const instruments = db.getInstruments();
 
+        // BOLT OPTIMIZATION:
+        // Pre-build O(1) lookup Maps for instruments, accounts, and institutes to avoid O(N * (I + A + Inst)) linear find operations inside the transaction processing loop.
+        const instrumentMap = new Map(instruments.map(i => [i.id, i]));
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const instituteMap = new Map(institutes.map(i => [i.id, i]));
+
         // Sort unified transactions by date ascending
         const sortedTxs = [...unifiedTxs].sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
 
@@ -49,9 +55,9 @@ export const portfolioService = {
         for (const tx of sortedTxs) {
             if (!tx.instrumentId) continue;
 
-            const instrument = instruments.find(i => i.id === tx.instrumentId);
-            const account = accounts.find(a => a.id === tx.accountId);
-            const institute = account ? institutes.find(i => i.id === account.instituteId) : null;
+            const instrument = instrumentMap.get(tx.instrumentId);
+            const account = accountMap.get(tx.accountId);
+            const institute = account?.instituteId ? instituteMap.get(account.instituteId) : null;
             const symbol = instrument?.marketIdentifier.symbol || tx.assetSymbol;
 
             const key = `${tx.accountId}:${tx.instrumentId}`;
