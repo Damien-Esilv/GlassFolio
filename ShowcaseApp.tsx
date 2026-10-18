@@ -7,6 +7,7 @@ import './src/i18n';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { Analytics } from '@vercel/analytics/react';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
@@ -55,6 +56,7 @@ export const ShowcaseApp: React.FC = () => {
           </Routes>
         </React.Suspense>
         <ConsentBanner />
+        <Analytics />
       </Router>
     </AuthProvider>
   );

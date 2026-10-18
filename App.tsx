@@ -29,6 +29,7 @@ import { VaultGate } from './components/security/VaultGate';
 import { getAppTarget } from './src/config/deployment';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 
 // Lazy-loaded showcase & legal pages to preserve core bundle budget
 // @ts-expect-error import.meta.env is injected by Vite at compile time
@@ -154,6 +155,7 @@ const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>
+          <VercelAnalytics />
         </Router>
       </DataProvider>
     </AuthProvider>
