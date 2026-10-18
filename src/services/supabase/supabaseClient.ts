@@ -55,7 +55,7 @@ export const getSupabaseConfig = (): SupabaseConfig | null => {
 
     if (!rawUrl || !rawKey) return null;
     return {
-        url: rawUrl.replace(/\/+$/, ''),
+        url: rawUrl.replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '').replace(/\/auth\/v1\/?$/, ''),
         anonKey: rawKey,
     };
 };
