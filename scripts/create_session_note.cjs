@@ -10,7 +10,7 @@ const safeSubject = subject
   .replace(/[^a-zA-Z0-9-_]/g, '')
   .toLowerCase();
 
-const brainPath = process.env.BRAIN_PATH || '/Users/damien/Developpement/brain/GlassFolio';
+const brainPath = process.env.BRAIN_PATH || (process.env.HOME ? path.join(process.env.HOME, 'Developpement', 'brain', 'GlassFolio') : path.resolve(process.cwd(), '../brain/GlassFolio'));
 const sessionsDir = path.join(brainPath, '05-Sessions-IA');
 const templatePath = path.join(sessionsDir, 'Session-TEMPLATE.md');
 

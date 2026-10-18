@@ -26,7 +26,7 @@ export const RecoveryKeyDialog: React.FC<RecoveryKeyDialogProps> = ({ recoveryKe
     const handleDownload = () => {
         const content = [
             '================================================================',
-            'GlassFolio — Emergency Recovery Key (Zero-Knowledge Architecture)',
+            'GlassFolio — Emergency Recovery Key (End-to-End Encrypted Vault)',
             '================================================================',
             '',
             `Date Created : ${new Date().toISOString()}`,

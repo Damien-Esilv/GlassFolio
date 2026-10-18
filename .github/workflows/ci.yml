@@ -78,7 +78,7 @@ jobs:
         run: npm run check:types
 
       - name: ESLint check (errors block CI)
-        run: npx eslint . --ext .ts,.tsx --quiet
+        run: npm run lint
 
       - name: i18n keys completeness audit
         run: npm run check:i18n
@@ -211,10 +211,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build production bundle in Local mode
-        run: VITE_DEPLOYMENT_MODE=local npm run build
+      - name: Build production bundle in Local mode (App only, 0 bytes Landing)
+        run: npm run build:local
 
-      - name: Check bundle size in Local mode (hard limit 2MB, warn at 1.5MB)
+      - name: Check bundle size in Local mode (hard limit 2MB) & verify Showcase exclusion
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Local mode bundle size: ${BUNDLE_SIZE}KB"
@@ -222,18 +222,45 @@ jobs:
             echo "::error::Local bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
             exit 1
           fi
-
-      - name: Build production bundle in Cloud mode
-        run: VITE_DEPLOYMENT_MODE=cloud npm run build
-
-      - name: Check bundle size in Cloud mode (hard limit 2MB, warn at 1.5MB)
-        run: |
-          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "Cloud mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2048 ]; then
-            echo "::error::Cloud bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
+          if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
+            echo "::error::Landing chunk was unexpectedly bundled into local app build!"
             exit 1
           fi
+          echo "✅ Lean local build verified: zero showcase assets bundled."
+
+      - name: Build production bundle in Cloud App mode (Subdomain app.glassfolio.dev)
+        run: npm run build:app
+
+      - name: Check bundle size in Cloud App mode (hard limit 2MB) & verify Showcase exclusion
+        run: |
+          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
+          echo "Cloud App mode bundle size: ${BUNDLE_SIZE}KB"
+          if [ $BUNDLE_SIZE -gt 2048 ]; then
+            echo "::error::Cloud App bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
+            exit 1
+          fi
+          if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
+            echo "::error::Landing chunk was unexpectedly bundled into Cloud App build!"
+            exit 1
+          fi
+          echo "✅ Cloud App build verified: zero showcase assets bundled."
+
+      - name: Build production bundle in Showcase mode (Apex glassfolio.dev)
+        run: npm run build:showcase
+
+      - name: Check bundle size in Showcase mode (hard limit 1MB) & verify Showcase inclusion
+        run: |
+          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
+          echo "Showcase mode bundle size: ${BUNDLE_SIZE}KB"
+          if [ $BUNDLE_SIZE -gt 1024 ]; then
+            echo "::error::Showcase bundle size ${BUNDLE_SIZE}KB exceeds 1MB limit"
+            exit 1
+          fi
+          if ! ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
+            echo "::error::Landing chunk missing from Showcase build!"
+            exit 1
+          fi
+          echo "✅ Showcase build verified: lightweight showcase bundle emitted."
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

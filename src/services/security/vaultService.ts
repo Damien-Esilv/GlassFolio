@@ -1,5 +1,5 @@
 /**
- * Vault Service — Orchestrates zero-knowledge vault lifecycle (TGLA-041).
+ * Vault Service — Orchestrates E2EE encrypted vault lifecycle (TGLA-041).
  *
  * Implements:
  *   - Setup: derives Dual-Keys (KEK + AuthKey), generates Recovery Key, wraps DEK, writes VaultHeader.
@@ -118,7 +118,7 @@ export class VaultService {
     }
 
     /**
-     * Sets up a new zero-knowledge vault with a master password.
+     * Sets up a new E2EE encrypted vault with a master password.
      * Generates a 160-bit recovery key and returns it (shown ONCE to the user).
      */
     public async setup(password: string): Promise<VaultSetupResult> {

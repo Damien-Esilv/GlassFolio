@@ -9,7 +9,7 @@ import { DashboardSummary, Position } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { portfolioService } from '../src/services/portfolioService';
 import { currencyService } from '../src/services/currencyService';
-import { fetchRealPriceHistory, HistoricalPricePoint } from '../src/services/priceService';
+import { fetchRealPriceHistory, generateHighPrecisionHistory, HistoricalPricePoint } from '../src/services/priceService';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
@@ -102,12 +102,12 @@ const Dashboard: React.FC = () => {
     return [...nonCashPositions].sort((a, b) => a.unrealizedPLPercent - b.unrealizedPLPercent)[0];
   }, [nonCashPositions]);
 
-  // Fetch real historical prices for Best and Worst performers
+  // Fetch real historical prices for Best and Worst performers (synchronized with selected portfolio timeRange)
   useEffect(() => {
     let isSubscribed = true;
 
     if (bestPerformer) {
-      fetchRealPriceHistory(bestPerformer, '1Y').then(data => {
+      fetchRealPriceHistory(bestPerformer, timeRange).then(data => {
         if (isSubscribed) setBestHistory(data);
       });
     } else {
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
     }
 
     if (worstPerformer) {
-      fetchRealPriceHistory(worstPerformer, '1Y').then(data => {
+      fetchRealPriceHistory(worstPerformer, timeRange).then(data => {
         if (isSubscribed) setWorstHistory(data);
       });
     } else {
@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
     }
 
     return () => { isSubscribed = false; };
-  }, [bestPerformer, worstPerformer]);
+  }, [bestPerformer, worstPerformer, timeRange]);
 
   // Dynamic screen column capacity (1 on sm, 2 on md, 3 on lg)
   const [maxCols, setMaxCols] = useState<number>(() => {
@@ -173,19 +173,20 @@ const Dashboard: React.FC = () => {
     isWorst?: boolean;
     realHistory?: HistoricalPricePoint[];
   }) => {
-    // Real Sparkline price trend data (fallback to interpolated sine curve if API returned empty)
+    // Real Sparkline price trend data (fallback to high-precision financial generator if API returned empty)
     const sparklineData = useMemo(() => {
       if (!position) return [];
       if (realHistory && realHistory.length >= 2) {
         return realHistory.map(pt => ({ val: pt.price }));
       }
-      return Array.from({ length: 15 }, (_, i) => {
-        const progress = i / 14;
-        const base = position.avgCost + (position.lastPrice - position.avgCost) * progress;
-        const noise = 1 + (Math.sin(i * 1.7) * 0.015);
-        return { val: base * noise };
-      });
-    }, [realHistory, position]);
+      const plRatio = (position.unrealizedPLPercent || 0) / 100;
+      const estimatedStart = plRatio !== -1
+        ? position.lastPrice / (1 + plRatio)
+        : (position.avgCost > 0 ? position.avgCost : position.lastPrice * 0.9);
+      const count = timeRange === '1D' ? 24 : timeRange === '1W' ? 42 : timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === 'ALL' ? 300 : 252;
+      const synthetic = generateHighPrecisionHistory(position.symbol, estimatedStart, position.lastPrice, count);
+      return synthetic.map(pt => ({ val: pt.price }));
+    }, [realHistory, position, timeRange]);
 
     if (!position) {
       return (

@@ -1,0 +1,121 @@
+{
+  "banner": {
+    "title": "Privacy & GDPR Cookie Consent",
+    "description": "GlassFolio uses strictly necessary local storage to operate your client-side encrypted vault and interface preferences. We do not use third-party advertising cookies. With your explicit consent, we may collect anonymous telemetry to improve feature stability in cloud mode.",
+    "acceptButton": "Accept optional analytics",
+    "refuseButton": "Refuse optional analytics",
+    "customizeLink": "Learn more in Cookie Settings"
+  },
+  "center": {
+    "pageTitle": "Legal & GDPR Governance Center",
+    "pageSubtitle": "Transparency, privacy-by-design architecture, and regulatory compliance disclosures for GlassFolio.",
+    "backToApp": "Back to Application",
+    "backToHome": "Back to Home",
+    "tabs": {
+      "legal": "Legal Notice",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use",
+      "cookies": "Cookies & Storage",
+      "accessibility": "Accessibility"
+    }
+  },
+  "legalNotice": {
+    "title": "Mentions Légales — Legal Notice",
+    "lastUpdated": "Last updated: October 2026",
+    "publisherTitle": "1. Site & Project Publisher",
+    "publisherText": "The GlassFolio showcase application and source code are published as an open-source personal software project by:",
+    "publisherName": "Publisher: Damien [LAST_NAME]",
+    "publisherStatus": "Status: Individual open-source software project (Portfolio & Demonstration)",
+    "publisherContact": "Contact: [CONTACT_EMAIL]",
+    "publisherProfile": "Project Repository & Professional Profile: [GITHUB_OR_LINKEDIN_URL]",
+    "hostingTitle": "2. Web Hosting & Infrastructure Providers",
+    "hostingText": "The GlassFolio web application is hosted as a static client-side bundle on:",
+    "hostingPrimary": "Primary Hosting: Microsoft Azure Static Web Apps — Microsoft Ireland Operations Limited, One Microsoft Place, South County Business Park, Leopardstown, Dublin 18, Ireland.",
+    "hostingSecondary": "Source Code & Version Control: GitHub, Inc. — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA.",
+    "ipTitle": "3. Intellectual Property & Open-Source License",
+    "ipText": "The GlassFolio application, architecture, and documentation are distributed under an open-source license. Third-party brand names, tickers, logos, and exchange trademarks mentioned (e.g., BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure) remain the exclusive property of their respective trademark holders. They are cited strictly for identification, technical interoperability, and descriptive purposes in accordance with Article L.713-6 of the French Intellectual Property Code and Article 14 of Regulation (EU) 2017/1001 on the European Union trade mark (nominative fair use)."
+  },
+  "privacy": {
+    "title": "Privacy Policy (GDPR)",
+    "lastUpdated": "Last updated: October 2026",
+    "zkTitle": "1. Client-Side End-to-End Encrypted (E2EE) Architecture",
+    "zkText": "GlassFolio is engineered from the ground up on an end-to-end encryption (E2EE) architecture. All sensitive financial records (transactions, holdings, average purchase prices, fiscal declarations, goals, and BYOK AI keys) are encrypted directly inside your browser memory using WebCrypto AES-256-GCM. Derivation uses PBKDF2-SHA256 with 600,000 iterations and HKDF-SHA256.",
+    "zkNoServer": "Crucially, no financial records are ever exposed in plaintext. Your unencrypted financial data, master password, recovery key, and TOTP seeds are never transmitted in plaintext to any third party or remote server.",
+    "externalTitle": "2. External Network Calls & Market Data",
+    "externalText": "To provide live portfolio valuations and AI capabilities, your browser may establish direct client-side network connections to the following external endpoints:",
+    "externalYahoo": "Yahoo Finance & CoinGecko: Direct HTTP requests from your browser for real-time asset market quotes and foreign exchange rates (cached locally with a 15-minute TTL).",
+    "externalAi": "User-Configured AI Providers: If you configure a BYOK API key (OpenAI, Anthropic, Groq, OpenRouter), requests are sent directly from your browser to the chosen provider. Alternatively, you may select Local Ollama for 100% offline, zero-data-egress AI assistance.",
+    "externalCdn": "Static Assets: Tailwind CSS is injected via cdn.tailwindcss.com and font styles from Google Fonts (fonts.googleapis.com). No user portfolio data is ever shared with these CDNs.",
+    "rightsTitle": "3. GDPR Rights & Data Portability",
+    "rightsText": "Under Regulation (EU) 2016/679 (GDPR), you hold complete sovereignty over your data:",
+    "rightAccess": "Right of Access & Portability (Art. 20): You can export your entire unencrypted ledger and portfolio as a standardized JSON backup at any time from Settings.",
+    "rightErasure": "Right to Erasure (Art. 17): You can completely purge all stored keys and ciphertext instantly via the Settings 'Purge Vault' action.",
+    "rightComplaint": "Right to lodge a complaint: You have the right to lodge a complaint with the French supervisory authority, the CNIL (Commission Nationale de l'Informatique et des Libertés — www.cnil.fr)."
+  },
+  "terms": {
+    "title": "Terms of Use (CGU) & Disclaimers",
+    "lastUpdated": "Last updated: October 2026",
+    "disclaimerTitle": "1. Non-Financial & Non-Tax Advice Disclaimer (AMF / DGFiP)",
+    "disclaimerImportant": "GlassFolio is strictly an informational software demonstration and mathematical simulation tool. It does NOT provide certified investment advice (Conseil en Investissements Financiers — CIF), portfolio management services, or legal tax counsel under French or European financial regulations.",
+    "disclaimerDetail": "Tax simulations (PFU 30% vs Case 2OP Barème Progressif, Cerfa 2042 / 2074 / 3916 boxes) and ETF fee drag projections are computed based on user-supplied inputs and prevailing statutory rules. Users are solely responsible for verifying their official declarations with the French DGFiP tax administration or a qualified chartered accountant.",
+    "asIsTitle": "2. Software Provided 'As-Is'",
+    "asIsText": "GlassFolio is provided 'as is' and 'as available', without warranty of any kind, express or implied. The author and contributors shall not be held liable for any calculation discrepancy, market quote delay, data loss, or financial decision made based on the software."
+  },
+  "cookies": {
+    "title": "Cookies & Local Storage Inventory",
+    "lastUpdated": "Last updated: October 2026",
+    "overviewText": "GlassFolio does NOT use third-party tracking cookies or advertising pixels. All persistent client-side data is managed through the browser's local storage abstraction layer (appStorage) under strict cryptographic segmentation.",
+    "tableTitle": "Inventory of Storage Keys",
+    "tableKey": "Key Name",
+    "tableCategory": "Classification",
+    "tablePurpose": "Technical Purpose & Security Lifecycle",
+    "tableLifespan": "Lifespan",
+    "rows": {
+      "vaultHeader": {
+        "key": "gf_vault_header",
+        "category": "Strictly Necessary",
+        "purpose": "Stores the PBKDF2 salt, auth verification tag, and passkey PRF metadata. Contains no financial values.",
+        "lifespan": "Persistent until user purge"
+      },
+      "vaultPayload": {
+        "key": "glassfolio_*",
+        "category": "Strictly Necessary (Encrypted)",
+        "purpose": "AES-256-GCM encrypted financial ledger records (transactions, positions, goals, AI secrets). Only readable with your master key in RAM.",
+        "lifespan": "Persistent until user purge"
+      },
+      "themeLang": {
+        "key": "gf_public_theme / gf_public_lang",
+        "category": "Strictly Necessary (Preferences)",
+        "purpose": "Stores your chosen UI theme (Light, Dark, Midnight) and language preference (EN, FR) across sessions.",
+        "lifespan": "Persistent until browser cache clear"
+      },
+      "consent": {
+        "key": "gf_consent_v1",
+        "category": "Strictly Necessary (Consent State)",
+        "purpose": "Stores your CNIL GDPR analytics consent record and timestamp.",
+        "lifespan": "13 months (CNIL recommended)"
+      }
+    },
+    "managerTitle": "Interactive Analytics Consent Manager",
+    "currentStatusLabel": "Current Consent Status:",
+    "statusAccepted": "Analytics Opt-in Accepted",
+    "statusRefused": "Analytics Opt-in Refused",
+    "statusUnset": "No Choice Recorded Yet",
+    "grantAnalyticsBtn": "Accept Optional Analytics",
+    "revokeAnalyticsBtn": "Revoke / Refuse Optional Analytics",
+    "resetConsentBtn": "Reset to Prompt State"
+  },
+  "accessibility": {
+    "title": "Accessibility Declaration (RGAA 4.1)",
+    "lastUpdated": "Last updated: October 2026",
+    "statusTitle": "1. Compliance Status",
+    "statusText": "GlassFolio commits to making its interface accessible in accordance with Article 47 of French Law No. 2005-102 of February 11, 2005. The application is currently PARTIALLY COMPLIANT with the General Accessibility Improvement Framework (RGAA version 4.1 / WCAG 2.1 Level AA), as a formal external audit is pending.",
+    "standardsTitle": "2. Implemented Accessibility Features",
+    "featAria": "Semantic Landmarks & ARIA: Proper semantic tags (header, nav, main, section, footer), accessible button labels (aria-label on all icon-only controls), and accordion controls (aria-expanded, aria-controls).",
+    "featContrast": "WCAG AA Color Contrast: Strict SSOT semantic token system enforcing minimum 4.5:1 text-to-background contrast across Light, Dark, and Midnight themes.",
+    "featKeyboard": "Keyboard Navigation: Visible focus outlines and tab sequence across all interactive controls, modals, and drawers.",
+    "featMotion": "Reduced Motion: Respects the user's operating system prefers-reduced-motion preference, disabling decorative transitions and animations.",
+    "feedbackTitle": "3. Feedback & Contact",
+    "feedbackText": "If you encounter an accessibility defect or barrier on this application, please open an issue on the project repository or contact Damien [LAST_NAME] at [CONTACT_EMAIL]."
+  }
+}

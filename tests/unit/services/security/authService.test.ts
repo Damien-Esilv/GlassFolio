@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LocalAuthProvider, createAuthProvider } from '../../../../src/services/security/authService';
 import { createBackingStorage } from '../../../../src/services/storage/storageFactory';
-import { LocalStorageProvider } from '../../../../src/types/storage';
+import { SyncedBackingStorageProvider } from '../../../../src/services/storage/SyncedBackingStorageProvider';
 import { vaultService } from '../../../../src/services/security/vaultService';
 import { userRepository } from '../../../../src/services/repositories';
 
@@ -20,7 +20,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         ).rejects.toThrow(/NIST/i);
     });
 
-    it('creates account and initializes zero-knowledge vault on valid signup', async () => {
+    it('creates account and initializes encrypted vault on valid signup', async () => {
         const strongPassword = 'Strong-Vault-Secret-Key-2026!#';
         const result = await auth.signUp('alice@glassfolio.com', strongPassword, 'Alice Explorer');
 
@@ -36,10 +36,39 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         expect(current?.email).toBe('alice@glassfolio.com');
     });
 
+    it('sets up local vault directly without requiring an email address', async () => {
+        const strongPassword = 'Strong-Local-Vault-Master-Key-2026!#';
+        const result = await auth.setupLocalVault('Damien Investor', strongPassword);
+
+        expect(result.user).toBeDefined();
+        expect(result.user.name).toBe('Damien Investor');
+        expect(result.user.email).toBe('local@glassfolio.vault');
+        expect(result.recoveryKey).toBeDefined();
+        expect(vaultService.isInitialized()).toBe(true);
+        expect(vaultService.isUnlocked()).toBe(true);
+
+        // Lock vault and test unlocking with master password
+        await vaultService.lock();
+        expect(vaultService.isUnlocked()).toBe(false);
+
+        const unlockRes = await auth.unlockLocalVault(strongPassword);
+        expect(unlockRes.user.name).toBe('Damien Investor');
+        expect(vaultService.isUnlocked()).toBe(true);
+    });
+
+    it('rejects setupLocalVault with weak master password based on NIST policy', async () => {
+        await expect(
+            auth.setupLocalVault('Damien', 'weakpass')
+        ).rejects.toThrow(/NIST/i);
+    });
+
     it('handles demo user signIn and unlocks demo vault', async () => {
         const res = await auth.signIn('demo@glassfolio.com', 'password');
         expect(res.user.email).toBe('demo@glassfolio.com');
-        expect(res.user.name).toBe('Alex Trader');
+        expect(res.user.name).toBe('Thomas Martin');
+        expect(res.user.avatar).toBe('/avatars/demo-user.jpg');
+        expect(res.user.preferences?.fiscalProfile?.familyStatus).toBe('married');
+        expect(res.user.preferences?.fiscalProfile?.fiscalShares).toBe(3);
         expect(vaultService.isInitialized()).toBe(true);
         expect(vaultService.isUnlocked()).toBe(true);
     });
@@ -85,10 +114,10 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect(cloudAuth).toBeInstanceOf(LocalAuthProvider);
 
             const localStorage = createBackingStorage('local');
-            expect(localStorage).toBeInstanceOf(LocalStorageProvider);
+            expect(localStorage).toBeInstanceOf(SyncedBackingStorageProvider);
 
             const cloudStorage = createBackingStorage('cloud');
-            expect(cloudStorage).toBeInstanceOf(LocalStorageProvider);
+            expect(cloudStorage).toBeInstanceOf(SyncedBackingStorageProvider);
         });
     });
 });

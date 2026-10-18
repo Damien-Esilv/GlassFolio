@@ -26,15 +26,23 @@ import { useTranslation } from 'react-i18next';
 import './src/i18n'; // Initialize i18n
 
 import { VaultGate } from './components/security/VaultGate';
+import { getAppTarget } from './src/config/deployment';
+import { LoadingScreen } from './components/ui/LoadingScreen';
+import { ScrollToTop } from './components/ui/ScrollToTop';
+
+// Lazy-loaded showcase & legal pages to preserve core bundle budget
+// @ts-expect-error import.meta.env is injected by Vite at compile time
+const isShowcaseExcluded = import.meta.env.VITE_APP_TARGET === 'app';
+const Landing = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Landing'));
+const LegalCenter = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/LegalCenter'));
 
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-canvas text-brand">{t('common:labels.loading')}</div>;
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -44,18 +52,78 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <VaultGate>{children}</VaultGate>;
 };
 
+// Dual-mode Root Route: Authenticated -> Dashboard, Cloud/Unified -> Landing, App-only -> /login
+const RootRoute: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const target = getAppTarget();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (user) {
+    return (
+      <VaultGate>
+        <Dashboard />
+      </VaultGate>
+    );
+  }
+
+  // App-only target (Docker container or cloud app subdomain) greets with /login
+  if (isShowcaseExcluded || target === 'app') {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Unified or showcase target defaults unauthenticated visitors to /welcome
+  return <Navigate to="/welcome" replace />;
+};
+
+const LazyLanding: React.FC = () => {
+  if (isShowcaseExcluded || !Landing) {
+    return <Navigate to="/login" replace />;
+  }
+  return (
+    <React.Suspense fallback={<LoadingScreen />}>
+      <Landing />
+    </React.Suspense>
+  );
+};
+
+const LazyLegalCenter: React.FC = () => {
+  if (isShowcaseExcluded || !LegalCenter) {
+    return <Navigate to="/login" replace />;
+  }
+  return (
+    <React.Suspense fallback={<LoadingScreen />}>
+      <LegalCenter />
+    </React.Suspense>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <DataProvider>
         <Router>
+          <ScrollToTop />
           <Layout>
             <Routes>
+              {/* Public Showcase & Legal Routes */}
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/welcome" element={<LazyLanding />} />
+              <Route path="/legal" element={<LazyLegalCenter />} />
+              <Route path="/privacy" element={<LazyLegalCenter />} />
+              <Route path="/terms" element={<LazyLegalCenter />} />
+              <Route path="/cookies" element={<LazyLegalCenter />} />
+              <Route path="/accessibility" element={<LazyLegalCenter />} />
+              <Route path="/welcome/legal" element={<LazyLegalCenter />} />
+              <Route path="/welcome/privacy" element={<LazyLegalCenter />} />
+              <Route path="/welcome/terms" element={<LazyLegalCenter />} />
+              <Route path="/welcome/cookies" element={<LazyLegalCenter />} />
+              <Route path="/welcome/accessibility" element={<LazyLegalCenter />} />
+
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-
-              {/* Protected Routes */}
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/portfolio" element={<ProtectedRoute><PortfolioHub /></ProtectedRoute>} />
               <Route path="/portfolio/summary" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
               <Route path="/positions" element={<ProtectedRoute><Positions /></ProtectedRoute>} />

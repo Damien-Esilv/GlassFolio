@@ -1,10 +1,10 @@
 /**
- * Unified Authentication Service (TGLA-047).
+ * Unified Authentication Service (TGLA-047, TGLA-059 & TGLA-060).
  *
  * Implements:
- *   - LocalAuthProvider (zero-knowledge local mode, PBKDF2/HKDF dual-key unlock, lockout protection).
- *   - OAuth stubs (Google / Apple Sign-In).
- *   - Factory keyed on VITE_DEPLOYMENT_MODE.
+ *   - LocalAuthProvider (E2EE local mode, single-vault direct unlock, PBKDF2/HKDF dual-key unlock, lockout protection).
+ *   - SupabaseAuthProvider (E2EE cloud mode, GoTrue Auth, Google/Apple OAuth, automated encrypted vault sync).
+ *   - Factory keyed on VITE_DEPLOYMENT_MODE & Supabase configuration.
  */
 
 import { getDeploymentMode } from '../../config/deployment';
@@ -14,9 +14,49 @@ import { userRepository } from '../repositories';
 import { AuthResult, AuthSession, IAuthProvider } from './authTypes';
 import { evaluatePassword } from './passwordValidator';
 import { vaultService } from './vaultService';
+import { appStorage } from '../storage/appStorage';
+import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../storage/storageKeys';
+import { getSyncedStorageProvider } from '../storage/storageFactory';
+import { isSupabaseConfigured, SupabaseAuthSession, supabaseClient } from '../supabase/supabaseClient';
+
+function getInitialAuthPreferences(): User['preferences'] {
+    const storedTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
+    const validTheme = storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'night'
+        ? storedTheme
+        : (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'night');
+
+    const storedLang = appStorage.getItem(PUBLIC_LANG_STORAGE_KEY);
+    const validLang = storedLang === 'fr' || storedLang === 'en'
+        ? storedLang
+        : (typeof document !== 'undefined' && document.documentElement.lang?.toLowerCase().startsWith('fr') ? 'fr' : 'en');
+
+    const currency = validLang === 'fr' ? 'EUR' : 'USD';
+
+    return {
+        theme: validTheme,
+        currency,
+        notifications: true,
+        language: validLang,
+        dateFormat: 'DD/MM/YYYY',
+    };
+}
 
 const MAX_UNLOCKED_ATTEMPTS = 5;
 const BASE_LOCKOUT_SECONDS = 30;
+
+// Helper to create in-memory session record
+function createSessionRecord(userId: string): AuthSession {
+    return {
+        id: `sess-${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        createdAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node/Test',
+        deviceLabel: 'Current Device',
+    };
+}
+
+// ── LOCAL AUTH PROVIDER (Offline-first & Docker single-vault) ─────────────────
 
 export class LocalAuthProvider implements IAuthProvider {
     private failedAttempts = 0;
@@ -37,14 +77,14 @@ export class LocalAuthProvider implements IAuthProvider {
         return diff;
     }
 
-    private checkLockout(): void {
+    protected checkLockout(): void {
         const remaining = this.getLockoutRemainingSeconds();
         if (remaining > 0) {
             throw new Error(`Account temporarily locked. Please wait ${remaining} seconds.`);
         }
     }
 
-    private registerFailure(): void {
+    protected registerFailure(): void {
         this.failedAttempts++;
         if (this.failedAttempts >= MAX_UNLOCKED_ATTEMPTS) {
             const multiplier = Math.pow(2, this.failedAttempts - MAX_UNLOCKED_ATTEMPTS);
@@ -53,22 +93,73 @@ export class LocalAuthProvider implements IAuthProvider {
         }
     }
 
-    private resetFailures(): void {
+    protected resetFailures(): void {
         this.failedAttempts = 0;
         this.lockoutUntil = null;
     }
 
-    private createSession(userId: string): AuthSession {
-        const session: AuthSession = {
-            id: `sess-${Math.random().toString(36).substr(2, 9)}`,
-            userId,
-            createdAt: new Date().toISOString(),
-            lastSeenAt: new Date().toISOString(),
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node/Test',
-            deviceLabel: 'Current Device',
+    public async setupLocalVault(name: string, masterPassword: string): Promise<AuthResult> {
+        await delay(300);
+
+        const validation = evaluatePassword(masterPassword);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        let recoveryKey: string | undefined;
+        if (!vaultService.isInitialized()) {
+            const setupRes = await vaultService.setup(masterPassword);
+            recoveryKey = setupRes.recoveryKey;
+        }
+
+        const userId = `usr-local-${Math.random().toString(36).substr(2, 7)}`;
+        const localUser: User = {
+            id: userId,
+            name: name.trim() || 'Local Vault Master',
+            email: 'local@glassfolio.vault',
+            avatar: '/avatars/local-user.jpg',
+            preferences: getInitialAuthPreferences(),
+            xp: 0,
+            level: 1,
         };
+
+        await userRepository.saveUser(localUser);
+        this.resetFailures();
+        const session = createSessionRecord(localUser.id);
         this.currentSession = session;
-        return session;
+
+        return { user: localUser, recoveryKey, session };
+    }
+
+    public async unlockLocalVault(masterPassword: string): Promise<AuthResult> {
+        await delay(250);
+        this.checkLockout();
+
+        try {
+            if (vaultService.isInitialized() && !vaultService.isUnlocked()) {
+                await vaultService.unlock(masterPassword);
+            }
+            let user = await userRepository.getUser();
+            if (!user) {
+                user = {
+                    id: 'usr-local-default',
+                    name: 'Local Vault Master',
+                    email: 'local@glassfolio.vault',
+                    avatar: '/avatars/local-user.jpg',
+                    preferences: getInitialAuthPreferences(),
+                    xp: 0,
+                    level: 1,
+                };
+                await userRepository.saveUser(user);
+            }
+            this.resetFailures();
+            const session = createSessionRecord(user.id);
+            this.currentSession = session;
+            return { user, session };
+        } catch {
+            this.registerFailure();
+            throw new Error('Invalid master password.');
+        }
     }
 
     public async signUp(email: string, password: string, name: string): Promise<AuthResult> {
@@ -80,7 +171,15 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        // Initialize zero-knowledge vault
+        // If current user is the demo account, reset the vault first so a real user gets a clean vault
+        const existingUser = await userRepository.getUser();
+        if (existingUser?.email === 'demo@glassfolio.com') {
+            await vaultService.lock();
+            await userRepository.clearUser();
+            await vaultService.resetVault();
+        }
+
+        // Initialize encrypted vault
         let recoveryKey: string | undefined;
         if (!vaultService.isInitialized()) {
             const setupRes = await vaultService.setup(password);
@@ -93,20 +192,15 @@ export class LocalAuthProvider implements IAuthProvider {
             name: name.trim(),
             email: email.trim().toLowerCase(),
             avatar: `https://i.pravatar.cc/150?u=${encodeURIComponent(email)}`,
-            preferences: {
-                theme: 'night',
-                currency: 'USD',
-                notifications: true,
-                language: 'en',
-                dateFormat: 'DD/MM/YYYY',
-            },
+            preferences: getInitialAuthPreferences(),
             xp: 0,
             level: 1,
         };
 
         await userRepository.saveUser(newUser);
         this.resetFailures();
-        const session = this.createSession(newUser.id);
+        const session = createSessionRecord(newUser.id);
+        this.currentSession = session;
 
         return {
             user: newUser,
@@ -133,29 +227,48 @@ export class LocalAuthProvider implements IAuthProvider {
                 console.error('[authService] Failed to unlock demo vault', err);
             }
 
+            const existingDemo = await userRepository.getUser();
+            const storedTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY) as User['preferences']['theme'];
+            const storedLang = appStorage.getItem(PUBLIC_LANG_STORAGE_KEY) as User['preferences']['language'];
+
             const demoUser: User = {
                 id: 'demo-123',
-                name: 'Alex Trader',
+                name: 'Thomas Martin',
                 email: 'demo@glassfolio.com',
-                avatar: 'https://i.pravatar.cc/150?u=alex',
+                avatar: '/avatars/demo-user.jpg',
                 preferences: {
-                    theme: 'night',
-                    currency: 'USD',
-                    notifications: true,
-                    language: 'en',
+                    ...getInitialAuthPreferences(),
+                    currency: 'EUR',
                     dateFormat: 'DD/MM/YYYY',
+                    notifications: true,
+                    ...(existingDemo?.preferences || {}),
+                    theme: storedTheme || existingDemo?.preferences?.theme || 'night',
+                    language: storedLang || existingDemo?.preferences?.language || 'fr',
+                    fiscalProfile: {
+                        familyStatus: 'married',
+                        fiscalShares: 3,
+                        taxResidenceCountries: ['FR'],
+                        department: '75',
+                        taxZone: 'zone_3',
+                        otherTaxableIncome: 68000,
+                        estimatedTMI: 30,
+                        hasOpted2OP: false,
+                        lossCarryforwards: {},
+                        ...(existingDemo?.preferences?.fiscalProfile || {}),
+                    },
                 },
-                xp: 1250,
-                level: 5,
+                xp: existingDemo?.xp || 1450,
+                level: existingDemo?.level || 6,
             };
 
             await userRepository.saveUser(demoUser);
             this.resetFailures();
-            const session = this.createSession(demoUser.id);
+            const session = createSessionRecord(demoUser.id);
+            this.currentSession = session;
             return { user: demoUser, session };
         }
 
-        // 2. Custom account handling via zero-knowledge vault
+        // 2. Custom account handling via encrypted vault
         try {
             if (vaultService.isInitialized() && !vaultService.isUnlocked()) {
                 await vaultService.unlock(password);
@@ -163,7 +276,8 @@ export class LocalAuthProvider implements IAuthProvider {
             const storedUser = await userRepository.getUser();
             if (storedUser && storedUser.email.toLowerCase() === cleanEmail) {
                 this.resetFailures();
-                const session = this.createSession(storedUser.id);
+                const session = createSessionRecord(storedUser.id);
+                this.currentSession = session;
                 return { user: storedUser, session };
             }
         } catch {
@@ -194,13 +308,216 @@ export class LocalAuthProvider implements IAuthProvider {
     }
 }
 
-/**
- * Factory for creating the appropriate auth provider based on deployment mode.
- */
+// ── SUPABASE AUTH PROVIDER (Cloud E2EE Sync) ──────────────────────────────────
+
+export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProvider {
+    private supabaseSession: SupabaseAuthSession | null = null;
+
+    constructor() {
+        super();
+        this.restoreSessionFromStorage();
+    }
+
+    private restoreSessionFromStorage(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            const raw = localStorage.getItem('gf_sb_session');
+            if (raw) {
+                const parsed = JSON.parse(raw) as SupabaseAuthSession;
+                if (parsed.expiresAt > Date.now()) {
+                    this.supabaseSession = parsed;
+                    getSyncedStorageProvider()?.setSupabaseSession(parsed);
+                } else {
+                    localStorage.removeItem('gf_sb_session');
+                }
+            }
+        } catch {
+            // Silent fallback
+        }
+    }
+
+    private persistSession(session: SupabaseAuthSession | null): void {
+        this.supabaseSession = session;
+        getSyncedStorageProvider()?.setSupabaseSession(session);
+        if (typeof window === 'undefined') return;
+        if (session) {
+            localStorage.setItem('gf_sb_session', JSON.stringify(session));
+        } else {
+            localStorage.removeItem('gf_sb_session');
+        }
+    }
+
+    public async handleOAuthCallback(): Promise<AuthResult | null> {
+        if (typeof window === 'undefined') return null;
+        const hash = window.location.hash;
+        if (!hash.includes('access_token=')) return null;
+
+        const params = new URLSearchParams(hash.replace(/^#/, ''));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const expiresIn = params.get('expires_in');
+
+        if (!accessToken) return null;
+
+        // Clean URL hash without reload
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+        const session: SupabaseAuthSession = {
+            accessToken,
+            refreshToken: refreshToken || '',
+            expiresAt: Date.now() + (Number(expiresIn) || 3600) * 1000,
+            user: {
+                id: `usr-sb-${Math.random().toString(36).substr(2, 7)}`,
+            },
+        };
+
+        this.persistSession(session);
+        const synced = getSyncedStorageProvider();
+        if (synced) {
+            await synced.pullFromRemote();
+        }
+
+        let user = await userRepository.getUser();
+        if (!user) {
+            user = {
+                id: session.user.id,
+                name: 'Cloud Investor',
+                email: 'user@cloud.glassfolio',
+                avatar: `https://i.pravatar.cc/150?u=${encodeURIComponent(session.user.id)}`,
+                preferences: getInitialAuthPreferences(),
+                xp: 0,
+                level: 1,
+            };
+            await userRepository.saveUser(user);
+        }
+
+        return {
+            user,
+            session: createSessionRecord(user.id),
+        };
+    }
+
+    public override async signUp(email: string, password: string, name: string): Promise<AuthResult> {
+        this.checkLockout();
+
+        // 1. NIST evaluation
+        const validation = evaluatePassword(password);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        // 2. Register user on Supabase Auth
+        const sbSession = await supabaseClient.signUp(email, password, name);
+        this.persistSession(sbSession);
+
+        // 3. Setup client-side encrypted vault
+        const setupRes = await vaultService.setup(password);
+
+        // 4. Save User record
+        const newUser: User = {
+            id: sbSession.user.id,
+            name: name.trim() || sbSession.user.user_metadata?.name || 'Investor',
+            email: email.trim().toLowerCase(),
+            avatar: sbSession.user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${encodeURIComponent(email)}`,
+            preferences: getInitialAuthPreferences(),
+            xp: 0,
+            level: 1,
+        };
+
+        await userRepository.saveUser(newUser);
+
+        // 5. Trigger initial remote sync
+        const synced = getSyncedStorageProvider();
+        if (synced) {
+            await synced.pullFromRemote();
+        }
+
+        this.resetFailures();
+        return {
+            user: newUser,
+            recoveryKey: setupRes.recoveryKey,
+            session: createSessionRecord(newUser.id),
+        };
+    }
+
+    public override async signIn(email: string, password: string): Promise<AuthResult> {
+        this.checkLockout();
+
+        const cleanEmail = email.trim().toLowerCase();
+        if (cleanEmail === 'demo@glassfolio.com') {
+            return super.signIn(email, password);
+        }
+
+        try {
+            // 1. Authenticate against Supabase Auth
+            const sbSession = await supabaseClient.signInWithPassword(cleanEmail, password);
+            this.persistSession(sbSession);
+
+            // 2. Pull remote encrypted vault from Supabase PostgREST
+            const synced = getSyncedStorageProvider();
+            if (synced) {
+                await synced.pullFromRemote();
+            }
+
+            // 3. Unlock encrypted vault
+            if (vaultService.isInitialized() && !vaultService.isUnlocked()) {
+                await vaultService.unlock(password);
+            }
+
+            // 4. Retrieve or reconstruct user profile
+            let user = await userRepository.getUser();
+            if (!user) {
+                user = {
+                    id: sbSession.user.id,
+                    name: sbSession.user.user_metadata?.name || cleanEmail.split('@')[0],
+                    email: cleanEmail,
+                    avatar: sbSession.user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${encodeURIComponent(cleanEmail)}`,
+                    preferences: getInitialAuthPreferences(),
+                    xp: 0,
+                    level: 1,
+                };
+                await userRepository.saveUser(user);
+            }
+
+            this.resetFailures();
+            return {
+                user,
+                session: createSessionRecord(user.id),
+            };
+        } catch (err: unknown) {
+            this.registerFailure();
+            const msg = err instanceof Error ? err.message : 'Invalid credentials.';
+            throw new Error(msg);
+        }
+    }
+
+    public override async signInWithOAuth(provider: 'google' | 'apple'): Promise<never> {
+        if (!isSupabaseConfigured() || typeof window === 'undefined') {
+            return super.signInWithOAuth(provider);
+        }
+        const redirectUrl = supabaseClient.getOAuthUrl(provider);
+        window.location.assign(redirectUrl);
+        // Returns promise that never resolves as browser is redirecting
+        return new Promise(() => {});
+    }
+
+    public override async signOut(): Promise<void> {
+        if (this.supabaseSession) {
+            await supabaseClient.signOut(this.supabaseSession.accessToken);
+        }
+        this.persistSession(null);
+        await super.signOut();
+    }
+}
+
+// ── FACTORY ───────────────────────────────────────────────────────────────────
+
 export const createAuthProvider = (mode: string): IAuthProvider => {
     switch (mode) {
         case 'cloud':
-            // Cloud provider uses LocalAuthProvider as local fallback until InstantDB/Azure is configured
+            if (isSupabaseConfigured()) {
+                return new SupabaseAuthProvider();
+            }
             return new LocalAuthProvider();
         case 'local':
         default:

@@ -1,11 +1,14 @@
 {
     "lockScreen": {
         "title": "Coffre-fort verrouillé",
-        "subtitle": "Le chiffrement Zero-Knowledge est actif. Saisissez votre mot de passe maître pour déchiffrer vos données financières.",
+        "subtitle": "Le chiffrement de bout en bout (E2EE) est actif. Saisissez votre mot de passe maître pour déchiffrer vos données financières.",
         "passwordLabel": "Mot de passe maître",
         "passwordPlaceholder": "Saisissez votre mot de passe maître",
         "unlockButton": "Déverrouiller le coffre",
         "unlocking": "Déchiffrement en cours...",
+        "unlockWithPasskey": "Déverrouiller avec Passkey (Biométrie)",
+        "unlockingPasskey": "Vérification biométrique...",
+        "passkeyNotSupported": "WebAuthn / Passkey non disponible",
         "useRecoveryKey": "Mot de passe oublié ? Utiliser la clé de récupération",
         "usePassword": "Retour au mot de passe maître",
         "recoveryKeyLabel": "Clé de récupération",
@@ -13,8 +16,8 @@
         "recoveryKeyHint": "Entrez la clé de récupération à 32 caractères générée lors de la création de votre coffre.",
         "forgotPrompt": "Mot de passe oublié et clé de récupération perdue ?",
         "resetButton": "Réinitialiser le coffre & recharger les données démo",
-        "resetConfirmTitle": "Réinitialiser le coffre Zero-Knowledge ?",
-        "resetConfirmMessage": "Attention : Par conception Zero-Knowledge, les données ne peuvent être récupérées sans le mot de passe ou la clé de secours. La réinitialisation effacera définitivement votre stockage local chiffré et restaurera le jeu de données démo par défaut.",
+        "resetConfirmTitle": "Réinitialiser le coffre chiffré ?",
+        "resetConfirmMessage": "Attention : Par conception du chiffrement de bout en bout, les données ne peuvent être récupérées sans le mot de passe ou la clé de secours. La réinitialisation effacera définitivement votre stockage local chiffré et restaurera le jeu de données démo par défaut.",
         "resetConfirmButton": "Oui, purger et revenir à la démo",
         "cancel": "Annuler",
         "invalidCredentials": "Le mot de passe maître ou la clé de récupération est incorrect.",
@@ -23,10 +26,10 @@
         "vaultStatusLocked": "Coffre verrouillé"
     },
     "header": {
-        "lockVaultTooltip": "Verrouiller le coffre-fort Zero-Knowledge immédiatement"
+        "lockVaultTooltip": "Verrouiller le coffre-fort immédiatement"
     },
     "vaultSection": {
-        "title": "Coffre-fort Zero-Knowledge",
+        "title": "Coffre-fort chiffré (E2EE)",
         "subtitle": "Toutes vos transactions, positions et identifiants sont chiffrés localement avec AES-256-GCM.",
         "statusActive": "Chiffrement Actif (Enveloppe V1)",
         "changeMasterPassword": "Modifier le mot de passe maître",

@@ -1,5 +1,5 @@
 /**
- * Crypto primitives for the GlassFolio zero-knowledge vault (TGLA-041).
+ * Crypto primitives for the GlassFolio E2EE encrypted vault (TGLA-041).
  *
  * Built only on the native Web Crypto API (no third-party crypto, no WASM).
  *

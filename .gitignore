@@ -1,4 +1,35 @@
-# Logs
+# ==============================================================================
+# GlassFolio — Git Ignore Configuration (Hardened DevSecOps)
+# ==============================================================================
+
+# Environment files & Secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Security credentials & Private keys
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Production builds & Testing outputs
+dist
+dist-ssr
+coverage
+downloads/
+*.lcov
+
+# Logs & Debugging
 logs
 *.log
 npm-debug.log*
@@ -7,26 +38,33 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-coverage
-*.local
-.env
-.env.*
-!.env.example
+# OS artifacts & Temp files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.backup
+*.bak
+*.sw?
+*~
 
-# Editor directories and files
+# IDE & Editor configurations
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 
+# AI Agent Local Cache & MCP Artifacts
+.gemini/
+.claude/
+.cursor/
 
-.gemini/mcp_config.json
-.vscode/mcp.json
+# Docker Local Persistent Volume
+glassfolio-data/
+

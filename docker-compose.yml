@@ -1,0 +1,14 @@
+services:
+  glassfolio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: glassfolio-app
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./glassfolio-data:/data
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/data

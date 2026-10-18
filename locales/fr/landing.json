@@ -1,0 +1,239 @@
+{
+  "common": {
+    "demoDataBadge": "Données d'exemple",
+    "tryLiveDemo": "Essayer la Démo (1-Clic)",
+    "launchInteractiveDemo": "Lancer la Démo Interactive (1-Clic)",
+    "createEncryptedVault": "Créer un Coffre Chiffré",
+    "goToDashboard": "Aller au Dashboard",
+    "logIn": "Connexion",
+    "signUp": "Créer un compte",
+    "learnMore": "Explorer",
+    "InteractivePlayground": "Simulateur Interactif"
+  },
+  "header": {
+    "brandName": "GlassFolio",
+    "navFeatures": "Fonctionnalités",
+    "navTax": "Simulateur Fiscal",
+    "navFees": "Impact des Frais",
+    "navCsv": "Import Courtiers",
+    "navSecurityAi": "Sécurité & IA",
+    "navFaq": "FAQ",
+    "themeCycleAria": "Changer de thème visuel (Clair, Sombre, Midnight)",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeNight": "Midnight",
+    "langSwitchAria": "Changer la langue de l'interface",
+    "langEn": "English",
+    "langFr": "Français",
+    "selectLanguage": "Langue de l'interface",
+    "selectTheme": "Thème d'affichage",
+    "mobileMenuAria": "Basculer le menu de navigation"
+  },
+  "hero": {
+    "badge": "Copilote Patrimonial E2EE & Fiscalité Française",
+    "title": "Pilotez votre patrimoine multi-actifs avec rigueur mathématique et confidentialité absolue.",
+    "subtitle": "Suivez vos PEA, CTO, Crypto, Assurance-Vie, Livrets et Immobilier dans un coffre local AES-256-GCM. Simulez vos cases Cerfa, analysez l'érosion des frais ETF et interrogez votre portefeuille via IA locale ou MCP.",
+    "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets • Immobilier",
+    "cardTitle": "Synthèse Patrimoniale Multi-Enveloppes",
+    "envelopeFilterLabel": "Filtrer par Enveloppe",
+    "currencySwitchLabel": "Devise de Référence",
+    "envelopes": {
+      "all": "Tout (148 450 €)",
+      "pea": "PEA (68 200 €)",
+      "cto": "CTO (54 100 €)",
+      "crypto": "Crypto (26 150 €)"
+    },
+    "metrics": {
+      "netWorth": "Patrimoine Net Total",
+      "unrealizedPl": "Plus-Value Latente (P&L)",
+      "pruTotal": "Capital Investi (PRU)",
+      "allocationTitle": "Répartition Multi-Actifs du Portefeuille",
+      "otherEnvelopesNote": "Prend également en charge Assurance-Vie, Livret A / LDDS & Immobilier"
+    },
+    "segments": {
+      "equitiesEtf": "Actions & ETF Indiciels",
+      "techGrowth": "Tech Mondiale & Actions US",
+      "cryptoAssets": "Actifs Numériques (BTC / ETH)",
+      "cashYield": "Liquidités, Livrets & Assurance-Vie"
+    }
+  },
+  "tax": {
+    "sectionBadge": "Moteur Fiscal Français • Aide Fiscale",
+    "title": "Simulateur Fiscal & Cases Cerfa Officielles",
+    "subtitle": "Comparez en temps réel la Flat Tax (PFU 30 %) et le Barème Progressif (Case 2OP) et visualisez les cases Cerfa DGFiP exactes avant votre déclaration.",
+    "tmiLabel": "Sélectionnez votre Tranche Marginale d'Imposition (TMI)",
+    "scenarioLabel": "Sélectionnez un Scénario de Gains Financiers",
+    "scenarios": {
+      "dividends": "Dividendes d'Actions (3 500 €)",
+      "ctoGains": "Plus-Values CTO (8 000 €)",
+      "crypto": "Crypto Art. 150 VH bis (5 000 €)"
+    },
+    "pfuCardTitle": "PFU — Flat Tax (30 %)",
+    "pfuBreakdown": "12,8 % Impôt sur le Revenu + 17,2 % Prélèvements Sociaux",
+    "baremeCardTitle": "Barème Progressif (Case 2OP)",
+    "baremeBreakdownDividends": "Abattement de 40 % sur dividendes + 6,8 % CSG déductible",
+    "baremeBreakdownGains": "Tranche marginale + 17,2 % PS (dont 6,8 % CSG déductible)",
+    "baremeBreakdownCrypto": "Flat Tax 30 % ou option Barème (Formulaire 2086)",
+    "optimalBadge": "Régime Optimal",
+    "estimatedTax": "Impôt Estimé",
+    "netAfterTax": "Net Perçu après Impôt",
+    "optimalSummarySave": "Optimal : {{regime}} vous fait économiser {{savings}} € cette année.",
+    "optimalSummaryEqual": "Les deux régimes produisent une imposition équivalente ({{amount}} €).",
+    "cerfaTitle": "Cases Cerfa DGFiP Officielles Activées",
+    "cerfaForms": "Formulaires 2042 • 2042-C • 2074 • 2086",
+    "cerfa3916Badge": "Cerfa 3916 Prêt (Trade Republic, IBKR, Binance, Kraken)",
+    "boxes": {
+      "2DC": "2DC — Dividendes et distributions éligibles à l'abattement de 40 %",
+      "2OP": "2OP — Option globale pour l'imposition au barème progressif",
+      "3VG": "3VG — Plus-values nettes imposables de cession de valeurs mobilières",
+      "3AN": "3AN — Moins-values reportables sur 10 ans",
+      "3AN_crypto": "2086 / 3AN — Plus-value nette imposable sur actifs numériques (Art. 150 VH bis)"
+    },
+    "disclaimer": "Outil d'estimation à titre purement informatif — ne constitue pas un conseil financier AMF ni un avis fiscal DGFiP."
+  },
+  "fees": {
+    "sectionBadge": "Analytique & Intérêts Composés • Analyseur TER",
+    "title": "Comparateur d'Impact des Frais ETF (Fee Drag)",
+    "subtitle": "Visualisez comment les frais de gestion annuels érodent silencieusement vos intérêts composés sur plusieurs décennies et l'économie permise par les ETF indiciels PEA/CTO.",
+    "profileLabel": "Profil de Frais du Fonds (Capital initial : 50 000 € • 7 % brut/an)",
+    "horizonLabel": "Horizon de Placement",
+    "profiles": {
+      "bank": "Fonds Bancaire Traditionnel (1,85 % TER)",
+      "thematic": "ETF Thématique Actif (0,50 % TER)",
+      "index": "ETF Indiciel PEA/CTO Bas Frais (0,15 % TER)"
+    },
+    "horizons": {
+      "y10": "10 Ans",
+      "y20": "20 Ans",
+      "y30": "30 Ans"
+    },
+    "projectedValue": "Valeur Nette Projetée du Portefeuille",
+    "feeDragLost": "Total des Frais Composés Perdus (Fee Drag)",
+    "netSavingsVsBank": "Capital Préservé vs Fonds Bancaire (1,85 %)",
+    "benchmarkAlpha": "Alpha vs Livret A Sans Risque (3,0 %)",
+    "retentionRate": "Taux de Rétention de la Performance",
+    "comparisonBarTitle": "Capital Net Conservé vs Érosion par les Frais"
+  },
+  "csv": {
+    "sectionBadge": "Ingestion Idempotente • 6 Courtiers Détectés",
+    "title": "Inspecteur CSV Multi-Courtiers & Rollback 1-Clic",
+    "subtitle": "Détection automatique des relevés des principaux courtiers européens et plateformes crypto. Reconstruisez l'historique complet ou un snapshot avec déduplication SHA-256.",
+    "selectBroker": "Sélectionnez un Courtier / Exchange",
+    "modeHistory": "Mode Historique (Journal de Transactions)",
+    "modeSnapshot": "Mode Snapshot (Réconciliation de Solde)",
+    "detectedHeaders": "Colonnes CSV Détectées Automatiquement",
+    "normalizedSchema": "Schéma Normalisé GlassFolio",
+    "duplicateGuardBadge": "Protection Anti-Doublon Idempotente SHA-256 Active",
+    "formulaSanitizedBadge": "Bouclier Anti-Injection CSV (=, +, -, @)",
+    "testRollbackBtn": "Tester le Rollback 1-Clic",
+    "restoreImportBtn": "Relancer l'Import du Lot",
+    "statusImported": "Importé (+14 transactions • 0 doublon ignoré)",
+    "statusRolledBack": "Annulé proprement (0 effet de bord sur le journal existant)",
+    "fields": {
+      "isinTicker": "ISIN / Ticker",
+      "quantity": "Quantité",
+      "pru": "Prix Unitaire / PRU",
+      "fee": "Frais de Courtage",
+      "currency": "Devise"
+    },
+    "trademarkDisclaimer": "Notice de Marques : BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase sont des marques déposées de leurs propriétaires respectifs. GlassFolio est un projet logiciel indépendant sans affiliation, parrainage ni approbation. Les noms sont cités exclusivement à titre indicatif pour préciser la compatibilité des formats de fichiers (Art. L.713-6 du CPI / Règlement UE 2017/1001 Art. 14)."
+  },
+  "securityAi": {
+    "sectionBadge": "Coffre Chiffré E2EE & Model Context Protocol",
+    "title": "Coffre Client AES-256-GCM & Copilote IA sous Garde-Fous",
+    "subtitle": "Vos données financières sont chiffrées localement avant tout stockage. Connectez Ollama en local ou vos clients MCP (Claude Desktop, Cursor) avec validation humaine obligatoire.",
+    "vaultTitle": "Sous-Widget A — Inspecteur d'État du Coffre Chiffré",
+    "btnUnlocked": "Déverrouillé en RAM (Clé WebCrypto Non-Extractible)",
+    "btnLocked": "Verrouillé en Stockage (Texte Chiffré AES-256-GCM)",
+    "vaultStateLabel": "État Actif de la Mémoire et du Stockage",
+    "kdfPipeline": "PBKDF2-SHA256 (600k itér.) → HKDF-SHA256 → AES-KW → AES-256-GCM (IV 96 bits + AAD)",
+    "protections": {
+      "totp": "2FA TOTP RFC 6238",
+      "passkeys": "Passkeys WebAuthn PRF",
+      "recovery": "Clé de Secours Base32 256 bits"
+    },
+    "aiTitle": "Sous-Widget B — Sélecteur d'Exécution IA & MCP",
+    "providers": {
+      "ollama": "Ollama Local (100 % Hors-Ligne)",
+      "claude": "Claude Desktop (MCP)",
+      "cursor": "Cursor (MCP)",
+      "byok": "BYOK (OpenAI / Anthropic / Groq)"
+    },
+    "guardrailBadge": "guardrailsService : Rédaction des Secrets + Validation Humaine (requiresConfirmation: true)",
+    "toolPreviewTitle": "Aperçu d'Exécution des Outils MCP Enregistrés",
+    "readOnlyTag": "Lecture Seule",
+    "confirmationTag": "Validation Utilisateur Requise"
+  },
+  "bento": {
+    "sectionBadge": "Conçu pour les Investisseurs Exigeants",
+    "title": "Tous les outils pour une gestion patrimoniale souveraine",
+    "subtitle": "Bâti avec un système de tokens sémantiques zéro-hardcoding, une autonomie hors-ligne complète et des standards DevSecOps stricts.",
+    "gamification": {
+      "badge": "21 Rangs • Séries DCA • Quêtes",
+      "title": "Objectifs, 21 Rangs d'Investisseur & Suivi DCA",
+      "description": "Progressez à travers 21 rangs d'investisseur (de Novice à Titan des Marchés), maintenez votre série DCA mensuelle, validez des quêtes financières pour gagner de l'XP et débloquez des thèmes visuels exclusifs."
+    },
+    "theming": {
+      "badge": "Clair • Sombre • Midnight + FR/EN",
+      "title": "3 Thèmes Sémantiques & Parité Bilingue 100 %",
+      "description": "Basculez instantanément entre les thèmes Clair, Sombre et Midnight avec contraste WCAG AA, interface 100 % FR/EN et couverture multi-actifs complète (PEA, CTO, Crypto, Assurance-Vie, Livrets, Immobilier)."
+    },
+    "portability": {
+      "badge": "Portabilité RGPD Article 20",
+      "title": "Sauvegarde JSON 1-Clic, Assistant de Fusion & Purge",
+      "description": "Exportez l'intégralité de votre portefeuille à tout moment, fusionnez des sauvegardes historiques sans doublons via BackupMergeWizard ou purgez cryptographiquement votre coffre local en un clic."
+    },
+    "selfHost": {
+      "badge": "Vitrine Cloud ou Docker Local",
+      "title": "Auto-Hébergement en 1 Commande (docker compose up -d)",
+      "description": "Utilisez notre vitrine cloud instantanée ou déployez votre propre conteneur isolé en local avec une seule commande Docker Compose et zéro base de données externe."
+    }
+  },
+  "faq": {
+    "sectionBadge": "Questions Fréquentes",
+    "title": "Tout savoir sur l'architecture GlassFolio",
+    "items": {
+      "q1": {
+        "question": "Où sont stockées mes données financières et qui peut y accéder ?",
+        "answer": "Vos données sensibles (positions, transactions, objectifs, clés IA) sont chiffrées directement dans votre navigateur via WebCrypto AES-256-GCM dérivé par PBKDF2-SHA256 (600 000 itérations) et HKDF. Ni notre hébergeur statique ni aucun tiers n'a accès à votre mot de passe maître ou à vos données financières en clair."
+      },
+      "q2": {
+        "question": "Le simulateur fiscal remplace-t-il la déclaration officielle DGFiP ?",
+        "answer": "Non. GlassFolio fournit des simulations mathématiques comparant la Flat Tax (PFU 30 %) et le Barème Progressif (Case 2OP), ainsi qu'un guide pédagogique des cases Cerfa 2042, 2074, 2086 et 3916. Il s'agit strictement d'un outil d'estimation informatif et non d'un conseil fiscal ou financier certifié AMF."
+      },
+      "q3": {
+        "question": "Quels courtiers, enveloppes et formats CSV sont pris en charge ?",
+        "answer": "GlassFolio détecte nativement les exports CSV de BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase en modes Historique et Snapshot, et permet de suivre PEA, CTO, Assurance-Vie, Livrets, portefeuilles Crypto et Immobilier."
+      },
+      "q4": {
+        "question": "Comment le copilote IA et le serveur MCP protègent-ils ma vie privée ?",
+        "answer": "Vous pouvez utiliser Ollama 100 % hors-ligne pour qu'aucune donnée ne quitte votre machine, ou connecter Claude Desktop / Cursor via le serveur MCP local. Avant tout envoi, guardrailsService masque les secrets et toute action d'écriture exige votre confirmation explicite."
+      },
+      "q5": {
+        "question": "Quelle est la différence entre le mode Cloud et le mode Docker Local ?",
+        "answer": "En mode Cloud, GlassFolio affiche cette vitrine interactive et conserve votre coffre chiffré dans le stockage de votre navigateur. En mode Local (VITE_DEPLOYMENT_MODE=local sous Docker), l'application ouvre directement l'écran d'authentification de votre coffre auto-hébergé."
+      },
+      "q6": {
+        "question": "Comment tester GlassFolio sans créer de compte ?",
+        "answer": "Cliquez sur n'importe quel bouton « Essayer la Démo (1-Clic) » sur cette page. Cela déverrouille instantanément un portefeuille de démonstration complet (PEA, CTO, Crypto, scénarios fiscaux et quêtes) dans votre navigateur."
+      }
+    }
+  },
+  "footer": {
+    "ctaTitle": "Prêt à découvrir un suivi patrimonial privé de qualité institutionnelle ?",
+    "ctaSubtitle": "Explorez le coffre de démonstration pré-rempli en un clic ou initialisez votre propre coffre chiffré en quelques secondes.",
+    "zkBadge": "Architecture Chiffrée E2EE",
+    "brandDescription": "Suivi patrimonial multi-actifs et copilote fiscal français de qualité institutionnelle développé avec React 19, WebCrypto AES-256-GCM et le Model Context Protocol.",
+    "deploymentBadge": "Déploiement : {{mode}}",
+    "legalHeading": "Centre Légal & RGPD",
+    "legalNotice": "Mentions Légales",
+    "privacyPolicy": "Politique de Confidentialité (RGPD)",
+    "termsOfUse": "Conditions d'Utilisation (CGU)",
+    "cookiesStorage": "Cookies & Stockage Local",
+    "accessibility": "Accessibilité (RGAA)",
+    "cookiePreferencesBtn": "Préférences Cookies",
+    "regulatoryDisclaimer": "Avertissement AMF / DGFiP : GlassFolio est un projet logiciel open-source à vocation informative. Les simulations et analyses sont fournies à titre purement pédagogique et ne constituent jamais un conseil en investissement financier, juridique ou fiscal personnalisé.",
+    "trademarkNotice": "Usage Nominatif des Marques : L'ensemble des noms de banques, courtiers, plateformes d'échange et marques tiers cités sur GlassFolio (notamment BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase) sont la propriété exclusive de leurs titulaires respectifs. Ils sont mentionnés uniquement à des fins d'interopérabilité technique et de référence descriptive (Art. L.713-6 du Code de la Propriété Intellectuelle / Règlement sur la marque de l'UE Art. 14).",
+    "copyright": "© {{year}} GlassFolio — Architecture FinTech Open-Source E2EE."
+  }
+}

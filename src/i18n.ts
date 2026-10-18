@@ -15,6 +15,8 @@ import reportsEN from '../locales/en/reports.json';
 import taxEN from '../locales/en/tax.json';
 import aiEN from '../locales/en/ai.json';
 import securityEN from '../locales/en/security.json';
+import landingEN from '../locales/en/landing.json';
+import legalEN from '../locales/en/legal.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -29,6 +31,8 @@ import reportsFR from '../locales/fr/reports.json';
 import taxFR from '../locales/fr/tax.json';
 import aiFR from '../locales/fr/ai.json';
 import securityFR from '../locales/fr/security.json';
+import landingFR from '../locales/fr/landing.json';
+import legalFR from '../locales/fr/legal.json';
 
 const resources = {
     en: {
@@ -45,6 +49,8 @@ const resources = {
         tax: taxEN,
         ai: aiEN,
         security: securityEN,
+        landing: landingEN,
+        legal: legalEN,
     },
     fr: {
         common: commonFR,
@@ -60,6 +66,8 @@ const resources = {
         tax: taxFR,
         ai: aiFR,
         security: securityFR,
+        landing: landingFR,
+        legal: legalFR,
     },
 };
 

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { AIChatDrawer } from './ai/AIChatDrawer';
+import { ConsentBanner } from './ConsentBanner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -69,9 +70,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [location.pathname]);
 
-  // If not authenticated (e.g. on login page), just show children without the sidebar/header
-  if (!user) {
-    return <>{children}</>;
+  // Check if current route is a public full-screen route (Landing, Legal Center, Login, Signup)
+  const PUBLIC_FULL_SCREEN_ROUTES = [
+    '/login',
+    '/signup',
+    '/welcome',
+    '/legal',
+    '/privacy',
+    '/terms',
+    '/cookies',
+    '/accessibility',
+  ];
+  const isFullScreenRoute =
+    PUBLIC_FULL_SCREEN_ROUTES.includes(location.pathname) ||
+    location.pathname.startsWith('/welcome');
+
+  // If not authenticated or currently on a public full-screen route, render children in full screen
+  if (!user || isFullScreenRoute) {
+    return (
+      <>
+        {children}
+        <ConsentBanner />
+      </>
+    );
   }
 
   const isActive = (path: string) => location.pathname === path;

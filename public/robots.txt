@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /welcome
+Allow: /legal
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /accessibility
+
+Sitemap: https://glassfolio.com/sitemap.xml

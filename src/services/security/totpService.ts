@@ -7,7 +7,7 @@
  *   - Drift tolerance window (±30s).
  *   - Anti-replay protection (monotonic time step).
  *   - Single-use SHA-256 hashed emergency backup codes.
- *   - Zero-knowledge storage in appStorage (encrypted at rest).
+ *   - E2EE storage in appStorage (encrypted at rest).
  */
 
 import { fromBase32, toBase32, toBase64, utf8Encode } from './encoding';

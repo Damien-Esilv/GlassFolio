@@ -52,12 +52,14 @@ const sourceFiles = [];
 for (const dir of ['components', 'pages', 'context', 'hooks', 'src']) {
   getAllFiles(path.join(process.cwd(), dir), sourceFiles);
 }
-if (fs.existsSync(path.join(process.cwd(), 'App.tsx'))) {
-  sourceFiles.push('App.tsx');
+for (const rootFile of ['App.tsx', 'ShowcaseApp.tsx', 'index.tsx']) {
+  if (fs.existsSync(path.join(process.cwd(), rootFile))) {
+    sourceFiles.push(rootFile);
+  }
 }
 
 // ── 1. Check Hex Colors ────────────────────────────────────────────────────────
-console.log('🎨 [1/4] Checking Design Standards: Zero hardcoded hex colors...');
+console.log('🎨 [1/5] Checking Design Standards: Zero hardcoded hex colors...');
 const hexRegex = /#[0-9a-fA-F]{3,6}\b/g;
 const hexViolations = [];
 
@@ -89,7 +91,7 @@ if (hexViolations.length > 0) {
 }
 
 // ── 2. Check Raw Tailwind Color Classes ────────────────────────────────────────
-console.log('\n🌈 [2/4] Checking Semantic Tokens: Zero raw Tailwind palette classes...');
+console.log('\n🌈 [2/5] Checking Semantic Tokens: Zero raw Tailwind palette classes...');
 const rawTailwindColorRegex = /\b(?:text|bg|border|ring|fill|stroke)-(?:emerald|rose|amber|yellow|lime|green|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/g;
 const rawTailwindViolations = [];
 
@@ -121,7 +123,7 @@ if (rawTailwindViolations.length > 0) {
 }
 
 // ── 3. Check RGB/RGBA Literals ────────────────────────────────────────────────
-console.log('\n💡 [3/4] Checking Color Invariants: Zero raw rgb/rgba function calls...');
+console.log('\n💡 [3/5] Checking Color Invariants: Zero raw rgb/rgba function calls...');
 const rgbRegex = /\brgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g;
 const rgbViolations = [];
 
@@ -153,7 +155,7 @@ if (rgbViolations.length > 0) {
 }
 
 // ── 4. Check Storage Invariants ───────────────────────────────────────────────
-console.log('\n🔒 [4/4] Checking Architectural Invariants: Zero direct storage bypass...');
+console.log('\n🔒 [4/5] Checking Architectural Invariants: Zero direct storage bypass...');
 const storageRegex = /\b(?:(?:window|globalThis)\.)?(?:localStorage|sessionStorage)\./g;
 const storageViolations = [];
 
@@ -189,9 +191,90 @@ if (storageViolations.length > 0) {
   console.log('✅ Zero direct localStorage/sessionStorage bypasses detected.');
 }
 
+// ── 5. Check Personal Machine Paths ──────────────────────────────────────────
+console.log('\n🛡️ [5/5] Checking DevSecOps Standards: Zero personal machine paths (/Users/)...');
+const personalPathPattern = '/' + 'Users/[a-zA-Z0-9_.-]+';
+const personalPathRegex = new RegExp(personalPathPattern, 'g');
+const pathViolations = [];
+
+let allTextFiles = [];
+try {
+  const { execSync } = await import('child_process');
+  const tracked = execSync('git ls-files', { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
+  allTextFiles = tracked.filter(rel => {
+    const ext = path.extname(rel).toLowerCase();
+    return (
+      ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md', '.yml', '.yaml', '.html'].includes(ext) &&
+      rel !== 'scripts/check-standards.mjs' &&
+      rel !== 'scripts/pre-commit-check.mjs' &&
+      !rel.endsWith('pre-commit.sh')
+    );
+  });
+} catch {
+  function getAllTextFiles(dirPath, arrayOfFiles = []) {
+    if (!fs.existsSync(dirPath)) return arrayOfFiles;
+    const files = fs.readdirSync(dirPath);
+
+    for (const file of files) {
+      const fullPath = path.join(dirPath, file);
+      if (fs.statSync(fullPath).isDirectory()) {
+        if (
+          file !== 'node_modules' &&
+          file !== 'dist' &&
+          file !== 'coverage' &&
+          file !== '.git' &&
+          file !== '.gemini' &&
+          file !== '.vscode' &&
+          file !== '.idea' &&
+          file !== '.cursor' &&
+          file !== '.claude'
+        ) {
+          getAllTextFiles(fullPath, arrayOfFiles);
+        }
+      } else {
+        const rel = path.relative(process.cwd(), fullPath).replace(/\\/g, '/');
+        const ext = path.extname(file).toLowerCase();
+        if (['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md', '.yml', '.yaml', '.html'].includes(ext)) {
+          if (
+            rel !== 'scripts/check-standards.mjs' &&
+            rel !== 'scripts/pre-commit-check.mjs' &&
+            !rel.endsWith('pre-commit.sh')
+          ) {
+            arrayOfFiles.push(rel);
+          }
+        }
+      }
+    }
+    return arrayOfFiles;
+  }
+  allTextFiles = getAllTextFiles(process.cwd());
+}
+
+for (const file of allTextFiles) {
+  if (!fs.existsSync(file)) continue;
+  const raw = fs.readFileSync(file, 'utf-8');
+  const lines = raw.split('\n');
+  lines.forEach((line, idx) => {
+    const matches = line.match(personalPathRegex);
+    if (matches) {
+      matches.forEach(m => {
+        pathViolations.push({ file, line: idx + 1, match: m, content: line.trim() });
+      });
+    }
+  });
+}
+
+if (pathViolations.length > 0) {
+  console.error(`❌ Found ${pathViolations.length} personal machine path(s):`);
+  pathViolations.forEach(v => console.error(`  - ${v.file}:${v.line} -> "${v.match}" in "${v.content}"`));
+  hasError = true;
+} else {
+  console.log(`✅ Zero personal machine paths detected across ${allTextFiles.length} tracked text files.`);
+}
+
 if (hasError) {
   process.exit(1);
 } else {
-  console.log('\n🌟 All architectural, theming, and design standards passed successfully!\n');
+  console.log('\n🌟 All architectural, theming, design, and DevSecOps standards passed successfully!\n');
   process.exit(0);
 }

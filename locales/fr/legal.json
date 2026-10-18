@@ -1,0 +1,121 @@
+{
+  "banner": {
+    "title": "Confidentialité & Consentement Cookies RGPD",
+    "description": "GlassFolio utilise un stockage local strictement nécessaire au fonctionnement de votre coffre chiffré côté client et de vos préférences d'interface. Nous n'utilisons aucun cookie publicitaire tiers. Avec votre accord explicite, nous pouvons collecter une télémétrie anonyme pour améliorer la stabilité des fonctionnalités en mode cloud.",
+    "acceptButton": "Accepter la mesure d'audience optionnelle",
+    "refuseButton": "Refuser la mesure d'audience optionnelle",
+    "customizeLink": "En savoir plus dans les Paramètres Cookies"
+  },
+  "center": {
+    "pageTitle": "Centre Légal & Gouvernance RGPD",
+    "pageSubtitle": "Transparence, architecture Privacy-by-Design et conformité réglementaire de GlassFolio.",
+    "backToApp": "Retour à l'Application",
+    "backToHome": "Retour à l'Accueil",
+    "tabs": {
+      "legal": "Mentions Légales",
+      "privacy": "Confidentialité",
+      "terms": "Conditions (CGU)",
+      "cookies": "Cookies & Stockage",
+      "accessibility": "Accessibilité"
+    }
+  },
+  "legalNotice": {
+    "title": "Mentions Légales",
+    "lastUpdated": "Dernière mise à jour : Octobre 2026",
+    "publisherTitle": "1. Éditeur du Site & du Projet",
+    "publisherText": "L'application de vitrine et le code source de GlassFolio sont publiés à titre de projet logiciel personnel open-source par :",
+    "publisherName": "Éditeur : Damien [LAST_NAME]",
+    "publisherStatus": "Statut : Projet logiciel open-source individuel (Portfolio & Démonstration)",
+    "publisherContact": "Contact : [CONTACT_EMAIL]",
+    "publisherProfile": "Dépôt du projet & Profil professionnel : [GITHUB_OR_LINKEDIN_URL]",
+    "hostingTitle": "2. Hébergement & Prestataires d'Infrastructure",
+    "hostingText": "L'application web GlassFolio est hébergée sous la forme d'un bundle client statique auprès de :",
+    "hostingPrimary": "Hébergeur principal : Microsoft Azure Static Web Apps — Microsoft Ireland Operations Limited, One Microsoft Place, South County Business Park, Leopardstown, Dublin 18, Irlande.",
+    "hostingSecondary": "Code source et gestion de versions : GitHub, Inc. — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis.",
+    "ipTitle": "3. Propriété Intellectuelle & Licence Open-Source",
+    "ipText": "L'application, l'architecture et la documentation GlassFolio sont distribuées sous licence open-source. Les marques tierces, tickers, logos et noms d'établissements ou courtiers mentionnés (ex : BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure) demeurent la propriété exclusive de leurs titulaires respectifs. Ils sont cités strictement à des fins d'identification, d'interopérabilité technique et de description fonctionnelle, conformément à l'article L.713-6 du Code de la propriété intellectuelle français et à l'article 14 du Règlement (UE) 2017/1001 sur la marque de l'Union européenne (usage loyal nominatif)."
+  },
+  "privacy": {
+    "title": "Politique de Confidentialité (RGPD)",
+    "lastUpdated": "Dernière mise à jour : Octobre 2026",
+    "zkTitle": "1. Architecture Chiffrée de Bout en Bout (E2EE) Côté Client",
+    "zkText": "GlassFolio est conçu dès l'origine selon le paradigme de chiffrement de bout en bout (E2EE). L'ensemble de vos données financières sensibles (transactions, détentions, prix de revient unitaire, déclarations fiscales, objectifs et clés d'API IA privées) est chiffré directement dans la mémoire de votre navigateur via l'API WebCrypto en AES-256-GCM. La dérivation s'appuie sur PBKDF2-SHA256 (600 000 itérations) et HKDF-SHA256.",
+    "zkNoServer": "Crucialement, aucune donnée financière n'est jamais exposée en clair. Vos données financières en clair, votre mot de passe maître, votre clé de secours et vos secrets TOTP ne sont jamais transmis en clair à un tiers ni accessibles par les administrateurs.",
+    "externalTitle": "2. Flux Réseau Externes & Données de Marché",
+    "externalText": "Afin de fournir des valorisations de portefeuille en direct et des capacités d'IA, votre navigateur peut établir des connexions réseau directes vers les points de terminaison suivants :",
+    "externalYahoo": "Yahoo Finance & CoinGecko : Requêtes HTTP directes depuis votre navigateur pour les cours de marché en temps réel et les taux de change de devises (mis en cache locale avec un TTL de 15 minutes).",
+    "externalAi": "Fournisseurs d'IA Configurés par l'Utilisateur : Si vous configurez une clé d'API personnelle (OpenAI, Anthropic, Groq, OpenRouter), les requêtes sont envoyées directement depuis votre navigateur au fournisseur sélectionné. Alternativement, vous pouvez utiliser Ollama en local pour une assistance IA 100 % hors-ligne, sans aucune fuite de données.",
+    "externalCdn": "Ressources Statiques : Tailwind CSS est injecté via cdn.tailwindcss.com et les polices via Google Fonts (fonts.googleapis.com). Aucune donnée de portefeuille n'est partagée avec ces CDN.",
+    "rightsTitle": "3. Droits RGPD & Portabilité des Données",
+    "rightsText": "Conformément au Règlement (UE) 2016/679 (RGPD), vous disposez d'une souveraineté totale sur vos données :",
+    "rightAccess": "Droit d'accès et de portabilité (Art. 20) : Vous pouvez exporter à tout moment l'intégralité de vos comptes et transactions sous forme de sauvegarde JSON standardisée depuis les Paramètres.",
+    "rightErasure": "Droit à l'effacement (Art. 17) : Vous pouvez purger instantanément toutes les clés et données chiffrées stockées via l'action « Purger le coffre » dans les Paramètres.",
+    "rightComplaint": "Droit de réclamation : Vous avez le droit d'introduire une réclamation auprès de l'autorité de contrôle française, la CNIL (Commission Nationale de l'Informatique et des Libertés — www.cnil.fr)."
+  },
+  "terms": {
+    "title": "Conditions Générales d'Utilisation (CGU) & Avertissements",
+    "lastUpdated": "Dernière mise à jour : Octobre 2026",
+    "disclaimerTitle": "1. Avertissement Légal : Absence de Conseil Financier et Fiscal (AMF / DGFiP)",
+    "disclaimerImportant": "GlassFolio est strictement un outil de démonstration logicielle et de simulation mathématique à vocation informative. Il NE FOURNIT PAS de conseil en investissements financiers certifié (CIF), de service de gestion de portefeuille pour compte de tiers, ni de conseil fiscal ou juridique au sens de la réglementation française et européenne.",
+    "disclaimerDetail": "Les simulations fiscales (PFU 30 % vs Barème Progressif Case 2OP, cases Cerfa 2042 / 2074 / 3916) et les projections d'érosion des frais ETF sont calculées à partir des données saisies par l'utilisateur et des barèmes légaux connus. L'utilisateur demeure seul responsable de la vérification de ses déclarations officielles auprès de la DGFiP ou d'un professionnel qualifié (expert-comptable, avocat fiscaliste).",
+    "asIsTitle": "2. Logiciel Fourni « En l'État »",
+    "asIsText": "GlassFolio est fourni « en l'état », sans garantie d'aucune sorte, expresse ou implicite. L'auteur et les contributeurs ne sauraient être tenus responsables des écarts de calcul, retards de cotations boursières, pertes de données ou décisions d'investissement prises sur la base du logiciel."
+  },
+  "cookies": {
+    "title": "Inventaire des Cookies & du Stockage Local",
+    "lastUpdated": "Dernière mise à jour : Octobre 2026",
+    "overviewText": "GlassFolio n'utilise AUCUN cookie traceur tiers ni pixel publicitaire. Toutes les données persistées côté client sont gérées via la couche d'abstraction de stockage du navigateur (appStorage) sous une segmentation cryptographique stricte.",
+    "tableTitle": "Inventaire des Clés de Stockage",
+    "tableKey": "Clé de Stockage",
+    "tableCategory": "Classification",
+    "tablePurpose": "Finalité Technique & Cycle de Vie",
+    "tableLifespan": "Durée de Conservation",
+    "rows": {
+      "vaultHeader": {
+        "key": "gf_vault_header",
+        "category": "Strictement Nécessaire",
+        "purpose": "Conserve le sel PBKDF2, le tag de vérification d'authentification et les métadonnées Passkeys PRF. Ne contient aucune valeur financière.",
+        "lifespan": "Persistant jusqu'à la purge manuelle"
+      },
+      "vaultPayload": {
+        "key": "glassfolio_*",
+        "category": "Strictement Nécessaire (Chiffré)",
+        "purpose": "Enveloppes chiffrées en AES-256-GCM contenant vos transactions, positions, objectifs et secrets d'API IA. Déchiffrable uniquement avec votre clé en RAM.",
+        "lifespan": "Persistant jusqu'à la purge manuelle"
+      },
+      "themeLang": {
+        "key": "gf_public_theme / gf_public_lang",
+        "category": "Strictement Nécessaire (Préférences)",
+        "purpose": "Mémorise votre thème d'interface (Clair, Sombre, Midnight) et votre langue (FR, EN) entre les sessions.",
+        "lifespan": "Persistant jusqu'à l'effacement du cache"
+      },
+      "consent": {
+        "key": "gf_consent_v1",
+        "category": "Strictement Nécessaire (Consentement)",
+        "purpose": "Conserve votre choix de consentement RGPD / CNIL pour la mesure d'audience anonyme.",
+        "lifespan": "13 mois (recommandation CNIL)"
+      }
+    },
+    "managerTitle": "Gestionnaire Interactif du Consentement",
+    "currentStatusLabel": "Statut Actuel du Consentement :",
+    "statusAccepted": "Mesure d'audience acceptée",
+    "statusRefused": "Mesure d'audience refusée",
+    "statusUnset": "Aucun choix enregistré pour le moment",
+    "grantAnalyticsBtn": "Accepter la Mesure d'Audience",
+    "revokeAnalyticsBtn": "Révoquer / Refuser la Mesure d'Audience",
+    "resetConsentBtn": "Réinitialiser le Choix"
+  },
+  "accessibility": {
+    "title": "Déclaration d'Accessibilité (RGAA 4.1)",
+    "lastUpdated": "Dernière mise à jour : Octobre 2026",
+    "statusTitle": "1. État de Conformité",
+    "statusText": "GlassFolio s'engage à rendre son interface accessible conformément à l'article 47 de la loi n° 2005-102 du 11 février 2005. L'application est actuellement PARTIELLEMENT CONFORME avec le Référentiel Général d'Amélioration de l'Accessibilité (RGAA version 4.1 / WCAG 2.1 niveau AA), dans l'attente d'un audit formel externe.",
+    "standardsTitle": "2. Fonctionnalités d'Accessibilité Mises en Œuvre",
+    "featAria": "Balises Sémantiques & ARIA : Structure HTML5 conforme (header, nav, main, section, footer), libellés descriptifs (aria-label sur tous les boutons à icône seule) et gestion des accordéons (aria-expanded, aria-controls).",
+    "featContrast": "Contraste des Couleurs WCAG AA : Système de design tokens sémantiques garantissant un ratio de contraste supérieur à 4,5:1 sur les 3 thèmes (Clair, Sombre, Midnight).",
+    "featKeyboard": "Navigation au Clavier : Focus visible et ordre de tabulation logique sur l'intégralité des composants interactifs, formulaires et fenêtres modales.",
+    "featMotion": "Animations Réduites : Prise en compte automatique de la préférence système prefers-reduced-motion désactivant les transitions décoratives.",
+    "feedbackTitle": "3. Voie de Recours & Contact",
+    "feedbackText": "Si vous constatez un défaut d'accessibilité vous empêchant d'accéder à un contenu ou une fonctionnalité, vous pouvez ouvrir un ticket sur le dépôt du projet ou contacter Damien [LAST_NAME] à l'adresse [CONTACT_EMAIL]."
+  }
+}

@@ -4,7 +4,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Glassfolio</title>
+  <title>GlassFolio — End-to-End Encrypted Multi-Asset Wealth & French Tax Copilot</title>
+  <meta name="description" content="Master your multi-asset wealth (PEA, CTO, Crypto, Assurance-Vie, Real Estate) with mathematical rigor, French Cerfa tax simulation, ETF fee drag analysis, and client-side AES-256-GCM encryption." />
+  <meta name="keywords" content="GlassFolio, FinTech, Wealth Tracker, French Tax, Cerfa 2042, PFU, PEA, CTO, Crypto, ETF, Fee Drag, E2EE, MCP, Model Context Protocol" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="GlassFolio — End-to-End Encrypted Multi-Asset Wealth & French Tax Copilot" />
+  <meta property="og:description" content="Master your multi-asset wealth with mathematical rigor, French Cerfa tax simulation, and client-side AES-256-GCM encryption." />
+  <meta property="og:site_name" content="GlassFolio" />
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="GlassFolio — End-to-End Encrypted Multi-Asset Wealth & French Tax Copilot" />
+  <meta name="twitter:description" content="Master your multi-asset wealth with mathematical rigor, French Cerfa tax simulation, and client-side AES-256-GCM encryption." />
+
+  <!-- Schema.org SoftwareApplication JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GlassFolio",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web, Windows, macOS, Linux",
+    "description": "End-to-end encrypted multi-asset wealth tracking, French Cerfa fiscal declaration assistant, ETF fee drag analysis, and local AI copilot.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    }
+  }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -386,6 +416,62 @@
 
     ::-webkit-scrollbar-thumb:hover {
       background: var(--text-tertiary);
+    }
+
+    /* Refined Global Text Selection: Transparent Background (No Rectangles), Single Semantic Token */
+    ::selection {
+      background-color: transparent;
+      color: var(--color-primary);
+    }
+
+    /* Preserve Full Readability on Blue / Brand Surfaces (e.g. Buttons & Badges) */
+    .bg-primary ::selection,
+    .bg-primary::selection,
+    .bg-brand ::selection,
+    .bg-brand::selection,
+    .bg-brand-static ::selection,
+    .bg-brand-static::selection,
+    [class*="bg-primary"] ::selection,
+    [class*="bg-primary"]::selection,
+    [class*="bg-brand"] ::selection,
+    [class*="bg-brand"]::selection {
+      background-color: rgba(255, 255, 255, 0.25) !important;
+      color: inherit !important;
+      text-shadow: none !important;
+    }
+
+    /* Interactive Elements: Non-selectable to Prevent Selection Traps and Drag Glitches */
+    button,
+    a,
+    nav,
+    [role="button"],
+    [role="tab"] {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input,
+    textarea {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    input::selection,
+    textarea::selection {
+      background-color: var(--border-strong);
+      color: inherit;
+    }
+
+    /* Accessibility: Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
   <script type="module" src="/index.tsx"></script>
