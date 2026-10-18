@@ -248,6 +248,29 @@ export const etfFeeService = {
     ) => {
         const now = new Date();
 
+        // BOLT OPTIMIZATION: Pre-compute symbol metadata once to avoid redundant object lookups and math operations inside the N-points loop.
+        const symbolMeta = symbols.map((sym, symIdx) => {
+            const symUpper = sym.toUpperCase();
+            const info = KNOWN_ETF_DB[symUpper] || etfFeeService.getEtfInfo(symUpper);
+            const charSum = symUpper.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+            const seedOffset = (charSum % 10) * 0.15;
+            const waveFreq = 0.8 + ((charSum % 5) * 0.1);
+
+            let baseTrend = 1.6;
+            if (info.category?.includes('S&P')) baseTrend = 2.1;
+            else if (info.category?.includes('World')) baseTrend = 1.75;
+            else if (info.category?.includes('All-World')) baseTrend = 1.45;
+
+            return {
+                sym,
+                symIdx,
+                ter: info.ter,
+                seedOffset,
+                waveFreq,
+                baseTrend
+            };
+        });
+
         return Array.from({ length: pointsCount }, (_, i) => {
             const d = new Date(now.getFullYear(), now.getMonth() - (pointsCount - 1 - i), 1);
             const monthLabel = formatChartDate(d, 'month', dateFormatPattern, locale);
@@ -256,27 +279,13 @@ export const etfFeeService = {
                 month: monthLabel
             };
 
-            symbols.forEach((sym, symIdx) => {
-                const symUpper = sym.toUpperCase();
-                const info = KNOWN_ETF_DB[symUpper] || etfFeeService.getEtfInfo(symUpper);
-
-                // Deterministic pseudo-random seed per symbol based on ticker characters
-                const charSum = symUpper.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-                const seedOffset = (charSum % 10) * 0.15;
-                const waveFreq = 0.8 + ((charSum % 5) * 0.1);
-
-                // Category-based baseline growth factor
-                let baseTrend = 1.6;
-                if (info.category?.includes('S&P')) baseTrend = 2.1;
-                else if (info.category?.includes('World')) baseTrend = 1.75;
-                else if (info.category?.includes('All-World')) baseTrend = 1.45;
-
+            symbolMeta.forEach(({ sym, symIdx, ter, seedOffset, waveFreq, baseTrend }) => {
                 // Base normalized growth starting at 100
                 const trendGrowth = (i * baseTrend) + (Math.sin((i + symIdx * 2) * waveFreq) * (1.2 + seedOffset));
                 const grossValue = 100 + trendGrowth;
 
                 // Subtract TER fee drag accrued over time
-                const accumulatedFeeDrag = (info.ter / 100) * (i / (pointsCount / 12));
+                const accumulatedFeeDrag = (ter / 100) * (i / (pointsCount / 12));
                 const netValue = Math.round((grossValue * (1 - accumulatedFeeDrag)) * 100) / 100;
 
                 point[sym] = netValue;
