@@ -29,7 +29,7 @@ export const getSecurityStatusTool: AIToolDefinition<
 > = {
   name: 'get_security_status',
   description:
-    'Inspect the current zero-knowledge security posture of GlassFolio (vault lock state, encryption algorithm, 2FA/TOTP status, registered passkeys count, and recent security audit events).',
+    'Inspect the current E2EE security posture of GlassFolio (vault lock state, encryption algorithm, 2FA/TOTP status, registered passkeys count, and recent security audit events).',
   requiresConfirmation: false,
   parameters: {
     type: 'object',
@@ -91,7 +91,7 @@ export const lockVaultTool: AIToolDefinition<
 > = {
   name: 'lock_vault',
   description:
-    'Immediately lock the zero-knowledge vault, wiping all decrypted keys from memory. Requires explicit user confirmation.',
+    'Immediately lock the encrypted vault, wiping all decrypted keys from memory. Requires explicit user confirmation.',
   requiresConfirmation: true,
   parameters: {
     type: 'object',
@@ -102,7 +102,7 @@ export const lockVaultTool: AIToolDefinition<
     await vaultService.lock();
     return {
       success: true,
-      message: 'Zero-knowledge vault locked successfully. Financial data is now protected.',
+      message: 'Encrypted vault locked successfully. Financial data is now protected.',
     };
   },
 };
@@ -113,7 +113,7 @@ export const rotateEncryptionKeyTool: AIToolDefinition<
 > = {
   name: 'rotate_encryption_key',
   description:
-    'Rotate the zero-knowledge Data Encryption Key (DEK) and re-encrypt all stored records with a fresh AES-256-GCM key. Requires master password and human confirmation.',
+    'Rotate the Data Encryption Key (DEK) and re-encrypt all stored records with a fresh AES-256-GCM key. Requires master password and human confirmation.',
   requiresConfirmation: true,
   parameters: {
     type: 'object',

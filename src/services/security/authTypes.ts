@@ -35,9 +35,12 @@ export interface AuthResult {
 export interface IAuthProvider {
     signUp(email: string, password: string, name: string): Promise<AuthResult>;
     signIn(email: string, password: string): Promise<AuthResult>;
-    signInWithOAuth(provider: 'google' | 'apple'): Promise<never>;
+    signInWithOAuth(provider: 'google' | 'apple'): Promise<void | AuthResult>;
     signOut(): Promise<void>;
     getCurrentUser(): Promise<User | null>;
     getFailedAttemptsCount(): number;
     getLockoutRemainingSeconds(): number;
+    handleOAuthCallback?(): Promise<AuthResult | null>;
+    setupLocalVault?(name: string, masterPassword: string): Promise<AuthResult>;
+    unlockLocalVault?(masterPassword: string): Promise<AuthResult>;
 }

@@ -71,8 +71,8 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
 ### Priorité de contexte
 
 1. Lire `AI_CODING_STANDARDS.md` (règles techniques) + ce fichier (règles projet).
-2. **MCP `memory`** (`glassfolio.json`) — mémoire persistante inter-sessions. Fichier : `/Users/damien/Developpement/memory/glassfolio.json`. Contient le graphe d'entités, relations et observations du projet. Interroger `read_graph` ou `search_nodes` avant toute exploration de code.
-3. **MCP `obsidian`** — coffre global (`/Users/damien/Developpement/brain`) : lire les specs de features, ADRs, sessions IA et codemaps dans le dossier `GlassFolio/`.
+2. **MCP `memory`** (`glassfolio.json`) — mémoire persistante inter-sessions. Fichier : `$HOME/Developpement/memory/glassfolio.json` (ou via `MEMORY_FILE_PATH`). Contient le graphe d'entités, relations et observations du projet. Interroger `read_graph` ou `search_nodes` avant toute exploration de code.
+3. **MCP `obsidian`** — coffre global (`$HOME/Developpement/brain`) : lire les specs de features, ADRs, sessions IA et codemaps dans le dossier `GlassFolio/`.
 4. **Explorer le code en ciblé** : `grep_search` / recherche par symbole avant d'ouvrir de gros fichiers.
 5. N'ouvrir des fichiers bruts que pour un détail précis et uniquement les portions pertinentes.
 
@@ -123,7 +123,7 @@ L'espace Notion est un reflet contractuel et professionnel de l'état du code so
 
 ### Protocole maintenance MCP Memory (`glassfolio.json`)
 
-Le graphe Memory persisté dans `/Users/damien/Developpement/memory/glassfolio.json` doit être maintenu à jour :
+Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doit être maintenu à jour :
 
 - **Nouveau module/service/page/composant** : `create_entities` avec type, fichier source, exports, dépendances.
 - **Nouvelle dépendance entre modules** : `create_relations` (ex: `PageX depends_on ServiceY`).
@@ -131,7 +131,41 @@ Le graphe Memory persisté dans `/Users/damien/Developpement/memory/glassfolio.j
 - **Suppression de module** : `delete_entities` ou `delete_relations` pour les entrées obsolètes.
 - **Après changements majeurs** : `read_graph` pour vérifier la cohérence du graphe.
 
-> ⚠️ Ne jamais lire, modifier ou créer d'autres fichiers dans `/Users/damien/Developpement/memory/` — seul `glassfolio.json` est géré par ce projet.
+> ⚠️ Ne jamais lire, modifier ou créer d'autres fichiers dans `$HOME/Developpement/memory/` — seul `glassfolio.json` est géré par ce projet.
+
+### Protocole Git, Branching & DevSecOps (Règle Recruiter-Grade)
+
+Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et auditeurs open-source :
+
+1. **Interdiction formelle de commiter directement sur `main`** :
+   - `main` est une branche protégée réservée exclusivement aux versions de production livrables sur Azure et synchronisables vers le dépôt public.
+   - Toute tâche (`TGLA-XXX`), refactorisation ou correction **doit obligatoirement démarrer par la création et la bascule sur une branche dédiée** :
+     - `feat/tgla-XXX-<short-slug>`
+     - `fix/tgla-XXX-<short-slug>`
+     - `chore/tgla-XXX-<short-slug>`
+
+2. **Commits Conventionnels Atomiques** :
+   - Tout commit doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
+   - Les messages doivent être explicites et refléter la progression technique.
+
+3. **Garantie 6-Gates Pré-Merge** :
+   - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% :
+     - `npm run check:types`
+     - `npm run lint`
+     - `npm run check:i18n`
+     - `npm run check:standards`
+     - `npm run test:security`
+     - `npm test`
+
+4. **Architecture Dual-Remote (Lab Privé vs Vitrine Publique)** :
+   - `origin` : dépôt de travail privé (toutes branches de sprint, discussions et historiques détaillés).
+   - `public` : dépôt miroir public open-source (uniquement les releases propres validées de `main`).
+   - Synchronisation vers la vitrine publique :
+     ```bash
+     git checkout main
+     npm run check:standards && npm test
+     git push public main:main --tags
+     ```
 
 ### Règles tokens / latence
 
@@ -156,12 +190,14 @@ Le graphe Memory persisté dans `/Users/damien/Developpement/memory/glassfolio.j
 
 ## Commandes de développement
  
-- `npm install` : installer les dépendances
+- `npm install` : installer les dépendances (installe automatiquement le hook pre-commit)
 - `npm run dev` : lancer le serveur local (port 3000)
 - `npm run check:theming` : valider la conformité des tokens visuels et micro-primitives
-- `npm run check:standards` : valider l'ensemble des standards visuels, d'architecture et de sécurité
+- `npm run check:standards` : valider l'ensemble des standards visuels, d'architecture, de sécurité et zéro fuite de chemin
 - `npm run check:types` : validation TypeScript stricte (tsc)
 - `npm run check:i18n` : contrôle d'exhaustivité des clés i18n FR/EN
+- `npm run precommit:check` : bouclier de sécurité local exécuté avant chaque git commit
+- `npm run test:security` : exécuter les tests de sécurité (Vault E2EE, guardrails AI, RBAC)
 - `npm test` : exécuter la suite de tests unitaires (Vitest)
 - `npm run build` : build de prod
 - `npm run preview` : prévisualisation du build

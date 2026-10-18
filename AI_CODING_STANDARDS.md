@@ -159,7 +159,7 @@ The system supports three distinct themes. Your code must support all three auto
 
 ### 5.4. Directory Structure
 *   **Vite Non-Standard:** Note that `pages/` and `components/` reside in the **ROOT**, while `services/` resides in `src/`. Respect this structure; do not move files unnecessarily.
-*   **No `docs/` in repo:** Project documentation (feature specs, ADRs, session logs, code summaries) is centralized in the **external Obsidian vault** at `/Users/damien/Developpement/brain/GlassFolio/`, accessible via the MCP `obsidian` server. Do not create a `docs/` folder in this repo.
+*   **No `docs/` in repo:** Project documentation (feature specs, ADRs, session logs, code summaries) is centralized in the **external Obsidian vault** at `$HOME/Developpement/brain/GlassFolio/` (or via `BRAIN_PATH`), accessible via the MCP `obsidian` server. Do not create a `docs/` folder in this repo.
 
 ### 5.5. Strict Typing
 *   **No ANY:** The use of `any` is strictly prohibited unless wrapping an external untyped library (and even then, prefer `unknown`).
@@ -171,7 +171,7 @@ The system supports three distinct themes. Your code must support all three auto
 **Goal:** Keep the persistent knowledge graph in sync with the codebase at all times.
 
 ### 6.1. Memory Graph Location
-*   **File:** `/Users/damien/Developpement/memory/glassfolio.json`
+*   **File:** `$HOME/Developpement/memory/glassfolio.json` (or via `MEMORY_FILE_PATH`)
 *   **Server:** MCP `memory` (configured via `MEMORY_FILE_PATH` env var)
 *   **Scope:** This file is the **sole** persistence file for GlassFolio. Do NOT read or modify other files in the `memory/` directory.
 
@@ -318,4 +318,33 @@ Tout outil doit comporter :
 - **Mode lecture seule par défaut** : aucune écriture silencieuse n'est autorisée.
 - **Human-in-the-loop** : quand `requiresConfirmation === true`, l'action génère une proposition (`PendingActionProposal`) que l'utilisateur doit valider explicitement dans l'UI via le composant `AIActionApprovalCard`.
 - **Clés API BYOK** : les clés privées (OpenAI, Anthropic, OpenRouter) restent stockées côté client de manière sécurisée et ne transitent jamais par un serveur intermédiaire tiers.
+
+---
+
+## 9. Git Workflow, Branching & DevSecOps Standards (Pilier Recruiter-Grade)
+> **Version:** 1.0 | **Ajouté:** 2026-10-15
+
+**Règle absolue : Aucun commit direct sur `main`. L'historique Git doit refléter une rigueur logicielle exemplaire.**
+
+### 9.1. Règle de Branching Systématique
+- **Interdiction formelle de commiter directement sur `main`** : `main` est strictement réservé aux livraisons testées, validées et prêtes pour le déploiement Azure et l'exposition publique.
+- **Convention de nommage des branches** : Chaque nouvelle tâche (`TGLA-XXX`) ou sprint doit faire l'objet d'une branche dédiée créée depuis `main` à jour :
+  - Fonctionnalités : `feat/tgla-XXX-<short-slug>`
+  - Corrections : `fix/tgla-XXX-<short-slug>`
+  - Maintenance & Outillage : `chore/tgla-XXX-<short-slug>`
+
+### 9.2. Commits Conventionnels Atomiques
+- Respect strict de la spécification **Conventional Commits** : `type(scope): description impérative en anglais ou français`.
+  - Types autorisés : `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `perf`, `ci`.
+  - Exemples : `feat(vault): add passkey PRF support (#12)`, `fix(tax): correct flat tax bracket calculation`.
+- Chaque commit doit être atomique, autonome et passer tous les tests unitaires.
+
+### 9.3. Bouclier de Sécurité Local & Zéro Fuite de Chemins
+- **Pre-Commit Hook local obligatoire** (`scripts/pre-commit-check.mjs`) : bloque automatiquement tout commit contenant :
+  - Des fichiers `.env` ou secrets non ignorés.
+  - Des signatures de tokens / clés d'API réelles (`sk-`, `AIza`, `ghp_`, etc.).
+  - Des chemins de système de fichiers personnels absolus (`/Users/`).
+  - Des contournements directs de stockage (`localStorage.`) ou des codes hex bruts dans les `.tsx`.
+- **Zéro chemin personnel dans le code tracé** : Tout chemin vers des ressources locales doit obligatoirement utiliser des variables d'environnement (`BRAIN_PATH`, `HOME`), des chemins relatifs ou des alias.
+
 

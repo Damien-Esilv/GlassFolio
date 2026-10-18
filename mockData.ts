@@ -338,9 +338,21 @@ export const financialGoals: FinancialGoal[] = [
     color: 'blue'
   },
   {
+    id: 'g2',
+    title: 'Études Supérieures Enfants',
+    targetAmount: 50000,
+    method: 'dynamic',
+    linkedAssets: [
+        { type: 'class', id: 'Cash', name: 'Livret A', percentage: 50 }
+    ],
+    isPinned: true,
+    iconType: 'other',
+    color: 'blue'
+  },
+  {
     id: 'g3',
     title: 'Emergency Fund',
-    targetAmount: 20000,
+    targetAmount: 25000,
     method: 'dynamic',
     linkedAssets: [
         { type: 'class', id: 'Crypto', name: 'All Crypto', percentage: 20 }

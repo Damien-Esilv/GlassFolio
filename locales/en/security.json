@@ -1,11 +1,14 @@
 {
     "lockScreen": {
         "title": "Vault Locked",
-        "subtitle": "Zero-knowledge encryption is active. Enter your master password to decrypt your financial data.",
+        "subtitle": "End-to-end encryption (E2EE) is active. Enter your master password to decrypt your financial data.",
         "passwordLabel": "Master Password",
         "passwordPlaceholder": "Enter your master password",
         "unlockButton": "Unlock Vault",
         "unlocking": "Decrypting...",
+        "unlockWithPasskey": "Unlock with Passkey (Biometrics)",
+        "unlockingPasskey": "Authenticating with Passkey...",
+        "passkeyNotSupported": "WebAuthn / Passkey not supported",
         "useRecoveryKey": "Lost password? Use Recovery Key",
         "usePassword": "Back to Master Password",
         "recoveryKeyLabel": "Recovery Key",
@@ -13,8 +16,8 @@
         "recoveryKeyHint": "Enter the 32-character recovery key generated when your vault was created.",
         "forgotPrompt": "Forgot password and lost your recovery key?",
         "resetButton": "Reset Vault & Reload Demo Data",
-        "resetConfirmTitle": "Reset Zero-Knowledge Vault?",
-        "resetConfirmMessage": "Warning: True zero-knowledge architecture means data cannot be recovered without the password or recovery key. Resetting will permanently wipe your encrypted local storage and restore default demo data.",
+        "resetConfirmTitle": "Reset Encrypted Vault?",
+        "resetConfirmMessage": "Warning: Due to end-to-end encryption, data cannot be recovered without the password or recovery key. Resetting will permanently wipe your encrypted local storage and restore default demo data.",
         "resetConfirmButton": "Yes, wipe & reset to demo",
         "cancel": "Cancel",
         "invalidCredentials": "The master password or recovery key is incorrect.",
@@ -23,10 +26,10 @@
         "vaultStatusLocked": "Vault Locked"
     },
     "header": {
-        "lockVaultTooltip": "Lock zero-knowledge vault immediately"
+        "lockVaultTooltip": "Lock encrypted vault immediately"
     },
     "vaultSection": {
-        "title": "Zero-Knowledge Vault",
+        "title": "Encrypted Vault (E2EE)",
         "subtitle": "All your transactions, positions, and credentials are encrypted locally with AES-256-GCM.",
         "statusActive": "Encryption Active (Envelope V1)",
         "changeMasterPassword": "Change Master Password",

@@ -9,19 +9,17 @@
 
 import { DeploymentMode } from '../../config/deployment';
 import { IStorageProvider, LocalStorageProvider } from '../../types/storage';
+import { SyncedBackingStorageProvider } from './SyncedBackingStorageProvider';
 
-let cloudFallbackNotified = false;
+let syncedProviderInstance: SyncedBackingStorageProvider | null = null;
 
 export const createBackingStorage = (mode: DeploymentMode): IStorageProvider => {
-    switch (mode) {
-        case 'cloud':
-            if (!cloudFallbackNotified) {
-                cloudFallbackNotified = true;
-                console.warn('[storage] Cloud storage provider not available yet — using browser storage (E2EE still applies).');
-            }
-            return new LocalStorageProvider();
-        case 'local':
-        default:
-            return new LocalStorageProvider();
+    if (!syncedProviderInstance) {
+        syncedProviderInstance = new SyncedBackingStorageProvider(new LocalStorageProvider(), mode);
     }
+    return syncedProviderInstance;
+};
+
+export const getSyncedStorageProvider = (): SyncedBackingStorageProvider | null => {
+    return syncedProviderInstance;
 };

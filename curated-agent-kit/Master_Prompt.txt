@@ -4,7 +4,7 @@ Contexte technique :
 - IDE : Antigravity sur Mac M3.
 - Fichier de règles central : AGENTS.md à la racine du projet actif.
 - MCP `memory` : mémoire persistante inter-projets et inter-sessions (entités, relations, observations).
-- MCP `obsidian` : coffre documentaire global à `/Users/damien/Developpement/brain`, organisé par projet (sous-dossier `[NomProjet]/`).
+- MCP `obsidian` : coffre documentaire global à `$HOME/Developpement/brain`, organisé par projet (sous-dossier `[NomProjet]/`).
 
 OBJECTIF GLOBAL :
 1) Minimiser drastiquement les tokens consommés et la latence.

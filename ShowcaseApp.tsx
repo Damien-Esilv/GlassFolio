@@ -1,0 +1,63 @@
+import React, { useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ConsentBanner } from './components/ConsentBanner';
+import { buildAppDestinationUrl } from './src/config/deployment';
+import './src/i18n';
+
+import { LoadingScreen } from './components/ui/LoadingScreen';
+import { ScrollToTop } from './components/ui/ScrollToTop';
+
+const Landing = React.lazy(() => import('./pages/Landing'));
+const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
+
+const AppRedirectHandler: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const targetPath = (location.pathname === '/login' || location.pathname === '/signup')
+      ? location.pathname
+      : '/';
+    const destination = buildAppDestinationUrl(targetPath);
+    if (typeof window !== 'undefined') {
+      window.location.assign(destination);
+    }
+  }, [location.pathname]);
+
+  return <LoadingScreen />;
+};
+
+export const ShowcaseApp: React.FC = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <ScrollToTop />
+        <React.Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/welcome" element={<Landing />} />
+            <Route path="/legal" element={<LegalCenter />} />
+            <Route path="/privacy" element={<LegalCenter />} />
+            <Route path="/terms" element={<LegalCenter />} />
+            <Route path="/cookies" element={<LegalCenter />} />
+            <Route path="/accessibility" element={<LegalCenter />} />
+            <Route path="/welcome/legal" element={<LegalCenter />} />
+            <Route path="/welcome/privacy" element={<LegalCenter />} />
+            <Route path="/welcome/terms" element={<LegalCenter />} />
+            <Route path="/welcome/cookies" element={<LegalCenter />} />
+            <Route path="/welcome/accessibility" element={<LegalCenter />} />
+
+            {/* If redirected or deep-linked to app routes on showcase domain, redirect to app */}
+            <Route path="/login" element={<AppRedirectHandler />} />
+            <Route path="/signup" element={<AppRedirectHandler />} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </React.Suspense>
+        <ConsentBanner />
+      </Router>
+    </AuthProvider>
+  );
+};
+
+export default ShowcaseApp;

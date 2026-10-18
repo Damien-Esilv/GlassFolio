@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key } from 'lucide-react';
+import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key, Fingerprint } from 'lucide-react';
 import Button from '../Button';
 import { vaultService } from '../../src/services/security/vaultService';
+import { passkeyService, isPasskeySupported } from '../../src/services/security/passkeyService';
 import { useData } from '../../context/DataContext';
 
 interface LockScreenProps {
@@ -18,8 +19,27 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const [mode, setMode] = useState<'password' | 'recovery'>('password');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [passkeySupported, setPasskeySupported] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+
+    React.useEffect(() => {
+        isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
+    }, []);
+
+    const handleUnlockWithPasskey = async () => {
+        setError(null);
+        setIsLoading(true);
+        try {
+            await passkeyService.authenticate();
+            await refreshData();
+            onUnlocked?.();
+        } catch {
+            setError(t('security:lockScreen.invalidCredentials'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleUnlockWithPassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -127,6 +147,18 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                         <Button type="submit" className="w-full" isLoading={isLoading} aria-label={t('security:lockScreen.unlockButton')}>
                             {isLoading ? t('security:lockScreen.unlocking') : t('security:lockScreen.unlockButton')}
                         </Button>
+
+                        {passkeySupported && (
+                            <button
+                                type="button"
+                                onClick={handleUnlockWithPasskey}
+                                disabled={isLoading}
+                                className="w-full flex items-center justify-center gap-2 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-xs font-semibold shadow-sm"
+                            >
+                                <Fingerprint size={16} className="text-brand" />
+                                {t('security:lockScreen.unlockWithPasskey')}
+                            </button>
+                        )}
 
                         <div className="text-center pt-2">
                             <button
