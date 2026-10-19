@@ -93,28 +93,28 @@
         "description": "Aucune configuration requise. Intelligence financière locale fonctionnant hors ligne."
       },
       "ollama": {
-        "name": "Ollama (100% Local & Souverain)",
+        "name": "Ollama (Local)",
         "description": "Tourne sur votre machine via localhost:11434. Gratuit, zéro fuite de données."
       },
       "openai": {
-        "name": "OpenAI (BYOK)",
-        "description": "Utilisez votre propre clé API OpenAI (GPT-4o, GPT-4o-mini)."
+        "name": "OpenAI",
+        "description": "Utilisez votre propre clé API OpenAI avec le modèle de votre choix."
       },
       "anthropic": {
-        "name": "Anthropic Claude (BYOK)",
-        "description": "Utilisez votre propre clé API Anthropic (Claude 3.5 Sonnet)."
+        "name": "Anthropic (Claude)",
+        "description": "Utilisez votre propre clé API Anthropic avec le modèle de votre choix."
       },
       "gemini": {
-        "name": "Google Gemini (BYOK)",
-        "description": "Utilisez votre propre clé API Google Gemini (Gemini 2.0 Flash, 1.5 Pro)."
+        "name": "Google Gemini",
+        "description": "Utilisez votre propre clé API Google Gemini avec le modèle de votre choix."
       },
       "openrouter": {
-        "name": "OpenRouter (BYOK)",
-        "description": "Accédez à tous les modèles ouverts et propriétaires via OpenRouter."
+        "name": "OpenRouter",
+        "description": "Accédez à tous les modèles avec votre clé OpenRouter."
       },
       "groq": {
-        "name": "Groq (Ultra-rapide BYOK)",
-        "description": "Inférence ultra-basse latence avec Llama 3 / Mixtral."
+        "name": "Groq",
+        "description": "Inférence ultra-rapide avec votre clé API Groq et le modèle de votre choix."
       }
     },
     "ollama": {
@@ -134,9 +134,10 @@
       "serviceLabel": "Fournisseur d'IA Cloud",
       "popularModels": "Modèles recommandés :",
       "apiKey": "Clé API (Stockée localement dans votre navigateur)",
-      "apiKeyPlaceholder": "sk-...",
-      "model": "Identifiant du modèle",
-      "modelPlaceholder": "gpt-4o-mini"
+      "apiKeyPlaceholder": "Entrez votre clé API...",
+      "model": "Nom du modèle",
+      "modelPlaceholder": "Entrez le nom du modèle (ex: gemini-1.5-flash, gpt-4o, claude-3-5-sonnet...)",
+      "modelHelp": "Indiquez l'identifiant exact du modèle souhaité chez votre fournisseur."
     },
     "security": {
       "title": "Garde-fous & Mode d'Autorisation",

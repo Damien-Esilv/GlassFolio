@@ -25,8 +25,7 @@ interface CloudProviderOption {
   id: AIProviderType;
   name: string;
   keyPlaceholder: string;
-  defaultModel: string;
-  popularModels: string[];
+  modelPlaceholder: string;
 }
 
 export const AISettingsTab: React.FC = () => {
@@ -58,36 +57,31 @@ export const AISettingsTab: React.FC = () => {
       id: 'groq',
       name: t('ai:settings.providers.groq.name'),
       keyPlaceholder: 'gsk_...',
-      defaultModel: 'llama-3.3-70b-versatile',
-      popularModels: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+      modelPlaceholder: 'llama-3.3-70b-versatile',
     },
     {
       id: 'openai',
       name: t('ai:settings.providers.openai.name'),
       keyPlaceholder: 'sk-proj-...',
-      defaultModel: 'gpt-4o-mini',
-      popularModels: ['gpt-4o-mini', 'gpt-4o', 'o3-mini'],
+      modelPlaceholder: 'gpt-4o',
     },
     {
       id: 'anthropic',
       name: t('ai:settings.providers.anthropic.name'),
       keyPlaceholder: 'sk-ant-...',
-      defaultModel: 'claude-3-5-sonnet-latest',
-      popularModels: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'],
+      modelPlaceholder: 'claude-3-5-sonnet-latest',
     },
     {
       id: 'gemini',
       name: t('ai:settings.providers.gemini.name'),
       keyPlaceholder: 'AIzaSy...',
-      defaultModel: 'gemini-2.0-flash',
-      popularModels: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+      modelPlaceholder: 'gemini-1.5-flash',
     },
     {
       id: 'openrouter',
       name: t('ai:settings.providers.openrouter.name'),
       keyPlaceholder: 'sk-or-...',
-      defaultModel: 'meta-llama/llama-3.3-70b-instruct',
-      popularModels: ['meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-r1', 'anthropic/claude-3.5-sonnet'],
+      modelPlaceholder: 'anthropic/claude-3.5-sonnet',
     },
   ];
 
@@ -108,7 +102,6 @@ export const AISettingsTab: React.FC = () => {
         setSettings((prev) => ({
           ...prev,
           activeProvider: 'groq',
-          cloudModel: prev.cloudModel || 'llama-3.3-70b-versatile',
         }));
       }
     }
@@ -116,17 +109,10 @@ export const AISettingsTab: React.FC = () => {
   };
 
   const handleCloudProviderChange = (newProvider: AIProviderType) => {
-    const selectedOption = cloudOptions.find((opt) => opt.id === newProvider);
     setSettings((prev) => ({
       ...prev,
       activeProvider: newProvider,
-      cloudModel: selectedOption?.defaultModel || prev.cloudModel,
     }));
-    setSaveSuccess(false);
-  };
-
-  const handleSelectPopularModel = (modelName: string) => {
-    setSettings((prev) => ({ ...prev, cloudModel: modelName }));
     setSaveSuccess(false);
   };
 
@@ -293,16 +279,16 @@ export const AISettingsTab: React.FC = () => {
                   value={settings.ollamaEndpoint}
                   onChange={(e) => setSettings({ ...settings, ollamaEndpoint: e.target.value })}
                   placeholder="http://localhost:11434"
-                  className="flex-1 bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
+                  className="min-w-0 flex-1 bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
                 />
                 <button
                   type="button"
                   onClick={handleTestOllama}
                   disabled={isTestingOllama}
-                  className="px-3 py-2 rounded-xl bg-subtle border border-subtle hover:bg-card text-xs font-medium text-primary transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  className="whitespace-nowrap shrink-0 px-3.5 py-2 rounded-xl bg-subtle border border-subtle hover:bg-card text-xs font-medium text-primary transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  <RefreshCw size={12} className={isTestingOllama ? 'animate-spin' : ''} />
-                  <span>{isTestingOllama ? t('ai:settings.ollama.testing') : t('ai:settings.ollama.testConnection')}</span>
+                  <RefreshCw size={13} className={`shrink-0 ${isTestingOllama ? 'animate-spin' : ''}`} />
+                  <span className="whitespace-nowrap">{isTestingOllama ? t('ai:settings.ollama.testing') : t('ai:settings.ollama.testConnection')}</span>
                 </button>
               </div>
             </div>
@@ -403,30 +389,12 @@ export const AISettingsTab: React.FC = () => {
                 type="text"
                 value={settings.cloudModel}
                 onChange={(e) => setSettings({ ...settings, cloudModel: e.target.value })}
-                placeholder={currentCloudOption.defaultModel}
+                placeholder={currentCloudOption.modelPlaceholder || t('ai:settings.cloud.modelPlaceholder')}
                 className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
               />
-
-              {/* Popular Models Badges */}
-              <div className="pt-1.5 space-y-1">
-                <span className="text-[10px] text-tertiary">{t('ai:settings.cloud.popularModels')}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {currentCloudOption.popularModels.map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      onClick={() => handleSelectPopularModel(model)}
-                      className={`text-[10px] px-2 py-0.5 rounded-lg border transition-colors ${
-                        settings.cloudModel === model
-                          ? 'bg-primary/15 border-primary text-primary font-semibold'
-                          : 'bg-subtle hover:bg-card border-subtle text-secondary'
-                      }`}
-                    >
-                      {model}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-[11px] text-tertiary">
+                {t('ai:settings.cloud.modelHelp')}
+              </p>
             </div>
           </div>
         </div>

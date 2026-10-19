@@ -62,6 +62,29 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         ).rejects.toThrow(/NIST/i);
     });
 
+    it('re-initializes and unlocks vault cleanly when setupLocalVault or signUp is called while an existing demo vault is locked', async () => {
+        // 1. Login as demo (initializes vault with demo password) and then sign out (locks vault)
+        await auth.signIn('demo@glassfolio.com', 'password');
+        await auth.signOut();
+        expect(vaultService.isInitialized()).toBe(true);
+        expect(vaultService.isUnlocked()).toBe(false);
+
+        // 2. Now initialize a new local vault from the signup page
+        const strongPassword = 'Strong-Local-Vault-Master-Key-2026!#';
+        const result = await auth.setupLocalVault('Tets', strongPassword);
+        expect(result.user.name).toBe('Tets');
+        expect(result.recoveryKey).toBeDefined();
+        expect(vaultService.isUnlocked()).toBe(true);
+
+        // 3. Lock again and test full signUp over a locked vault
+        await vaultService.lock();
+        expect(vaultService.isUnlocked()).toBe(false);
+
+        const signupRes = await auth.signUp('tets@example.com', strongPassword, 'Tets Cloud');
+        expect(signupRes.user.email).toBe('tets@example.com');
+        expect(vaultService.isUnlocked()).toBe(true);
+    });
+
     it('handles demo user signIn and unlocks demo vault', async () => {
         const res = await auth.signIn('demo@glassfolio.com', 'password');
         expect(res.user.email).toBe('demo@glassfolio.com');

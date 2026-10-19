@@ -93,28 +93,28 @@
         "description": "Zero setup required. Rule-based offline financial intelligence running locally."
       },
       "ollama": {
-        "name": "Ollama (100% Local & Sovereign)",
+        "name": "Ollama (Local)",
         "description": "Runs on your machine via localhost:11434. No API fees, 100% data privacy."
       },
       "openai": {
-        "name": "OpenAI (BYOK)",
-        "description": "Use your personal OpenAI API key (GPT-4o, GPT-4o-mini)."
+        "name": "OpenAI",
+        "description": "Use your personal OpenAI API key with the model of your choice."
       },
       "anthropic": {
-        "name": "Anthropic Claude (BYOK)",
-        "description": "Use your personal Anthropic API key (Claude 3.5 Sonnet)."
+        "name": "Anthropic (Claude)",
+        "description": "Use your personal Anthropic API key with the model of your choice."
       },
       "gemini": {
-        "name": "Google Gemini (BYOK)",
-        "description": "Use your Google Gemini API key (Gemini 2.0 Flash, 1.5 Pro)."
+        "name": "Google Gemini",
+        "description": "Use your Google Gemini API key with the model of your choice."
       },
       "openrouter": {
-        "name": "OpenRouter (BYOK)",
-        "description": "Access any open or proprietary model through OpenRouter."
+        "name": "OpenRouter",
+        "description": "Access any model with your personal OpenRouter API key."
       },
       "groq": {
-        "name": "Groq (Ultra-fast BYOK)",
-        "description": "Ultra-low latency inference with Llama 3 / Mixtral."
+        "name": "Groq",
+        "description": "Ultra-fast inference with your Groq API key and your chosen model."
       }
     },
     "ollama": {
@@ -134,9 +134,10 @@
       "serviceLabel": "Cloud AI Provider",
       "popularModels": "Recommended models:",
       "apiKey": "API Key (Stored locally in your browser)",
-      "apiKeyPlaceholder": "sk-...",
-      "model": "Model ID",
-      "modelPlaceholder": "gpt-4o-mini"
+      "apiKeyPlaceholder": "Enter your API key...",
+      "model": "Model Name",
+      "modelPlaceholder": "Enter model name (e.g. gemini-1.5-flash, gpt-4o, claude-3-5-sonnet...)",
+      "modelHelp": "Specify the exact model identifier provided by your service."
     },
     "security": {
       "title": "Guardrails & Authorization Mode",
