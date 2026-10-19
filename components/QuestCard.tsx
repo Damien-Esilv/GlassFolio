@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GamificationQuest } from '../types';
-import { CheckCircle2, Clock, Zap } from 'lucide-react';
+import { CheckCircle2, Zap } from 'lucide-react';
 import Button from './Button';
 
 interface QuestCardProps {
     quest: GamificationQuest;
-    onClaim?: (questId: string) => void;
+    onClaim?: (questId: string) => void | Promise<void>;
 }
 
 const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
     const { t } = useTranslation(['gamification']);
+    const [isClaiming, setIsClaiming] = useState(false);
 
     const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+
+    const handleClaim = async () => {
+        if (!onClaim || isClaiming || quest.claimed) return;
+        setIsClaiming(true);
+        try {
+            await onClaim(quest.id);
+        } finally {
+            setIsClaiming(false);
+        }
+    };
 
     return (
         <div className={`p-5 rounded-2xl border transition-all ${
@@ -33,7 +44,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
                         {quest.completed && (
                             <span className="flex items-center gap-1 text-[11px] font-bold text-positive">
                                 <CheckCircle2 size={12} />
-                                {t('gamification:quests.completed')}
+                                {quest.claimed ? t('gamification:quests.claimed', { defaultValue: 'Réclamé' }) : t('gamification:quests.completed')}
                             </span>
                         )}
                     </div>
@@ -69,17 +80,25 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
                 </div>
             </div>
 
-            {quest.completed && onClaim && (
+            {quest.claimed ? (
+                <div className="mt-4 pt-3 border-t border-subtle flex justify-end">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-subtle text-secondary text-xs font-semibold">
+                        <CheckCircle2 size={13} className="text-positive" />
+                        {t('gamification:quests.claimed', { defaultValue: 'Réclamé' })}
+                    </span>
+                </div>
+            ) : quest.completed && onClaim ? (
                 <div className="mt-4 pt-3 border-t border-subtle flex justify-end">
                     <Button 
                         size="sm" 
-                        onClick={() => onClaim(quest.id)}
+                        onClick={handleClaim}
+                        disabled={isClaiming}
                         className="text-xs font-bold shadow-md shadow-brand/20"
                     >
-                        {t('gamification:quests.claim', { xp: quest.rewardXp })}
+                        {isClaiming ? '...' : t('gamification:quests.claim', { xp: quest.rewardXp })}
                     </Button>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 };

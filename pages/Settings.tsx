@@ -426,6 +426,24 @@ const Settings: React.FC = () => {
                                                 <Laptop size={20} />
                                                 <span className="text-xs font-medium">{t('settings:preferences.system')}</span>
                                             </button>
+                                            {((user?.level || 1) >= 10 || prefData.theme === 'emerald') && (
+                                                <button
+                                                    onClick={() => updatePreference('theme', 'emerald')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'emerald' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
+                                                >
+                                                    <div data-theme="emerald" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
+                                                    <span className="text-xs font-medium">{t('gamification:themes.emeraldPrestige', { defaultValue: 'Émeraude' })}</span>
+                                                </button>
+                                            )}
+                                            {((user?.level || 1) >= 15 || prefData.theme === 'cyber') && (
+                                                <button
+                                                    onClick={() => updatePreference('theme', 'cyber')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'cyber' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
+                                                >
+                                                    <div data-theme="cyber" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
+                                                    <span className="text-xs font-medium">{t('gamification:themes.cyberNeon', { defaultValue: 'Cyber Néon' })}</span>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 

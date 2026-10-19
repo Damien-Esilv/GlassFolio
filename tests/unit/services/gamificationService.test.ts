@@ -79,10 +79,13 @@ describe('GamificationService', () => {
       expect(velvetTheme?.unlocked).toBe(false);
     });
 
-    it('unlocks Midnight Velvet at level 5+', async () => {
-      const themes = await gamificationService.getThemeRewards(6);
-      const velvetTheme = themes.find(t => t.id === 'theme_night');
-      expect(velvetTheme?.unlocked).toBe(true);
+    it('unlocks Emerald Prestige at level 10+ and Cyber Neon at level 15+', async () => {
+      const themesLvl10 = await gamificationService.getThemeRewards(10);
+      expect(themesLvl10.find(t => t.id === 'theme_emerald')?.unlocked).toBe(true);
+      expect(themesLvl10.find(t => t.id === 'theme_cyber')?.unlocked).toBe(false);
+
+      const themesLvl15 = await gamificationService.getThemeRewards(15);
+      expect(themesLvl15.find(t => t.id === 'theme_cyber')?.unlocked).toBe(true);
     });
   });
 
@@ -92,6 +95,28 @@ describe('GamificationService', () => {
       expect(quests.length).toBeGreaterThan(0);
       expect(quests[0]).toHaveProperty('titleKey');
       expect(quests[0]).toHaveProperty('rewardXp');
+    });
+
+    it('claims completed quest, prevents double-claiming, and persists claimed state', async () => {
+      // Ensure quest_monthly_review exists and is completed
+      const initialQuests = await gamificationService.getQuests();
+      const targetQuest = initialQuests.find(q => q.id === 'quest_monthly_review');
+      expect(targetQuest).toBeDefined();
+
+      // First claim should succeed
+      const firstClaim = await gamificationService.claimQuestReward('quest_monthly_review');
+      expect(firstClaim.success).toBe(true);
+      expect(firstClaim.xpReward).toBe(150);
+
+      // Second claim should be rejected
+      const secondClaim = await gamificationService.claimQuestReward('quest_monthly_review');
+      expect(secondClaim.success).toBe(false);
+      expect(secondClaim.xpReward).toBe(0);
+
+      // Verify persisted state
+      const reloadedQuests = await gamificationService.getQuests();
+      const updatedTarget = reloadedQuests.find(q => q.id === 'quest_monthly_review');
+      expect(updatedTarget?.claimed).toBe(true);
     });
 
     it('pins max 3 badges cleanly', async () => {

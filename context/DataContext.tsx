@@ -215,8 +215,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           level: newLevel,
           xpGained: res.xpReward
         });
+      } else {
+        setActiveCelebration({
+          type: 'rank',
+          title: `+${res.xpReward} XP !`,
+          subtitle: 'Mission accomplie',
+          xpGained: res.xpReward
+        });
       }
-      setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true } : q));
+      setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true, claimed: true } : q));
     }
   }, [user, updateProfile]);
 

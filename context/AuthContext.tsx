@@ -127,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const root = document.documentElement;
     const storedPublicTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
     const fallbackTheme =
-      storedPublicTheme === 'light' || storedPublicTheme === 'dark' || storedPublicTheme === 'night'
+      storedPublicTheme === 'light' || storedPublicTheme === 'dark' || storedPublicTheme === 'night' || storedPublicTheme === 'emerald' || storedPublicTheme === 'cyber'
         ? storedPublicTheme
         : 'night';
 

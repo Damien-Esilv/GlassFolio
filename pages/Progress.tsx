@@ -21,8 +21,7 @@ import {
     Award, 
     Pin, 
     Filter, 
-    Flame,
-    Zap
+    Flame
 } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
@@ -263,20 +262,18 @@ const Progress: React.FC = () => {
                     </button>
                     <button 
                         onClick={() => { setActiveTab('quests'); setSearchParams({ tab: 'quests' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
                             activeTab === 'quests' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
                         }`}
                     >
-                        <Zap size={14} className="text-brand fill-current" />
                         {t('gamification:tabs.quests')}
                     </button>
                     <button 
                         onClick={() => { setActiveTab('ranks'); setSearchParams({ tab: 'ranks' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
                             activeTab === 'ranks' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
                         }`}
                     >
-                        <Award size={14} />
                         {t('gamification:tabs.ranks')}
                     </button>
                 </div>

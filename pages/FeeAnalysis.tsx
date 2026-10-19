@@ -152,16 +152,22 @@ const FeeAnalysis: React.FC = () => {
 
    // Generate Sector & Geography allocation comparison chart data
    const allocationChartData = useMemo(() => {
+      // BOLT OPTIMIZATION: Pre-fetch breakdowns and construct an O(1) percentage Map per symbol
+      // to avoid linear Array.find() and repeated etfFeeService.getEtfBreakdown() calls during row generation.
       const keysMap = new Map<string, string>(); // key -> labelKey
-
-      selectedCompareSymbols.forEach(sym => {
+      const symbolMapList = selectedCompareSymbols.map(sym => {
          const breakdown = etfFeeService.getEtfBreakdown(sym);
          const list = allocationTab === 'sectors' ? breakdown.sectors : breakdown.geography;
+         const map = new Map<string, number>();
+
          list.forEach(item => {
             if (!keysMap.has(item.key)) {
                keysMap.set(item.key, item.labelKey);
             }
+            map.set(item.key, item.percentage);
          });
+
+         return { sym, map };
       });
 
       return Array.from(keysMap.entries()).map(([key, labelKey]) => {
@@ -169,11 +175,8 @@ const FeeAnalysis: React.FC = () => {
             categoryName: t(`reports:feeAnalysis.${labelKey}` as keyof typeof t) || key
          };
 
-         selectedCompareSymbols.forEach(sym => {
-            const breakdown = etfFeeService.getEtfBreakdown(sym);
-            const list = allocationTab === 'sectors' ? breakdown.sectors : breakdown.geography;
-            const found = list.find(item => item.key === key);
-            row[sym] = found ? found.percentage : 0;
+         symbolMapList.forEach(({ sym, map }) => {
+            row[sym] = map.get(key) || 0;
          });
 
          return row;
