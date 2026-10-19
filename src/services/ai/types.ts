@@ -67,7 +67,7 @@ export interface ChatMessage {
   thought?: string;
 }
 
-export type AIProviderType = 'mock' | 'ollama' | 'openai' | 'anthropic' | 'openrouter' | 'groq';
+export type AIProviderType = 'mock' | 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'openrouter';
 
 export type AIExecutionMode = 'supervised' | 'read_only';
 

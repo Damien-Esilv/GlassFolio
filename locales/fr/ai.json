@@ -73,6 +73,20 @@
       "description": "Choisissez entre une IA locale privée (Ollama), une clé cloud personnelle (BYOK) ou le simulateur intégré.",
       "selectLabel": "Fournisseur actif"
     },
+    "categories": {
+      "ollama": {
+        "name": "IA Locale Privée (Ollama)",
+        "description": "100% privé sur votre machine (localhost:11434)"
+      },
+      "cloud": {
+        "name": "Modèles Cloud (BYOK)",
+        "description": "OpenAI, Claude, Gemini, Groq & OpenRouter"
+      },
+      "mock": {
+        "name": "Simulateur Démo",
+        "description": "Fonctionne immédiatement sans clé d'API"
+      }
+    },
     "providers": {
       "mock": {
         "name": "Simulateur Intelligent GlassFolio",
@@ -89,6 +103,10 @@
       "anthropic": {
         "name": "Anthropic Claude (BYOK)",
         "description": "Utilisez votre propre clé API Anthropic (Claude 3.5 Sonnet)."
+      },
+      "gemini": {
+        "name": "Google Gemini (BYOK)",
+        "description": "Utilisez votre propre clé API Google Gemini (Gemini 2.0 Flash, 1.5 Pro)."
       },
       "openrouter": {
         "name": "OpenRouter (BYOK)",
@@ -108,9 +126,13 @@
       "testing": "Test en cours...",
       "success": "Connexion réussie ! {{count}} modèle(s) détecté(s).",
       "failure": "Impossible de joindre Ollama. Vérifiez que l'application est bien lancée.",
-      "availableModels": "Modèles disponibles"
+      "availableModels": "Modèles disponibles",
+      "onlineNoticeTitle": "Note pour la version en ligne (HTTPS)",
+      "onlineNoticeBody": "Vous utilisez actuellement GlassFolio sur le Web (HTTPS). Les navigateurs bloquent les requêtes directes vers http://localhost (Mixed Content). Pour utiliser votre modèle Ollama local sans restriction, lancez GlassFolio en local avec Docker (http://localhost:3000), ou utilisez un modèle Cloud (Groq, Gemini, OpenAI)."
     },
     "cloud": {
+      "serviceLabel": "Fournisseur d'IA Cloud",
+      "popularModels": "Modèles recommandés :",
       "apiKey": "Clé API (Stockée localement dans votre navigateur)",
       "apiKeyPlaceholder": "sk-...",
       "model": "Identifiant du modèle",

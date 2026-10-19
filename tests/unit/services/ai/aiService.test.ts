@@ -114,4 +114,45 @@ describe('aiService', () => {
     expect(lastMsg.content).toContain('ministral-3:3b');
     expect(lastMsg.content).toContain('ollama pull');
   });
+
+  it('routes requests to Google Gemini provider when activeProvider is gemini', async () => {
+    aiSettingsService.saveSettings({
+      activeProvider: 'gemini',
+      apiKey: 'test-gemini-key',
+      cloudModel: 'gemini-2.0-flash',
+    });
+
+    const mockResponse = {
+      choices: [
+        {
+          message: {
+            content: 'Bonjour depuis Google Gemini!',
+          },
+        },
+      ],
+    };
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const messages = await aiService.sendMessage('Bonjour Gemini');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-gemini-key',
+        }),
+      })
+    );
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toBe('Bonjour depuis Google Gemini!');
+  });
 });
+

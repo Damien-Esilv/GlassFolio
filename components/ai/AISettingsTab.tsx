@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
-  Bot,
   Server,
   Key,
   Shield,
@@ -12,11 +11,23 @@ import {
   RefreshCw,
   Cpu,
   Brain,
+  Cloud,
+  Info,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { aiSettingsService } from '../../src/services/ai/aiSettingsService';
 import { AIProviderType, AIExecutionMode, AISettings } from '../../src/services/ai/types';
 import Button from '../Button';
+
+type AICategory = 'ollama' | 'cloud' | 'mock';
+
+interface CloudProviderOption {
+  id: AIProviderType;
+  name: string;
+  keyPlaceholder: string;
+  defaultModel: string;
+  popularModels: string[];
+}
 
 export const AISettingsTab: React.FC = () => {
   const { t } = useTranslation();
@@ -31,8 +42,91 @@ export const AISettingsTab: React.FC = () => {
   const [isCopied, setIsCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const handleProviderSelect = (provider: AIProviderType) => {
-    setSettings((prev) => ({ ...prev, activeProvider: provider }));
+  const isCloudProvider = (provider: AIProviderType): boolean =>
+    ['groq', 'openai', 'anthropic', 'gemini', 'openrouter'].includes(provider);
+
+  const getCategoryFromProvider = (provider: AIProviderType): AICategory => {
+    if (provider === 'ollama') return 'ollama';
+    if (provider === 'mock') return 'mock';
+    return 'cloud';
+  };
+
+  const currentCategory = getCategoryFromProvider(settings.activeProvider);
+
+  const cloudOptions: CloudProviderOption[] = [
+    {
+      id: 'groq',
+      name: t('ai:settings.providers.groq.name'),
+      keyPlaceholder: 'gsk_...',
+      defaultModel: 'llama-3.3-70b-versatile',
+      popularModels: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+    },
+    {
+      id: 'openai',
+      name: t('ai:settings.providers.openai.name'),
+      keyPlaceholder: 'sk-proj-...',
+      defaultModel: 'gpt-4o-mini',
+      popularModels: ['gpt-4o-mini', 'gpt-4o', 'o3-mini'],
+    },
+    {
+      id: 'anthropic',
+      name: t('ai:settings.providers.anthropic.name'),
+      keyPlaceholder: 'sk-ant-...',
+      defaultModel: 'claude-3-5-sonnet-latest',
+      popularModels: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'],
+    },
+    {
+      id: 'gemini',
+      name: t('ai:settings.providers.gemini.name'),
+      keyPlaceholder: 'AIzaSy...',
+      defaultModel: 'gemini-2.0-flash',
+      popularModels: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    },
+    {
+      id: 'openrouter',
+      name: t('ai:settings.providers.openrouter.name'),
+      keyPlaceholder: 'sk-or-...',
+      defaultModel: 'meta-llama/llama-3.3-70b-instruct',
+      popularModels: ['meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-r1', 'anthropic/claude-3.5-sonnet'],
+    },
+  ];
+
+  const activeCloudProvider: AIProviderType = isCloudProvider(settings.activeProvider)
+    ? settings.activeProvider
+    : 'groq';
+
+  const currentCloudOption =
+    cloudOptions.find((opt) => opt.id === activeCloudProvider) || cloudOptions[0];
+
+  const handleCategorySelect = (category: AICategory) => {
+    if (category === 'ollama') {
+      setSettings((prev) => ({ ...prev, activeProvider: 'ollama' }));
+    } else if (category === 'mock') {
+      setSettings((prev) => ({ ...prev, activeProvider: 'mock' }));
+    } else {
+      if (!isCloudProvider(settings.activeProvider)) {
+        setSettings((prev) => ({
+          ...prev,
+          activeProvider: 'groq',
+          cloudModel: prev.cloudModel || 'llama-3.3-70b-versatile',
+        }));
+      }
+    }
+    setSaveSuccess(false);
+  };
+
+  const handleCloudProviderChange = (newProvider: AIProviderType) => {
+    const selectedOption = cloudOptions.find((opt) => opt.id === newProvider);
+    setSettings((prev) => ({
+      ...prev,
+      activeProvider: newProvider,
+      cloudModel: selectedOption?.defaultModel || prev.cloudModel,
+    }));
+    setSaveSuccess(false);
+  };
+
+  const handleSelectPopularModel = (modelName: string) => {
+    setSettings((prev) => ({ ...prev, cloudModel: modelName }));
     setSaveSuccess(false);
   };
 
@@ -81,36 +175,29 @@ export const AISettingsTab: React.FC = () => {
     setTimeout(() => setIsCopied(false), 2500);
   };
 
-  const providers: Array<{ id: AIProviderType; nameKey: string; descKey: string }> = [
-    {
-      id: 'mock',
-      nameKey: 'ai:settings.providers.mock.name',
-      descKey: 'ai:settings.providers.mock.description',
-    },
+  const categoryCards: Array<{
+    id: AICategory;
+    titleKey: string;
+    descKey: string;
+    icon: React.ReactNode;
+  }> = [
     {
       id: 'ollama',
-      nameKey: 'ai:settings.providers.ollama.name',
-      descKey: 'ai:settings.providers.ollama.description',
+      titleKey: 'ai:settings.categories.ollama.name',
+      descKey: 'ai:settings.categories.ollama.description',
+      icon: <Server size={20} className="text-primary" />,
     },
     {
-      id: 'openai',
-      nameKey: 'ai:settings.providers.openai.name',
-      descKey: 'ai:settings.providers.openai.description',
+      id: 'cloud',
+      titleKey: 'ai:settings.categories.cloud.name',
+      descKey: 'ai:settings.categories.cloud.description',
+      icon: <Cloud size={20} className="text-primary" />,
     },
     {
-      id: 'anthropic',
-      nameKey: 'ai:settings.providers.anthropic.name',
-      descKey: 'ai:settings.providers.anthropic.description',
-    },
-    {
-      id: 'openrouter',
-      nameKey: 'ai:settings.providers.openrouter.name',
-      descKey: 'ai:settings.providers.openrouter.description',
-    },
-    {
-      id: 'groq',
-      nameKey: 'ai:settings.providers.groq.name',
-      descKey: 'ai:settings.providers.groq.description',
+      id: 'mock',
+      titleKey: 'ai:settings.categories.mock.name',
+      descKey: 'ai:settings.categories.mock.description',
+      icon: <Sparkles size={20} className="text-primary" />,
     },
   ];
 
@@ -140,90 +227,61 @@ export const AISettingsTab: React.FC = () => {
         </Button>
       </div>
 
-      {/* 2. Provider Selection */}
+      {/* 2. Provider Category Selection (3 Clean Tabs) */}
       <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-primary">{t('ai:settings.providerCard.title')}</h3>
           <p className="text-xs text-secondary">{t('ai:settings.providerCard.description')}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {providers.map((p) => {
-            const isSelected = settings.activeProvider === p.id;
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {categoryCards.map((c) => {
+            const isSelected = currentCategory === c.id;
             return (
               <div
-                key={p.id}
-                onClick={() => handleProviderSelect(p.id)}
-                className={`cursor-pointer p-4 rounded-xl border transition-all text-left space-y-1.5 ${
+                key={c.id}
+                onClick={() => handleCategorySelect(c.id)}
+                className={`cursor-pointer p-4 rounded-xl border transition-all text-left space-y-2 ${
                   isSelected
                     ? 'bg-primary/10 border-primary shadow-sm'
                     : 'bg-subtle/50 hover:bg-subtle border-subtle'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-primary">{t(p.nameKey)}</span>
-                  {isSelected && <Check size={14} className="text-primary" />}
+                  <div className="flex items-center gap-2.5">
+                    {c.icon}
+                    <span className="text-xs font-bold text-primary">{t(c.titleKey)}</span>
+                  </div>
+                  {isSelected && <Check size={16} className="text-primary" />}
                 </div>
-                <p className="text-[11px] text-tertiary leading-relaxed">{t(p.descKey)}</p>
+                <p className="text-[11px] text-tertiary leading-relaxed">{t(c.descKey)}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 3. Reasoning & Thinking Mode (<think>) */}
-      <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain size={18} className="text-brand shrink-0" />
-            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</h3>
-          </div>
-          <span
-            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-              settings.enableThinking
-                ? 'bg-primary/10 text-primary border-primary/25'
-                : 'bg-subtle text-tertiary border-subtle'
-            }`}
-          >
-            {settings.enableThinking
-              ? t('ai:settings.thinkingMode.enabled')
-              : t('ai:settings.thinkingMode.disabled')}
-          </span>
-        </div>
-
-        <p className="text-xs text-secondary leading-relaxed">
-          {t('ai:settings.thinkingMode.description')}
-        </p>
-
-        <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
-          <div className="space-y-0.5 pr-4">
-            <span className="text-xs font-semibold text-primary">
-              {settings.enableThinking
-                ? t('ai:settings.thinkingMode.enabled')
-                : t('ai:settings.thinkingMode.disabled')}
-            </span>
-            <p className="text-[11px] text-tertiary">
-              {t('ai:settings.thinkingMode.description')}
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer shrink-0">
-            <input
-              type="checkbox"
-              checked={settings.enableThinking}
-              onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
-          </label>
-        </div>
-      </div>
-
-      {/* 4. Provider Specific Configurations */}
-      {settings.activeProvider === 'ollama' && (
+      {/* 3. Provider Specific Configurations */}
+      {currentCategory === 'ollama' && (
         <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
           <div className="flex items-center gap-2">
             <Server size={18} className="text-primary" />
             <h3 className="text-sm font-semibold text-primary">{t('ai:settings.ollamaConfigTitle')}</h3>
+          </div>
+
+          {/* Online / HTTPS Mixed Content Educational Notice */}
+          <div className="p-4 rounded-xl bg-subtle/80 border border-subtle flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary shrink-0 mt-0.5">
+              <Info size={16} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-semibold text-primary">
+                {t('ai:settings.ollama.onlineNoticeTitle')}
+              </h4>
+              <p className="text-[11px] text-secondary leading-relaxed">
+                {t('ai:settings.ollama.onlineNoticeBody')}
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,28 +333,6 @@ export const AISettingsTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Thinking / Reasoning Mode Toggle */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
-            <div className="space-y-0.5 pr-4">
-              <div className="flex items-center gap-2">
-                <Brain size={15} className="text-brand shrink-0" />
-                <span className="text-xs font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</span>
-              </div>
-              <p className="text-[11px] text-secondary leading-relaxed">
-                {t('ai:settings.thinkingMode.description')}
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-              <input
-                type="checkbox"
-                checked={settings.enableThinking}
-                onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
-            </label>
-          </div>
-
           {ollamaResult && (
             <div
               className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
@@ -315,14 +351,31 @@ export const AISettingsTab: React.FC = () => {
         </div>
       )}
 
-      {['openai', 'anthropic', 'openrouter', 'groq'].includes(settings.activeProvider) && (
-        <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
+      {currentCategory === 'cloud' && (
+        <div className="p-6 rounded-2xl bg-card border border-subtle space-y-5">
           <div className="flex items-center gap-2">
             <Key size={18} className="text-primary" />
             <h3 className="text-sm font-semibold text-primary">{t('ai:settings.cloudConfigTitle')}</h3>
           </div>
 
+          {/* Cloud Provider Dropdown */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.serviceLabel')}</label>
+            <select
+              value={activeCloudProvider}
+              onChange={(e) => handleCloudProviderChange(e.target.value as AIProviderType)}
+              className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2.5 text-xs font-medium"
+            >
+              {cloudOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* API Key */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.apiKey')}</label>
               <div className="relative">
@@ -330,7 +383,7 @@ export const AISettingsTab: React.FC = () => {
                   type={showApiKey ? 'text' : 'password'}
                   value={settings.apiKey}
                   onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
-                  placeholder={t('ai:settings.cloud.apiKeyPlaceholder')}
+                  placeholder={currentCloudOption.keyPlaceholder}
                   className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs pr-10"
                 />
                 <button
@@ -343,43 +396,102 @@ export const AISettingsTab: React.FC = () => {
               </div>
             </div>
 
+            {/* Model Identifier */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.model')}</label>
               <input
                 type="text"
                 value={settings.cloudModel}
                 onChange={(e) => setSettings({ ...settings, cloudModel: e.target.value })}
-                placeholder={t('ai:settings.cloud.modelPlaceholder')}
+                placeholder={currentCloudOption.defaultModel}
                 className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
               />
-            </div>
-          </div>
 
-          {/* Thinking / Reasoning Mode Toggle for Cloud */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
-            <div className="space-y-0.5 pr-4">
-              <div className="flex items-center gap-2">
-                <Brain size={15} className="text-brand shrink-0" />
-                <span className="text-xs font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</span>
+              {/* Popular Models Badges */}
+              <div className="pt-1.5 space-y-1">
+                <span className="text-[10px] text-tertiary">{t('ai:settings.cloud.popularModels')}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentCloudOption.popularModels.map((model) => (
+                    <button
+                      key={model}
+                      type="button"
+                      onClick={() => handleSelectPopularModel(model)}
+                      className={`text-[10px] px-2 py-0.5 rounded-lg border transition-colors ${
+                        settings.cloudModel === model
+                          ? 'bg-primary/15 border-primary text-primary font-semibold'
+                          : 'bg-subtle hover:bg-card border-subtle text-secondary'
+                      }`}
+                    >
+                      {model}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-[11px] text-secondary leading-relaxed">
-                {t('ai:settings.thinkingMode.description')}
-              </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-              <input
-                type="checkbox"
-                checked={settings.enableThinking}
-                onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
-            </label>
           </div>
         </div>
       )}
 
-      {/* 4. Security & Guardrails */}
+      {currentCategory === 'mock' && (
+        <div className="p-6 rounded-2xl bg-card border border-subtle space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-primary" />
+            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.providers.mock.name')}</h3>
+          </div>
+          <p className="text-xs text-secondary leading-relaxed">
+            {t('ai:settings.providers.mock.description')}
+          </p>
+        </div>
+      )}
+
+      {/* 4. Reasoning & Thinking Mode (<think>) */}
+      <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain size={18} className="text-brand shrink-0" />
+            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.thinkingMode.title')}</h3>
+          </div>
+          <span
+            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+              settings.enableThinking
+                ? 'bg-primary/10 text-primary border-primary/25'
+                : 'bg-subtle text-tertiary border-subtle'
+            }`}
+          >
+            {settings.enableThinking
+              ? t('ai:settings.thinkingMode.enabled')
+              : t('ai:settings.thinkingMode.disabled')}
+          </span>
+        </div>
+
+        <p className="text-xs text-secondary leading-relaxed">
+          {t('ai:settings.thinkingMode.description')}
+        </p>
+
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-subtle/70 border border-subtle">
+          <div className="space-y-0.5 pr-4">
+            <span className="text-xs font-semibold text-primary">
+              {settings.enableThinking
+                ? t('ai:settings.thinkingMode.enabled')
+                : t('ai:settings.thinkingMode.disabled')}
+            </span>
+            <p className="text-[11px] text-tertiary">
+              {t('ai:settings.thinkingMode.description')}
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <input
+              type="checkbox"
+              checked={settings.enableThinking}
+              onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
+          </label>
+        </div>
+      </div>
+
+      {/* 5. Security & Guardrails */}
       <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-primary" />
@@ -420,7 +532,7 @@ export const AISettingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. External MCP Server Section */}
+      {/* 6. External MCP Server Section */}
       <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

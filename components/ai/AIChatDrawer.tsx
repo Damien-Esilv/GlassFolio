@@ -152,6 +152,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         return t('ai:drawer.status.ollama');
       case 'openai':
       case 'anthropic':
+      case 'gemini':
       case 'openrouter':
       case 'groq':
         return t('ai:drawer.status.cloud');
