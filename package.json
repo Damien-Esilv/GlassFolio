@@ -26,7 +26,9 @@
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",
     "precommit:check": "node scripts/pre-commit-check.mjs",
     "notion:sync": "node scripts/notion-sync.mjs",
-    "mcp": "node mcp-server/index.mjs"
+    "mcp": "node mcp-server/index.mjs",
+    "ollama:proxy": "node scripts/ollama-proxy.mjs",
+    "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
