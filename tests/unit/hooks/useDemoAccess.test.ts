@@ -73,7 +73,7 @@ describe('useDemoAccess hook (TGLA-057 / TGLA-058)', () => {
     });
 
     expect(assignMock).toHaveBeenCalledWith(
-      'https://app.glassfolio.dev/?theme=night&lang=fr&demo=1#/login'
+      'https://app.glassfolio.dev/login?theme=night&lang=fr&demo=1'
     );
     expect(mockLogin).not.toHaveBeenCalled();
 

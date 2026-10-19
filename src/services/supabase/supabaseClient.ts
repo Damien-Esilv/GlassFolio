@@ -62,6 +62,34 @@ export const getSupabaseConfig = (): SupabaseConfig | null => {
 
 export const isSupabaseConfigured = (): boolean => getSupabaseConfig() !== null;
 
+let capturedOAuthHash: string | null = null;
+if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+    capturedOAuthHash = window.location.hash;
+}
+
+export const consumeInitialOAuthHash = (): string | null => {
+    if (capturedOAuthHash) {
+        const hash = capturedOAuthHash;
+        capturedOAuthHash = null;
+        return hash;
+    }
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+        return window.location.hash;
+    }
+    return null;
+};
+
+export interface SupabaseUserData {
+    id: string;
+    email?: string;
+    user_metadata?: {
+        name?: string;
+        full_name?: string;
+        avatar_url?: string;
+        picture?: string;
+    };
+}
+
 const createHeaders = (config: SupabaseConfig, accessToken?: string): Record<string, string> => {
     const headers: Record<string, string> = {
         'apikey': config.anonKey,
@@ -169,6 +197,24 @@ export const supabaseClient = {
             expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
             user: data.user,
         };
+    },
+
+    async getUser(accessToken: string): Promise<SupabaseUserData> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/user`;
+        const res = await fetch(endpoint, {
+            method: 'GET',
+            headers: createHeaders(config, accessToken),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.msg || data.error_description || data.message || 'Failed to fetch Supabase user.');
+        }
+
+        return data as SupabaseUserData;
     },
 
     async signOut(accessToken: string): Promise<void> {

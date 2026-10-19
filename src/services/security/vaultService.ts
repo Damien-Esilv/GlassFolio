@@ -82,6 +82,15 @@ export class VaultService {
         return this.currentStatus === 'unlocked';
     }
 
+    public isDemoVault(): boolean {
+        try {
+            const header = this.getVaultHeader();
+            return Boolean(header?.isDemo);
+        } catch {
+            return false;
+        }
+    }
+
     public subscribeStatus(listener: StatusListener): () => void {
         this.statusListeners.add(listener);
         listener(this.currentStatus);
@@ -121,7 +130,7 @@ export class VaultService {
      * Sets up a new E2EE encrypted vault with a master password.
      * Generates a 160-bit recovery key and returns it (shown ONCE to the user).
      */
-    public async setup(password: string): Promise<VaultSetupResult> {
+    public async setup(password: string, options?: { isDemo?: boolean }): Promise<VaultSetupResult> {
         await delay(300);
 
         if (this.isInitialized()) {
@@ -165,6 +174,7 @@ export class VaultService {
             createdAt: nowIso,
             updatedAt: nowIso,
             dekCreatedAt: nowIso,
+            isDemo: Boolean(options?.isDemo),
         };
 
         appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));

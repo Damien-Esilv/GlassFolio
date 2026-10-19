@@ -132,14 +132,18 @@ export const buildAppDestinationUrl = (
 
   const queryString = queryParams.toString();
   const queryPart = queryString ? `?${queryString}` : '';
+  const normalizedPath = path === '/' ? '/' : path;
 
   if (appBase) {
-    return `${appBase}/${queryPart}#${path}`;
+    if (normalizedPath === '/') {
+      return queryPart ? `${appBase}/${queryPart}` : `${appBase}/`;
+    }
+    return `${appBase}${normalizedPath}${queryPart}`;
   }
 
   // Single-origin unified routing
   if (queryPart) {
-    return `${queryPart}#${path}`;
+    return `${normalizedPath}${queryPart}`;
   }
   return path;
 };
@@ -152,7 +156,8 @@ export const buildShowcaseDestinationUrl = (
 ): string => {
   const showcaseBase = getShowcaseUrl();
   if (showcaseBase) {
-    return `${showcaseBase}/#${path}`;
+    const normalizedPath = path === '/' ? '/' : path;
+    return `${showcaseBase}${normalizedPath}`;
   }
 
   // In single-origin unified mode, root showcase is on /welcome
