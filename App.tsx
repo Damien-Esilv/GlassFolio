@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Positions from './pages/Positions';
@@ -29,6 +29,7 @@ import { VaultGate } from './components/security/VaultGate';
 import { getAppTarget } from './src/config/deployment';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 
 // Lazy-loaded showcase & legal pages to preserve core bundle budget
@@ -107,6 +108,7 @@ const App: React.FC = () => {
       <DataProvider>
         <Router>
           <ScrollToTop />
+          <LegacyHashRedirect />
           <Layout>
             <Routes>
               {/* Public Showcase & Legal Routes */}

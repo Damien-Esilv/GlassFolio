@@ -36,6 +36,8 @@ export interface VaultHeader {
     createdAt: string;
     updatedAt: string;
     dekCreatedAt: string;
+    /** Distinguishes demo/test vaults from real personal/cloud user vaults */
+    isDemo?: boolean;
 }
 
 /** On-disk format of every encrypted record. */

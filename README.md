@@ -132,7 +132,7 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
 | Domain | Technologies |
 |---|---|
 | **Framework & Core** | [React 19](https://react.dev/), [TypeScript 5.8](https://www.typescriptlang.org/), [Vite 6](https://vitejs.dev/) |
-| **Routing** | [React Router 7](https://reactrouter.com/) (`HashRouter` with route protection) |
+| **Routing** | [React Router 7](https://reactrouter.com/) (`BrowserRouter` HTML5 History API & clean URLs) |
 | **Styling & Design System** | [Tailwind CSS](https://tailwindcss.com/) (CSS variables injection, SSOT `THEME_INTENT`, `<TrendValue />`, `<TrendBadge />`) |
 | **Charts & Visualizations** | [Recharts 3](https://recharts.org/) (8-slot categorical palette, deterministic asset hashing) |
 | **Icons** | [Lucide React](https://lucide.dev/) |

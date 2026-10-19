@@ -54,20 +54,20 @@ describe('Dual-Entry Deployment & URL Handoff (TGLA-058)', () => {
 
     it('attaches query params in single-origin unified mode', () => {
       const url = buildAppDestinationUrl('/login', { demo: true, theme: 'dark', lang: 'fr' });
-      expect(url).toBe('?theme=dark&lang=fr&demo=1#/login');
+      expect(url).toBe('/login?theme=dark&lang=fr&demo=1');
     });
 
     it('builds cross-subdomain URL when app base is defined', () => {
       vi.stubEnv('VITE_APP_URL', 'https://app.glassfolio.dev');
       const url = buildAppDestinationUrl('/', { demo: true, theme: 'night', lang: 'en' });
-      expect(url).toBe('https://app.glassfolio.dev/?theme=night&lang=en&demo=1#/');
+      expect(url).toBe('https://app.glassfolio.dev/?theme=night&lang=en&demo=1');
       vi.unstubAllEnvs();
     });
 
     it('trims trailing slashes from app base URL', () => {
       vi.stubEnv('VITE_APP_URL', 'https://app.glassfolio.dev///');
       const url = buildAppDestinationUrl('/signup');
-      expect(url).toBe('https://app.glassfolio.dev/#/signup');
+      expect(url).toBe('https://app.glassfolio.dev/signup');
       vi.unstubAllEnvs();
     });
   });
@@ -83,8 +83,8 @@ describe('Dual-Entry Deployment & URL Handoff (TGLA-058)', () => {
 
     it('builds external showcase URL when showcase base is configured', () => {
       vi.stubEnv('VITE_SHOWCASE_URL', 'https://glassfolio.dev');
-      expect(buildShowcaseDestinationUrl('/')).toBe('https://glassfolio.dev/#/');
-      expect(buildShowcaseDestinationUrl('/terms')).toBe('https://glassfolio.dev/#/terms');
+      expect(buildShowcaseDestinationUrl('/')).toBe('https://glassfolio.dev/');
+      expect(buildShowcaseDestinationUrl('/terms')).toBe('https://glassfolio.dev/terms');
       vi.unstubAllEnvs();
     });
   });
@@ -139,6 +139,31 @@ describe('Dual-Entry Deployment & URL Handoff (TGLA-058)', () => {
         null,
         '',
         '/#/'
+      );
+    });
+
+    it('extracts demo, theme, and lang from clean URL and cleans window URL in place', () => {
+      const mockReplaceState = vi.fn();
+      window.history.replaceState = mockReplaceState;
+
+      const fakeUrl = 'https://app.glassfolio.dev/login?demo=1&theme=dark&lang=en';
+      delete (window as any).location;
+      window.location = new URL(fakeUrl) as any;
+
+      const result = consumeUrlBootstrapParams();
+
+      expect(result.demoRequested).toBe(true);
+      expect(result.theme).toBe('dark');
+      expect(result.lang).toBe('en');
+
+      expect(appStorage.getItem(PUBLIC_THEME_STORAGE_KEY)).toBe('dark');
+      expect(appStorage.getItem(PUBLIC_LANG_STORAGE_KEY)).toBe('en');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+
+      expect(mockReplaceState).toHaveBeenCalledWith(
+        null,
+        '',
+        '/login'
       );
     });
 

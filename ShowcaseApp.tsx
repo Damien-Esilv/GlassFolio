@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
 import { buildAppDestinationUrl } from './src/config/deployment';
@@ -7,6 +7,7 @@ import './src/i18n';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
+import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { Analytics } from '@vercel/analytics/react';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
@@ -33,6 +34,7 @@ export const ShowcaseApp: React.FC = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
+        <LegacyHashRedirect />
         <React.Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Landing />} />

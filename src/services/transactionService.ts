@@ -15,10 +15,18 @@ export const transactionService = {
         const unifiedTxs = db.getUnifiedTransactions();
         const accounts = db.getAccounts();
         const institutes = db.getInstitutes();
+        const instruments = db.getInstruments();
+
+        // BOLT OPTIMIZATION:
+        // Pre-build O(1) Map lookups for accounts, institutes, and instruments to avoid N repeated
+        // localStorage reads/JSON parsing calls to db.getInstrumentById and O(N * M) array searches.
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const instituteMap = new Map(institutes.map(i => [i.id, i]));
+        const instrumentMap = new Map(instruments.map(i => [i.id, i]));
 
         // Convert to legacy format
         let transactions = unifiedTxs.map(tx =>
-            convertToLegacyTransaction(tx, accounts, institutes)
+            convertToLegacyTransaction(tx, accountMap, instituteMap, instrumentMap)
         );
 
         if (transactions.length === 0) {
@@ -120,13 +128,18 @@ export const transactionService = {
         await portfolioService.recalculatePositions();
     },
 
-    checkDuplicates: async (limit = 1000): Promise<Transaction[]> => {
+    checkDuplicates: async (_limit = 1000): Promise<Transaction[]> => {
         // Return all transactions for duplicate checking
         const unified = db.getUnifiedTransactions();
         const accounts = db.getAccounts();
         const institutes = db.getInstitutes();
+        const instruments = db.getInstruments();
 
-        return unified.map(tx => convertToLegacyTransaction(tx, accounts, institutes));
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const instituteMap = new Map(institutes.map(i => [i.id, i]));
+        const instrumentMap = new Map(instruments.map(i => [i.id, i]));
+
+        return unified.map(tx => convertToLegacyTransaction(tx, accountMap, instituteMap, instrumentMap));
     },
 
     /**
