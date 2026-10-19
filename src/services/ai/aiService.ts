@@ -52,30 +52,30 @@ class AIService {
       case 'openai':
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel || 'gpt-4o-mini',
+          settings.cloudModel?.trim() || 'gpt-4o-mini',
           'https://api.openai.com/v1/chat/completions'
         );
       case 'groq':
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel || 'llama-3.3-70b-versatile',
+          settings.cloudModel?.trim() || 'llama-3.3-70b-versatile',
           'https://api.groq.com/openai/v1/chat/completions'
         );
       case 'openrouter':
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel || 'anthropic/claude-3.5-sonnet',
+          settings.cloudModel?.trim() || 'anthropic/claude-3.5-sonnet',
           'https://openrouter.ai/api/v1/chat/completions'
         );
       case 'anthropic':
         return new AnthropicProvider(
           settings.apiKey,
-          settings.cloudModel || 'claude-3-5-sonnet-20241022'
+          settings.cloudModel?.trim() || 'claude-3-5-sonnet-20241022'
         );
       case 'gemini':
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel || 'gemini-2.0-flash',
+          settings.cloudModel?.trim() || 'gemini-1.5-flash',
           'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
         );
       case 'mock':

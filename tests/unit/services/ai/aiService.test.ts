@@ -115,11 +115,11 @@ describe('aiService', () => {
     expect(lastMsg.content).toContain('ollama pull');
   });
 
-  it('routes requests to Google Gemini provider when activeProvider is gemini', async () => {
+  it('routes requests to Google Gemini provider with user specified custom model', async () => {
     aiSettingsService.saveSettings({
       activeProvider: 'gemini',
       apiKey: 'test-gemini-key',
-      cloudModel: 'gemini-2.0-flash',
+      cloudModel: 'gemini-1.5-pro',
     });
 
     const mockResponse = {
@@ -149,6 +149,7 @@ describe('aiService', () => {
         headers: expect.objectContaining({
           Authorization: 'Bearer test-gemini-key',
         }),
+        body: expect.stringContaining('"model":"gemini-1.5-pro"'),
       })
     );
     expect(lastMsg.role).toBe('assistant');

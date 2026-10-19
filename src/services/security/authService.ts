@@ -106,11 +106,11 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        let recoveryKey: string | undefined;
-        if (!vaultService.isInitialized()) {
-            const setupRes = await vaultService.setup(masterPassword);
-            recoveryKey = setupRes.recoveryKey;
+        if (vaultService.isInitialized()) {
+            await vaultService.resetVault();
         }
+        const setupRes = await vaultService.setup(masterPassword);
+        const recoveryKey = setupRes.recoveryKey;
 
         const userId = `usr-local-${Math.random().toString(36).substr(2, 7)}`;
         const localUser: User = {
@@ -171,20 +171,15 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        // If current user is the demo account, reset the vault first so a real user gets a clean vault
-        const existingUser = await userRepository.getUser();
-        if (existingUser?.email === 'demo@glassfolio.com') {
-            await vaultService.lock();
-            await userRepository.clearUser();
+        // If a vault is already initialized (e.g. from a previous demo session or locked state),
+        // reset it so the new account gets a clean, unlocked E2EE vault
+        if (vaultService.isInitialized()) {
             await vaultService.resetVault();
         }
 
         // Initialize encrypted vault
-        let recoveryKey: string | undefined;
-        if (!vaultService.isInitialized()) {
-            const setupRes = await vaultService.setup(password);
-            recoveryKey = setupRes.recoveryKey;
-        }
+        const setupRes = await vaultService.setup(password);
+        const recoveryKey = setupRes.recoveryKey;
 
         const userId = `usr-${Math.random().toString(36).substr(2, 9)}`;
         const newUser: User = {
@@ -411,6 +406,9 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         this.persistSession(sbSession);
 
         // 3. Setup client-side encrypted vault
+        if (vaultService.isInitialized()) {
+            await vaultService.resetVault();
+        }
         const setupRes = await vaultService.setup(password);
 
         // 4. Save User record
