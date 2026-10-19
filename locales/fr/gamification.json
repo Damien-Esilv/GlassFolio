@@ -60,12 +60,16 @@
     "midnightVelvet": "Velours de Minuit",
     "emeraldPrestige": "Émeraude Prestige",
     "cyberNeon": "Néon Cyber Glass",
-    "unlockAt": "Déblocage au Niveau {{level}}"
+    "unlockAt": "Déblocage au Niveau {{level}}",
+    "active": "Actif",
+    "apply": "Appliquer",
+    "currentlyActive": "Thème activé"
   },
   "quests": {
     "title": "Missions en Cours",
     "subtitle": "Accomplissez des routines financières positives pour remporter des XP bonus.",
     "claim": "Réclamer +{{xp}} XP",
+    "claimed": "Réclamé",
     "completed": "Complété",
     "inProgress": "En cours",
     "monthlyReview": {

@@ -60,12 +60,16 @@
     "midnightVelvet": "Midnight Velvet",
     "emeraldPrestige": "Emerald Prestige",
     "cyberNeon": "Cyber Neon Glass",
-    "unlockAt": "Unlocks at Level {{level}}"
+    "unlockAt": "Unlocks at Level {{level}}",
+    "active": "Active",
+    "apply": "Apply",
+    "currentlyActive": "Active Theme"
   },
   "quests": {
     "title": "Active Missions",
     "subtitle": "Complete non-intrusive financial habits to earn bonus XP.",
     "claim": "Claim +{{xp}} XP",
+    "claimed": "Claimed",
     "completed": "Completed",
     "inProgress": "In Progress",
     "monthlyReview": {

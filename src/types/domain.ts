@@ -2,7 +2,7 @@ import { AssetClass } from '../constants/assetClasses';
 import { FiscalProfile } from './types.backend';
 
 export interface UserPreferences {
-  theme: 'light' | 'dark' | 'night' | 'system';
+  theme: 'light' | 'dark' | 'night' | 'emerald' | 'cyber' | 'system';
   currency: string;
   notifications: boolean;
   language?: 'en' | 'fr';
@@ -147,6 +147,7 @@ export interface GamificationQuest {
   progress: number;
   target: number;
   expiryDate?: string;
+  claimed?: boolean;
 }
 
 export interface ThemeReward {

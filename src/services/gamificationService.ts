@@ -87,6 +87,7 @@ const INITIAL_QUESTS: GamificationQuest[] = [
         rewardXp: 150,
         frequency: 'monthly',
         completed: true,
+        claimed: false,
         progress: 1,
         target: 1,
         expiryDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString()
@@ -98,6 +99,7 @@ const INITIAL_QUESTS: GamificationQuest[] = [
         rewardXp: 250,
         frequency: 'monthly',
         completed: false,
+        claimed: false,
         progress: 1,
         target: 2,
         expiryDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString()
@@ -109,6 +111,7 @@ const INITIAL_QUESTS: GamificationQuest[] = [
         rewardXp: 200,
         frequency: 'quarterly',
         completed: false,
+        claimed: false,
         progress: 2,
         target: 3,
         expiryDate: new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0).toISOString()
@@ -188,15 +191,25 @@ export const gamificationService = {
     },
 
     /**
-     * Claims reward for a completed quest.
+     * Claims reward for a completed quest and persists its claimed status.
      */
     claimQuestReward: async (questId: string): Promise<{ success: boolean; xpReward: number }> => {
         await delay(200);
-        const quests = db.getQuests();
-        const quest = quests.find(q => q.id === questId);
-        if (!quest || !quest.completed) {
+        let quests = db.getQuests();
+        if (quests.length === 0) {
+            quests = [...INITIAL_QUESTS];
+        }
+        const questIndex = quests.findIndex(q => q.id === questId);
+        if (questIndex === -1) {
             return { success: false, xpReward: 0 };
         }
+        const quest = quests[questIndex];
+        if (!quest.completed || quest.claimed) {
+            return { success: false, xpReward: 0 };
+        }
+        const updatedQuests = [...quests];
+        updatedQuests[questIndex] = { ...quest, claimed: true };
+        db.saveQuests(updatedQuests);
         return { success: true, xpReward: quest.rewardXp };
     },
 

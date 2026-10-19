@@ -252,8 +252,8 @@ export class LocalAuthProvider implements IAuthProvider {
                         ...(existingDemo?.preferences?.fiscalProfile || {}),
                     },
                 },
-                xp: existingDemo?.xp || 1450,
-                level: existingDemo?.level || 6,
+                xp: Math.max(existingDemo?.xp || 0, 2750),
+                level: Math.max(existingDemo?.level || 0, 6),
             };
 
             await userRepository.saveUser(demoUser);

@@ -5,7 +5,8 @@ import {
     INVESTOR_RANKS, 
     gamificationService 
 } from '../src/services/gamificationService';
-import { Award, Lock, CheckCircle2, Palette, Sparkles, ChevronRight } from 'lucide-react';
+import { Award, Lock, CheckCircle2, Palette, Sparkles, ChevronRight, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface InvestorRankCardProps {
     currentLevel: number;
@@ -18,9 +19,20 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
     currentXp, 
     themeRewards 
 }) => {
-    const { t } = useTranslation(['gamification']);
+    const { t } = useTranslation(['gamification', 'common']);
+    const { user, updateProfile } = useAuth();
     const currentRank = gamificationService.getInvestorRank(currentLevel);
     const progress = gamificationService.calculateLevelProgress(currentXp);
+
+    const handleApplyTheme = (themeKey: string) => {
+        if (!user || !updateProfile) return;
+        updateProfile({
+            preferences: {
+                ...user.preferences,
+                theme: themeKey as any
+            }
+        });
+    };
 
     return (
         <div className="space-y-6">
@@ -127,13 +139,26 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {themeRewards.map((theme) => {
+                        const isActive = (user?.preferences?.theme || 'night') === theme.themeKey;
+
                         return (
                             <div 
                                 key={theme.id}
-                                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                                onClick={() => theme.unlocked && handleApplyTheme(theme.themeKey)}
+                                role={theme.unlocked ? 'button' : undefined}
+                                tabIndex={theme.unlocked ? 0 : undefined}
+                                onKeyDown={(e) => {
+                                    if (theme.unlocked && (e.key === 'Enter' || e.key === ' ')) {
+                                        e.preventDefault();
+                                        handleApplyTheme(theme.themeKey);
+                                    }
+                                }}
+                                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between text-left ${
                                     theme.unlocked 
-                                        ? 'bg-card border-subtle hover:border-strong' 
-                                        : 'bg-subtle/20 border-subtle opacity-60'
+                                        ? isActive
+                                            ? 'bg-card border-brand shadow-md ring-2 ring-brand/20 cursor-default'
+                                            : 'bg-card border-subtle hover:border-brand/60 hover:shadow-sm cursor-pointer group' 
+                                        : 'bg-subtle/20 border-subtle opacity-60 cursor-not-allowed'
                                 }`}
                             >
                                 <div>
@@ -148,9 +173,16 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                                             ))}
                                         </div>
                                         {theme.unlocked ? (
-                                            <span className="text-[10px] font-bold text-positive bg-positive-subtle px-2 py-0.5 rounded-full">
-                                                {t('gamification:unlocked')}
-                                            </span>
+                                            isActive ? (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded-full">
+                                                    <Check size={11} className="stroke-[3]" />
+                                                    {t('gamification:themes.active', { defaultValue: 'Actif' })}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-positive bg-positive-subtle px-2 py-0.5 rounded-full">
+                                                    {t('gamification:unlocked')}
+                                                </span>
+                                            )
                                         ) : (
                                             <Lock size={14} className="text-tertiary" />
                                         )}
@@ -159,11 +191,24 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                                         {t(theme.nameKey)}
                                     </h4>
                                 </div>
-                                <p className="text-[11px] text-tertiary mt-3">
-                                    {theme.unlocked 
-                                        ? t('gamification:unlocked')
-                                        : t('gamification:themes.unlockAt', { level: theme.requiredLevel })}
-                                </p>
+                                <div className="mt-3 pt-2 border-t border-subtle/50 flex items-center justify-between">
+                                    {theme.unlocked ? (
+                                        isActive ? (
+                                            <span className="text-[11px] font-bold text-brand">
+                                                {t('gamification:themes.currentlyActive', { defaultValue: 'Thème activé' })}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] font-bold text-secondary group-hover:text-brand flex items-center gap-1 transition-colors">
+                                                {t('gamification:themes.apply', { defaultValue: 'Appliquer' })}
+                                                <ChevronRight size={12} />
+                                            </span>
+                                        )
+                                    ) : (
+                                        <p className="text-[11px] text-tertiary">
+                                            {t('gamification:themes.unlockAt', { level: theme.requiredLevel })}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
