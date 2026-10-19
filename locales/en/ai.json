@@ -73,6 +73,20 @@
       "description": "Choose between private local AI (Ollama), cloud Bring-Your-Own-Key, or the built-in simulator.",
       "selectLabel": "Active Provider"
     },
+    "categories": {
+      "ollama": {
+        "name": "Private Local AI (Ollama)",
+        "description": "100% private on your machine (localhost:11434)"
+      },
+      "cloud": {
+        "name": "Cloud Models (BYOK)",
+        "description": "OpenAI, Claude, Gemini, Groq & OpenRouter"
+      },
+      "mock": {
+        "name": "Demo Simulator",
+        "description": "Works out of the box without any API key"
+      }
+    },
     "providers": {
       "mock": {
         "name": "GlassFolio Smart Simulator",
@@ -89,6 +103,10 @@
       "anthropic": {
         "name": "Anthropic Claude (BYOK)",
         "description": "Use your personal Anthropic API key (Claude 3.5 Sonnet)."
+      },
+      "gemini": {
+        "name": "Google Gemini (BYOK)",
+        "description": "Use your Google Gemini API key (Gemini 2.0 Flash, 1.5 Pro)."
       },
       "openrouter": {
         "name": "OpenRouter (BYOK)",
@@ -108,9 +126,13 @@
       "testing": "Testing...",
       "success": "Connected successfully! {{count}} model(s) detected.",
       "failure": "Unable to connect to Ollama. Make sure Ollama is running.",
-      "availableModels": "Available Models"
+      "availableModels": "Available Models",
+      "onlineNoticeTitle": "Note for the online version (HTTPS)",
+      "onlineNoticeBody": "You are currently using GlassFolio on the Web (HTTPS). Modern browsers block direct requests to http://localhost for security reasons (Mixed Content). To use your local Ollama model without restrictions, run GlassFolio locally with Docker (http://localhost:3000), or use a Cloud provider (Groq, Gemini, OpenAI)."
     },
     "cloud": {
+      "serviceLabel": "Cloud AI Provider",
+      "popularModels": "Recommended models:",
       "apiKey": "API Key (Stored locally in your browser)",
       "apiKeyPlaceholder": "sk-...",
       "model": "Model ID",

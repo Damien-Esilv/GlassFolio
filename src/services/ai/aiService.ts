@@ -72,6 +72,12 @@ class AIService {
           settings.apiKey,
           settings.cloudModel || 'claude-3-5-sonnet-20241022'
         );
+      case 'gemini':
+        return new OpenAICompatibleProvider(
+          settings.apiKey,
+          settings.cloudModel || 'gemini-2.0-flash',
+          'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        );
       case 'mock':
       default:
         return new MockProvider(settings.enableThinking);
