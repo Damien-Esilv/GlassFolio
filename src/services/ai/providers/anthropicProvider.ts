@@ -4,7 +4,7 @@ import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 export class AnthropicProvider implements AIProvider {
   constructor(
     private apiKey: string,
-    private model: string = 'claude-3-5-sonnet-20241022'
+    private model: string
   ) {}
 
   public async sendMessage(

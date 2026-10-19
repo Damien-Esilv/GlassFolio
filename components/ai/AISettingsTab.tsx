@@ -57,31 +57,31 @@ export const AISettingsTab: React.FC = () => {
       id: 'groq',
       name: t('ai:settings.providers.groq.name'),
       keyPlaceholder: 'gsk_...',
-      modelPlaceholder: 'llama-3.3-70b-versatile',
+      modelPlaceholder: t('ai:settings.cloud.modelPlaceholder'),
     },
     {
       id: 'openai',
       name: t('ai:settings.providers.openai.name'),
       keyPlaceholder: 'sk-proj-...',
-      modelPlaceholder: 'gpt-4o',
+      modelPlaceholder: t('ai:settings.cloud.modelPlaceholder'),
     },
     {
       id: 'anthropic',
       name: t('ai:settings.providers.anthropic.name'),
       keyPlaceholder: 'sk-ant-...',
-      modelPlaceholder: 'claude-3-5-sonnet-latest',
+      modelPlaceholder: t('ai:settings.cloud.modelPlaceholder'),
     },
     {
       id: 'gemini',
       name: t('ai:settings.providers.gemini.name'),
       keyPlaceholder: 'AIzaSy...',
-      modelPlaceholder: 'gemini-1.5-flash',
+      modelPlaceholder: t('ai:settings.cloud.modelPlaceholder'),
     },
     {
       id: 'openrouter',
       name: t('ai:settings.providers.openrouter.name'),
       keyPlaceholder: 'sk-or-...',
-      modelPlaceholder: 'anthropic/claude-3.5-sonnet',
+      modelPlaceholder: t('ai:settings.cloud.modelPlaceholder'),
     },
   ];
 
@@ -384,7 +384,14 @@ export const AISettingsTab: React.FC = () => {
 
             {/* Model Identifier */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.model')}</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.model')}</label>
+                {!settings.cloudModel?.trim() && (
+                  <span className="text-[10px] text-warning font-medium">
+                    {t('ai:settings.cloud.modelRequiredNotice')}
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={settings.cloudModel}

@@ -22,6 +22,26 @@ Tu disposes d'outils pour consulter le portefeuille, l'allocation d'actifs, les 
 RÈGLE D'OR : Pour toute opération modifiant le portefeuille (enregistrement d'une transaction, création d'un objectif), appelle l'outil correspondant. L'utilisateur devra obligatoirement valider l'opération via une interface interactive.
 Ne donne jamais de conseil d'investissement spéculatif sans rappeler le caractère informatif de tes réponses.`;
 
+export class CloudModelNotConfiguredError extends Error {
+  public provider: string;
+
+  constructor(provider: string) {
+    super(`No model configured for ${provider}`);
+    this.name = 'CloudModelNotConfiguredError';
+    this.provider = provider;
+  }
+}
+
+export class CloudApiKeyMissingError extends Error {
+  public provider: string;
+
+  constructor(provider: string) {
+    super(`API key missing for ${provider}`);
+    this.name = 'CloudApiKeyMissingError';
+    this.provider = provider;
+  }
+}
+
 /**
  * AIService - Central Orchestrator for the In-App AI Chat and MCP Capabilities.
  */
@@ -49,35 +69,55 @@ class AIService {
           settings.ollamaModel,
           settings.enableThinking
         );
-      case 'openai':
+      case 'openai': {
+        const model = settings.cloudModel?.trim();
+        if (!model) throw new CloudModelNotConfiguredError('OpenAI');
+        if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('OpenAI');
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel?.trim() || 'gpt-4o-mini',
+          model,
           'https://api.openai.com/v1/chat/completions'
         );
-      case 'groq':
+      }
+      case 'groq': {
+        const model = settings.cloudModel?.trim();
+        if (!model) throw new CloudModelNotConfiguredError('Groq');
+        if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('Groq');
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel?.trim() || 'llama-3.3-70b-versatile',
+          model,
           'https://api.groq.com/openai/v1/chat/completions'
         );
-      case 'openrouter':
+      }
+      case 'openrouter': {
+        const model = settings.cloudModel?.trim();
+        if (!model) throw new CloudModelNotConfiguredError('OpenRouter');
+        if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('OpenRouter');
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel?.trim() || 'anthropic/claude-3.5-sonnet',
+          model,
           'https://openrouter.ai/api/v1/chat/completions'
         );
-      case 'anthropic':
+      }
+      case 'anthropic': {
+        const model = settings.cloudModel?.trim();
+        if (!model) throw new CloudModelNotConfiguredError('Anthropic (Claude)');
+        if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('Anthropic (Claude)');
         return new AnthropicProvider(
           settings.apiKey,
-          settings.cloudModel?.trim() || 'claude-3-5-sonnet-20241022'
+          model
         );
-      case 'gemini':
+      }
+      case 'gemini': {
+        const model = settings.cloudModel?.trim();
+        if (!model) throw new CloudModelNotConfiguredError('Google Gemini');
+        if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('Google Gemini');
         return new OpenAICompatibleProvider(
           settings.apiKey,
-          settings.cloudModel?.trim() || 'gemini-1.5-flash',
+          model,
           'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
         );
+      }
       case 'mock':
       default:
         return new MockProvider(settings.enableThinking);
@@ -104,14 +144,14 @@ class AIService {
   public async processAssistantTurn(
     context: AIExecutionContext = { language: 'fr', currency: 'EUR' }
   ): Promise<ChatMessage[]> {
-    const provider = this.getActiveProvider();
-    const tools = aiToolRegistry.getAllTools().map((t) => ({
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    }));
-
     try {
+      const provider = this.getActiveProvider();
+      const tools = aiToolRegistry.getAllTools().map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+      }));
+
       // First call to the LLM
       const initialResponse = await provider.sendMessage(this.messages, tools, SYSTEM_PROMPT);
 
@@ -202,7 +242,25 @@ class AIService {
       const lng = context.language || (i18n.language === 'en' ? 'en' : 'fr');
       let errorContent = '';
 
-      if (err instanceof OllamaConnectionError) {
+      if (err instanceof CloudModelNotConfiguredError || (err instanceof Error && err.name === 'CloudModelNotConfiguredError')) {
+        const providerName = (err as any).provider || 'Cloud';
+        errorContent =
+          `### ⚠️ ${i18n.t('ai:errors.cloudModelMissingTitle', { lng, provider: providerName })}\n\n` +
+          i18n.t('ai:errors.cloudModelMissingBody', { lng, provider: providerName });
+      } else if (err instanceof CloudApiKeyMissingError || (err instanceof Error && err.name === 'CloudApiKeyMissingError')) {
+        const providerName = (err as any).provider || 'Cloud';
+        errorContent =
+          `### ⚠️ ${i18n.t('ai:errors.cloudApiKeyMissingTitle', { lng, provider: providerName })}\n\n` +
+          i18n.t('ai:errors.cloudApiKeyMissingBody', { lng, provider: providerName });
+      } else if (
+        err instanceof Error &&
+        (err.message.includes('model') || err.message.includes('Model')) &&
+        (err.message.includes('not found') || err.message.includes('does not exist') || err.message.includes('deprecated') || err.message.includes('404'))
+      ) {
+        errorContent =
+          `### ⚠️ ${i18n.t('ai:errors.cloudModelInvalidTitle', { lng })}\n\n` +
+          i18n.t('ai:errors.cloudModelInvalidBody', { lng, error: err.message });
+      } else if (err instanceof OllamaConnectionError) {
         errorContent =
           `### ⚠️ ${i18n.t('ai:errors.ollamaConnectionFailedTitle', { lng })}\n\n` +
           i18n.t('ai:errors.ollamaConnectionFailedBody', { lng, endpoint: err.endpoint });

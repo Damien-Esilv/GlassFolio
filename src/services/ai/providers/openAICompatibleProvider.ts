@@ -4,7 +4,7 @@ import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 export class OpenAICompatibleProvider implements AIProvider {
   constructor(
     private apiKey: string,
-    private model: string = 'gpt-4o-mini',
+    private model: string,
     private endpoint: string = 'https://api.openai.com/v1/chat/completions'
   ) {}
 

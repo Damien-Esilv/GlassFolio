@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS: AISettings = {
   ollamaEndpoint: 'http://localhost:11434',
   ollamaModel: 'llama3.2:latest',
   apiKey: '',
-  cloudModel: 'gpt-4o-mini',
+  cloudModel: '',
   enableThinking: true,
 };
 
