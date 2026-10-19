@@ -38,6 +38,9 @@ jobs:
       - name: Audit production dependencies (high/critical vulnerabilities)
         run: npm audit --audit-level=high --omit=dev
 
+      - name: Verify Supply Chain SHA-512 cryptographic integrity
+        run: node scripts/verify-supply-chain-sha.mjs
+
       - name: Static secret pattern scan
         run: |
           echo "Scanning for hardcoded secrets or access tokens..."

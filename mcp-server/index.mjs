@@ -89,7 +89,7 @@ const TOOLS = [
   },
   {
     name: 'get_security_status',
-    description: 'Inspect the zero-knowledge vault status, 2FA MFA state, registered passkeys, and recent security audit events.',
+    description: 'Inspect the encrypted client-side E2EE vault status, 2FA MFA state, registered passkeys, and recent security audit events.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -107,7 +107,7 @@ const TOOLS = [
   },
   {
     name: 'lock_vault',
-    description: 'Immediately lock the zero-knowledge vault and wipe decrypted data from memory (requires confirmation).',
+    description: 'Immediately lock the encrypted client-side vault and wipe decrypted data from memory (requires confirmation).',
     inputSchema: {
       type: 'object',
       properties: {}

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Hexagon, Loader2 } from 'lucide-react';
+import { Hexagon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { AppThinkingOrb } from './AppThinkingOrb';
 
 interface LoadingScreenProps {
   label?: string;
@@ -24,13 +25,14 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ label }) => {
         </div>
       </div>
 
-      {/* Spinner & Label */}
+      {/* Orb & Label */}
       <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-secondary">
-        <Loader2 size={16} className="animate-spin text-primary shrink-0" />
+        <AppThinkingOrb state="breathing" size={20} />
         <span>{label || t('common:labels.loading')}</span>
       </div>
     </div>
   );
 };
+
 
 export default LoadingScreen;

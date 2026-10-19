@@ -26,7 +26,7 @@ describe('<LegalCenter /> Suite', () => {
     vi.clearAllMocks();
   });
 
-  it('renders Mentions Légales on /legal with publisher placeholders and hosting details', () => {
+  it('renders Mentions Légales on /legal with publisher details and hosting infrastructure', () => {
     render(
       <MemoryRouter initialEntries={['/legal']}>
         <Routes>
@@ -36,10 +36,9 @@ describe('<LegalCenter /> Suite', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Mentions Légales/i })).toBeTruthy();
-    expect(screen.getByText(/Damien \[LAST_NAME\]/i)).toBeTruthy();
-    expect(screen.getByText(/\[CONTACT_EMAIL\]/i)).toBeTruthy();
-    expect(screen.getByText(/\[GITHUB_OR_LINKEDIN_URL\]/i)).toBeTruthy();
-    expect(screen.getByText(/Microsoft Azure Static Web Apps/i)).toBeTruthy();
+    expect(screen.getAllByText(/Damien/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/https:\/\/github\.com\/Damien-Esilv/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Vercel Inc\./i)).toBeTruthy();
   });
 
   it('renders Privacy Policy on /privacy detailing E2EE architecture and GDPR rights', () => {

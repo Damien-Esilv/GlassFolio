@@ -7,6 +7,8 @@ import { aiSettingsService } from '../../src/services/ai/aiSettingsService';
 import { ChatMessage } from '../../src/services/ai/types';
 import { AIActionApprovalCard } from './AIActionApprovalCard';
 import { AIMarkdownRenderer } from './AIMarkdownRenderer';
+import { AppThinkingOrb } from '../ui/AppThinkingOrb';
+
 
 interface AIChatDrawerProps {
   isOpen: boolean;
@@ -224,8 +226,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center p-6 space-y-6">
-              <div className="w-14 h-14 rounded-2xl bg-subtle border border-subtle flex items-center justify-center text-primary">
-                <Bot size={28} />
+              <div className="flex items-center justify-center p-2 rounded-2xl bg-subtle/50 border border-subtle">
+                <AppThinkingOrb state="breathing" size={64} label={t('ai:drawer.title')} />
               </div>
               <div className="space-y-1.5 max-w-xs">
                 <h3 className="text-sm font-semibold text-primary">{t('ai:drawer.title')}</h3>
@@ -352,9 +354,19 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
 
               {/* Thinking / Processing bubble right below the last message */}
               {isLoading && (
-                <div className="flex flex-col space-y-1.5 p-3 rounded-2xl bg-subtle border border-subtle text-xs max-w-[85%] animate-pulse">
+                <div className="flex flex-col space-y-1.5 p-3 rounded-2xl bg-subtle border border-subtle text-xs max-w-[85%]">
                   <div className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin text-primary shrink-0" />
+                    <AppThinkingOrb
+                      state={
+                        settings.activeProvider === 'ollama' && isOllamaColdStart
+                          ? 'connecting'
+                          : isLongLoading
+                          ? 'solving'
+                          : 'working'
+                      }
+                      size={20}
+                      label={t('ai:chat.thinking')}
+                    />
                     <span className="font-semibold text-primary">
                       {settings.activeProvider === 'ollama'
                         ? isOllamaColdStart
@@ -364,7 +376,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
                     </span>
                   </div>
                   {settings.activeProvider === 'ollama' && isLongLoading && (
-                    <p className="text-[11px] text-tertiary pl-5 leading-relaxed">
+                    <p className="text-[11px] text-tertiary pl-7 leading-relaxed">
                       {t('ai:chat.ollamaLoadingVram')}
                     </p>
                   )}

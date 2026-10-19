@@ -19,7 +19,8 @@
     "check:types": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "check:theming": "vitest run tests/unit/standards tests/unit/components/theming",
-    "check:standards": "node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
+    "check:supply-chain": "node scripts/verify-supply-chain-sha.mjs",
+    "check:standards": "node scripts/verify-supply-chain-sha.mjs && node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
     "check:mcp": "node --check mcp-server/index.mjs",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
@@ -39,6 +40,7 @@
     "react-i18next": "^16.5.4",
     "react-router-dom": "^7.9.6",
     "recharts": "^3.4.1",
+    "thinking-orbs": "^0.3.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
