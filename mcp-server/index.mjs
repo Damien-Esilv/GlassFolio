@@ -123,6 +123,52 @@ const TOOLS = [
       },
       required: ['masterPassword']
     }
+  },
+  {
+    name: 'list_notifications',
+    description: 'List all notifications and alerts with optional category filter (portfolio, fiscal, goals, security, system), read filter, and limit.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', enum: ['portfolio', 'fiscal', 'goals', 'security', 'system'] },
+        unreadOnly: { type: 'boolean', description: 'Filter unread notifications only' },
+        limit: { type: 'number', description: 'Maximum notifications to return' }
+      }
+    }
+  },
+  {
+    name: 'manage_notifications',
+    description: 'Perform management actions on notifications (mark_read, mark_all_read, delete, clear_read). Requires confirmation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['mark_read', 'mark_all_read', 'delete', 'clear_read'] },
+        alertId: { type: 'string', description: 'Notification ID required for mark_read or delete' }
+      },
+      required: ['action']
+    }
+  },
+  {
+    name: 'list_alert_rules',
+    description: 'List all custom user-defined alert rules (price threshold, P&L %, cash ratio) with their trigger history and enabled state.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'create_alert_rule',
+    description: 'Create a new custom alert rule for real-time portfolio monitoring (e.g. price threshold, P&L %, cash ratio). Requires confirmation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Name of the rule' },
+        metric: { type: 'string', enum: ['price_above', 'price_below', 'pl_percent_above', 'pl_percent_below', 'cash_ratio_above'] },
+        threshold: { type: 'number', description: 'Threshold value' },
+        symbol: { type: 'string', description: 'Asset symbol if metric requires it' }
+      },
+      required: ['name', 'metric', 'threshold']
+    }
   }
 ];
 
@@ -149,6 +195,12 @@ const RESOURCES = [
     uri: 'glassfolio://gamification/status',
     name: 'Gamification Status',
     description: 'Current investor rank, level, total XP, and unlocked badges count',
+    mimeType: 'application/json'
+  },
+  {
+    uri: 'glassfolio://notifications',
+    name: 'Notifications & Alerts',
+    description: 'Current in-app notifications, smart alerts, and unread counts',
     mimeType: 'application/json'
   }
 ];
@@ -181,6 +233,15 @@ const mockPositions = [
   { symbol: 'BTC', instrument: 'Bitcoin', type: 'Crypto', quantity: 0.85, avgCost: 42000.0, lastPrice: 65200.0, marketValue: 55420.0, unrealizedPL: 19720.0, currency: 'EUR' },
   { symbol: 'CW8', instrument: 'Amundi MSCI World ETF', type: 'ETF', quantity: 80, avgCost: 420.0, lastPrice: 512.4, marketValue: 40992.0, unrealizedPL: 7392.0, currency: 'EUR' },
   { symbol: 'EUR', instrument: 'Livret A & Liquidités', type: 'Cash', quantity: 20405.95, avgCost: 1.0, lastPrice: 1.0, marketValue: 20405.95, unrealizedPL: 0.0, currency: 'EUR' }
+];
+
+let mockAlerts = [
+  { id: 'alrt-1', type: 'warning', category: 'fiscal', title: 'Échéance fiscale', message: 'Date limite dans 15 jours.', date: '2026-05-15T00:00:00.000Z', read: false },
+  { id: 'alrt-2', type: 'info', category: 'portfolio', title: 'Dividende reçu', message: '+45.20 € sur AAPL', date: '2026-05-10T12:00:00.000Z', read: true }
+];
+
+let mockAlertRules = [
+  { id: 'rule-btc-target', name: 'BTC > $60,000', metric: 'price_above', symbol: 'BTC', threshold: 60000, enabled: true, createdAt: '2026-05-01T00:00:00.000Z' }
 ];
 
 async function handleToolCall(name, args) {
@@ -309,6 +370,73 @@ async function handleToolCall(name, args) {
         content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'DEK successfully rotated with fresh IVs' }, null, 2) }]
       };
     }
+    case 'list_notifications': {
+      let filtered = mockAlerts;
+      if (args?.category) filtered = filtered.filter(a => a.category === args.category);
+      if (args?.unreadOnly) filtered = filtered.filter(a => !a.read);
+      const limit = args?.limit || 20;
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            total: filtered.length,
+            unreadCount: mockAlerts.filter(a => !a.read).length,
+            notifications: filtered.slice(0, limit)
+          }, null, 2)
+        }]
+      };
+    }
+    case 'manage_notifications': {
+      if (args?.action === 'mark_read') {
+        mockAlerts = mockAlerts.map(a => a.id === args.alertId ? { ...a, read: true } : a);
+      } else if (args?.action === 'mark_all_read') {
+        mockAlerts = mockAlerts.map(a => ({ ...a, read: true }));
+      } else if (args?.action === 'delete') {
+        mockAlerts = mockAlerts.filter(a => a.id !== args.alertId);
+      } else if (args?.action === 'clear_read') {
+        mockAlerts = mockAlerts.filter(a => !a.read);
+      }
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            action: args?.action,
+            remainingCount: mockAlerts.length,
+            unreadCount: mockAlerts.filter(a => !a.read).length
+          }, null, 2)
+        }]
+      };
+    }
+    case 'list_alert_rules': {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            count: mockAlertRules.length,
+            rules: mockAlertRules
+          }, null, 2)
+        }]
+      };
+    }
+    case 'create_alert_rule': {
+      const newRule = {
+        id: `rule-${Date.now()}`,
+        name: args.name,
+        metric: args.metric,
+        threshold: args.threshold,
+        symbol: args.symbol,
+        enabled: true,
+        createdAt: new Date().toISOString()
+      };
+      mockAlertRules.push(newRule);
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ success: true, rule: newRule }, null, 2)
+        }]
+      };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -333,6 +461,18 @@ async function handleResourceRead(uri) {
   if (uri === 'glassfolio://gamification/status') {
     return {
       contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ level: 3, xp: 450, rank: 'rank_3', unlockedBadgesCount: 4 }, null, 2) }]
+    };
+  }
+  if (uri === 'glassfolio://notifications') {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          unreadCount: mockAlerts.filter(a => !a.read).length,
+          alerts: mockAlerts
+        }, null, 2)
+      }]
     };
   }
   throw new Error(`Resource not found: ${uri}`);

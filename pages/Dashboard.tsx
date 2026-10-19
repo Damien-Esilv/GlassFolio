@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
   const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
   const dateFormat = user?.preferences?.dateFormat || 'DD/MM/YYYY';
   const currency = user?.preferences?.currency || 'USD';
-  const { transactions, positions, alerts, goals, achievements, isLoading: isContextLoading } = useData();
+  const { transactions, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -608,31 +608,56 @@ const Dashboard: React.FC = () => {
       <div className={`${cardStyle}`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-primary">{t('dashboard:recentAlerts')}</h3>
-          <button className="text-xs font-bold text-primary hover:underline">{t('common:actions.viewHistory')}</button>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="text-xs font-bold text-primary hover:underline transition-colors"
+          >
+            {t('common:actions.viewHistory')}
+          </button>
         </div>
         <div className="space-y-3">
-          {alerts.slice(0, 2).map((alert, idx) => (
-            <div
-              key={alert.id}
-              className={`flex items-center justify-between p-3 rounded-xl transition-all ${alert.type === 'warning' ? 'bg-warning-subtle ring-1 ring-warning/20' : 'bg-positive-subtle ring-1 ring-positive/20'}`}
-              style={{
-                opacity: animActive ? 1 : 0,
-                transform: animActive ? 'scale(1)' : 'scale(0.92)',
-                transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                transitionTimingFunction: ANIMATION_EASING,
-                transitionDelay: `${idx * STAGGER_DELAY_MS}ms`
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-warning' : 'text-positive'} />
-                <div>
-                  <p className="font-bold text-xs text-primary">{alert.title}</p>
-                  <p className="text-[10px] text-tertiary">{alert.message}</p>
+          {alerts.length === 0 ? (
+            <p className="text-xs text-secondary text-center py-4">{t('notifications:center.empty')}</p>
+          ) : (
+            alerts.slice(0, 3).map((alert, idx) => (
+              <div
+                key={alert.id}
+                className={`flex items-center justify-between p-3 rounded-xl transition-all ${alert.type === 'warning' ? 'bg-warning-subtle ring-1 ring-warning/20' : 'bg-positive-subtle ring-1 ring-positive/20'}`}
+                style={{
+                  opacity: animActive ? 1 : 0,
+                  transform: animActive ? 'scale(1)' : 'scale(0.92)',
+                  transitionDuration: `${ANIMATION_DURATION_MS}ms`,
+                  transitionTimingFunction: ANIMATION_EASING,
+                  transitionDelay: `${idx * STAGGER_DELAY_MS}ms`
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0 mr-2">
+                  <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-warning shrink-0' : 'text-positive shrink-0'} />
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-primary truncate">{alert.title}</p>
+                    <p className="text-[10px] text-tertiary truncate">{alert.message}</p>
+                  </div>
                 </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-[10px] font-bold shrink-0"
+                  onClick={() => {
+                    if (!alert.read) {
+                      markAlertAsRead(alert.id);
+                    }
+                    if (alert.actionUrl) {
+                      navigate(alert.actionUrl);
+                    } else {
+                      navigate('/notifications');
+                    }
+                  }}
+                >
+                  {alert.actionLabelKey ? t(alert.actionLabelKey) : t('common:actions.review')}
+                </Button>
               </div>
-              <Button size="sm" variant="ghost" className="text-[10px] font-bold">{t('common:actions.review')}</Button>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -1,10 +1,27 @@
 import { AssetClass } from '../constants/assetClasses';
 import { FiscalProfile } from './types.backend';
 
+export type NotificationCategory = 'portfolio' | 'fiscal' | 'goals' | 'security' | 'system';
+
+export interface NotificationCategoryPreferences {
+  masterEnabled: boolean;
+  inAppToasts: boolean;
+  categories: {
+    portfolio: boolean;
+    fiscal: boolean;
+    goals: boolean;
+    security: boolean;
+    system: boolean;
+  };
+  dormantCashThresholdPercent: number;
+  volatilityThresholdPercent: number;
+}
+
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'night' | 'emerald' | 'cyber' | 'system';
   currency: string;
   notifications: boolean;
+  notificationPreferences?: NotificationCategoryPreferences;
   language?: 'en' | 'fr';
   dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   fiscalProfile?: FiscalProfile;
@@ -64,9 +81,34 @@ export interface Alert {
   id: string;
   ownerId?: string;
   type: 'warning' | 'error' | 'success' | 'info';
+  category?: NotificationCategory;
   title: string;
   message: string;
   date: string;
+  read?: boolean;
+  archived?: boolean;
+  actionUrl?: string;
+  actionLabelKey?: string;
+  dedupKey?: string;
+}
+
+export type AlertRuleMetric =
+  | 'price_above'
+  | 'price_below'
+  | 'pl_percent_above'
+  | 'pl_percent_below'
+  | 'cash_ratio_above';
+
+export interface AlertRule {
+  id: string;
+  ownerId?: string;
+  name: string;
+  metric: AlertRuleMetric;
+  symbol?: string;
+  threshold: number;
+  enabled: boolean;
+  createdAt: string;
+  lastTriggeredAt?: string;
 }
 
 export interface ReportCard {

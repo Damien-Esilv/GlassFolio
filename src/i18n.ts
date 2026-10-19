@@ -17,6 +17,7 @@ import aiEN from '../locales/en/ai.json';
 import securityEN from '../locales/en/security.json';
 import landingEN from '../locales/en/landing.json';
 import legalEN from '../locales/en/legal.json';
+import notificationsEN from '../locales/en/notifications.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -33,6 +34,7 @@ import aiFR from '../locales/fr/ai.json';
 import securityFR from '../locales/fr/security.json';
 import landingFR from '../locales/fr/landing.json';
 import legalFR from '../locales/fr/legal.json';
+import notificationsFR from '../locales/fr/notifications.json';
 
 const resources = {
     en: {
@@ -51,6 +53,7 @@ const resources = {
         security: securityEN,
         landing: landingEN,
         legal: legalEN,
+        notifications: notificationsEN,
     },
     fr: {
         common: commonFR,
@@ -68,6 +71,7 @@ const resources = {
         security: securityFR,
         landing: landingFR,
         legal: legalFR,
+        notifications: notificationsFR,
     },
 };
 
