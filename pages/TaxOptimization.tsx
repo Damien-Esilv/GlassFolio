@@ -171,9 +171,10 @@ const TaxOptimization: React.FC = () => {
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
+            const summary = await taxService.getTaxSummary(fiscalYear, profile);
             const [pfuResult, sugResult] = await Promise.all([
-                taxService.comparePFUvsBareme(fiscalYear, profile),
-                taxService.getOptimizationSuggestions(fiscalYear, profile),
+                taxService.comparePFUvsBareme(fiscalYear, profile, undefined, summary),
+                taxService.getOptimizationSuggestions(fiscalYear, profile, undefined, summary),
             ]);
             setPFUComparison(pfuResult);
             setSuggestions(sugResult);
@@ -181,7 +182,7 @@ const TaxOptimization: React.FC = () => {
             console.error('Failed to load optimization data:', err);
         }
         setIsLoading(false);
-    }, [fiscalYear]);
+    }, [fiscalYear, profile]);
 
     useEffect(() => { loadData(); }, [loadData]);
 

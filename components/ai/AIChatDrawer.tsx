@@ -78,6 +78,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         currency: 'EUR',
       });
       setMessages([...updated]);
+    } catch (err) {
+      console.error('[AIChatDrawer] Error processing assistant turn:', err);
+      // Fallback: reload messages from service which already contains the error message
+      setMessages([...aiService.getMessages()]);
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +121,9 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         currency: 'EUR',
       });
       setMessages([...updated]);
+    } catch (err) {
+      console.error('[AIChatDrawer] Error during edit regeneration:', err);
+      setMessages([...aiService.getMessages()]);
     } finally {
       setIsLoading(false);
     }
@@ -280,6 +287,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
               {messages.map((msg) => {
                 // Ignore raw tool result messages in user view
                 if (msg.role === 'tool') return null;
+                // Ignore internal assistant tool-invocation records that have no textual answer or action proposal
+                if (msg.role === 'assistant' && !msg.content?.trim() && !msg.pendingAction) return null;
 
                 const isUser = msg.role === 'user';
                 const isEditingThis = editingMessageId === msg.id;

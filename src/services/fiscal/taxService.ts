@@ -96,16 +96,15 @@ export const taxService = {
     comparePFUvsBareme: async (
         fiscalYear: string,
         profile: FiscalProfile,
-        country: string = DEFAULT_TAX_COUNTRY
+        country: string = DEFAULT_TAX_COUNTRY,
+        existingSummary?: TaxSummaryResult
     ): Promise<{
         pfuTotal: number;
         baremeTotal: number;
         recommendation: 'PFU' | 'BAREME' | 'NEUTRAL';
         confidence: import('../../types/types.backend').FiscalConfidence;
     }> => {
-        await delay(500);
-
-        const summary = await taxService.getTaxSummary(fiscalYear, profile, country);
+        const summary = existingSummary || await taxService.getTaxSummary(fiscalYear, profile, country);
         const rules = getFiscalRulesOrThrow(fiscalYear, country);
 
         // Collect all taxable events for comparison
@@ -163,11 +162,10 @@ export const taxService = {
     getOptimizationSuggestions: async (
         fiscalYear: string,
         profile: FiscalProfile,
-        country: string = DEFAULT_TAX_COUNTRY
+        country: string = DEFAULT_TAX_COUNTRY,
+        existingSummary?: TaxSummaryResult
     ): Promise<OptimizationSuggestion[]> => {
-        await delay(500);
-
-        const summary = await taxService.getTaxSummary(fiscalYear, profile, country);
+        const summary = existingSummary || await taxService.getTaxSummary(fiscalYear, profile, country);
         const rules = getFiscalRulesOrThrow(fiscalYear, country);
         const suggestions: OptimizationSuggestion[] = [];
 

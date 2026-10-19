@@ -25,10 +25,12 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ label }) => {
         </div>
       </div>
 
-      {/* Orb & Label */}
-      <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-secondary">
-        <AppThinkingOrb state="breathing" size={20} />
-        <span>{label || t('common:labels.loading')}</span>
+      {/* Thinking Orb Grand Format */}
+      <div className="flex flex-col items-center gap-4 mb-2">
+        <AppThinkingOrb state="breathing" size={72} label={label || t('common:labels.loading')} />
+        <span className="text-xs sm:text-sm font-semibold text-secondary tracking-wide">
+          {label || t('common:labels.loading')}
+        </span>
       </div>
     </div>
   );

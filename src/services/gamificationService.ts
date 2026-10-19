@@ -46,28 +46,36 @@ export const INVESTOR_RANKS: InvestorRank[] = [
 
 export const THEME_REWARDS: ThemeReward[] = [
     {
-        id: 'theme_default',
-        themeKey: 'dark',
-        nameKey: 'gamification:themes.defaultDark',
+        id: 'theme_light',
+        themeKey: 'light',
+        nameKey: 'settings:preferences.light',
         requiredLevel: 1,
         unlocked: true,
-        previewColors: ['var(--bg-app)', 'var(--color-accent-blue)']
+        previewColors: ['var(--bg-card)', 'var(--color-primary)']
     },
     {
         id: 'theme_night',
         themeKey: 'night',
-        nameKey: 'gamification:themes.midnightVelvet',
-        requiredLevel: 5,
-        unlocked: false,
+        nameKey: 'settings:preferences.night',
+        requiredLevel: 1,
+        unlocked: true,
         previewColors: ['var(--bg-subtle)', 'var(--color-accent-indigo)']
+    },
+    {
+        id: 'theme_dark',
+        themeKey: 'dark',
+        nameKey: 'settings:preferences.dark',
+        requiredLevel: 2,
+        unlocked: false,
+        previewColors: ['var(--bg-canvas)', 'var(--color-primary)']
     },
     {
         id: 'theme_emerald',
         themeKey: 'emerald',
         nameKey: 'gamification:themes.emeraldPrestige',
-        requiredLevel: 10,
+        requiredLevel: 6,
         unlocked: false,
-        previewColors: ['var(--color-accent-green)', 'var(--color-brand)']
+        previewColors: ['var(--color-positive)', 'var(--color-brand)']
     },
     {
         id: 'theme_cyber',
@@ -75,7 +83,7 @@ export const THEME_REWARDS: ThemeReward[] = [
         nameKey: 'gamification:themes.cyberNeon',
         requiredLevel: 15,
         unlocked: false,
-        previewColors: ['var(--color-accent-amber)', 'var(--color-accent-red)']
+        previewColors: ['var(--color-accent-cyan)', 'var(--color-accent-purple)']
     }
 ];
 
@@ -96,11 +104,11 @@ const INITIAL_QUESTS: GamificationQuest[] = [
         id: 'quest_dca_habit',
         titleKey: 'gamification:quests.dcaHabit.title',
         descriptionKey: 'gamification:quests.dcaHabit.description',
-        rewardXp: 250,
+        rewardXp: 200,
         frequency: 'monthly',
-        completed: false,
+        completed: true,
         claimed: false,
-        progress: 1,
+        progress: 2,
         target: 2,
         expiryDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString()
     },

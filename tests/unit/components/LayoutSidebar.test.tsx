@@ -110,9 +110,14 @@ describe('Layout Sidebar Collapse', () => {
     expect(localStorage.getItem('gf_sidebar_collapsed')).toBe('true');
   });
 
-  it('restores collapsed state from localStorage on initial render', () => {
+  it('restores collapsed state from localStorage on initial render without redundant bottom toggle', () => {
     renderLayout(true);
     const sidebar = screen.getByTestId('desktop-sidebar');
     expect(sidebar.className).toContain('md:w-20');
+
+    // Expand button is only in header, not duplicated in bottom settings area
+    const expandButtons = screen.getAllByTitle('Développer le menu latéral');
+    expect(expandButtons.length).toBe(1);
   });
 });
+

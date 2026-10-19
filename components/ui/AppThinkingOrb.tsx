@@ -15,7 +15,7 @@ export type ThinkingOrbState =
 
 export interface AppThinkingOrbProps {
   state?: ThinkingOrbState;
-  size?: 20 | 64;
+  size?: 20 | 32 | 64 | 72 | number;
   theme?: 'auto' | 'dark' | 'light';
   speed?: number;
   paused?: boolean;
@@ -42,6 +42,10 @@ export const AppThinkingOrb: React.FC<AppThinkingOrbProps> = ({
   const [hasError, setHasError] = useState(false);
   const effectiveAriaLabel = ariaLabelProp || label || `Agent state: ${state}`;
 
+  // thinking-orbs strictly expects preset sizes: 20, 32, or 64
+  const supportedPreset: 20 | 32 | 64 = size <= 26 ? 20 : size <= 48 ? 32 : 64;
+  const scale = size > 64 ? size / 64 : 1;
+
   if (hasError) {
     return (
       <span
@@ -50,7 +54,7 @@ export const AppThinkingOrb: React.FC<AppThinkingOrbProps> = ({
         className={`inline-flex items-center justify-center shrink-0 ${className}`}
       >
         <Loader2
-          size={size === 64 ? 32 : 16}
+          size={size >= 48 ? 32 : 16}
           className="animate-spin text-primary shrink-0"
         />
       </span>
@@ -63,10 +67,11 @@ export const AppThinkingOrb: React.FC<AppThinkingOrbProps> = ({
       data-testid="app-thinking-orb"
       data-state={state}
       data-size={size}
+      style={scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'center center' } : undefined}
     >
       <ThinkingOrb
         state={state as any}
-        size={size as any}
+        size={supportedPreset}
         theme={theme as any}
         speed={speed}
         paused={paused}

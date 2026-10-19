@@ -432,16 +432,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             name={t('navigation:menu.settings')}
             collapsed={isSidebarCollapsed}
           />
-          {isSidebarCollapsed && (
-            <button
-              onClick={toggleSidebarCollapsed}
-              className="flex items-center justify-center py-2 text-secondary hover:text-primary hover:bg-subtle rounded-lg transition-colors w-full"
-              title={t('navigation:expandSidebar')}
-              aria-label={t('navigation:expandSidebar')}
-            >
-              <PanelLeftOpen size={18} />
-            </button>
-          )}
         </div>
       </aside>
 
