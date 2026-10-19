@@ -136,8 +136,9 @@
       "apiKey": "Clé API (Stockée localement dans votre navigateur)",
       "apiKeyPlaceholder": "Entrez votre clé API...",
       "model": "Nom du modèle",
-      "modelPlaceholder": "Entrez le nom du modèle (ex: gemini-1.5-flash, gpt-4o, claude-3-5-sonnet...)",
-      "modelHelp": "Indiquez l'identifiant exact du modèle souhaité chez votre fournisseur."
+      "modelPlaceholder": "Entrez l'identifiant exact de votre modèle...",
+      "modelHelp": "Indiquez l'identifiant exact du modèle souhaité chez votre fournisseur.",
+      "modelRequiredNotice": "Identifiant de modèle obligatoire. Aucun modèle par défaut n'est appliqué afin d'éviter les versions obsolètes."
     },
     "security": {
       "title": "Garde-fous & Mode d'Autorisation",
@@ -205,6 +206,12 @@
     "ollamaModelNotFoundWithAvailable": "Le modèle `{{model}}` n'est pas installé sur votre machine.\n\n**Modèles actuellement installés sur votre ordinateur :**\n{{available}}\n\n**Pour télécharger `{{model}}` :**\n```bash\nollama pull {{model}}\n```\nOu sélectionnez l'un de vos modèles installés dans **Réglages > IA & MCP**.",
     "ollamaServerErrorTitle": "Erreur retournée par Ollama (HTTP {{status}})",
     "ollamaServerResponseBody": "{{message}}\n\n*Conseil : Vérifiez la console Ollama ou choisissez un autre modèle dans **Réglages > IA & MCP**.*",
+    "cloudModelMissingTitle": "Modèle d'IA non configuré pour {{provider}}",
+    "cloudModelMissingBody": "Aucun identifiant de modèle n'est configuré pour **{{provider}}**.\n\nAfin d'éviter d'utiliser des modèles obsolètes ou dépréciés, aucun modèle n'est forcé par défaut.\n\n**Comment configurer votre modèle :**\n- Rendez-vous dans **Réglages > IA & MCP**.\n- Dans la section **Modèles Cloud**, sélectionnez **{{provider}}**.\n- Saisissez le nom exact du modèle souhaité dans le champ **Nom du modèle**.\n- Cliquez sur **Enregistrer les Préférences IA**.",
+    "cloudApiKeyMissingTitle": "Clé API non renseignée pour {{provider}}",
+    "cloudApiKeyMissingBody": "Aucune clé API n'a été trouvée pour **{{provider}}**.\n\n**Comment configurer votre clé :**\n- Rendez-vous dans **Réglages > IA & MCP**.\n- Saisissez votre clé API dans le champ dédié et enregistrez.",
+    "cloudModelInvalidTitle": "Modèle d'IA introuvable ou non supporté",
+    "cloudModelInvalidBody": "Le modèle configuré n'a pas été reconnu par votre fournisseur ou n'est plus en service.\n\nDétail retourné par le prestataire : `{{error}}`\n\n**Comment corriger :**\n- Rendez-vous dans **Réglages > IA & MCP**.\n- Saisissez un identifiant de modèle actif et maintenu par votre fournisseur.",
     "generalError": "Une erreur est survenue lors de l'échange avec l'assistant : {{error}}"
   }
 }

@@ -155,5 +155,58 @@ describe('aiService', () => {
     expect(lastMsg.role).toBe('assistant');
     expect(lastMsg.content).toBe('Bonjour depuis Google Gemini!');
   });
+
+  it('displays actionable error when cloudModel is not configured (empty) without forcing defaults', async () => {
+    aiSettingsService.saveSettings({
+      activeProvider: 'gemini',
+      apiKey: 'test-gemini-key',
+      cloudModel: '',
+    });
+
+    const messages = await aiService.sendMessage('Bonjour Gemini');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toContain('Modèle d\'IA non configuré');
+    expect(lastMsg.content).toContain('Google Gemini');
+    expect(lastMsg.content).toContain('Réglages > IA & MCP');
+  });
+
+  it('displays actionable error when API key is missing for cloud provider', async () => {
+    aiSettingsService.saveSettings({
+      activeProvider: 'openai',
+      apiKey: '',
+      cloudModel: 'custom-model',
+    });
+
+    const messages = await aiService.sendMessage('Hello OpenAI');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toContain('Clé API non renseignée');
+    expect(lastMsg.content).toContain('OpenAI');
+  });
+
+  it('displays actionable guidance when cloud API reports model is not found or deprecated', async () => {
+    aiSettingsService.saveSettings({
+      activeProvider: 'gemini',
+      apiKey: 'test-gemini-key',
+      cloudModel: 'deprecated-model',
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: { message: "The model 'deprecated-model' does not exist or is deprecated" } }), {
+        status: 404,
+        statusText: 'Not Found',
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const messages = await aiService.sendMessage('Hello Gemini');
+    const lastMsg = messages[messages.length - 1];
+
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toContain('Modèle d\'IA introuvable ou non supporté');
+  });
 });
 

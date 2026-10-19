@@ -136,8 +136,9 @@
       "apiKey": "API Key (Stored locally in your browser)",
       "apiKeyPlaceholder": "Enter your API key...",
       "model": "Model Name",
-      "modelPlaceholder": "Enter model name (e.g. gemini-1.5-flash, gpt-4o, claude-3-5-sonnet...)",
-      "modelHelp": "Specify the exact model identifier provided by your service."
+      "modelPlaceholder": "Enter exact model identifier...",
+      "modelHelp": "Specify the exact model identifier provided by your service.",
+      "modelRequiredNotice": "Model identifier is required. No default model is forced to avoid deprecated versions."
     },
     "security": {
       "title": "Guardrails & Authorization Mode",
@@ -205,6 +206,12 @@
     "ollamaModelNotFoundWithAvailable": "The model `{{model}}` is not installed on your machine.\n\n**Models currently installed on your computer:**\n{{available}}\n\n**To download `{{model}}`:**\n```bash\nollama pull {{model}}\n```\nOr select one of your installed models in **Settings > AI & MCP**.",
     "ollamaServerErrorTitle": "Ollama Error (HTTP {{status}})",
     "ollamaServerResponseBody": "{{message}}\n\n*Tip: Check the Ollama terminal logs or choose another model in **Settings > AI & MCP**.*",
+    "cloudModelMissingTitle": "AI Model Not Configured for {{provider}}",
+    "cloudModelMissingBody": "No model identifier is configured for **{{provider}}**.\n\nTo prevent the use of deprecated or discontinued models, no default model is forced.\n\n**How to configure your model:**\n- Go to **Settings > AI & MCP**.\n- In the **Cloud Models** section, select **{{provider}}**.\n- Enter the exact model name in the **Model Name** field.\n- Click **Save AI Preferences**.",
+    "cloudApiKeyMissingTitle": "API Key Missing for {{provider}}",
+    "cloudApiKeyMissingBody": "No API key was found for **{{provider}}**.\n\n**How to configure your key:**\n- Go to **Settings > AI & MCP**.\n- Enter your API key in the dedicated field and save.",
+    "cloudModelInvalidTitle": "AI Model Not Found or Unsupported",
+    "cloudModelInvalidBody": "The configured model was not recognized by your provider or has been discontinued.\n\nProvider error details: `{{error}}`\n\n**How to fix:**\n- Go to **Settings > AI & MCP**.\n- Enter an active, maintained model identifier for your provider.",
     "generalError": "An error occurred while communicating with the assistant: {{error}}"
   }
 }
