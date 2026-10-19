@@ -109,6 +109,6 @@ describe('<LandingHeader />', () => {
 
     const dashboardLink = screen.getByText(/Dashboard|Tableau de bord/i);
     expect(dashboardLink).toBeTruthy();
-    expect(dashboardLink.closest('a')?.getAttribute('href')).toBe('https://app.glassfolio.dev/#/');
+    expect(dashboardLink.closest('a')?.getAttribute('href')).toBe('https://app.glassfolio.dev/');
   });
 });

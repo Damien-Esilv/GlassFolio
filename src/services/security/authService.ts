@@ -17,7 +17,13 @@ import { vaultService } from './vaultService';
 import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../storage/storageKeys';
 import { getSyncedStorageProvider } from '../storage/storageFactory';
-import { isSupabaseConfigured, SupabaseAuthSession, supabaseClient } from '../supabase/supabaseClient';
+import {
+    isSupabaseConfigured,
+    SupabaseAuthSession,
+    supabaseClient,
+    consumeInitialOAuthHash,
+    SupabaseUserData,
+} from '../supabase/supabaseClient';
 
 function getInitialAuthPreferences(): User['preferences'] {
     const storedTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
@@ -212,9 +218,20 @@ export class LocalAuthProvider implements IAuthProvider {
 
         // 1. Demo account handling
         if (cleanEmail === 'demo@glassfolio.com' && password === 'password') {
+            // Guard: ensure no Supabase session can ever sync demo data to the cloud
+            getSyncedStorageProvider()?.setSupabaseSession(null);
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('gf_sb_session');
+            }
+
+            // Guard: if a real user vault was present, reset to a fresh demo vault
+            if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
+                await vaultService.resetVault();
+            }
+
             try {
                 if (!vaultService.isInitialized()) {
-                    await vaultService.setup('password');
+                    await vaultService.setup('password', { isDemo: true });
                 } else if (!vaultService.isUnlocked()) {
                     await vaultService.unlock('password');
                 }
@@ -252,8 +269,8 @@ export class LocalAuthProvider implements IAuthProvider {
                         ...(existingDemo?.preferences?.fiscalProfile || {}),
                     },
                 },
-                xp: existingDemo?.xp || 1450,
-                level: existingDemo?.level || 6,
+                xp: Math.max(existingDemo?.xp || 0, 2750),
+                level: Math.max(existingDemo?.level || 0, 6),
             };
 
             await userRepository.saveUser(demoUser);
@@ -285,11 +302,10 @@ export class LocalAuthProvider implements IAuthProvider {
 
     public async signInWithOAuth(provider: 'google' | 'apple'): Promise<never> {
         await delay(400);
-        throw new Error(
-            provider === 'google'
-                ? 'Google Login is currently in preview mode. Please use Email or Demo account.'
-                : 'Apple Sign-In is currently in preview mode. Please use Email or Demo account.'
-        );
+        if (provider === 'apple') {
+            throw new Error('Apple Sign-In is disabled.');
+        }
+        throw new Error('Google Login requires Supabase to be configured in .env.local.');
     }
 
     public async signOut(): Promise<void> {
@@ -344,10 +360,11 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
     public async handleOAuthCallback(): Promise<AuthResult | null> {
         if (typeof window === 'undefined') return null;
-        const hash = window.location.hash;
-        if (!hash.includes('access_token=')) return null;
+        const hash = consumeInitialOAuthHash() || window.location.hash;
+        if (!hash || !hash.includes('access_token=')) return null;
 
-        const params = new URLSearchParams(hash.replace(/^#/, ''));
+        const cleanFragment = hash.replace(/^[#/?]+/, '');
+        const params = new URLSearchParams(cleanFragment);
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         const expiresIn = params.get('expires_in');
@@ -357,35 +374,90 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         // Clean URL hash without reload
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
+        // 1. Fetch verified user profile from Supabase Auth
+        let sbUser: SupabaseUserData;
+        try {
+            sbUser = await supabaseClient.getUser(accessToken);
+        } catch (err) {
+            console.error('[authService] Failed to retrieve Supabase user from OAuth token', err);
+            return null;
+        }
+
         const session: SupabaseAuthSession = {
             accessToken,
             refreshToken: refreshToken || '',
             expiresAt: Date.now() + (Number(expiresIn) || 3600) * 1000,
             user: {
-                id: `usr-sb-${Math.random().toString(36).substr(2, 7)}`,
+                id: sbUser.id,
+                email: sbUser.email,
+                user_metadata: sbUser.user_metadata,
             },
         };
 
         this.persistSession(session);
+
+        // 2. Clear any leftover demo vault if present so demo data never mixes with Google account
+        if (vaultService.isDemoVault()) {
+            await vaultService.resetVault();
+        }
+
+        // 3. Pull user's encrypted vault from Supabase PostgREST
         const synced = getSyncedStorageProvider();
         if (synced) {
             await synced.pullFromRemote();
         }
 
+        // 4. Derive seamless E2EE vault secret and initialize or unlock vault
+        const oauthEmail = (sbUser.email || '').trim().toLowerCase();
+        const oauthVaultSecret = `gf-oauth-e2ee-v1:${sbUser.id}:${oauthEmail}`;
+
+        try {
+            if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
+                if (!vaultService.isUnlocked()) {
+                    await vaultService.unlock(oauthVaultSecret);
+                }
+            } else {
+                if (vaultService.isInitialized()) {
+                    await vaultService.resetVault();
+                }
+                await vaultService.setup(oauthVaultSecret, { isDemo: false });
+            }
+        } catch (err) {
+            console.error('[authService] E2EE vault auto-unlock error on OAuth callback', err);
+        }
+
+        // 5. Construct or retrieve user profile
         let user = await userRepository.getUser();
+        const googleName = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || oauthEmail.split('@')[0] || 'Investor';
+        const googleAvatar = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || `https://i.pravatar.cc/150?u=${encodeURIComponent(sbUser.id)}`;
+
         if (!user) {
             user = {
-                id: session.user.id,
-                name: 'Cloud Investor',
-                email: 'user@cloud.glassfolio',
-                avatar: `https://i.pravatar.cc/150?u=${encodeURIComponent(session.user.id)}`,
+                id: sbUser.id,
+                name: googleName,
+                email: oauthEmail,
+                avatar: googleAvatar,
                 preferences: getInitialAuthPreferences(),
                 xp: 0,
                 level: 1,
             };
             await userRepository.saveUser(user);
+        } else {
+            let updated = false;
+            if (googleName && user.name !== googleName) {
+                user.name = googleName;
+                updated = true;
+            }
+            if (googleAvatar && user.avatar !== googleAvatar) {
+                user.avatar = googleAvatar;
+                updated = true;
+            }
+            if (updated) {
+                await userRepository.saveUser(user);
+            }
         }
 
+        this.resetFailures();
         return {
             user,
             session: createSessionRecord(user.id),
@@ -489,12 +561,21 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
     }
 
+    protected redirectToUrl(url: string): void {
+        if (typeof window !== 'undefined' && window.location?.assign) {
+            window.location.assign(url);
+        }
+    }
+
     public override async signInWithOAuth(provider: 'google' | 'apple'): Promise<never> {
+        if (provider === 'apple') {
+            throw new Error('Apple Sign-In is disabled.');
+        }
         if (!isSupabaseConfigured() || typeof window === 'undefined') {
             return super.signInWithOAuth(provider);
         }
         const redirectUrl = supabaseClient.getOAuthUrl(provider);
-        window.location.assign(redirectUrl);
+        this.redirectToUrl(redirectUrl);
         // Returns promise that never resolves as browser is redirecting
         return new Promise(() => {});
     }
@@ -519,6 +600,9 @@ export const createAuthProvider = (mode: string): IAuthProvider => {
             return new LocalAuthProvider();
         case 'local':
         default:
+            if (isSupabaseConfigured()) {
+                return new SupabaseAuthProvider();
+            }
             return new LocalAuthProvider();
     }
 };
