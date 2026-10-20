@@ -203,11 +203,11 @@ const LegalCenter: React.FC = () => {
 
               <section className="space-y-2.5">
                 <h3 className="text-base font-bold text-primary">
-                  {t('legal:privacy.zkTitle')}
+                  {t('legal:privacy.e2eeTitle')}
                 </h3>
-                <p className="text-secondary">{t('legal:privacy.zkText')}</p>
+                <p className="text-secondary">{t('legal:privacy.e2eeText')}</p>
                 <div className="p-4 rounded-xl bg-positive-subtle/40 border border-positive/30 text-positive text-xs font-semibold">
-                  {t('legal:privacy.zkNoServer')}
+                  {t('legal:privacy.e2eeNoServer')}
                 </div>
               </section>
 
