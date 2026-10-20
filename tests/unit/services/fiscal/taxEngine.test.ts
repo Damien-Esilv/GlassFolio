@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCryptoGains, EnrichedTransaction } from '../../../../src/services/fiscal/taxEngine';
+import { calculateCryptoGains, buildTaxSummary, generateFormMappings, EnrichedTransaction } from '../../../../src/services/fiscal/taxEngine';
 import { getFiscalRulesOrThrow } from '../../../../src/services/fiscal/taxRules';
 import { CGI_ARTICLES } from '../../../../src/constants/fiscalConstants';
+import { UnifiedTransaction, Account, Institute, Instrument } from '../../../../src/types/types.backend';
 
 // Helper to construct EnrichedTransaction objects for testing
 function createMockCryptoTx(overrides: Partial<EnrichedTransaction> = {}): EnrichedTransaction {
@@ -390,5 +391,183 @@ describe('calculateCryptoGains', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].instrumentName).toBe('DOT');
+  });
+});
+
+describe('taxEngine O(1) Lookups & Date Parsing Robustness (Jules Hardening)', () => {
+  const rules2024 = getFiscalRulesOrThrow('2024', 'FR');
+
+  it('correctly maps accounts, institutes, and instruments via stack-scoped Maps', () => {
+    const mockAccounts: Account[] = [
+      {
+        id: 'acc-1',
+        ownerId: 'user-1',
+        name: 'Compte CTO',
+        type: 'investment',
+        wrapperType: 'CTO',
+        instituteId: 'inst-1',
+        currency: 'EUR',
+        isTaxDeferred: false,
+        openedAt: '2023-01-01',
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z',
+      },
+    ];
+
+    const mockInstitutes: Institute[] = [
+      {
+        id: 'inst-1',
+        ownerId: 'user-1',
+        name: 'BoursoBank',
+        type: 'bank',
+        isCustom: false,
+        country: 'FR',
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z',
+      },
+    ];
+
+    const mockInstruments: Instrument[] = [
+      {
+        id: 'instr-1',
+        ownerId: 'user-1',
+        name: 'TotalEnergies',
+        type: 'stock',
+        marketIdentifier: { symbol: 'TTE' },
+        isMarketReady: true,
+        denominationCurrency: 'EUR',
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z',
+      },
+    ];
+
+    const mockTxs: UnifiedTransaction[] = [
+      {
+        id: 'tx-1',
+        ownerId: 'user-1',
+        accountId: 'acc-1',
+        instrumentId: 'instr-1',
+        batchId: 'b-1',
+        rowHash: 'h-1',
+        sourceOrigin: 'FILE',
+        isSynthetic: false,
+        isFiscal: true,
+        sourceMode: 'history',
+        transactionDate: '2024-06-15T10:00:00Z',
+        type: 'BUY',
+        rawType: 'BUY',
+        rawLabel: 'Achat TTE',
+        amountPrimary: '1000',
+        assetSymbol: 'TTE',
+        quantity: '20',
+        feeAmount: '5',
+        createdAt: '2024-06-15T10:00:00Z',
+        updatedAt: '2024-06-15T10:00:00Z',
+        version: 1,
+      },
+      // Edge case: transaction without accountId or instrumentId
+      {
+        id: 'tx-orphan',
+        ownerId: 'user-1',
+        accountId: '',
+        instrumentId: '',
+        batchId: 'b-1',
+        rowHash: 'h-2',
+        sourceOrigin: 'FILE',
+        isSynthetic: false,
+        isFiscal: true,
+        sourceMode: 'history',
+        transactionDate: '2024-06-20T10:00:00Z',
+        type: 'OTHER',
+        rawType: 'OTHER',
+        rawLabel: 'Autre',
+        amountPrimary: '100',
+        createdAt: '2024-06-20T10:00:00Z',
+        updatedAt: '2024-06-20T10:00:00Z',
+        version: 1,
+      },
+    ];
+
+    const mockProfile = { taxResidenceCountries: ['FR'], fiscalShares: 1 };
+    const summary = buildTaxSummary(mockTxs, mockAccounts, mockInstitutes, mockInstruments, '2024', mockProfile);
+    expect(summary).toBeDefined();
+    expect(summary.income.totalDividends).toBe(0);
+    expect(summary.cto.totalGains).toBe(0);
+  });
+
+  it('handles non-ISO dates safely with fallback parser without crashing', () => {
+    const mockAccounts: Account[] = [];
+    const mockInstitutes: Institute[] = [];
+    const mockInstruments: Instrument[] = [];
+
+    const mockTxs: UnifiedTransaction[] = [
+      {
+        id: 'tx-non-iso',
+        ownerId: 'user-1',
+        accountId: 'acc-1',
+        batchId: 'b-1',
+        rowHash: 'h-3',
+        sourceOrigin: 'FILE',
+        isSynthetic: false,
+        isFiscal: true,
+        sourceMode: 'history',
+        transactionDate: '2024/05/10', // non-ISO slash format
+        type: 'INCOME',
+        subType: 'DIVIDEND',
+        rawType: 'DIVIDEND',
+        rawLabel: 'Dividende',
+        amountPrimary: '50',
+        createdAt: '2024-05-10T10:00:00Z',
+        updatedAt: '2024-05-10T10:00:00Z',
+        version: 1,
+      },
+      {
+        id: 'tx-malformed',
+        ownerId: 'user-1',
+        accountId: 'acc-1',
+        batchId: 'b-1',
+        rowHash: 'h-4',
+        sourceOrigin: 'FILE',
+        isSynthetic: false,
+        isFiscal: true,
+        sourceMode: 'history',
+        transactionDate: '', // empty date
+        type: 'INCOME',
+        subType: 'DIVIDEND',
+        rawType: 'DIVIDEND',
+        rawLabel: 'Dividende malformed',
+        amountPrimary: '25',
+        createdAt: '2024-05-10T10:00:00Z',
+        updatedAt: '2024-05-10T10:00:00Z',
+        version: 1,
+      },
+    ];
+
+    const mockProfile = { taxResidenceCountries: ['FR'], fiscalShares: 1 };
+    const summary = buildTaxSummary(mockTxs, mockAccounts, mockInstitutes, mockInstruments, '2024', mockProfile);
+    expect(summary).toBeDefined();
+    // Only the 2024 transaction should count
+    expect(summary.income.totalDividends).toBe(50);
+  });
+
+  it('correctly maps form cases via O(1) formCaseMap', () => {
+    const events = [
+      {
+        transactionIds: ['tx-1'],
+        fiscalYear: '2024',
+        eventType: 'capital_gain' as const,
+        wrapperType: 'CTO' as const,
+        grossAmount: 500,
+        taxableAmount: 500,
+        fees: 0,
+        currency: 'EUR',
+        confidence: 'determined' as const,
+      },
+    ];
+
+    const mappings = generateFormMappings(events, rules2024);
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0].caseId).toBe('3VG');
+    expect(mappings[0].value).toBe(500);
   });
 });
