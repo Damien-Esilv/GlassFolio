@@ -17,7 +17,10 @@
         "newPassword": "Nouveau mot de passe",
         "confirmNewPassword": "Confirmer le nouveau mot de passe",
         "profileUpdated": "Détails du profil mis à jour avec succès",
-        "passwordUpdated": "Mot de passe changé avec succès"
+        "passwordUpdated": "Mot de passe changé avec succès",
+        "securityTitle": "Sécurité & Mot de passe maître",
+        "securityDesc": "Dans GlassFolio, votre mot de passe chiffre directement l'ensemble de vos données financières (E2EE). Gérez votre mot de passe maître, la 2FA et vos Passkeys dans l'onglet Sécurité.",
+        "goToSecurity": "Ouvrir l'onglet Sécurité"
     },
     "preferences": {
         "applicationSettings": "Paramètres de l'application",

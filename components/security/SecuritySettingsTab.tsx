@@ -94,28 +94,28 @@ export const SecuritySettingsTab: React.FC = () => {
         <div className="space-y-6 animate-fade-in">
             {/* 1. Encrypted Vault (E2EE) Section */}
             <div className={cardStyle}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                             <Lock size={22} />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm font-semibold text-primary">
                                     {t('security:vaultSection.title')}
                                 </h3>
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/10 text-success border border-success/20 shrink-0">
-                                    <ShieldCheck size={12} />
-                                    {t('security:vaultSection.statusActive')}
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-success/10 text-success border border-success/20 shrink-0">
+                                    <ShieldCheck size={12} className="shrink-0" />
+                                    <span>{t('security:vaultSection.statusActive')}</span>
                                 </span>
                             </div>
-                            <p className="text-xs text-secondary mt-0.5">
+                            <p className="text-xs text-secondary mt-1 leading-relaxed">
                                 {t('security:vaultSection.subtitle')}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         <Button
                             type="button"
                             variant="secondary"
@@ -123,7 +123,7 @@ export const SecuritySettingsTab: React.FC = () => {
                             onClick={() => setShowChangePassword(true)}
                             className="text-xs whitespace-nowrap"
                         >
-                            <KeyRound size={14} className="mr-1.5" />
+                            <KeyRound size={14} className="mr-1.5 shrink-0" />
                             {t('security:vaultSection.changeMasterPassword')}
                         </Button>
                         <Button
@@ -133,7 +133,7 @@ export const SecuritySettingsTab: React.FC = () => {
                             onClick={() => lockVault()}
                             className="text-xs whitespace-nowrap"
                         >
-                            <Lock size={14} className="mr-1.5" />
+                            <Lock size={14} className="mr-1.5 shrink-0" />
                             {t('security:vaultSection.lockNow')}
                         </Button>
                     </div>

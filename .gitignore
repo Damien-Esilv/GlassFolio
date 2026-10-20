@@ -64,6 +64,7 @@ Thumbs.db
 .gemini/
 .claude/
 .cursor/
+poc-*.html
 
 # Docker Local Persistent Volume
 glassfolio-data/

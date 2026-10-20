@@ -144,9 +144,13 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
      - `fix/tgla-XXX-<short-slug>`
      - `chore/tgla-XXX-<short-slug>`
 
-2. **Commits Conventionnels Atomiques** :
+2. **Commits Conventionnels Atomiques & Consolidation (Anti-Pollution de l'Arborescence)** :
    - Tout commit doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
-   - Les messages doivent être explicites et refléter la progression technique.
+   - **Interdiction de polluer l'historique avec des micro-commits dispersés** : Ne jamais commiter de micro-ajustements cosmétiques ou d'essais successifs isolés. Les corrections et tests d'une même tâche doivent être regroupés de manière cohérente en commits atomiques complets.
+   - **Stratégie de Fusion Propre (Squash-and-Merge)** :
+     - Pour fusionner une branche de travail (`feat/*`, `fix/*`) dans `main`, privilégier le **Squash-and-Merge** via GitHub PR ou regrouper localement les commits avant merge.
+     - Ainsi, chaque feature ou correction correspond sur `main` à **un commit unique, limpide et auto-suffisant**, gardant l'arborescence et le graphe Git parfaitement lisibles et élégants pour les recruteurs.
+   - **Nettoyage des branches distantes** : Dès qu'une PR est fusionnée dans `main`, la branche distante associée doit être supprimée de GitHub (`git push origin --delete <branch>`) pour maintenir la liste des branches propre.
 
 3. **Garantie 6-Gates Pré-Merge** :
    - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% :

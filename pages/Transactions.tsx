@@ -266,14 +266,14 @@ const Transactions: React.FC = () => {
                                </td>
                                <td className="px-6 py-4 text-primary font-medium">
                                   <div className="flex items-center gap-2">
-                                     <span>{tx.instrument}</span>
+                                     <span className="truncate">{tx.instrument}</span>
                                      {isUntracked && (
                                         <div 
-                                           className="inline-flex items-center gap-1 bg-warning-subtle text-warning text-[10px] font-semibold px-2 py-0.5 rounded-full border border-warning/20"
+                                           className="inline-flex items-center gap-1 bg-warning-subtle text-warning text-[10px] font-semibold px-2 py-0.5 rounded-full border border-warning/20 whitespace-nowrap shrink-0"
                                            title={t('transactions:untrackedTooltip')}
                                         >
-                                           <AlertTriangle size={12} />
-                                           <span>{t('transactions:untrackedBadge')}</span>
+                                           <AlertTriangle size={12} className="shrink-0" />
+                                           <span className="whitespace-nowrap">{t('transactions:untrackedBadge')}</span>
                                         </div>
                                      )}
                                   </div>

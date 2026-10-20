@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Solid white background -->
+  <rect width="512" height="512" fill="#ffffff"/>
+  
+  <!-- Centered Diamond: 290x290 with rx=76, rotated 45deg -->
+  <g transform="translate(256, 256)">
+    <rect x="-145" y="-145" width="290" height="290" rx="76" fill="#137fec" transform="rotate(45)"/>
+    
+    <!-- White Hexagon -->
+    <g transform="translate(-89.6, -89.6) scale(7.47)">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+            fill="#ffffff"
+            stroke="#ffffff"
+            stroke-width="1.2"
+            stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>
