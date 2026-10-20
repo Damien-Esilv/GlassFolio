@@ -72,6 +72,9 @@ function filterByFiscalYear(txs: UnifiedTransaction[], year: string): UnifiedTra
 
 /**
  * Enrich transactions with account, institute, and instrument info.
+ * BOLT OPTIMIZATION:
+ * Pre-build stack-scoped O(1) Map lookups for accounts, institutes, and instruments to avoid
+ * O(N * (A + I + K)) linear array searches on every tax summary calculation.
  */
 function enrichTransactions(
     txs: UnifiedTransaction[],
@@ -79,10 +82,14 @@ function enrichTransactions(
     institutes: Institute[],
     instruments: Instrument[]
 ): EnrichedTransaction[] {
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+    const instituteMap = new Map(institutes.map(i => [i.id, i]));
+    const instrumentMap = new Map(instruments.map(i => [i.id, i]));
+
     return txs.map(tx => {
-        const account = accounts.find(a => a.id === tx.accountId);
-        const institute = account ? institutes.find(i => i.id === account.instituteId) : undefined;
-        const instrument = instruments.find(i => i.id === tx.instrumentId);
+        const account = tx.accountId ? accountMap.get(tx.accountId) : undefined;
+        const institute = account?.instituteId ? instituteMap.get(account.instituteId) : undefined;
+        const instrument = tx.instrumentId ? instrumentMap.get(tx.instrumentId) : undefined;
         return {
             ...tx,
             account,
