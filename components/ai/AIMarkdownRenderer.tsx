@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -6,8 +6,6 @@ import {
   Copy,
   Check,
   Terminal,
-  Maximize2,
-  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,8 +20,16 @@ export const AIMarkdownRenderer: React.FC<AIMarkdownRendererProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isThoughtOpen, setIsThoughtOpen] = useState(isLiveThinking);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedThought, setCopiedThought] = useState(false);
+
+  // Auto-expand during live thinking, auto-collapse when generation is complete
+  useEffect(() => {
+    if (isLiveThinking) {
+      setIsThoughtOpen(true);
+    } else {
+      setIsThoughtOpen(false);
+    }
+  }, [isLiveThinking]);
 
   if (!content) return null;
 
@@ -64,6 +70,7 @@ export const AIMarkdownRenderer: React.FC<AIMarkdownRendererProps> = ({
               type="button"
               onClick={() => setIsThoughtOpen(!isThoughtOpen)}
               className="flex items-center gap-2 flex-1 text-left min-w-0"
+              aria-expanded={isThoughtOpen}
             >
               <Brain
                 size={14}
@@ -74,22 +81,21 @@ export const AIMarkdownRenderer: React.FC<AIMarkdownRendererProps> = ({
               </span>
               {!isLiveThinking && thoughtWords > 0 && (
                 <span className="text-[10px] text-tertiary">
-                  ({t('ai:thoughtModal.words', { count: thoughtWords })})
+                  ({t('ai:markdown.words', { count: thoughtWords })})
                 </span>
               )}
             </button>
 
             <div className="flex items-center gap-1.5 shrink-0 ml-2">
-              {/* Button to expand into full modal dialog */}
+              {/* Copy thoughts inline button */}
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleCopyThought}
                 className="p-1 rounded-md text-tertiary hover:text-primary hover:bg-card transition-colors flex items-center gap-1"
-                title={t('ai:markdown.expandModal')}
-                aria-label={t('ai:markdown.expandModal')}
+                title={copiedThought ? t('ai:markdown.thoughtCopied') : t('ai:markdown.copyThought')}
+                aria-label={copiedThought ? t('ai:markdown.thoughtCopied') : t('ai:markdown.copyThought')}
               >
-                <Maximize2 size={13} />
-                <span className="text-[10px] hidden sm:inline">{t('ai:markdown.expandModal')}</span>
+                {copiedThought ? <Check size={13} className="text-success" /> : <Copy size={13} />}
               </button>
 
               {/* Inline accordion chevron */}
@@ -119,78 +125,6 @@ export const AIMarkdownRenderer: React.FC<AIMarkdownRendererProps> = ({
 
       {/* Main Markdown Content */}
       {mainContent && <MarkdownBody text={mainContent} />}
-
-      {/* Thought Process Modal Dialog ("Agrandir la page de ses pensées") */}
-      {isModalOpen && thoughtText && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            className="bg-card border border-subtle rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-subtle bg-subtle/30">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                  <Brain size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-primary">{t('ai:thoughtModal.title')}</h3>
-                  <p className="text-[11px] text-secondary">{t('ai:thoughtModal.subtitle')}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyThought}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-subtle hover:bg-card border border-subtle text-xs text-secondary hover:text-primary transition-colors"
-                >
-                  {copiedThought ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-                  <span>{copiedThought ? t('ai:thoughtModal.copied') : t('ai:thoughtModal.copy')}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-subtle transition-colors"
-                  aria-label={t('ai:thoughtModal.close')}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-6 overflow-y-auto space-y-4 text-xs leading-relaxed">
-              <div className="flex items-center justify-between text-[11px] text-tertiary">
-                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
-                  {t('ai:thoughtModal.status')}
-                </span>
-                <span>{t('ai:thoughtModal.words', { count: thoughtWords })}</span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-subtle/50 border border-subtle font-mono text-[11.5px] text-secondary whitespace-pre-wrap leading-relaxed select-text">
-                {thoughtText}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 py-3 border-t border-subtle bg-subtle/20 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:opacity-90 transition-opacity"
-              >
-                {t('ai:thoughtModal.close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-describe('Legal Documents & Zero-Knowledge Cleanup Standards', () => {
+describe('Legal Documents & Privacy Copy Standards', () => {
   it('ensures legal.json files exist for FR and EN', () => {
     const frLegalPath = resolve(process.cwd(), 'locales/fr/legal.json');
     const enLegalPath = resolve(process.cwd(), 'locales/en/legal.json');
@@ -37,7 +37,7 @@ describe('Legal Documents & Zero-Knowledge Cleanup Standards', () => {
     expect(frText).not.toContain('@gmail.com');
   });
 
-  it('verifies strict absence of "zero-knowledge" across legal and landing copy', () => {
+  it('verifies strict absence of unvetted privacy claims across legal and landing copy', () => {
     const frLegal = readFileSync(resolve(process.cwd(), 'locales/fr/legal.json'), 'utf-8');
     const enLegal = readFileSync(resolve(process.cwd(), 'locales/en/legal.json'), 'utf-8');
     const frLanding = readFileSync(resolve(process.cwd(), 'locales/fr/landing.json'), 'utf-8');

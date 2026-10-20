@@ -4,7 +4,8 @@ import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 export class AnthropicProvider implements AIProvider {
   constructor(
     private apiKey: string,
-    private model: string
+    private model: string,
+    private enableThinking: boolean = true
   ) {}
 
   public async sendMessage(
@@ -57,12 +58,15 @@ export class AnthropicProvider implements AIProvider {
 
     const data = await response.json();
     let textContent = '';
+    let thinkingContent = '';
     const toolCalls: ToolCallRequest[] = [];
 
     if (Array.isArray(data?.content)) {
       for (const block of data.content) {
         if (block.type === 'text') {
           textContent += block.text || '';
+        } else if (block.type === 'thinking') {
+          thinkingContent += block.thinking || '';
         } else if (block.type === 'tool_use') {
           toolCalls.push({
             id: block.id || `call_${Date.now()}`,
@@ -71,6 +75,12 @@ export class AnthropicProvider implements AIProvider {
           });
         }
       }
+    }
+
+    if (this.enableThinking && thinkingContent.trim()) {
+      textContent = `<think>\n${thinkingContent.trim()}\n</think>\n\n${textContent}`;
+    } else if (!this.enableThinking) {
+      textContent = textContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
     }
 
     return {

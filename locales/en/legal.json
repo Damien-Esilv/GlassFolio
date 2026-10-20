@@ -38,9 +38,9 @@
   "privacy": {
     "title": "Privacy Policy (GDPR)",
     "lastUpdated": "Last updated: October 2026",
-    "zkTitle": "1. Client-Side End-to-End Encrypted (E2EE) Architecture",
-    "zkText": "GlassFolio is engineered from the ground up on an end-to-end encryption (E2EE) architecture. All sensitive financial records (transactions, holdings, average purchase prices, fiscal declarations, goals, and BYOK AI keys) are encrypted directly inside your browser memory using WebCrypto AES-256-GCM. Derivation uses PBKDF2-SHA256 with 600,000 iterations and HKDF-SHA256.",
-    "zkNoServer": "Crucially, no financial records are ever exposed in plaintext. Your unencrypted financial data, master password, recovery key, and TOTP seeds are never transmitted in plaintext to any third party or remote server.",
+    "e2eeTitle": "1. Client-Side End-to-End Encrypted (E2EE) Architecture",
+    "e2eeText": "GlassFolio is engineered from the ground up on an end-to-end encryption (E2EE) architecture. All sensitive financial records (transactions, holdings, average purchase prices, fiscal declarations, goals, and BYOK AI keys) are encrypted directly inside your browser memory using WebCrypto AES-256-GCM. Derivation uses PBKDF2-SHA256 with 600,000 iterations and HKDF-SHA256.",
+    "e2eeNoServer": "Crucially, no financial records are ever exposed in plaintext. Your unencrypted financial data, master password, recovery key, and TOTP seeds are never transmitted in plaintext to any third party or remote server.",
     "externalTitle": "2. External Network Calls & Market Data",
     "externalText": "To provide live portfolio valuations and AI capabilities, your browser may establish direct client-side network connections to the following external endpoints:",
     "externalYahoo": "Yahoo Finance & CoinGecko: Direct HTTP requests from your browser for real-time asset market quotes and foreign exchange rates (cached locally with a 15-minute TTL).",

@@ -70,7 +70,7 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
 - **Hybrid AI Engine**:
   - *Local Ollama*: 100% offline with zero cloud data egress, auto-recovery for reasoning models, and built-in connection diagnostics.
   - *Cloud BYOK*: Connect OpenAI, Anthropic, OpenRouter, or Groq with API keys encrypted client-side in the vault.
-- **Chain-of-Thought Reasoning**: Collapsible extraction of `<think>` reasoning blocks with an expandable full-screen thought inspection modal (`AIThoughtModal`).
+- **Chain-of-Thought Reasoning**: Inline collapsible extraction of `<think>` reasoning blocks with real-time stream status, word counts, and one-click copy.
 - **Unified AI Tool Registry (`aiToolRegistry`)**: 16 standard bi-directional tools covering portfolio allocation, positions, transactions, fiscal simulations, goals, security, and gamification.
 - **Human-in-the-Loop Safeguards**: Sensitive state mutations require explicit user confirmation via interactive action cards (`AIActionApprovalCard`, `requiresConfirmation: true`).
 - **Standalone Model Context Protocol (MCP) Server**: Run `mcp-server/index.mjs` via Stdio transport to expose GlassFolio tools and data directly to external AI agents (Claude Desktop, Cursor, Antigravity IDE).
@@ -197,7 +197,7 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
 ```
 GlassFolio/
 ├── components/          # Reusable UI components
-│   ├── ai/              # AI drawer, approval cards, markdown & thought modals
+│   ├── ai/              # AI drawer, approval cards, markdown & thinking components
 │   ├── security/        # Vault gates, lock screen, TOTP/passkey dialogs, secrets
 │   ├── ui/              # Semantic primitives (TrendValue, TrendBadge)
 │   ├── GoalCard.tsx     # Memoized financial goal card

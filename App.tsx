@@ -15,6 +15,7 @@ import DeclarationAssistant from './pages/DeclarationAssistant';
 import TaxOptimization from './pages/TaxOptimization';
 import TaxGuide from './pages/TaxGuide';
 import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
 import Progress from './pages/Progress';
 import ImportWizard from './pages/ImportWizard';
 import ImportHistory from './pages/ImportHistory';
@@ -148,7 +149,9 @@ const App: React.FC = () => {
               <Route path="/reports" element={<Navigate to="/analytics" replace />} />
               <Route path="/reports/*" element={<Navigate to="/analytics" replace />} />
               <Route path="/goals" element={<Navigate to="/progress" replace />} />
+              <Route path="/alerts" element={<Navigate to="/notifications" replace />} />
 
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
               <Route path="/import" element={<ProtectedRoute><ImportWizard /></ProtectedRoute>} />

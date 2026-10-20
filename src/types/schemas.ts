@@ -75,6 +75,43 @@ export const AssetGroupSchema = z.object({
 
 export type ValidatedAssetGroup = z.infer<typeof AssetGroupSchema>;
 
+export const AlertSchema = z.object({
+  id: z.string().min(1),
+  ownerId: z.string().optional(),
+  type: z.enum(['warning', 'error', 'success', 'info']).default('info'),
+  category: z.enum(['portfolio', 'fiscal', 'goals', 'security', 'system']).optional(),
+  title: z.string().min(1),
+  message: z.string().min(1),
+  date: z.string().min(4),
+  read: z.boolean().default(false),
+  archived: z.boolean().default(false),
+  actionUrl: z.string().optional(),
+  actionLabelKey: z.string().optional(),
+  dedupKey: z.string().optional(),
+});
+
+export type ValidatedAlert = z.infer<typeof AlertSchema>;
+
+export const AlertRuleSchema = z.object({
+  id: z.string().min(1),
+  ownerId: z.string().optional(),
+  name: z.string().min(1),
+  metric: z.enum([
+    'price_above',
+    'price_below',
+    'pl_percent_above',
+    'pl_percent_below',
+    'cash_ratio_above',
+  ]),
+  symbol: z.string().optional(),
+  threshold: z.number().finite(),
+  enabled: z.boolean().default(true),
+  createdAt: z.string().min(4),
+  lastTriggeredAt: z.string().optional(),
+});
+
+export type ValidatedAlertRule = z.infer<typeof AlertRuleSchema>;
+
 export const CSVRowSchema = z.record(z.string(), z.string().nullable().optional());
 
 /**
@@ -94,6 +131,14 @@ export function safeParsePosition(data: unknown) {
 
 export function safeParseAssetGroup(data: unknown) {
   return AssetGroupSchema.safeParse(data);
+}
+
+export function safeParseAlert(data: unknown) {
+  return AlertSchema.safeParse(data);
+}
+
+export function safeParseAlertRule(data: unknown) {
+  return AlertRuleSchema.safeParse(data);
 }
 
 /**

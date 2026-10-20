@@ -15,6 +15,12 @@ import {
   lockVaultTool,
   rotateEncryptionKeyTool,
 } from './securityTools';
+import {
+  listNotificationsTool,
+  manageNotificationsTool,
+  listAlertRulesTool,
+  createAlertRuleTool,
+} from './notificationTools';
 
 /**
  * Initializes and registers all standard GlassFolio AI / MCP tools.
@@ -37,6 +43,10 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(listVaultSecretsTool);
   aiToolRegistry.registerTool(lockVaultTool);
   aiToolRegistry.registerTool(rotateEncryptionKeyTool);
+  aiToolRegistry.registerTool(listNotificationsTool);
+  aiToolRegistry.registerTool(manageNotificationsTool);
+  aiToolRegistry.registerTool(listAlertRulesTool);
+  aiToolRegistry.registerTool(createAlertRuleTool);
 }
 
 // Auto-register on import
@@ -59,4 +69,8 @@ export {
   listVaultSecretsTool,
   lockVaultTool,
   rotateEncryptionKeyTool,
+  listNotificationsTool,
+  manageNotificationsTool,
+  listAlertRulesTool,
+  createAlertRuleTool,
 };

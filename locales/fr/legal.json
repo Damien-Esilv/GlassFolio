@@ -38,9 +38,9 @@
   "privacy": {
     "title": "Politique de Confidentialité (RGPD)",
     "lastUpdated": "Dernière mise à jour : Octobre 2026",
-    "zkTitle": "1. Architecture Chiffrée de Bout en Bout (E2EE) Côté Client",
-    "zkText": "GlassFolio est conçu dès l'origine selon le paradigme de chiffrement de bout en bout (E2EE). L'ensemble de vos données financières sensibles (transactions, détentions, prix de revient unitaire, déclarations fiscales, objectifs et clés d'API IA privées) est chiffré directement dans la mémoire de votre navigateur via l'API WebCrypto en AES-256-GCM. La dérivation s'appuie sur PBKDF2-SHA256 (600 000 itérations) et HKDF-SHA256.",
-    "zkNoServer": "Crucialement, aucune donnée financière n'est jamais exposée en clair. Vos données financières en clair, votre mot de passe maître, votre clé de secours et vos secrets TOTP ne sont jamais transmis en clair à un tiers ni accessibles par les administrateurs.",
+    "e2eeTitle": "1. Architecture Chiffrée de Bout en Bout (E2EE) Côté Client",
+    "e2eeText": "GlassFolio est conçu dès l'origine selon le paradigme de chiffrement de bout en bout (E2EE). L'ensemble de vos données financières sensibles (transactions, détentions, prix de revient unitaire, déclarations fiscales, objectifs et clés d'API IA privées) est chiffré directement dans la mémoire de votre navigateur via l'API WebCrypto en AES-256-GCM. La dérivation s'appuie sur PBKDF2-SHA256 (600 000 itérations) et HKDF-SHA256.",
+    "e2eeNoServer": "Crucialement, aucune donnée financière n'est jamais exposée en clair. Vos données financières en clair, votre mot de passe maître, votre clé de secours et vos secrets TOTP ne sont jamais transmis en clair à un tiers ni accessibles par les administrateurs.",
     "externalTitle": "2. Flux Réseau Externes & Données de Marché",
     "externalText": "Afin de fournir des valorisations de portefeuille en direct et des capacités d'IA, votre navigateur peut établir des connexions réseau directes vers les points de terminaison suivants :",
     "externalYahoo": "Yahoo Finance & CoinGecko : Requêtes HTTP directes depuis votre navigateur pour les cours de marché en temps réel et les taux de change de devises (mis en cache locale avec un TTL de 15 minutes).",

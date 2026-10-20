@@ -65,8 +65,16 @@ export class MockProvider implements AIProvider {
         },
       };
 
+      const thought = this.enableThinking
+        ? `<think>\n` +
+          `1. Analyse de l'ordre financier demandé : achat de ${amount} ${symbol} (${instrument}) à ${price} EUR.\n` +
+          `2. Contrôle de sécurité et Human-in-the-Loop : une modification financière nécessite une confirmation explicite.\n` +
+          `3. Préparation de la carte d'approbation d'action.\n` +
+          `</think>\n\n`
+        : '';
+
       return {
-        content: `J'ai préparé l'ordre d'achat pour **${instrument} (${symbol})**. S'agissant d'une modification financière de votre portefeuille, veuillez valider l'opération ci-dessous :`,
+        content: `${thought}J'ai préparé l'ordre d'achat pour **${instrument} (${symbol})**. S'agissant d'une modification financière de votre portefeuille, veuillez valider l'opération ci-dessous :`,
         toolCalls: [toolCall],
       };
     }
@@ -86,8 +94,16 @@ export class MockProvider implements AIProvider {
         },
       };
 
+      const thought = this.enableThinking
+        ? `<think>\n` +
+          `1. Analyse de l'objectif financier d'épargne ou fonds de précaution.\n` +
+          `2. Calcul de l'échéance prévisionnelle à 6 mois et du montant cible de 10 000 EUR.\n` +
+          `3. Préparation de la proposition d'action avec validation Human-in-the-Loop.\n` +
+          `</think>\n\n`
+        : '';
+
       return {
-        content: `Je vous propose de créer un nouvel objectif financier. Veuillez confirmer ci-dessous pour l'enregistrer dans GlassFolio :`,
+        content: `${thought}Je vous propose de créer un nouvel objectif financier. Veuillez confirmer ci-dessous pour l'enregistrer dans GlassFolio :`,
         toolCalls: [toolCall],
       };
     }
@@ -161,8 +177,17 @@ export class MockProvider implements AIProvider {
     }
 
     // Default conversational response
+    const thought = this.enableThinking
+      ? `<think>\n` +
+        `1. Analyse du message conversationnel de l'utilisateur.\n` +
+        `2. Identification des modules d'analyse patrimoniale, fiscale et de gestion de portefeuille disponibles.\n` +
+        `3. Formulation d'un guidage personnalisé avec exemples de commandes guidées.\n` +
+        `</think>\n\n`
+      : '';
+
     return {
       content:
+        `${thought}` +
         `Je suis votre assistant financier privé GlassFolio. Je peux analyser votre portefeuille, vérifier vos allocations d'actifs, calculer vos plus-values imposables ou vous aider à enregistrer des transactions en toute sécurité.\n\n` +
         `**Quelques exemples de questions :**\n` +
         `- *"Fais le bilan de mon patrimoine net et de mes gains."*\n` +
