@@ -76,7 +76,8 @@ class AIService {
         return new OpenAICompatibleProvider(
           settings.apiKey,
           model,
-          'https://api.openai.com/v1/chat/completions'
+          'https://api.openai.com/v1/chat/completions',
+          settings.enableThinking
         );
       }
       case 'groq': {
@@ -86,7 +87,8 @@ class AIService {
         return new OpenAICompatibleProvider(
           settings.apiKey,
           model,
-          'https://api.groq.com/openai/v1/chat/completions'
+          'https://api.groq.com/openai/v1/chat/completions',
+          settings.enableThinking
         );
       }
       case 'openrouter': {
@@ -96,7 +98,8 @@ class AIService {
         return new OpenAICompatibleProvider(
           settings.apiKey,
           model,
-          'https://openrouter.ai/api/v1/chat/completions'
+          'https://openrouter.ai/api/v1/chat/completions',
+          settings.enableThinking
         );
       }
       case 'anthropic': {
@@ -105,7 +108,8 @@ class AIService {
         if (!settings.apiKey?.trim()) throw new CloudApiKeyMissingError('Anthropic (Claude)');
         return new AnthropicProvider(
           settings.apiKey,
-          model
+          model,
+          settings.enableThinking
         );
       }
       case 'gemini': {
@@ -115,7 +119,8 @@ class AIService {
         return new OpenAICompatibleProvider(
           settings.apiKey,
           model,
-          'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+          'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+          settings.enableThinking
         );
       }
       case 'mock':

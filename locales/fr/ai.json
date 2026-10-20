@@ -177,22 +177,13 @@
     "hideThought": "Masquer la réflexion",
     "thinkingLive": "Raisonnement en cours...",
     "thoughtCompleted": "Processus de réflexion terminé",
-    "expandModal": "Agrandir le processus de réflexion",
     "collapseInline": "Réduire",
     "expandInline": "Déplier",
     "copyThought": "Copier la réflexion",
     "thoughtCopied": "Réflexion copiée !",
+    "words": "{{count}} mots",
     "copyCode": "Copier le code",
     "copied": "Copié !"
-  },
-  "thoughtModal": {
-    "title": "Processus de Réflexion & Raisonnement de l'IA",
-    "subtitle": "Chaîne de réflexion intérieure étape par étape générée avant la réponse finale.",
-    "close": "Fermer",
-    "copy": "Copier la réflexion",
-    "copied": "Copié !",
-    "status": "Raisonnement achevé",
-    "words": "{{count}} mots"
   },
   "edit": {
     "editMessage": "Modifier le message",

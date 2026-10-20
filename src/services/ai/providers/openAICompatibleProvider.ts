@@ -5,7 +5,8 @@ export class OpenAICompatibleProvider implements AIProvider {
   constructor(
     private apiKey: string,
     private model: string,
-    private endpoint: string = 'https://api.openai.com/v1/chat/completions'
+    private endpoint: string = 'https://api.openai.com/v1/chat/completions',
+    private enableThinking: boolean = true
   ) {}
 
   public async sendMessage(
@@ -64,7 +65,17 @@ export class OpenAICompatibleProvider implements AIProvider {
     const data = await response.json();
     const choice = data?.choices?.[0];
     const msg = choice?.message;
-    const content = msg?.content || '';
+    let content = msg?.content || '';
+
+    // Handle DeepSeek-R1 / Groq / OpenRouter / OpenAI reasoning content
+    const reasoning = msg?.reasoning_content || msg?.reasoning || msg?.thinking;
+    if (reasoning && typeof reasoning === 'string') {
+      if (this.enableThinking && !content.includes('<think>')) {
+        content = `<think>\n${reasoning.trim()}\n</think>\n\n${content}`;
+      }
+    } else if (!this.enableThinking) {
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    }
 
     const toolCalls: ToolCallRequest[] = [];
     if (Array.isArray(msg?.tool_calls)) {

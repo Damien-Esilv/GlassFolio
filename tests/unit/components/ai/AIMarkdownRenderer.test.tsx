@@ -25,33 +25,39 @@ describe('AIMarkdownRenderer', () => {
     expect(screen.getByText('Point 2')).toBeTruthy();
   });
 
-  it('extracts <think>...</think> reasoning blocks into an expandable accordion and modal', () => {
+  it('extracts <think>...</think> reasoning blocks into an inline collapsible accordion with zero popups', () => {
     const markdown = `<think>
 Calcul des gains latents sur Apple et Bitcoin...
 Analyse terminée.
 </think>
 Voici votre synthèse finale.`;
 
-    render(<AIMarkdownRenderer content={markdown} />);
+    const { rerender } = render(<AIMarkdownRenderer content={markdown} isLiveThinking={true} />);
 
-    // Thought process toggle button should be present
+    // In live mode, thought block should be expanded and show thinking indicator
+    expect(screen.getByText('Reasoning in progress...')).toBeTruthy();
+    expect(screen.getByText(/Calcul des gains latents/)).toBeTruthy();
+
+    // Rerender as finished (isLiveThinking = false) -> should auto-contract
+    rerender(<AIMarkdownRenderer content={markdown} isLiveThinking={false} />);
+
     const thoughtToggle = screen.getByText('Thought Process');
     expect(thoughtToggle).toBeTruthy();
 
-    // Main text should be rendered directly
-    expect(screen.getByText('Voici votre synthèse finale.')).toBeTruthy();
+    // After finish, reasoning should auto-contract (hidden)
+    expect(screen.queryByText(/Calcul des gains latents/)).toBeNull();
 
-    // Click to expand reasoning inline
+    // Click to unfold reasoning inline
     fireEvent.click(thoughtToggle);
     expect(screen.getByText(/Calcul des gains latents/)).toBeTruthy();
 
-    // Click enlarge button to open full thought modal dialog
-    const enlargeBtn = screen.getByTitle('Expand thought process');
-    fireEvent.click(enlargeBtn);
+    // Verify modal popup is completely absent and no enlarge modal button exists
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByTitle(/Expand thought process/i)).toBeNull();
 
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toBeTruthy();
-    expect(screen.getByText(/AI Thought Process & Reasoning/i)).toBeTruthy();
+    // Copy button is available inline
+    const copyBtn = screen.getByTitle('Copy thought process');
+    expect(copyBtn).toBeTruthy();
   });
 
   it('renders fenced code blocks with language badge', () => {

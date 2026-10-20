@@ -177,22 +177,13 @@
     "hideThought": "Hide thought process",
     "thinkingLive": "Reasoning in progress...",
     "thoughtCompleted": "Thought process completed",
-    "expandModal": "Expand thought process",
     "collapseInline": "Collapse",
     "expandInline": "Expand",
     "copyThought": "Copy thought process",
     "thoughtCopied": "Thoughts copied!",
+    "words": "{{count}} words",
     "copyCode": "Copy code",
     "copied": "Copied!"
-  },
-  "thoughtModal": {
-    "title": "AI Thought Process & Reasoning",
-    "subtitle": "Internal chain of thought and step-by-step reasoning generated before the final response.",
-    "close": "Close",
-    "copy": "Copy thoughts",
-    "copied": "Copied!",
-    "status": "Reasoning completed",
-    "words": "{{count}} words"
   },
   "edit": {
     "editMessage": "Edit message",
