@@ -64,13 +64,6 @@ const Settings: React.FC = () => {
         taxZone: user?.preferences?.fiscalProfile?.taxZone || 'zone_3',
     });
 
-    // Password State
-    const [passwords, setPasswords] = useState({
-        current: '',
-        new: '',
-        confirm: ''
-    });
-
     const [isSaving, setIsSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -79,11 +72,6 @@ const Settings: React.FC = () => {
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setProfileData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setPasswords(prev => ({ ...prev, [name]: value }));
     };
 
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,23 +102,6 @@ const Settings: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
-    };
-
-    const handleChangePassword = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (passwords.new !== passwords.confirm) {
-            setSuccessMsg(t('common:errors.passwordsDoNotMatch'));
-            setTimeout(() => setSuccessMsg(''), 3000);
-            return;
-        }
-        setIsSaving(true);
-        // Simulate API Call
-        setTimeout(() => {
-            setIsSaving(false);
-            setSuccessMsg(t('settings:profile.passwordUpdated'));
-            setPasswords({ current: '', new: '', confirm: '' });
-            setTimeout(() => setSuccessMsg(''), 3000);
-        }, 1000);
     };
 
     const updatePreference = async <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
@@ -347,48 +318,33 @@ const Settings: React.FC = () => {
                                 </form>
                             </div>
 
-                            {/* Change Password Section (Moved here) */}
+                            {/* Security & Master Password Note */}
                             <div className={cardStyle}>
-                                <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-2">
-                                    <Lock size={20} className="text-tertiary" />
-                                    {t('settings:profile.changePassword')}
-                                </h2>
-                                <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-                                    <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.currentPassword')}</label>
-                                        <input
-                                            type="password"
-                                            name="current"
-                                            value={passwords.current}
-                                            onChange={handlePasswordChange}
-                                            className="w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
-                                        />
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                                        <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                                            <Lock size={20} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="text-sm font-semibold text-primary">
+                                                {t('settings:profile.securityTitle')}
+                                            </h3>
+                                            <p className="text-xs text-secondary mt-1 leading-relaxed">
+                                                {t('settings:profile.securityDesc')}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.newPassword')}</label>
-                                        <input
-                                            type="password"
-                                            name="new"
-                                            value={passwords.new}
-                                            onChange={handlePasswordChange}
-                                            className="w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.confirmNewPassword')}</label>
-                                        <input
-                                            type="password"
-                                            name="confirm"
-                                            value={passwords.confirm}
-                                            onChange={handlePasswordChange}
-                                            className="w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
-                                        />
-                                    </div>
-                                    <div className="pt-2 flex justify-between items-center">
-                                        <span className="text-accent-green text-sm font-medium">{successMsg}</span>
-                                        <Button type="submit" variant="secondary">{t('common:buttons.updatePassword')}</Button>
-                                    </div>
-                                </form>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setActiveTab('security')}
+                                        className="text-xs whitespace-nowrap self-start sm:self-auto"
+                                    >
+                                        <Lock size={14} className="mr-1.5 shrink-0" />
+                                        {t('settings:profile.goToSecurity')}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}

@@ -154,6 +154,8 @@ const EnvelopeTable: React.FC = () => {
     );
 };
 
+const EMPTY_FISCAL_PROFILE: FiscalProfile = Object.freeze({});
+
 // ── Main component ──────────────────────────────────────────────────────────
 const TaxOptimization: React.FC = () => {
     const { t } = useTranslation();
@@ -162,7 +164,8 @@ const TaxOptimization: React.FC = () => {
     const { user } = useAuth();
 
     const fiscalYear = searchParams.get('year') || DEFAULT_FISCAL_YEAR;
-    const profile: FiscalProfile = user?.preferences?.fiscalProfile || {};
+    const profile: FiscalProfile = user?.preferences?.fiscalProfile || EMPTY_FISCAL_PROFILE;
+    const profileKey = JSON.stringify(profile);
 
     const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(null);
     const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
@@ -180,9 +183,10 @@ const TaxOptimization: React.FC = () => {
             setSuggestions(sugResult);
         } catch (err) {
             console.error('Failed to load optimization data:', err);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
-    }, [fiscalYear, profile]);
+    }, [fiscalYear, profileKey]);
 
     useEffect(() => { loadData(); }, [loadData]);
 
