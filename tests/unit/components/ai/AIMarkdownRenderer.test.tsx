@@ -67,4 +67,12 @@ Voici votre synthèse finale.`;
     expect(screen.getByText('typescript')).toBeTruthy();
     expect(screen.getByText('const a = 42;')).toBeTruthy();
   });
+
+  it('renders horizontal rules (---) as hr elements instead of literal text', () => {
+    const markdown = 'Paragraphe 1\n\n---\n\nParagraphe 2';
+    const { container } = render(<AIMarkdownRenderer content={markdown} />);
+
+    expect(container.querySelector('hr')).toBeTruthy();
+    expect(screen.queryByText('---')).toBeNull();
+  });
 });

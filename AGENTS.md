@@ -144,16 +144,14 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
      - `fix/tgla-XXX-<short-slug>`
      - `chore/tgla-XXX-<short-slug>`
 
-2. **Commits Conventionnels Atomiques & Consolidation (Anti-Pollution de l'Arborescence)** :
+2. **Gestion des Branches, Consolidation des Commits & Zéro Pollution Distante** :
    - Tout commit doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
-   - **Interdiction de polluer l'historique avec des micro-commits dispersés** : Ne jamais commiter de micro-ajustements cosmétiques ou d'essais successifs isolés. Les corrections et tests d'une même tâche doivent être regroupés de manière cohérente en commits atomiques complets.
-   - **Stratégie de Fusion Propre (Squash-and-Merge)** :
-     - Pour fusionner une branche de travail (`feat/*`, `fix/*`) dans `main`, privilégier le **Squash-and-Merge** via GitHub PR ou regrouper localement les commits avant merge.
-     - Ainsi, chaque feature ou correction correspond sur `main` à **un commit unique, limpide et auto-suffisant**, gardant l'arborescence et le graphe Git parfaitement lisibles et élégants pour les recruteurs.
-   - **Nettoyage des branches distantes** : Dès qu'une PR est fusionnée dans `main`, la branche distante associée doit être supprimée de GitHub (`git push origin --delete <branch>`) pour maintenir la liste des branches propre.
+   - **Consolidation obligatoire des micro-corrections** : Pendant le développement sur une branche dédiée, des commits intermédiaires sont autorisés. Cependant, lors de la fusion ou de la finalisation, tous les micro-ajustements cosmétiques, retouches ou essais successifs d'une même tâche doivent impérativement être **consolidés / fusionnés en un seul commit atomique et auto-suffisant** par feature majeure ou correction.
+   - **Arborescence épurée sur `main`** : Sur `main`, chaque commit représente une livraison claire et documentée.
+   - **Nettoyage drastique des branches distantes** : Dès qu'une PR est fusionnée dans `main`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
 
-3. **Garantie 6-Gates Pré-Merge** :
-   - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% :
+3. **Garantie 6-Gates Pré-Merge (Local)** :
+   - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% en local :
      - `npm run check:types`
      - `npm run lint`
      - `npm run check:i18n`
@@ -161,7 +159,12 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
      - `npm run test:security`
      - `npm test`
 
-4. **Architecture Dual-Remote (Lab Privé vs Vitrine Publique)** :
+4. **Attente & Validation Obligatoire de la CI/CD GitHub Actions (Distant)** :
+   - Dès qu'un commit ou une PR est poussé sur GitHub (`git push`), l'agent IA **a l'obligation stricte d'attendre et vérifier l'exécution des workflows GitHub Actions**.
+   - Il est formellement interdit de clore une intervention tant que les checks CI distants ne sont pas terminés et passés avec succès (`success` / vert).
+   - En cas d'échec du runner distant (différence d'environnement, timeout, cache), l'agent doit inspecter les logs, corriger le code sur la branche, re-pousser et attendre à nouveau la validation complète de la CI.
+
+5. **Architecture Dual-Remote (Lab Privé vs Vitrine Publique)** :
    - `origin` : dépôt de travail privé (toutes branches de sprint, discussions et historiques détaillés).
    - `public` : dépôt miroir public open-source (uniquement les releases propres validées de `main`).
    - Synchronisation vers la vitrine publique :

@@ -317,35 +317,6 @@ const Settings: React.FC = () => {
                                     </div>
                                 </form>
                             </div>
-
-                            {/* Security & Master Password Note */}
-                            <div className={cardStyle}>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                                            <Lock size={20} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="text-sm font-semibold text-primary">
-                                                {t('settings:profile.securityTitle')}
-                                            </h3>
-                                            <p className="text-xs text-secondary mt-1 leading-relaxed">
-                                                {t('settings:profile.securityDesc')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() => setActiveTab('security')}
-                                        className="text-xs whitespace-nowrap self-start sm:self-auto"
-                                    >
-                                        <Lock size={14} className="mr-1.5 shrink-0" />
-                                        {t('settings:profile.goToSecurity')}
-                                    </Button>
-                                </div>
-                            </div>
                         </div>
                     )}
 

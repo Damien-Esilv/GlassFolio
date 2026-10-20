@@ -12,15 +12,7 @@
         "profilePictureInfo": "Supports JPG, PNG or GIF. Max size 2MB.",
         "displayName": "Display Name",
         "emailAddress": "Email Address",
-        "changePassword": "Change Password",
-        "currentPassword": "Current Password",
-        "newPassword": "New Password",
-        "confirmNewPassword": "Confirm New Password",
-        "profileUpdated": "Profile details updated successfully",
-        "passwordUpdated": "Password changed successfully",
-        "securityTitle": "Security & Master Password",
-        "securityDesc": "In GlassFolio, your password client-side encrypts your entire financial vault (E2EE). Manage your master password, 2FA, and Passkeys in the Security tab.",
-        "goToSecurity": "Open Security Tab"
+        "profileUpdated": "Profile details updated successfully"
     },
     "preferences": {
         "applicationSettings": "Application Settings",
