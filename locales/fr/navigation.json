@@ -25,5 +25,7 @@
         "profileAndAccount": "Profil & Compte",
         "preferences": "Préférences"
     },
-    "brandName": "Glassfolio"
+    "brandName": "Glassfolio",
+    "collapseSidebar": "Réduire le menu latéral",
+    "expandSidebar": "Développer le menu latéral"
 }

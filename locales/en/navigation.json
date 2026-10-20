@@ -25,5 +25,7 @@
         "profileAndAccount": "Profile & Account",
         "preferences": "Preferences"
     },
-    "brandName": "Glassfolio"
+    "brandName": "Glassfolio",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
 }

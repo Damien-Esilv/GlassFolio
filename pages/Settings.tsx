@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale } from 'lucide-react';
+import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences } from '../types';
@@ -14,6 +14,7 @@ import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fis
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
 import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
+import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../src/constants/themeCatalog';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
@@ -387,63 +388,120 @@ const Settings: React.FC = () => {
                                         </select>
                                     </div>
 
-                                    {/* Theme Selector */}
-                                    <div className="border-t border-border pt-6">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2 bg-subtle rounded-lg text-secondary"><Moon size={20} /></div>
+                                    {/* Appearance & Themes Section */}
+                                    <div className="border-t border-border pt-6 space-y-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-subtle rounded-lg text-secondary"><Palette size={20} /></div>
                                             <div>
                                                 <p className="text-sm font-medium text-primary">{t('settings:preferences.appearance')}</p>
                                                 <p className="text-xs text-tertiary">{t('settings:preferences.appearanceInfo')}</p>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                            <button
-                                                onClick={() => updatePreference('theme', 'light')}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'light' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
-                                            >
-                                                <Sun size={20} />
-                                                <span className="text-xs font-medium">{t('settings:preferences.light')}</span>
-                                            </button>
-                                            <button
-                                                onClick={() => updatePreference('theme', 'dark')}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'dark' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
-                                            >
-                                                <Moon size={20} />
-                                                <span className="text-xs font-medium">{t('settings:preferences.dark')}</span>
-                                            </button>
-                                            <button
-                                                onClick={() => updatePreference('theme', 'night')}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'night' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
-                                            >
-                                                <div data-theme="night" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
-                                                <span className="text-xs font-medium">{t('settings:preferences.night')}</span>
-                                            </button>
-                                            <button
+                                        {/* 1. Automatic Mode Card */}
+                                        <div className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${prefData.theme === 'system' ? 'border-primary bg-primary/5 shadow-sm' : 'border-subtle bg-subtle/40'}`}>
+                                            <div className="flex items-start gap-3.5">
+                                                <div className="p-2.5 rounded-xl bg-card border border-subtle text-primary shrink-0 mt-0.5">
+                                                    <Laptop size={18} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-sm font-semibold text-primary">{t('settings:preferences.autoThemeTitle')}</h3>
+                                                        {prefData.theme === 'system' && (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/15 text-brand border border-brand/30">
+                                                                {t('gamification:themes.active')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-secondary mt-0.5 max-w-md">
+                                                        {t('settings:preferences.autoThemeDesc')}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant={prefData.theme === 'system' ? 'primary' : 'secondary'}
                                                 onClick={() => updatePreference('theme', 'system')}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'system' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
+                                                className="shrink-0 text-xs font-semibold"
                                             >
-                                                <Laptop size={20} />
-                                                <span className="text-xs font-medium">{t('settings:preferences.system')}</span>
-                                            </button>
-                                            {((user?.level || 1) >= 10 || prefData.theme === 'emerald') && (
-                                                <button
-                                                    onClick={() => updatePreference('theme', 'emerald')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'emerald' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
-                                                >
-                                                    <div data-theme="emerald" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
-                                                    <span className="text-xs font-medium">{t('gamification:themes.emeraldPrestige', { defaultValue: 'Émeraude' })}</span>
-                                                </button>
-                                            )}
-                                            {((user?.level || 1) >= 15 || prefData.theme === 'cyber') && (
-                                                <button
-                                                    onClick={() => updatePreference('theme', 'cyber')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${prefData.theme === 'cyber' ? 'bg-primary/10 border-primary text-primary' : 'bg-subtle border-transparent text-secondary hover:border-black/20 dark:hover:border-white/20'}`}
-                                                >
-                                                    <div data-theme="cyber" className="w-5 h-5 rounded-full bg-canvas border border-subtle"></div>
-                                                    <span className="text-xs font-medium">{t('gamification:themes.cyberNeon', { defaultValue: 'Cyber Néon' })}</span>
-                                                </button>
-                                            )}
+                                                {prefData.theme === 'system' ? t('gamification:themes.active') : t('gamification:themes.apply')}
+                                            </Button>
+                                        </div>
+
+                                        {/* 2. Color Themes Grid */}
+                                        <div className="space-y-3 pt-2">
+                                            <div>
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                                                    {t('settings:preferences.colorThemesTitle')}
+                                                </h3>
+                                                <p className="text-[11px] text-tertiary mt-0.5">
+                                                    {t('settings:preferences.colorThemesDesc')}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                {THEME_CATALOG.map((themeItem) => {
+                                                    const isUnlocked = isThemeUnlocked(themeItem.key, user?.level || 1) || prefData.theme === themeItem.key;
+                                                    const isSelected = prefData.theme === themeItem.key;
+
+                                                    return (
+                                                        <button
+                                                            key={themeItem.id}
+                                                            type="button"
+                                                            disabled={!isUnlocked}
+                                                            onClick={() => isUnlocked && updatePreference('theme', themeItem.key)}
+                                                            title={!isUnlocked ? t('settings:preferences.lockedThemeTooltip', { level: themeItem.requiredLevel }) : undefined}
+                                                            className={`p-3.5 rounded-xl border text-left flex items-center justify-between gap-3 transition-all ${
+                                                                isSelected
+                                                                    ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                                                                    : isUnlocked
+                                                                        ? 'border-subtle bg-card hover:bg-card-hover hover:border-strong cursor-pointer'
+                                                                        : 'border-subtle/50 bg-subtle/30 opacity-60 cursor-not-allowed'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                {/* Dynamic Mini Color Dot applying exact theme variables */}
+                                                                <div
+                                                                    data-theme={themeItem.key}
+                                                                    className="w-7 h-7 rounded-full bg-canvas border border-subtle flex items-center justify-center shrink-0 shadow-sm"
+                                                                >
+                                                                    <div className="w-3 h-3 rounded-full bg-brand" />
+                                                                </div>
+
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs font-semibold text-primary truncate">
+                                                                        {t(themeItem.nameKey, { defaultValue: themeItem.key })}
+                                                                    </p>
+                                                                    {!isUnlocked ? (
+                                                                        <span className="text-[10px] text-tertiary inline-flex items-center gap-1 mt-0.5">
+                                                                            <Lock size={10} className="shrink-0" />
+                                                                            {t('settings:preferences.requiredLevelBadge', { level: themeItem.requiredLevel })}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] text-secondary">
+                                                                            {themeItem.requiredLevel <= 1 ? t('gamification:unlocked') : t('gamification:level') + ` ${themeItem.requiredLevel}+`}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="shrink-0">
+                                                                {isSelected ? (
+                                                                    <div className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
+                                                                        <Check size={12} strokeWidth={3} />
+                                                                    </div>
+                                                                ) : !isUnlocked ? (
+                                                                    <div className="p-1 rounded-full bg-subtle text-tertiary">
+                                                                        <Lock size={12} />
+                                                                    </div>
+                                                                ) : null}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
 

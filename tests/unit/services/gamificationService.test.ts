@@ -70,22 +70,54 @@ describe('GamificationService', () => {
   });
 
   describe('Theme Rewards', () => {
-    it('unlocks base theme at level 1 and locks advanced themes', async () => {
-      const themes = await gamificationService.getThemeRewards(2);
-      const defaultTheme = themes.find(t => t.id === 'theme_default');
-      const velvetTheme = themes.find(t => t.id === 'theme_night');
+    it('unlocks light and night themes at level 1 and locks advanced themes', async () => {
+      const themesLvl1 = await gamificationService.getThemeRewards(1);
+      const lightTheme = themesLvl1.find(t => t.themeKey === 'light');
+      const nightTheme = themesLvl1.find(t => t.themeKey === 'night');
+      const darkTheme = themesLvl1.find(t => t.themeKey === 'dark');
+      const emeraldTheme = themesLvl1.find(t => t.themeKey === 'emerald');
 
-      expect(defaultTheme?.unlocked).toBe(true);
-      expect(velvetTheme?.unlocked).toBe(false);
+      expect(lightTheme?.unlocked).toBe(true);
+      expect(nightTheme?.unlocked).toBe(true);
+      expect(darkTheme?.unlocked).toBe(false);
+      expect(emeraldTheme?.unlocked).toBe(false);
     });
 
-    it('unlocks Emerald Prestige at level 10+ and Cyber Neon at level 15+', async () => {
-      const themesLvl10 = await gamificationService.getThemeRewards(10);
-      expect(themesLvl10.find(t => t.id === 'theme_emerald')?.unlocked).toBe(true);
-      expect(themesLvl10.find(t => t.id === 'theme_cyber')?.unlocked).toBe(false);
+    it('unlocks dark theme at level 2+', async () => {
+      const themesLvl2 = await gamificationService.getThemeRewards(2);
+      expect(themesLvl2.find(t => t.themeKey === 'dark')?.unlocked).toBe(true);
+      expect(themesLvl2.find(t => t.themeKey === 'emerald')?.unlocked).toBe(false);
+    });
+
+    it('unlocks Emerald Prestige at level 6+ and Cyber Neon at level 15+', async () => {
+      const themesLvl6 = await gamificationService.getThemeRewards(6);
+      expect(themesLvl6.find(t => t.themeKey === 'emerald')?.unlocked).toBe(true);
+      expect(themesLvl6.find(t => t.themeKey === 'cyber')?.unlocked).toBe(false);
 
       const themesLvl15 = await gamificationService.getThemeRewards(15);
-      expect(themesLvl15.find(t => t.id === 'theme_cyber')?.unlocked).toBe(true);
+      expect(themesLvl15.find(t => t.themeKey === 'cyber')?.unlocked).toBe(true);
+    });
+
+    it('allows demo user to reach level 6 and unlock emerald theme upon claiming 2 quests', async () => {
+      const initialDemoXp = 2200;
+      const initialLevel = gamificationService.calculateLevel(initialDemoXp);
+      expect(initialLevel).toBe(5);
+
+      const quests = await gamificationService.getQuests();
+      const quest1 = quests[0];
+      const quest2 = quests[1];
+
+      expect(quest1.completed).toBe(true);
+      expect(quest2.completed).toBe(true);
+
+      const totalClaimedXp = initialDemoXp + quest1.rewardXp + quest2.rewardXp;
+      expect(totalClaimedXp).toBe(2550); // 2200 + 150 + 200
+
+      const newLevel = gamificationService.calculateLevel(totalClaimedXp);
+      expect(newLevel).toBe(6);
+
+      const themesAfterClaim = await gamificationService.getThemeRewards(newLevel);
+      expect(themesAfterClaim.find(t => t.themeKey === 'emerald')?.unlocked).toBe(true);
     });
   });
 

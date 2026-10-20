@@ -34,3 +34,54 @@ if (!globalThis.fetch) {
     new Error('[TEST] Unmocked fetch call — use vi.fn() to mock this request.')
   );
 }
+
+// ── IntersectionObserver stub for jsdom ───────────────────────────────────
+if (!globalThis.IntersectionObserver) {
+  globalThis.IntersectionObserver = class MockIntersectionObserver {
+    readonly root: Element | null = null;
+    readonly rootMargin: string = '';
+    readonly thresholds: ReadonlyArray<number> = [];
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+  } as unknown as typeof IntersectionObserver;
+}
+
+// ── Canvas 2D context stub for jsdom ──────────────────────────────────────
+if (typeof HTMLCanvasElement !== 'undefined') {
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (contextId: string, ...args: any[]) {
+    if (contextId === '2d') {
+      return {
+        canvas: this,
+        clearRect: vi.fn(),
+        fillRect: vi.fn(),
+        beginPath: vi.fn(),
+        closePath: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        scale: vi.fn(),
+        translate: vi.fn(),
+        rotate: vi.fn(),
+        setTransform: vi.fn(),
+        resetTransform: vi.fn(),
+        drawImage: vi.fn(),
+        createLinearGradient: vi.fn(() => ({
+          addColorStop: vi.fn(),
+        })),
+        measureText: vi.fn(() => ({ width: 0 })),
+        fillStyle: '#000',
+        strokeStyle: '#000',
+        globalAlpha: 1,
+        globalCompositeOperation: 'source-over',
+        filter: 'none',
+      } as unknown as RenderingContext;
+    }
+    return originalGetContext ? originalGetContext.call(this, contextId, ...args) : null;
+  } as any;
+}
+

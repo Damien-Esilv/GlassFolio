@@ -14,6 +14,7 @@ import AnimatedCounter from '../components/AnimatedCounter';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../src/constants/animations';
 import { ASSET_CLASSES, ASSET_CLASSES_CONFIG } from '../src/constants/assetClasses';
 import { CHART_SERIES_PALETTE, getAssetStableColor } from '../src/constants/themeTokens';
+import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 
 const PortfolioPerformance: React.FC = () => {
    const { t } = useTranslation();
@@ -404,8 +405,11 @@ const PortfolioPerformance: React.FC = () => {
 
    if (isLoading || !summary) {
       return (
-         <div className="flex items-center justify-center h-[50vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" role="status" aria-live="polite">
+            <AppThinkingOrb state="breathing" size={72} label={t('common:labels.loading')} />
+            <span className="text-xs sm:text-sm font-semibold text-secondary tracking-wide">
+               {t('common:labels.loading')}
+            </span>
          </div>
       );
    }

@@ -7,6 +7,8 @@ import { aiSettingsService } from '../../src/services/ai/aiSettingsService';
 import { ChatMessage } from '../../src/services/ai/types';
 import { AIActionApprovalCard } from './AIActionApprovalCard';
 import { AIMarkdownRenderer } from './AIMarkdownRenderer';
+import { AppThinkingOrb } from '../ui/AppThinkingOrb';
+
 
 interface AIChatDrawerProps {
   isOpen: boolean;
@@ -28,24 +30,56 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
+    let pollInterval: NodeJS.Timeout | null = null;
+    let isCancelled = false;
+
     if (isLoading) {
       if (settings.activeProvider === 'ollama') {
+        // Fast check to verify if the model is currently present in Ollama's VRAM
         aiSettingsService
           .checkOllamaModelLoaded(settings.ollamaEndpoint, settings.ollamaModel)
           .then((isLoaded) => {
+            if (isCancelled) return;
             setIsOllamaColdStart(!isLoaded);
+
+            // If cold start, poll every 1.5s to switch to drafting as soon as VRAM weights are ready
+            if (!isLoaded) {
+              pollInterval = setInterval(() => {
+                aiSettingsService
+                  .checkOllamaModelLoaded(settings.ollamaEndpoint, settings.ollamaModel)
+                  .then((nowLoaded) => {
+                    if (isCancelled) return;
+                    if (nowLoaded) {
+                      setIsOllamaColdStart(false);
+                      if (pollInterval) clearInterval(pollInterval);
+                    }
+                  })
+                  .catch(() => {});
+              }, 1500);
+            }
           })
-          .catch(() => {});
+          .catch(() => {
+            if (!isCancelled) setIsOllamaColdStart(false);
+          });
+
         timer = setTimeout(() => {
-          setIsLongLoading(true);
+          if (!isCancelled) setIsLongLoading(true);
         }, 3500);
+      } else {
+        setIsOllamaColdStart(false);
+        timer = setTimeout(() => {
+          if (!isCancelled) setIsLongLoading(true);
+        }, 3000);
       }
     } else {
       setIsOllamaColdStart(false);
       setIsLongLoading(false);
     }
+
     return () => {
+      isCancelled = true;
       if (timer) clearTimeout(timer);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [isLoading, settings.activeProvider, settings.ollamaEndpoint, settings.ollamaModel]);
 
@@ -76,6 +110,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         currency: 'EUR',
       });
       setMessages([...updated]);
+    } catch (err) {
+      console.error('[AIChatDrawer] Error processing assistant turn:', err);
+      // Fallback: reload messages from service which already contains the error message
+      setMessages([...aiService.getMessages()]);
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +153,9 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         currency: 'EUR',
       });
       setMessages([...updated]);
+    } catch (err) {
+      console.error('[AIChatDrawer] Error during edit regeneration:', err);
+      setMessages([...aiService.getMessages()]);
     } finally {
       setIsLoading(false);
     }
@@ -224,8 +265,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center p-6 space-y-6">
-              <div className="w-14 h-14 rounded-2xl bg-subtle border border-subtle flex items-center justify-center text-primary">
-                <Bot size={28} />
+              <div className="flex items-center justify-center p-2 rounded-2xl bg-subtle/50 border border-subtle">
+                <AppThinkingOrb state="breathing" size={64} label={t('ai:drawer.title')} />
               </div>
               <div className="space-y-1.5 max-w-xs">
                 <h3 className="text-sm font-semibold text-primary">{t('ai:drawer.title')}</h3>
@@ -278,6 +319,8 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
               {messages.map((msg) => {
                 // Ignore raw tool result messages in user view
                 if (msg.role === 'tool') return null;
+                // Ignore internal assistant tool-invocation records that have no textual answer or action proposal
+                if (msg.role === 'assistant' && !msg.content?.trim() && !msg.pendingAction) return null;
 
                 const isUser = msg.role === 'user';
                 const isEditingThis = editingMessageId === msg.id;
@@ -352,20 +395,37 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
 
               {/* Thinking / Processing bubble right below the last message */}
               {isLoading && (
-                <div className="flex flex-col space-y-1.5 p-3 rounded-2xl bg-subtle border border-subtle text-xs max-w-[85%] animate-pulse">
+                <div className="flex flex-col space-y-1.5 p-3 rounded-2xl bg-subtle border border-subtle text-xs max-w-[85%] animate-in fade-in duration-200">
                   <div className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin text-primary shrink-0" />
-                    <span className="font-semibold text-primary">
-                      {settings.activeProvider === 'ollama'
-                        ? isOllamaColdStart
+                    <AppThinkingOrb
+                      state={
+                        settings.activeProvider === 'ollama' && isOllamaColdStart
+                          ? 'connecting'
+                          : isLongLoading
+                          ? 'solving'
+                          : 'working'
+                      }
+                      size={20}
+                      label={
+                        settings.activeProvider === 'ollama' && isOllamaColdStart
                           ? t('ai:chat.ollamaModelColdStart', { model: settings.ollamaModel })
-                          : t('ai:chat.ollamaLoadingModel', { model: settings.ollamaModel })
-                        : t('ai:chat.thinking')}
+                          : t('ai:chat.generatingResponse')
+                      }
+                    />
+                    <span className="font-semibold text-primary">
+                      {settings.activeProvider === 'ollama' && isOllamaColdStart
+                        ? t('ai:chat.ollamaModelColdStart', { model: settings.ollamaModel })
+                        : t('ai:chat.generatingResponse')}
                     </span>
                   </div>
-                  {settings.activeProvider === 'ollama' && isLongLoading && (
-                    <p className="text-[11px] text-tertiary pl-5 leading-relaxed">
+                  {settings.activeProvider === 'ollama' && isOllamaColdStart && (
+                    <p className="text-[11px] text-tertiary pl-7 leading-relaxed">
                       {t('ai:chat.ollamaLoadingVram')}
+                    </p>
+                  )}
+                  {!isOllamaColdStart && isLongLoading && (
+                    <p className="text-[11px] text-tertiary pl-7 leading-relaxed">
+                      {t('ai:chat.generatingDetail')}
                     </p>
                   )}
                 </div>

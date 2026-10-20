@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, Unlock, ShieldAlert, Cpu, Terminal, KeyRound, Fingerprint, CheckCircle2 } from 'lucide-react';
+import { Lock, Unlock, ShieldAlert, Cpu, Terminal, KeyRound, Fingerprint, CheckCircle2, ShieldCheck, Server } from 'lucide-react';
+
 
 type VaultState = 'unlocked' | 'locked';
 type AiProvider = 'ollama' | 'claude' | 'cursor' | 'byok';
@@ -191,6 +192,14 @@ export const InteractiveSecurityMcpPreview: React.FC = () => {
 
             {/* Protections Badges */}
             <div className="pt-4 border-t border-subtle flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-subtle text-secondary border border-subtle">
+                <ShieldCheck size={13} className="text-brand" />
+                <span>{t('landing:securityAi.protections.supabaseRls')}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-subtle text-secondary border border-subtle">
+                <Server size={13} className="text-brand" />
+                <span>{t('landing:securityAi.protections.dockerVault')}</span>
+              </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-subtle text-secondary border border-subtle">
                 <KeyRound size={13} className="text-brand" />
                 <span>{t('landing:securityAi.protections.totp')}</span>

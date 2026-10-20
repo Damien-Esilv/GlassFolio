@@ -40,7 +40,19 @@ export class OllamaProvider implements AIProvider {
       { role: 'system', content: systemPrompt },
       ...messages.map((m) => ({
         role: m.role === 'tool' ? 'tool' : m.role,
-        content: m.content,
+        content: m.content || '',
+        ...(m.toolCalls && m.toolCalls.length > 0
+          ? {
+              tool_calls: m.toolCalls.map((tc) => ({
+                id: tc.id,
+                type: 'function',
+                function: {
+                  name: tc.name,
+                  arguments: tc.arguments,
+                },
+              })),
+            }
+          : {}),
       })),
     ];
 
@@ -155,12 +167,21 @@ export class OllamaProvider implements AIProvider {
     if (Array.isArray(msg?.tool_calls)) {
       for (const tc of msg.tool_calls) {
         if (tc?.function?.name) {
+          let parsedArgs: Record<string, unknown> = {};
+          if (typeof tc.function.arguments === 'string') {
+            try {
+              parsedArgs = JSON.parse(tc.function.arguments);
+            } catch {
+              parsedArgs = {};
+            }
+          } else if (tc.function.arguments && typeof tc.function.arguments === 'object') {
+            parsedArgs = tc.function.arguments as Record<string, unknown>;
+          }
+
           toolCalls.push({
             id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             name: tc.function.name,
-            arguments: typeof tc.function.arguments === 'string'
-              ? JSON.parse(tc.function.arguments)
-              : tc.function.arguments || {},
+            arguments: parsedArgs,
           });
         }
       }

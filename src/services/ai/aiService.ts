@@ -157,6 +157,16 @@ class AIService {
 
       // Handle Tool Calls if any
       if (initialResponse.toolCalls && initialResponse.toolCalls.length > 0) {
+        // Record the assistant's tool invocation turn to satisfy chat API protocol
+        const assistantInvocationMsg: ChatMessage = {
+          id: `msg_${Date.now()}_a_invoc`,
+          role: 'assistant',
+          content: initialResponse.content || '',
+          toolCalls: initialResponse.toolCalls,
+          timestamp: new Date().toISOString(),
+        };
+        this.messages.push(assistantInvocationMsg);
+
         for (const toolCall of initialResponse.toolCalls) {
           const toolDef = aiToolRegistry.getTool(toolCall.name);
           const settings = aiSettingsService.getSettings();
@@ -182,16 +192,10 @@ class AIService {
               toolCall.arguments
             );
 
-            const assistantMsg: ChatMessage = {
-              id: `msg_${Date.now()}_a`,
-              role: 'assistant',
-              content:
-                initialResponse.content ||
-                `Une confirmation est requise avant d'exécuter l'action financière ci-dessous :`,
-              timestamp: new Date().toISOString(),
-              pendingAction: proposal,
-            };
-            this.messages.push(assistantMsg);
+            assistantInvocationMsg.pendingAction = proposal;
+            assistantInvocationMsg.content =
+              initialResponse.content ||
+              `Une confirmation est requise avant d'exécuter l'action financière ci-dessous :`;
             return [...this.messages];
           }
 

@@ -3,11 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
   LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
-  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles, Lock
+  TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles, Lock,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { appStorage } from '../src/services/storage/appStorage';
 import { AIChatDrawer } from './ai/AIChatDrawer';
 import { ConsentBanner } from './ConsentBanner';
 
@@ -28,7 +30,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return appStorage.getItem('gf_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const toggleSidebarCollapsed = useCallback(() => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        appStorage.setItem('gf_sidebar_collapsed', String(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }, []);
+
 
   /** Human-readable freshness label */
   const freshnessLabel = useMemo(() => {
@@ -117,131 +139,235 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     name: string;
     indent?: boolean;
     onClick?: () => void;
-  }> = ({ path, icon: Icon, name, indent = false, onClick }) => (
+    collapsed?: boolean;
+  }> = ({ path, icon: Icon, name, indent = false, onClick, collapsed = false }) => (
     <Link
       to={path}
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${indent ? 'ml-6' : ''
-        } ${isActive(path)
+      title={name}
+      aria-label={name}
+      className={`flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+        collapsed ? 'justify-center px-2' : `px-4 ${indent ? 'ml-6' : ''}`
+      } ${
+        isActive(path)
           ? 'bg-primary/10 text-primary font-semibold'
           : 'text-secondary hover:bg-subtle hover:text-primary'
-        }`}
+      }`}
     >
-      <Icon size={18} />
-      {name}
+      <Icon size={18} className="shrink-0" />
+      {!collapsed && <span className="truncate">{name}</span>}
     </Link>
   );
 
   // Sidebar content (shared between desktop and mobile)
-  const SidebarContent = () => (
+  const SidebarContent: React.FC<{ collapsed?: boolean }> = ({ collapsed = false }) => (
     <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       {/* 1. Dashboard */}
-      <NavItem path="/" icon={LayoutDashboard} name={t('navigation:menu.dashboard')} onClick={() => setIsMobileMenuOpen(false)} />
+      <NavItem
+        path="/"
+        icon={LayoutDashboard}
+        name={t('navigation:menu.dashboard')}
+        onClick={() => setIsMobileMenuOpen(false)}
+        collapsed={collapsed}
+      />
 
-      {/* 2. Portfolio Section (Collapsible) */}
-      <div>
-        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isPortfolioActive
-          ? 'bg-primary/10 text-primary font-semibold'
-          : 'text-secondary hover:bg-subtle hover:text-primary'
-          }`}>
-          {/* Clicking the name navigates to Portfolio Hub */}
-          <Link
-            to="/portfolio"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-3 flex-1 px-4 py-2.5"
+      {/* 2. Portfolio Section */}
+      {collapsed ? (
+        <NavItem
+          path="/portfolio"
+          icon={Briefcase}
+          name={t('navigation:menu.portfolio')}
+          onClick={() => setIsMobileMenuOpen(false)}
+          collapsed
+        />
+      ) : (
+        <div>
+          <div
+            className={`flex items-center rounded-lg text-sm font-medium transition-all ${
+              isPortfolioActive
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-secondary hover:bg-subtle hover:text-primary'
+            }`}
           >
-            <Briefcase size={18} />
-            {t('navigation:menu.portfolio')}
-          </Link>
-          {/* Clicking the chevron only toggles the dropdown */}
-          <button
-            onClick={() => setIsPortfolioExpanded(!isPortfolioExpanded)}
-            className="px-3 py-2.5 hover:text-primary"
-            aria-label="Toggle portfolio menu"
-          >
-            {isPortfolioExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
-        </div>
-
-        {/* Portfolio Sub-items (no Hub item — clicking the name already goes there) */}
-        {isPortfolioExpanded && (
-          <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
-            <NavItem path="/portfolio/summary" icon={PieChart} name={t('navigation:menu.summary')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/positions" icon={LayoutDashboard} name={t('navigation:menu.positions')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/transactions" icon={ArrowRightLeft} name={t('navigation:menu.transactions')} indent onClick={() => setIsMobileMenuOpen(false)} />
+            <Link
+              to="/portfolio"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3 flex-1 px-4 py-2.5"
+            >
+              <Briefcase size={18} />
+              {t('navigation:menu.portfolio')}
+            </Link>
+            <button
+              onClick={() => setIsPortfolioExpanded(!isPortfolioExpanded)}
+              className="px-3 py-2.5 hover:text-primary"
+              aria-label="Toggle portfolio menu"
+            >
+              {isPortfolioExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* 3. Analytics Section (Collapsible - Placed between Portfolio and Progress) */}
-      <div>
-        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isAnalyticsActive
-          ? 'bg-primary/10 text-primary font-semibold'
-          : 'text-secondary hover:bg-subtle hover:text-primary'
-          }`}>
-          {/* Clicking the name navigates to Analytics Hub */}
-          <Link
-            to="/analytics"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-3 flex-1 px-4 py-2.5"
-          >
-            <BarChart3 size={18} />
-            {t('navigation:menu.analytics')}
-          </Link>
-          {/* Clicking the chevron only toggles the dropdown */}
-          <button
-            onClick={() => setIsAnalyticsExpanded(!isAnalyticsExpanded)}
-            className="px-3 py-2.5 hover:text-primary"
-            aria-label="Toggle analytics menu"
-          >
-            {isAnalyticsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
+          {isPortfolioExpanded && (
+            <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
+              <NavItem
+                path="/portfolio/summary"
+                icon={PieChart}
+                name={t('navigation:menu.summary')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/positions"
+                icon={LayoutDashboard}
+                name={t('navigation:menu.positions')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/transactions"
+                icon={ArrowRightLeft}
+                name={t('navigation:menu.transactions')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Analytics Sub-items (no Hub item — clicking the name already goes there) */}
-        {isAnalyticsExpanded && (
-          <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
-            <NavItem path="/analytics/performance" icon={TrendingUp} name={t('navigation:menu.performance')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/analytics/pl" icon={Receipt} name={t('navigation:menu.pl')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/analytics/fees" icon={Coins} name={t('navigation:menu.fees')} indent onClick={() => setIsMobileMenuOpen(false)} />
+      {/* 3. Analytics Section */}
+      {collapsed ? (
+        <NavItem
+          path="/analytics"
+          icon={BarChart3}
+          name={t('navigation:menu.analytics')}
+          onClick={() => setIsMobileMenuOpen(false)}
+          collapsed
+        />
+      ) : (
+        <div>
+          <div
+            className={`flex items-center rounded-lg text-sm font-medium transition-all ${
+              isAnalyticsActive
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-secondary hover:bg-subtle hover:text-primary'
+            }`}
+          >
+            <Link
+              to="/analytics"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3 flex-1 px-4 py-2.5"
+            >
+              <BarChart3 size={18} />
+              {t('navigation:menu.analytics')}
+            </Link>
+            <button
+              onClick={() => setIsAnalyticsExpanded(!isAnalyticsExpanded)}
+              className="px-3 py-2.5 hover:text-primary"
+              aria-label="Toggle analytics menu"
+            >
+              {isAnalyticsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* 4. Fiscalité Section (Collapsible - Top-level) */}
-      <div>
-        <div className={`flex items-center rounded-lg text-sm font-medium transition-all ${isFiscaliteActive
-          ? 'bg-primary/10 text-primary font-semibold'
-          : 'text-secondary hover:bg-subtle hover:text-primary'
-          }`}>
-          <Link
-            to="/tax"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-3 flex-1 px-4 py-2.5"
-          >
-            <Scale size={18} />
-            {t('navigation:menu.fiscalite')}
-          </Link>
-          <button
-            onClick={() => setIsFiscaliteExpanded(!isFiscaliteExpanded)}
-            className="px-3 py-2.5 hover:text-primary"
-            aria-label="Toggle fiscalité menu"
-          >
-            {isFiscaliteExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
+          {isAnalyticsExpanded && (
+            <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
+              <NavItem
+                path="/analytics/performance"
+                icon={TrendingUp}
+                name={t('navigation:menu.performance')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/analytics/pl"
+                icon={Receipt}
+                name={t('navigation:menu.pl')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/analytics/fees"
+                icon={Coins}
+                name={t('navigation:menu.fees')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )}
         </div>
+      )}
 
-        {isFiscaliteExpanded && (
-          <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
-            <NavItem path="/tax/declaration" icon={FileText} name={t('navigation:menu.declaration')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/tax/optimization" icon={Lightbulb} name={t('navigation:menu.optimization')} indent onClick={() => setIsMobileMenuOpen(false)} />
-            <NavItem path="/tax/guide" icon={BookOpen} name={t('navigation:menu.taxGuide')} indent onClick={() => setIsMobileMenuOpen(false)} />
+      {/* 4. Fiscalité Section */}
+      {collapsed ? (
+        <NavItem
+          path="/tax"
+          icon={Scale}
+          name={t('navigation:menu.fiscalite')}
+          onClick={() => setIsMobileMenuOpen(false)}
+          collapsed
+        />
+      ) : (
+        <div>
+          <div
+            className={`flex items-center rounded-lg text-sm font-medium transition-all ${
+              isFiscaliteActive
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-secondary hover:bg-subtle hover:text-primary'
+            }`}
+          >
+            <Link
+              to="/tax"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3 flex-1 px-4 py-2.5"
+            >
+              <Scale size={18} />
+              {t('navigation:menu.fiscalite')}
+            </Link>
+            <button
+              onClick={() => setIsFiscaliteExpanded(!isFiscaliteExpanded)}
+              className="px-3 py-2.5 hover:text-primary"
+              aria-label="Toggle fiscalité menu"
+            >
+              {isFiscaliteExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* 4. Progress */}
-      <NavItem path="/progress" icon={Trophy} name={t('navigation:menu.progress')} onClick={() => setIsMobileMenuOpen(false)} />
+          {isFiscaliteExpanded && (
+            <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
+              <NavItem
+                path="/tax/declaration"
+                icon={FileText}
+                name={t('navigation:menu.declaration')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/tax/optimization"
+                icon={Lightbulb}
+                name={t('navigation:menu.optimization')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <NavItem
+                path="/tax/guide"
+                icon={BookOpen}
+                name={t('navigation:menu.taxGuide')}
+                indent
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Progress */}
+      <NavItem
+        path="/progress"
+        icon={Trophy}
+        name={t('navigation:menu.progress')}
+        onClick={() => setIsMobileMenuOpen(false)}
+        collapsed={collapsed}
+      />
     </nav>
   );
 
@@ -256,30 +382,65 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* Sidebar - Desktop (Fixed) */}
-      <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-60 bg-card border-r border-subtle z-30">
-        {/* Logo */}
-        <div className="h-16 flex items-center gap-3 px-4 border-b border-subtle">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-            <div className="w-8 h-8 bg-brand-static rounded-lg flex items-center justify-center transform rotate-45">
+      <aside
+        data-testid="desktop-sidebar"
+        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 ${
+          isSidebarCollapsed ? 'md:w-20' : 'md:w-60'
+        } transition-all duration-200 bg-card border-r border-subtle z-30`}
+      >
+        {/* Logo & Toggle */}
+        <div
+          className={`h-16 flex items-center border-b border-subtle transition-all ${
+            isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+          }`}
+        >
+          <Link
+            to="/"
+            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+            title={t('navigation:brandName')}
+          >
+            <div className="w-8 h-8 bg-brand-static rounded-lg flex items-center justify-center transform rotate-45 shrink-0">
               <div className="transform -rotate-45 text-white font-bold text-lg">
                 <Hexagon size={20} fill="currentColor" />
               </div>
             </div>
-            <span className="text-xl font-bold tracking-tight">{t('navigation:brandName')}</span>
+            {!isSidebarCollapsed && (
+              <span className="text-xl font-bold tracking-tight truncate">
+                {t('navigation:brandName')}
+              </span>
+            )}
           </Link>
+          <button
+            onClick={toggleSidebarCollapsed}
+            className={`p-1.5 text-secondary hover:text-primary hover:bg-subtle rounded-lg transition-colors ${
+              isSidebarCollapsed ? 'hidden' : 'block'
+            }`}
+            title={t('navigation:collapseSidebar')}
+            aria-label={t('navigation:collapseSidebar')}
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
-        <SidebarContent />
+        <SidebarContent collapsed={isSidebarCollapsed} />
 
         {/* Settings at bottom */}
-        <div className="p-3 border-t border-subtle">
-          <NavItem path="/settings" icon={Settings} name="Settings" />
+        <div className="p-3 border-t border-subtle flex flex-col gap-1">
+          <NavItem
+            path="/settings"
+            icon={Settings}
+            name={t('navigation:menu.settings')}
+            collapsed={isSidebarCollapsed}
+          />
         </div>
       </aside>
 
       {/* Sidebar - Mobile (Slide in) */}
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-card border-r border-subtle z-50 transform transition-transform duration-200 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
+      <aside
+        className={`fixed inset-y-0 left-0 w-64 bg-card border-r border-subtle z-50 transform transition-transform duration-200 md:hidden ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Mobile Logo & Close */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-subtle">
           <Link to="/" className="flex items-center gap-3">
@@ -295,11 +456,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        <SidebarContent />
+        <SidebarContent collapsed={false} />
       </aside>
 
       {/* Main Content Area */}
-      <div className="md:pl-60">
+      <div className={`${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-60'} transition-all duration-200`}>
         {/* Top Header */}
         <header className="sticky top-0 z-40 h-16 bg-card border-b border-subtle flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
@@ -310,6 +471,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <Menu size={20} />
             </button>
+
+            {/* Desktop Expand Button when collapsed */}
+            {isSidebarCollapsed && (
+              <button
+                onClick={toggleSidebarCollapsed}
+                className="hidden md:flex p-2 text-secondary hover:text-primary hover:bg-subtle rounded-lg transition-colors"
+                title={t('navigation:expandSidebar')}
+                aria-label={t('navigation:expandSidebar')}
+              >
+                <PanelLeftOpen size={18} />
+              </button>
+            )}
 
             {/* Live Price Freshness Badge & Refresh Button (Left Side) */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-subtle/60 border border-subtle text-xs">

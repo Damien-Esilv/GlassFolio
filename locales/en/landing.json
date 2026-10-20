@@ -148,6 +148,8 @@
     "vaultStateLabel": "Active Memory & Storage State",
     "kdfPipeline": "PBKDF2-SHA256 (600k iter.) → HKDF-SHA256 → AES-KW → AES-256-GCM (96-bit IV + AAD)",
     "protections": {
+      "supabaseRls": "Cloud E2EE (Supabase RLS)",
+      "dockerVault": "Docker Local Vault (100% Offline)",
       "totp": "RFC 6238 TOTP 2FA",
       "passkeys": "WebAuthn PRF Passkeys",
       "recovery": "Base32 256-bit Recovery Key"

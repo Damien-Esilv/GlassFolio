@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key, Fingerprint } from 'lucide-react';
+import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key, Fingerprint, Sparkles } from 'lucide-react';
 import Button from '../Button';
 import { vaultService } from '../../src/services/security/vaultService';
+import { authService } from '../../src/services/security/authService';
 import { passkeyService, isPasskeySupported } from '../../src/services/security/passkeyService';
 import { useData } from '../../context/DataContext';
 
@@ -13,8 +14,9 @@ interface LockScreenProps {
 export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const { t } = useTranslation();
     const { refreshData } = useData();
+    const isDemo = vaultService.isDemoVault();
 
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(isDemo ? 'password' : '');
     const [recoveryKey, setRecoveryKey] = useState('');
     const [mode, setMode] = useState<'password' | 'recovery'>('password');
     const [error, setError] = useState<string | null>(null);
@@ -26,6 +28,26 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     React.useEffect(() => {
         isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
     }, []);
+
+    const handleUnlockDemo = async () => {
+        setError(null);
+        setIsLoading(true);
+        try {
+            await vaultService.unlock('password');
+            await refreshData();
+            onUnlocked?.();
+        } catch {
+            try {
+                await authService.signIn('demo@glassfolio.com', 'password');
+                await refreshData();
+                onUnlocked?.();
+            } catch {
+                setError(t('security:lockScreen.invalidCredentials'));
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleUnlockWithPasskey = async () => {
         setError(null);
@@ -81,10 +103,18 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
         setIsResetting(true);
         setError(null);
         try {
-            await vaultService.resetVault();
-            await refreshData();
-            setShowResetConfirm(false);
-            window.location.reload();
+            if (isDemo) {
+                await vaultService.resetVault();
+                await authService.signIn('demo@glassfolio.com', 'password');
+                await refreshData();
+                setShowResetConfirm(false);
+                onUnlocked?.();
+            } else {
+                await vaultService.resetVault();
+                await refreshData();
+                setShowResetConfirm(false);
+                window.location.reload();
+            }
         } catch (err) {
             console.error('Failed to reset vault', err);
             setError('Failed to reset vault');
@@ -115,6 +145,29 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                     </p>
                 </div>
 
+                {/* Demo Mode Quick-Unlock Banner */}
+                {isDemo && (
+                    <div className="mb-5 p-3.5 bg-brand/10 border border-brand/20 rounded-xl space-y-2.5 animate-in fade-in">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+                            <Sparkles size={15} className="shrink-0" />
+                            <span>{t('security:lockScreen.demoBannerTitle', 'Mode Démonstration Actif')}</span>
+                        </div>
+                        <p className="text-[11px] text-secondary leading-relaxed">
+                            {t('security:lockScreen.demoBannerDesc', 'Vous explorez le portefeuille fictif. Déverrouillez en 1 clic sans avoir à taper votre mot de passe.')}
+                        </p>
+                        <Button
+                            type="button"
+                            variant="primary"
+                            className="w-full text-xs py-2 shadow-md shadow-brand/20 font-semibold"
+                            onClick={handleUnlockDemo}
+                            isLoading={isLoading}
+                        >
+                            <Sparkles size={14} className="mr-1.5" />
+                            {t('security:lockScreen.unlockDemoButton', 'Déverrouiller la démo (1-clic)')}
+                        </Button>
+                    </div>
+                )}
+
                 {error && (
                     <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-xs" role="alert">
                         <AlertCircle size={16} className="shrink-0" />
@@ -133,7 +186,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                                 <input
                                     id="vault-password"
                                     type="password"
-                                    autoFocus
+                                    autoFocus={!isDemo}
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

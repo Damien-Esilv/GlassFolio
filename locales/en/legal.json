@@ -24,16 +24,16 @@
     "lastUpdated": "Last updated: October 2026",
     "publisherTitle": "1. Site & Project Publisher",
     "publisherText": "The GlassFolio showcase application and source code are published as an open-source personal software project by:",
-    "publisherName": "Publisher: Damien [LAST_NAME]",
+    "publisherName": "Publisher: Damien",
     "publisherStatus": "Status: Individual open-source software project (Portfolio & Demonstration)",
-    "publisherContact": "Contact: [CONTACT_EMAIL]",
-    "publisherProfile": "Project Repository & Professional Profile: [GITHUB_OR_LINKEDIN_URL]",
+    "publisherContact": "Contact & Support: GitHub Issues & Discussions at https://github.com/Damien-Esilv",
+    "publisherProfile": "Project Repository & GitHub Profile: https://github.com/Damien-Esilv",
     "hostingTitle": "2. Web Hosting & Infrastructure Providers",
     "hostingText": "The GlassFolio web application is hosted as a static client-side bundle on:",
-    "hostingPrimary": "Primary Hosting: Microsoft Azure Static Web Apps — Microsoft Ireland Operations Limited, One Microsoft Place, South County Business Park, Leopardstown, Dublin 18, Ireland.",
+    "hostingPrimary": "Primary Hosting: Vercel Inc. — 440 N Barranca Ave #4133, Covina, CA 91723, USA (Edge CDN Distribution) & Supabase Inc. (Cloud synchronization for client-side end-to-end encrypted records).",
     "hostingSecondary": "Source Code & Version Control: GitHub, Inc. — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA.",
     "ipTitle": "3. Intellectual Property & Open-Source License",
-    "ipText": "The GlassFolio application, architecture, and documentation are distributed under an open-source license. Third-party brand names, tickers, logos, and exchange trademarks mentioned (e.g., BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure) remain the exclusive property of their respective trademark holders. They are cited strictly for identification, technical interoperability, and descriptive purposes in accordance with Article L.713-6 of the French Intellectual Property Code and Article 14 of Regulation (EU) 2017/1001 on the European Union trade mark (nominative fair use)."
+    "ipText": "The GlassFolio application, architecture, and documentation are distributed under an open-source license. Third-party brand names, tickers, logos, and exchange trademarks mentioned (e.g., BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure, Vercel, Supabase) remain the exclusive property of their respective trademark holders. They are cited strictly for identification, technical interoperability, and descriptive purposes in accordance with Article L.713-6 of the French Intellectual Property Code and Article 14 of Regulation (EU) 2017/1001 on the European Union trade mark (nominative fair use)."
   },
   "privacy": {
     "title": "Privacy Policy (GDPR)",
@@ -116,6 +116,6 @@
     "featKeyboard": "Keyboard Navigation: Visible focus outlines and tab sequence across all interactive controls, modals, and drawers.",
     "featMotion": "Reduced Motion: Respects the user's operating system prefers-reduced-motion preference, disabling decorative transitions and animations.",
     "feedbackTitle": "3. Feedback & Contact",
-    "feedbackText": "If you encounter an accessibility defect or barrier on this application, please open an issue on the project repository or contact Damien [LAST_NAME] at [CONTACT_EMAIL]."
+    "feedbackText": "If you encounter an accessibility defect or barrier on this application, please open an issue on the repository or contact Damien via https://github.com/Damien-Esilv."
   }
 }

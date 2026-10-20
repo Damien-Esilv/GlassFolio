@@ -71,7 +71,23 @@ function filterByFiscalYear(txs: UnifiedTransaction[], year: string): UnifiedTra
 }
 
 /**
+ * Fast fiscal year extractor from transaction date string.
+ * Uses O(1) string slicing for ISO 8601 strings (YYYY-MM-DD), with fallback to Date parsing.
+ */
+function getFiscalYearFromDate(dateStr: string | undefined): string {
+    if (!dateStr || dateStr.length < 4) return '';
+    if (dateStr.length >= 10 && dateStr.charAt(4) === '-' && dateStr.charAt(7) === '-') {
+        return dateStr.substring(0, 4);
+    }
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? '' : parsed.getFullYear().toString();
+}
+
+/**
  * Enrich transactions with account, institute, and instrument info.
+ * BOLT OPTIMIZATION:
+ * Pre-build stack-scoped O(1) Map lookups for accounts, institutes, and instruments
+ * to eliminate O(N * (A + I + Inst)) linear array searches on every mapped transaction.
  */
 function enrichTransactions(
     txs: UnifiedTransaction[],
@@ -79,10 +95,14 @@ function enrichTransactions(
     institutes: Institute[],
     instruments: Instrument[]
 ): EnrichedTransaction[] {
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+    const instituteMap = new Map(institutes.map(i => [i.id, i]));
+    const instrumentMap = new Map(instruments.map(i => [i.id, i]));
+
     return txs.map(tx => {
-        const account = accounts.find(a => a.id === tx.accountId);
-        const institute = account ? institutes.find(i => i.id === account.instituteId) : undefined;
-        const instrument = instruments.find(i => i.id === tx.instrumentId);
+        const account = tx.accountId ? accountMap.get(tx.accountId) : undefined;
+        const institute = account?.instituteId ? instituteMap.get(account.instituteId) : undefined;
+        const instrument = tx.instrumentId ? instrumentMap.get(tx.instrumentId) : undefined;
         return {
             ...tx,
             account,
@@ -163,9 +183,8 @@ export function calculateCTOCapitalGains(
                 costBasis.totalCost += amount + fees;
                 costBasis.totalQuantity += qty;
             } else if (TAXABLE_CESSION_TYPES.includes(tx.type as typeof TAXABLE_CESSION_TYPES[number])) {
-                // Only process sells within the fiscal year
-                const txDate = new Date(tx.transactionDate);
-                const txYear = txDate.getFullYear().toString();
+                // Only process sells within the fiscal year (fast O(1) string slice with robust fallback)
+                const txYear = getFiscalYearFromDate(tx.transactionDate);
                 
                 if (txYear !== fiscalYear) {
                     // Sell before the fiscal year: adjust cost basis
@@ -274,7 +293,7 @@ export function calculateCryptoGains(
             totalAcquisitionCost += amount + fees;
             assetQuantities.set(symbol, (assetQuantities.get(symbol) || 0) + qty);
         } else if (isCryptoToFiatCession(tx)) {
-            const txYear = new Date(tx.transactionDate).getFullYear().toString();
+            const txYear = getFiscalYearFromDate(tx.transactionDate);
 
             if (txYear === fiscalYear) {
                 // Calculate portfolio value at the time of cession
@@ -343,7 +362,7 @@ export function calculateDividendTax(
     const events: TaxableEvent[] = [];
 
     const incomeTxs = allTransactions.filter(tx => {
-        const txYear = new Date(tx.transactionDate).getFullYear().toString();
+        const txYear = getFiscalYearFromDate(tx.transactionDate);
         if (txYear !== fiscalYear) return false;
         if (!tx.isFiscal) return false;
         return tx.type === 'INCOME' || tx.subType === 'DIVIDEND' || tx.subType === 'INTEREST';
@@ -570,13 +589,17 @@ export function generateFormMappings(
 ): FormCaseMapping[] {
     const mappings: FormCaseMapping[] = [];
 
+    // BOLT OPTIMIZATION:
+    // Pre-build O(1) Map for formCases to replace repeated linear .find() calls
+    const formCaseMap = new Map(rules.formCases.map(c => [c.caseId, c]));
+
     // --- CTO Capital Gains (3VG) ---
     const ctoGains = events
         .filter(e => e.eventType === 'capital_gain' && isTaxableWrapper(e.wrapperType))
         .reduce((sum, e) => sum + e.taxableAmount, 0);
 
     if (ctoGains > 0) {
-        const caseDef = rules.formCases.find(c => c.caseId === '3VG');
+        const caseDef = formCaseMap.get('3VG');
         if (caseDef) {
             mappings.push({
                 form: caseDef.form,
@@ -596,7 +619,7 @@ export function generateFormMappings(
         .reduce((sum, e) => sum + e.taxableAmount, 0));
 
     if (ctoLosses > 0) {
-        const caseDef = rules.formCases.find(c => c.caseId === '3VH');
+        const caseDef = formCaseMap.get('3VH');
         if (caseDef) {
             mappings.push({
                 form: caseDef.form,
@@ -616,7 +639,7 @@ export function generateFormMappings(
         .reduce((sum, e) => sum + e.grossAmount, 0);
 
     if (totalDividends > 0) {
-        const caseDef = rules.formCases.find(c => c.caseId === '2DC');
+        const caseDef = formCaseMap.get('2DC');
         if (caseDef) {
             mappings.push({
                 form: caseDef.form,
@@ -635,7 +658,7 @@ export function generateFormMappings(
         .reduce((sum, e) => sum + e.taxableAmount, 0);
 
     if (cryptoGains > 0) {
-        const caseDef = rules.formCases.find(c => c.caseId === '3AN');
+        const caseDef = formCaseMap.get('3AN');
         if (caseDef) {
             mappings.push({
                 form: caseDef.form,
@@ -655,7 +678,7 @@ export function generateFormMappings(
         .reduce((sum, e) => sum + e.taxableAmount, 0));
 
     if (cryptoLosses > 0) {
-        const caseDef = rules.formCases.find(c => c.caseId === '3BN');
+        const caseDef = formCaseMap.get('3BN');
         if (caseDef) {
             mappings.push({
                 form: caseDef.form,
