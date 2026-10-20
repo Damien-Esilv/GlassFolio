@@ -9,11 +9,12 @@ import {
     transactions as initialTransactions,
     positions as initialPositions,
     alerts as initialAlerts,
+    alertRules as initialAlertRules,
     financialGoals as initialGoals,
     achievements as initialAchievements,
     assetGroups as initialAssetGroups
 } from '../../mockData';
-import { Transaction, Position, Alert, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../../types';
+import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../../types';
 
 // Backend entity types and mock data
 import {
@@ -40,6 +41,7 @@ const STORAGE_KEYS = {
     TRANSACTIONS: 'glassfolio_transactions',
     POSITIONS: 'glassfolio_positions',
     ALERTS: 'glassfolio_alerts',
+    ALERT_RULES: 'glassfolio_alert_rules',
     GOALS: 'glassfolio_goals',
     ACHIEVEMENTS: 'glassfolio_achievements',
     ASSET_GROUPS: 'glassfolio_asset_groups',
@@ -144,6 +146,15 @@ class MockDB {
 
     saveAlerts(data: Alert[]) {
         appStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(data));
+    }
+
+    getAlertRules(): AlertRule[] {
+        const stored = appStorage.getItem(STORAGE_KEYS.ALERT_RULES);
+        return stored ? JSON.parse(stored) : initialAlertRules;
+    }
+
+    saveAlertRules(data: AlertRule[]) {
+        appStorage.setItem(STORAGE_KEYS.ALERT_RULES, JSON.stringify(data));
     }
 
     getAssetGroups(): AssetGroup[] {
@@ -393,6 +404,7 @@ class MockDB {
             goals: this.getGoals(),
             achievements: this.getAchievements(),
             alerts: this.getAlerts(),
+            alertRules: this.getAlertRules(),
             assetGroups: this.getAssetGroups(),
             institutes: this.getInstitutes(),
             accounts: this.getAccounts(),

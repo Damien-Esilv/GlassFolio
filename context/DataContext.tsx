@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Transaction, Position, Alert, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
+import { Transaction, Position, Alert, AlertRule, AlertRuleMetric, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
 import { useAuth } from './AuthContext';
 import { transactionService } from '../src/services/transactionService';
 import { portfolioService } from '../src/services/portfolioService';
@@ -16,6 +16,9 @@ interface DataContextType {
   transactions: Transaction[];
   positions: Position[];
   alerts: Alert[];
+  unreadAlertsCount: number;
+  alertRules: AlertRule[];
+  activeToasts: Alert[];
   goals: FinancialGoal[];
   achievements: Achievement[];
   assetGroups: AssetGroup[];
@@ -36,6 +39,14 @@ interface DataContextType {
   deleteAssetGroup: (id: string) => Promise<void>;
   togglePinBadge: (badgeId: string) => Promise<void>;
   claimQuest: (questId: string) => Promise<void>;
+  markAlertAsRead: (alertId: string) => Promise<void>;
+  markAllAlertsAsRead: () => Promise<void>;
+  deleteAlert: (alertId: string) => Promise<void>;
+  clearReadAlerts: () => Promise<void>;
+  saveAlertRule: (rule: Partial<AlertRule> & { name: string; metric: AlertRuleMetric; threshold: number }) => Promise<void>;
+  toggleAlertRule: (id: string) => Promise<void>;
+  deleteAlertRule: (id: string) => Promise<void>;
+  dismissToast: (id: string) => void;
   activeCelebration: CelebrationData | null;
   dismissCelebration: () => void;
   triggerCelebration: (data: CelebrationData) => void;
@@ -55,6 +66,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [activeToasts, setActiveToasts] = useState<Alert[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [assetGroups, setAssetGroups] = useState<AssetGroup[]>([]);
@@ -62,6 +75,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pinnedBadges, setPinnedBadges] = useState<string[]>(['ac4', 'ac3', 'ac1']);
   const [activeCelebration, setActiveCelebration] = useState<CelebrationData | null>(null);
   const [lastPriceRefresh, setLastPriceRefresh] = useState<string | null>(() => getLastPriceFetchTime());
+
+  const unreadAlertsCount = useMemo(() => alerts.filter(a => !a.read).length, [alerts]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<null | string>(null);
@@ -78,10 +93,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const baseCurr = user?.preferences?.currency || 'EUR';
-      const [txs, pos, alrts, gls, achData, grps, activeQuests, pinned] = await Promise.all([
+      const [txs, pos, alrts, rules, gls, achData, grps, activeQuests, pinned] = await Promise.all([
         transactionService.getTransactions(),
         portfolioService.getPositions(),
         alertService.getAlerts(),
+        alertService.getAlertRules(),
         goalService.getGoals(baseCurr),
         achievementService.getAchievements(),
         goalService.getAssetGroups(),
@@ -91,12 +107,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setTransactions(txs);
       setPositions(pos);
-      setAlerts(alrts);
+      setAlertRules(rules);
       setGoals(gls);
       setAchievements(achData.achievements);
       setAssetGroups(grps);
       setQuests(activeQuests);
       setPinnedBadges(pinned);
+
+      // Evaluate Smart Alerts (Multi-Domain Engine)
+      const totalPortfolioValue = pos.reduce((sum, p) => sum + (p.marketValue || 0), 0);
+      const evalResult = await alertService.evaluateSmartAlerts({
+        positions: pos,
+        totalPortfolioValue,
+        taxZone: user?.preferences?.fiscalProfile?.taxZone,
+        preferences: user?.preferences,
+        goals: gls,
+        quests: activeQuests,
+      });
+
+      setAlerts(evalResult.allAlerts);
+
+      // Trigger toasts if fresh alerts detected and toasts not disabled in preferences
+      const notifPrefs = user?.preferences?.notificationPreferences;
+      const toastsEnabled = user?.preferences?.notifications !== false && notifPrefs?.inAppToasts !== false;
+      if (evalResult.newAlerts.length > 0 && toastsEnabled) {
+        setActiveToasts(prev => [...evalResult.newAlerts, ...prev].slice(0, 3));
+      }
 
       // Update XP if gained (Game Engine Logic)
       if (user && achData.xpGained > 0) {
@@ -227,6 +263,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, updateProfile]);
 
+  const markAlertAsRead = useCallback(async (alertId: string) => {
+    const updated = await alertService.markAlertAsRead(alertId);
+    setAlerts(updated);
+  }, []);
+
+  const markAllAlertsAsRead = useCallback(async () => {
+    const updated = await alertService.markAllAlertsAsRead();
+    setAlerts(updated);
+  }, []);
+
+  const deleteAlert = useCallback(async (alertId: string) => {
+    const updated = await alertService.deleteAlert(alertId);
+    setAlerts(updated);
+  }, []);
+
+  const clearReadAlerts = useCallback(async () => {
+    const updated = await alertService.clearReadAlerts();
+    setAlerts(updated);
+  }, []);
+
+  const saveAlertRule = useCallback(async (rule: Partial<AlertRule> & { name: string; metric: AlertRuleMetric; threshold: number }) => {
+    await alertService.saveAlertRule(rule);
+    const updatedRules = await alertService.getAlertRules();
+    setAlertRules(updatedRules);
+  }, []);
+
+  const toggleAlertRule = useCallback(async (id: string) => {
+    const updatedRules = await alertService.toggleAlertRule(id);
+    setAlertRules(updatedRules);
+  }, []);
+
+  const deleteAlertRule = useCallback(async (id: string) => {
+    const updatedRules = await alertService.deleteAlertRule(id);
+    setAlertRules(updatedRules);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setActiveToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const resetToSeedData = useCallback(async () => {
     clearPriceCache();
     db.resetToInitialData();
@@ -238,6 +314,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       transactions,
       positions,
       alerts,
+      unreadAlertsCount,
+      alertRules,
+      activeToasts,
       goals,
       achievements,
       assetGroups,
@@ -256,6 +335,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteAssetGroup,
       togglePinBadge,
       claimQuest,
+      markAlertAsRead,
+      markAllAlertsAsRead,
+      deleteAlert,
+      clearReadAlerts,
+      saveAlertRule,
+      toggleAlertRule,
+      deleteAlertRule,
+      dismissToast,
       activeCelebration,
       dismissCelebration,
       triggerCelebration,

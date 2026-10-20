@@ -1,4 +1,4 @@
-import { Position, Transaction, Alert, ReportCard, FinancialGoal, Achievement, AssetGroup } from './types';
+import { Position, Transaction, Alert, AlertRule, ReportCard, FinancialGoal, Achievement, AssetGroup } from './types';
 
 export const positions: Position[] = [
   {
@@ -283,16 +283,47 @@ export const alerts: Alert[] = [
   {
     id: 'a1',
     type: 'warning',
+    category: 'security',
     title: 'Mapping Issues',
     message: 'Review and resolve mapping issues for 3 imported transactions.',
-    date: 'Today'
+    date: '2026-10-19T09:30:00.000Z',
+    read: false,
+    archived: false,
+    actionUrl: '/import-history',
+    dedupKey: 'seed-mapping-issues'
   },
   {
     id: 'a2',
     type: 'success',
+    category: 'portfolio',
     title: 'Dividend Received',
     message: 'You received $45.20 in dividends from AAPL.',
-    date: 'Yesterday'
+    date: '2026-10-18T14:15:00.000Z',
+    read: false,
+    archived: false,
+    actionUrl: '/positions',
+    dedupKey: 'seed-dividend-aapl'
+  }
+];
+
+export const alertRules: AlertRule[] = [
+  {
+    id: 'rule-btc-target',
+    name: 'BTC > $60,000',
+    metric: 'price_above',
+    symbol: 'BTC',
+    threshold: 60000,
+    enabled: true,
+    createdAt: '2026-10-01T10:00:00.000Z'
+  },
+  {
+    id: 'rule-aapl-pl',
+    name: 'AAPL P&L > +15%',
+    metric: 'pl_percent_above',
+    symbol: 'AAPL',
+    threshold: 15,
+    enabled: true,
+    createdAt: '2026-10-05T12:00:00.000Z'
   }
 ];
 

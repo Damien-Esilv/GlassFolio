@@ -1,0 +1,106 @@
+{
+  "title": "Notification Center",
+  "subtitle": "Monitor your market alerts, tax deadlines, and portfolio milestones.",
+  "center": {
+    "title": "Notification Center",
+    "empty": "No recent alerts"
+  },
+  "bell": {
+    "ariaLabel": "Notifications",
+    "empty": "No notifications",
+    "emptyDesc": "You are all caught up! Smart alerts will appear here.",
+    "allTab": "All",
+    "unreadTab": "Unread",
+    "markAllAsRead": "Mark all as read",
+    "viewAll": "View all notifications",
+    "deleteAlert": "Delete notification",
+    "markAsRead": "Mark as read",
+    "dismiss": "Dismiss"
+  },
+  "tabs": {
+    "inbox": "Inbox",
+    "rules": "Custom Alert Rules"
+  },
+  "stats": {
+    "total": "Total Alerts",
+    "unread": "Unread",
+    "activeRules": "Active Rules",
+    "categories": "Categories Tracked"
+  },
+  "filters": {
+    "searchPlaceholder": "Search alerts, assets, keywords...",
+    "allCategories": "All Categories",
+    "portfolio": "Portfolio & Market",
+    "fiscal": "Tax & Deadlines",
+    "goals": "Goals & Quests",
+    "security": "Security & Imports",
+    "system": "System",
+    "statusAll": "All",
+    "statusUnread": "Unread only",
+    "clearRead": "Clear Read"
+  },
+  "categories": {
+    "portfolio": "Portfolio",
+    "fiscal": "Tax",
+    "goals": "Goals",
+    "security": "Security",
+    "system": "System"
+  },
+  "rules": {
+    "title": "Custom Alert Rules",
+    "subtitle": "Configure automated thresholds to get notified on market or allocation movements.",
+    "addRule": "Create Rule",
+    "name": "Rule Name",
+    "namePlaceholder": "E.g.: BTC rebound target",
+    "metric": "Trigger Condition",
+    "symbol": "Asset / Symbol",
+    "symbolPlaceholder": "E.g.: BTC, CW8, AAPL",
+    "threshold": "Threshold",
+    "thresholdPlaceholder": "E.g.: 60000 or 15",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "actions": "Actions",
+    "lastTriggered": "Last Triggered",
+    "neverTriggered": "Never",
+    "noRules": "No custom alert rules yet.",
+    "noRulesDesc": "Create your first rule to track price thresholds, P&L fluctuations, or cash drag.",
+    "deleteConfirm": "Delete this alert rule?",
+    "metrics": {
+      "price_above": "Price greater than or equal to (>=)",
+      "price_below": "Price less than or equal to (<=)",
+      "pl_percent_above": "Unrealized P&L % greater than (>=)",
+      "pl_percent_below": "Unrealized P&L % less than (<=)",
+      "cash_ratio_above": "Cash ratio greater than (%)"
+    }
+  },
+  "toast": {
+    "newNotification": "New Alert",
+    "viewAction": "View"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "yesterday": "Yesterday"
+  },
+  "settings": {
+    "title": "Notification Preferences",
+    "subtitle": "Customize how you receive portfolio alerts and real-time notifications.",
+    "master": "Smart Notifications",
+    "masterDesc": "Enable automated detection of portfolio anomalies and alerts.",
+    "toasts": "Live Floating Toasts",
+    "toastsDesc": "Display a transient toast banner when a new alert is detected.",
+    "categoriesTitle": "Monitored Categories",
+    "categoryPortfolio": "Portfolio & Market",
+    "categoryPortfolioDesc": "Price threshold triggers, P&L fluctuations, and dormant cash drag.",
+    "categoryFiscal": "Tax & Deadlines",
+    "categoryFiscalDesc": "Reminders on tax calendar deadlines and loss-harvesting opportunities.",
+    "categoryGoals": "Goals & Quests",
+    "categoryGoalsDesc": "Reached savings milestones and unclaimed quest XP.",
+    "categorySecurity": "Security & Data",
+    "categorySecurityDesc": "Vault backup reminders and synchronization warnings.",
+    "dormantCashTitle": "Dormant Cash Alert Threshold",
+    "dormantCashDesc": "Alert when uninvested cash exceeds this percentage of total portfolio.",
+    "manageRules": "Manage Custom Alert Rules"
+  }
+}

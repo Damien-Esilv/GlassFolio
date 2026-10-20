@@ -12,6 +12,8 @@ import { useData } from '../context/DataContext';
 import { appStorage } from '../src/services/storage/appStorage';
 import { AIChatDrawer } from './ai/AIChatDrawer';
 import { ConsentBanner } from './ConsentBanner';
+import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
+import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -484,6 +486,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </button>
             )}
 
+
             {/* Live Price Freshness Badge & Refresh Button (Left Side) */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-subtle/60 border border-subtle text-xs">
               {freshnessLabel ? (
@@ -521,10 +524,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="hidden sm:inline">Assistant IA</span>
             </button>
 
-            <button className="p-2 text-secondary hover:bg-subtle rounded-full transition-colors relative" aria-label="Notifications">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-card"></span>
-            </button>
+            <NotificationBellDropdown />
 
             {/* Lock Vault button */}
             <button
@@ -572,6 +572,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {t('navigation:header.profileAndAccount')}
                   </Link>
                   <Link
+                    to="/notifications"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-subtle hover:text-primary transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Bell size={16} />
+                    {t('notifications:center.title', 'Notifications')}
+                  </Link>
+                  <Link
                     to="/settings?tab=preferences"
                     className="flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-subtle hover:text-primary transition-colors"
                     onClick={() => setIsUserMenuOpen(false)}
@@ -610,6 +618,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* In-App AI Assistant Drawer */}
       <AIChatDrawer isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
+
+      {/* Real-time Floating Notification Toasts */}
+      <NotificationToastContainer />
     </div>
   );
 };

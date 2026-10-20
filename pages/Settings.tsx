@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import {
+    User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette,
+    TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles
+} from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { UserPreferences } from '../types';
+import { UserPreferences, NotificationCategoryPreferences } from '../types';
 import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
 import { exportBackupJSON, exportRGPDZip } from '../src/services/exportService';
 import { BackupMergeWizard } from '../components/BackupMergeWizard';
-import { Download, FileText, Database, Sparkles } from 'lucide-react';
 import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
@@ -133,6 +135,77 @@ const Settings: React.FC = () => {
 
     const updatePreference = async <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
         const newPrefs: UserPreferences = { ...prefData, [key]: value };
+        setPrefData(newPrefs);
+        await updateProfile({ preferences: newPrefs });
+    };
+
+    const notifPrefs = prefData.notificationPreferences || {
+        masterEnabled: prefData.notifications ?? true,
+        inAppToasts: true,
+        categories: {
+            portfolio: true,
+            fiscal: true,
+            goals: true,
+            security: true,
+            system: true,
+        },
+        dormantCashThresholdPercent: 25,
+        volatilityThresholdPercent: 15,
+    };
+
+    const handleToggleMasterNotifications = async () => {
+        const nextMaster = !prefData.notifications;
+        const updatedNotif: NotificationCategoryPreferences = {
+            ...notifPrefs,
+            masterEnabled: nextMaster,
+        };
+        const newPrefs: UserPreferences = {
+            ...prefData,
+            notifications: nextMaster,
+            notificationPreferences: updatedNotif,
+        };
+        setPrefData(newPrefs);
+        await updateProfile({ preferences: newPrefs });
+    };
+
+    const handleToggleToasts = async () => {
+        const updatedNotif: NotificationCategoryPreferences = {
+            ...notifPrefs,
+            inAppToasts: !notifPrefs.inAppToasts,
+        };
+        const newPrefs: UserPreferences = {
+            ...prefData,
+            notificationPreferences: updatedNotif,
+        };
+        setPrefData(newPrefs);
+        await updateProfile({ preferences: newPrefs });
+    };
+
+    const handleToggleCategory = async (cat: 'portfolio' | 'fiscal' | 'goals' | 'security') => {
+        const updatedNotif: NotificationCategoryPreferences = {
+            ...notifPrefs,
+            categories: {
+                ...notifPrefs.categories,
+                [cat]: !notifPrefs.categories[cat],
+            },
+        };
+        const newPrefs: UserPreferences = {
+            ...prefData,
+            notificationPreferences: updatedNotif,
+        };
+        setPrefData(newPrefs);
+        await updateProfile({ preferences: newPrefs });
+    };
+
+    const handleDormantCashChange = async (val: number) => {
+        const updatedNotif: NotificationCategoryPreferences = {
+            ...notifPrefs,
+            dormantCashThresholdPercent: val,
+        };
+        const newPrefs: UserPreferences = {
+            ...prefData,
+            notificationPreferences: updatedNotif,
+        };
         setPrefData(newPrefs);
         await updateProfile({ preferences: newPrefs });
     };
@@ -505,21 +578,168 @@ const Settings: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Notifications */}
-                                    <div className="flex items-center justify-between border-t border-border pt-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-subtle rounded-lg text-secondary"><Bell size={20} /></div>
-                                            <div>
-                                                <p className="text-sm font-medium text-primary">{t('settings:preferences.notifications')}</p>
-                                                <p className="text-xs text-tertiary">{t('settings:preferences.notificationsInfo')}</p>
+                                    {/* Granular Notifications Section */}
+                                    <div className="border-t border-border pt-6 space-y-5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-subtle rounded-lg text-secondary"><Bell size={20} /></div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-primary">{t('notifications:settings.master')}</p>
+                                                    <p className="text-xs text-tertiary">{t('notifications:settings.masterDesc')}</p>
+                                                </div>
                                             </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleToggleMasterNotifications}
+                                                className={`w-12 h-6 rounded-full transition-colors relative ${prefData.notifications ? 'bg-primary' : 'bg-subtle border border-subtle'}`}
+                                                aria-label={t('notifications:settings.master')}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${prefData.notifications ? 'left-7' : 'left-1'}`} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => updatePreference('notifications', !prefData.notifications)}
-                                            className={`w-12 h-6 rounded-full transition-colors relative ${prefData.notifications ? 'bg-primary' : 'bg-black/20 dark:bg-white/20'}`}
-                                        >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${prefData.notifications ? 'left-7' : 'left-1'}`}></div>
-                                        </button>
+
+                                        {prefData.notifications && (
+                                            <div className="space-y-5 pl-2 sm:pl-4 border-l-2 border-primary/20 animate-in fade-in slide-in-from-top-1">
+                                                {/* Live Toasts Toggle */}
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-primary">{t('notifications:settings.toasts')}</p>
+                                                        <p className="text-xs text-tertiary">{t('notifications:settings.toastsDesc')}</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleToggleToasts}
+                                                        className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.inAppToasts ? 'bg-primary' : 'bg-subtle border border-subtle'}`}
+                                                        aria-label={t('notifications:settings.toasts')}
+                                                    >
+                                                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.inAppToasts ? 'left-5' : 'left-0.5'}`} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Category Toggles */}
+                                                <div className="pt-1">
+                                                    <p className="text-xs font-semibold text-secondary uppercase tracking-wider mb-3">
+                                                        {t('notifications:settings.categoriesTitle')}
+                                                    </p>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {/* Portfolio */}
+                                                        <div className="flex items-center justify-between p-3 rounded-xl bg-subtle border border-subtle">
+                                                            <div className="flex items-center gap-2.5 mr-2">
+                                                                <TrendingUp size={16} className="text-positive shrink-0" />
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-primary">{t('notifications:settings.categoryPortfolio')}</p>
+                                                                    <p className="text-[10px] text-tertiary line-clamp-1">{t('notifications:settings.categoryPortfolioDesc')}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleCategory('portfolio')}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.portfolio ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                aria-label={t('notifications:settings.categoryPortfolio')}
+                                                            >
+                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.portfolio ? 'left-4' : 'left-0.5'}`} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Fiscal */}
+                                                        <div className="flex items-center justify-between p-3 rounded-xl bg-subtle border border-subtle">
+                                                            <div className="flex items-center gap-2.5 mr-2">
+                                                                <Scale size={16} className="text-brand shrink-0" />
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-primary">{t('notifications:settings.categoryFiscal')}</p>
+                                                                    <p className="text-[10px] text-tertiary line-clamp-1">{t('notifications:settings.categoryFiscalDesc')}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleCategory('fiscal')}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.fiscal ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                aria-label={t('notifications:settings.categoryFiscal')}
+                                                            >
+                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.fiscal ? 'left-4' : 'left-0.5'}`} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Goals */}
+                                                        <div className="flex items-center justify-between p-3 rounded-xl bg-subtle border border-subtle">
+                                                            <div className="flex items-center gap-2.5 mr-2">
+                                                                <Trophy size={16} className="text-warning shrink-0" />
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-primary">{t('notifications:settings.categoryGoals')}</p>
+                                                                    <p className="text-[10px] text-tertiary line-clamp-1">{t('notifications:settings.categoryGoalsDesc')}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleCategory('goals')}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.goals ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                aria-label={t('notifications:settings.categoryGoals')}
+                                                            >
+                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.goals ? 'left-4' : 'left-0.5'}`} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Security */}
+                                                        <div className="flex items-center justify-between p-3 rounded-xl bg-subtle border border-subtle">
+                                                            <div className="flex items-center gap-2.5 mr-2">
+                                                                <ShieldAlert size={16} className="text-negative shrink-0" />
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-primary">{t('notifications:settings.categorySecurity')}</p>
+                                                                    <p className="text-[10px] text-tertiary line-clamp-1">{t('notifications:settings.categorySecurityDesc')}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleCategory('security')}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.security ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                aria-label={t('notifications:settings.categorySecurity')}
+                                                            >
+                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.security ? 'left-4' : 'left-0.5'}`} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Dormant Cash Slider */}
+                                                <div className="pt-3 border-t border-border">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-primary">{t('notifications:settings.dormantCashTitle')}</p>
+                                                            <p className="text-xs text-tertiary">{t('notifications:settings.dormantCashDesc')}</p>
+                                                        </div>
+                                                        <span className="text-sm font-bold text-primary px-2.5 py-1 rounded-md bg-subtle border border-subtle">
+                                                            {notifPrefs.dormantCashThresholdPercent}%
+                                                        </span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min={5}
+                                                        max={50}
+                                                        step={5}
+                                                        value={notifPrefs.dormantCashThresholdPercent}
+                                                        onChange={(e) => handleDormantCashChange(parseInt(e.target.value, 10))}
+                                                        className="w-full accent-primary bg-subtle h-2 rounded-lg cursor-pointer"
+                                                    />
+                                                    <div className="flex justify-between text-[10px] text-tertiary mt-1">
+                                                        <span>5%</span>
+                                                        <span>25%</span>
+                                                        <span>50%</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Link to Rules */}
+                                                <div className="pt-2">
+                                                    <Link
+                                                        to="/notifications?tab=rules"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline transition-colors"
+                                                    >
+                                                        <SlidersHorizontal size={14} />
+                                                        <span>{t('notifications:settings.manageRules')}</span>
+                                                        <ExternalLink size={12} />
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -1,0 +1,106 @@
+{
+  "title": "Centre de notifications",
+  "subtitle": "Surveillez vos alertes de marché, vos échéances fiscales et vos jalons patrimoniaux.",
+  "center": {
+    "title": "Centre de notifications",
+    "empty": "Aucune alerte récente"
+  },
+  "bell": {
+    "ariaLabel": "Notifications",
+    "empty": "Aucune notification",
+    "emptyDesc": "Vous êtes à jour ! Vos alertes intelligentes apparaîtront ici.",
+    "allTab": "Toutes",
+    "unreadTab": "Non lues",
+    "markAllAsRead": "Tout marquer comme lu",
+    "viewAll": "Voir tout le centre de notifications",
+    "deleteAlert": "Supprimer la notification",
+    "markAsRead": "Marquer comme lue",
+    "dismiss": "Fermer"
+  },
+  "tabs": {
+    "inbox": "Boîte de réception",
+    "rules": "Règles d'alertes personnalisées"
+  },
+  "stats": {
+    "total": "Total des alertes",
+    "unread": "Non lues",
+    "activeRules": "Règles actives",
+    "categories": "Catégories surveillées"
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher une alerte, un actif, un mot-clé...",
+    "allCategories": "Toutes les catégories",
+    "portfolio": "Patrimoine & Marché",
+    "fiscal": "Fiscalité & Échéances",
+    "goals": "Objectifs & Quêtes",
+    "security": "Sécurité & Imports",
+    "system": "Système",
+    "statusAll": "Toutes",
+    "statusUnread": "Non lues uniquement",
+    "clearRead": "Nettoyer les lues"
+  },
+  "categories": {
+    "portfolio": "Patrimoine",
+    "fiscal": "Fiscalité",
+    "goals": "Objectifs",
+    "security": "Sécurité",
+    "system": "Système"
+  },
+  "rules": {
+    "title": "Règles d'alertes personnalisées",
+    "subtitle": "Configurez des seuils automatiques pour être averti lors d'un mouvement de marché ou d'allocation.",
+    "addRule": "Créer une règle",
+    "name": "Nom de la règle",
+    "namePlaceholder": "Ex: Alerte BTC rebond",
+    "metric": "Condition de déclenchement",
+    "symbol": "Actif / Symbole",
+    "symbolPlaceholder": "Ex: BTC, CW8, AAPL",
+    "threshold": "Seuil",
+    "thresholdPlaceholder": "Ex: 60000 ou 15",
+    "enabled": "Activée",
+    "disabled": "Désactivée",
+    "actions": "Actions",
+    "lastTriggered": "Dernier déclenchement",
+    "neverTriggered": "Jamais",
+    "noRules": "Aucune règle personnalisée pour le moment.",
+    "noRulesDesc": "Créez votre première règle de surveillance de prix, de performance ou de liquidités.",
+    "deleteConfirm": "Supprimer cette règle d'alerte ?",
+    "metrics": {
+      "price_above": "Prix supérieur ou égal à (>=)",
+      "price_below": "Prix inférieur ou égal à (<=)",
+      "pl_percent_above": "P&L latent % supérieur à (>=)",
+      "pl_percent_below": "P&L latent % inférieur à (<=)",
+      "cash_ratio_above": "Part de liquidités supérieure à (%)"
+    }
+  },
+  "toast": {
+    "newNotification": "Nouvelle alerte",
+    "viewAction": "Voir"
+  },
+  "time": {
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {{count}} min",
+    "hoursAgo": "Il y a {{count}} h",
+    "yesterday": "Hier"
+  },
+  "settings": {
+    "title": "Préférences des notifications",
+    "subtitle": "Personnalisez la réception de vos alertes patrimoniales et notifications en temps réel.",
+    "master": "Notifications intelligentes",
+    "masterDesc": "Activer la détection automatique des alertes et anomalies patrimoniales.",
+    "toasts": "Toasts flottants en direct",
+    "toastsDesc": "Afficher une bannière éphémère lors de la détection d'une nouvelle alerte.",
+    "categoriesTitle": "Catégories surveillées",
+    "categoryPortfolio": "Patrimoine & Marché",
+    "categoryPortfolioDesc": "Alertes sur les seuils de prix, variations de P&L et liquidités dormantes.",
+    "categoryFiscal": "Fiscalité & Échéances",
+    "categoryFiscalDesc": "Rappels sur le calendrier fiscal (déclarations en cours, harvesting de pertes).",
+    "categoryGoals": "Objectifs & Quêtes",
+    "categoryGoalsDesc": "Jalons patrimoniaux atteints et XP de quêtes débloquées.",
+    "categorySecurity": "Sécurité & Données",
+    "categorySecurityDesc": "Rappels de sauvegarde du coffre-fort et alertes de synchronisation.",
+    "dormantCashTitle": "Seuil de liquidités dormantes",
+    "dormantCashDesc": "Alerter lorsque la part de liquidités non investies dépasse ce pourcentage du portefeuille.",
+    "manageRules": "Gérer les règles d'alerte personnalisées"
+  }
+}
