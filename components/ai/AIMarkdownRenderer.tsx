@@ -196,6 +196,15 @@ const MarkdownBody: React.FC<{ text: string }> = ({ text }) => {
       continue;
     }
 
+    // Horizontal Rule / Divider: ---, ***, ___ (at least 3 characters)
+    if (/^(\*{3,}|-{3,}|_{3,})$/.test(line.trim().replace(/\s+/g, ''))) {
+      elements.push(
+        <hr key={`hr-${i}`} className="my-3 border-t border-subtle" />
+      );
+      i++;
+      continue;
+    }
+
     // Blockquote
     if (line.startsWith('> ')) {
       const quoteLines: string[] = [];

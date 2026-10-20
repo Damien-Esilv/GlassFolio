@@ -425,16 +425,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <SidebarContent collapsed={isSidebarCollapsed} />
-
-        {/* Settings at bottom */}
-        <div className="p-3 border-t border-subtle flex flex-col gap-1">
-          <NavItem
-            path="/settings"
-            icon={Settings}
-            name={t('navigation:menu.settings')}
-            collapsed={isSidebarCollapsed}
-          />
-        </div>
       </aside>
 
       {/* Sidebar - Mobile (Slide in) */}
@@ -580,7 +570,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {t('notifications:center.title', 'Notifications')}
                   </Link>
                   <Link
-                    to="/settings?tab=preferences"
+                    to="/settings"
                     className="flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-subtle hover:text-primary transition-colors"
                     onClick={() => setIsUserMenuOpen(false)}
                   >
