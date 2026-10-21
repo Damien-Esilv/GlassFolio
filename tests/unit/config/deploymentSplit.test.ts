@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   resolveAppTarget,
   getAppTarget,
+  getDeploymentMode,
   getAppUrl,
   getShowcaseUrl,
   isShowcaseAvailable,
@@ -23,6 +24,26 @@ describe('Dual-Entry Deployment & URL Handoff (TGLA-058)', () => {
   afterEach(() => {
     process.env = { ...originalEnv };
     _resetUrlBootstrapCache();
+  });
+
+  describe('getDeploymentMode', () => {
+    it('defaults to local when neither variable is set', () => {
+      vi.stubEnv('VITE_DEPLOYMENT_MODE', '');
+      vi.stubEnv('VITE_STORAGE_MODE', '');
+      expect(getDeploymentMode()).toBe('local');
+    });
+
+    it('resolves cloud from VITE_DEPLOYMENT_MODE', () => {
+      vi.stubEnv('VITE_DEPLOYMENT_MODE', 'cloud');
+      vi.stubEnv('VITE_STORAGE_MODE', '');
+      expect(getDeploymentMode()).toBe('cloud');
+    });
+
+    it('falls back to VITE_STORAGE_MODE as a resilient alias', () => {
+      vi.stubEnv('VITE_DEPLOYMENT_MODE', '');
+      vi.stubEnv('VITE_STORAGE_MODE', 'cloud');
+      expect(getDeploymentMode()).toBe('cloud');
+    });
   });
 
   describe('resolveAppTarget', () => {

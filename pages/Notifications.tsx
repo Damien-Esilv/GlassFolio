@@ -118,7 +118,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -280,7 +280,19 @@ export const Notifications: React.FC = () => {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-primary">{alert.title}</span>
+                      {alert.actionUrl ? (
+                        <Link
+                          to={alert.actionUrl}
+                          onClick={() => {
+                            if (!alert.read) markAlertAsRead(alert.id);
+                          }}
+                          className="text-xs font-bold text-primary hover:underline"
+                        >
+                          {alert.title}
+                        </Link>
+                      ) : (
+                        <span className="text-xs font-bold text-primary">{alert.title}</span>
+                      )}
                       {!alert.read && (
                         <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-primary/20 text-primary">
                           {t('notifications:bell.unreadTab')}

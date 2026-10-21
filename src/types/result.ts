@@ -15,7 +15,15 @@ export type AppErrorCode =
     | 'IMPORT_PARSE_ERROR'
     | 'NETWORK_ERROR'
     | 'NOT_FOUND'
-    | 'UNKNOWN_ERROR';
+    | 'UNKNOWN_ERROR'
+    | 'AUTH_INVALID_CREDENTIALS'
+    | 'AUTH_EMAIL_NOT_VERIFIED'
+    | 'AUTH_ACCOUNT_CONFLICT'
+    | 'AUTH_LOCKED_OUT'
+    | 'AUTH_MFA_REQUIRED'
+    | 'AUTH_ANTIBOT_REJECTED'
+    | 'AUTH_PROVIDER_RESTRICTED'
+    | 'VAULT_RECOVERY_FAILED';
 
 export interface AppError {
     code: AppErrorCode;

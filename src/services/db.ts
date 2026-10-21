@@ -35,6 +35,7 @@ import {
     instruments as initialInstruments
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
+import { VAULT_HEADER_KEY } from './storage/storageKeys';
 
 const STORAGE_KEYS = {
     // Legacy keys (existing functionality)
@@ -60,6 +61,17 @@ const STORAGE_KEYS = {
 // Helper: Simulate network delay
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const isRealUserVaultActive = (): boolean => {
+    try {
+        const raw = appStorage.getBacking().getItem(VAULT_HEADER_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        return Boolean(parsed && parsed.isDemo === false);
+    } catch {
+        return false;
+    }
+};
+
 class MockDB {
     // =========================================================================
     // LEGACY METHODS (Existing Functionality)
@@ -67,7 +79,8 @@ class MockDB {
 
     getTransactions(): Transaction[] {
         const stored = appStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-        return stored ? JSON.parse(stored) : initialTransactions;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialTransactions;
     }
 
     saveTransactions(data: Transaction[]) {
@@ -76,7 +89,8 @@ class MockDB {
 
     getPositions(): Position[] {
         const stored = appStorage.getItem(STORAGE_KEYS.POSITIONS);
-        return stored ? JSON.parse(stored) : initialPositions;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialPositions;
     }
 
     savePositions(data: Position[]) {
@@ -85,7 +99,8 @@ class MockDB {
 
     getGoals(): FinancialGoal[] {
         const stored = appStorage.getItem(STORAGE_KEYS.GOALS);
-        return stored ? JSON.parse(stored) : initialGoals;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialGoals;
     }
 
     saveGoals(data: FinancialGoal[]) {
@@ -141,7 +156,8 @@ class MockDB {
 
     getAlerts(): Alert[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ALERTS);
-        return stored ? JSON.parse(stored) : initialAlerts;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialAlerts;
     }
 
     saveAlerts(data: Alert[]) {
@@ -150,7 +166,8 @@ class MockDB {
 
     getAlertRules(): AlertRule[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ALERT_RULES);
-        return stored ? JSON.parse(stored) : initialAlertRules;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialAlertRules;
     }
 
     saveAlertRules(data: AlertRule[]) {
@@ -159,7 +176,8 @@ class MockDB {
 
     getAssetGroups(): AssetGroup[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ASSET_GROUPS);
-        return stored ? JSON.parse(stored) : initialAssetGroups;
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : initialAssetGroups;
     }
 
     saveAssetGroups(data: AssetGroup[]) {
@@ -203,16 +221,18 @@ class MockDB {
     // --- Accounts ---
     getAccounts(): Account[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-        if (!stored) return initialAccounts;
+        if (!stored) return isRealUserVaultActive() ? [] : initialAccounts;
 
         try {
             const storedList = JSON.parse(stored) as Account[];
             const map = new Map<string, Account>();
-            initialAccounts.forEach(a => map.set(a.id, a));
+            if (!isRealUserVaultActive()) {
+                initialAccounts.forEach(a => map.set(a.id, a));
+            }
             storedList.forEach(a => map.set(a.id, a));
             return Array.from(map.values());
         } catch {
-            return initialAccounts;
+            return isRealUserVaultActive() ? [] : initialAccounts;
         }
     }
 
@@ -231,7 +251,7 @@ class MockDB {
     // --- Import Batches ---
     getImportBatches(): ImportBatch[] {
         const stored = appStorage.getItem(STORAGE_KEYS.IMPORT_BATCHES);
-        if (!stored) return initialImportBatches;
+        if (!stored) return isRealUserVaultActive() ? [] : initialImportBatches;
 
         // Migrate old batches to new schema if needed
         const batches = JSON.parse(stored) as ImportBatch[];
@@ -264,7 +284,7 @@ class MockDB {
     // --- Unified Transactions ---
     getUnifiedTransactions(): UnifiedTransaction[] {
         const stored = appStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
-        if (!stored) return initialUnifiedTransactions;
+        if (!stored) return isRealUserVaultActive() ? [] : initialUnifiedTransactions;
 
         // Migrate old transactions to new schema if needed
         const transactions = JSON.parse(stored) as UnifiedTransaction[];
@@ -398,6 +418,66 @@ class MockDB {
      * Export all data (for backup)
      */
     exportAll(): Record<string, unknown> {
+        let userProfile: unknown[] = [];
+        const storedUser = appStorage.getItem('glassfolio_user');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                const { masterPasswordHash, authSalt, ...safeUser } = parsedUser;
+                userProfile = [safeUser];
+            } catch {
+                // Ignore parse errors
+            }
+        }
+
+        let gamification: unknown[] = [];
+        const storedGamification = appStorage.getItem('glassfolio_gamification_v1');
+        if (storedGamification) {
+            try {
+                gamification = [JSON.parse(storedGamification)];
+            } catch {
+                // Ignore parse errors
+            }
+        }
+
+        let aiSettings: unknown[] = [];
+        const storedAiSettings = appStorage.getItem('glassfolio_ai_settings_v1');
+        if (storedAiSettings) {
+            try {
+                const parsedSettings = JSON.parse(storedAiSettings);
+                if (parsedSettings && typeof parsedSettings === 'object') {
+                    const safeSettings = { ...parsedSettings };
+                    delete safeSettings.apiKey;
+                    delete safeSettings.customApiKey;
+                    aiSettings = [safeSettings];
+                }
+            } catch {
+                // Ignore
+            }
+        }
+
+        let aiConversations: unknown[] = [];
+        const storedAiChats = appStorage.getItem('glassfolio_ai_chats_v1');
+        if (storedAiChats) {
+            try {
+                const parsedChats = JSON.parse(storedAiChats);
+                aiConversations = Array.isArray(parsedChats) ? parsedChats : [parsedChats];
+            } catch {
+                // Ignore
+            }
+        }
+
+        let securityAuditLogs: unknown[] = [];
+        const storedAuditLogs = appStorage.getItem('glassfolio_security_audit_log');
+        if (storedAuditLogs) {
+            try {
+                const parsedLogs = JSON.parse(storedAuditLogs);
+                securityAuditLogs = Array.isArray(parsedLogs) ? parsedLogs : [parsedLogs];
+            } catch {
+                // Ignore
+            }
+        }
+
         return {
             transactions: this.getTransactions(),
             positions: this.getPositions(),
@@ -412,7 +492,14 @@ class MockDB {
             unifiedTransactions: this.getUnifiedTransactions(),
             mappingTemplates: this.getMappingTemplates(),
             assetPositions: this.getAssetPositions(),
-            instruments: this.getInstruments()
+            instruments: this.getInstruments(),
+            quests: this.getQuests(),
+            pinnedBadges: this.getPinnedBadges().map(id => ({ id })),
+            userProfile,
+            gamification,
+            aiSettings,
+            aiConversations,
+            securityAuditLogs
         };
     }
 

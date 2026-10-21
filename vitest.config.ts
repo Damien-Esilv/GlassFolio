@@ -43,6 +43,7 @@ export default defineConfig({
         'src/services/core/index.ts',
         'src/services/fiscal/index.ts',
         'src/services/**/*Types.ts',
+        'src/services/**/*Schemas.ts',
         'src/services/**/contracts/**',
         'node_modules/**',
         'dist/**',

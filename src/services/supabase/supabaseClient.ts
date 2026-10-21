@@ -6,6 +6,8 @@
  * Supabase GoTrue Auth and PostgREST.
  */
 
+import { appStorage } from '../storage/appStorage';
+
 export interface SupabaseConfig {
     url: string;
     anonKey: string;
@@ -18,6 +20,7 @@ export interface SupabaseAuthSession {
     user: {
         id: string;
         email?: string;
+        email_confirmed_at?: string;
         user_metadata?: {
             name?: string;
             avatar_url?: string;
@@ -82,11 +85,17 @@ export const consumeInitialOAuthHash = (): string | null => {
 export interface SupabaseUserData {
     id: string;
     email?: string;
+    email_confirmed_at?: string | null;
+    new_email?: string | null;
     user_metadata?: {
         name?: string;
         full_name?: string;
         avatar_url?: string;
         picture?: string;
+    };
+    app_metadata?: {
+        provider?: string;
+        providers?: string[];
     };
 }
 
@@ -107,20 +116,26 @@ export const supabaseClient = {
     async signUp(
         email: string,
         password: string,
-        name?: string
+        name?: string,
+        options?: { captchaToken?: string }
     ): Promise<SupabaseAuthSession> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
 
         const endpoint = `${config.url}/auth/v1/signup`;
+        const body: Record<string, unknown> = {
+            email,
+            password,
+            data: { name },
+        };
+        if (options?.captchaToken) {
+            body.gotrue_meta_security = { captcha_token: options.captchaToken };
+        }
+
         const res = await fetch(endpoint, {
             method: 'POST',
             headers: createHeaders(config),
-            body: JSON.stringify({
-                email,
-                password,
-                data: { name },
-            }),
+            body: JSON.stringify(body),
         });
 
         const data = await res.json();
@@ -128,27 +143,37 @@ export const supabaseClient = {
             throw new Error(data.msg || data.error_description || data.message || 'Supabase signup failed.');
         }
 
-        if (!data.access_token) {
-            throw new Error('Supabase registration requires email confirmation or did not return an access token.');
-        }
+        // If email confirmation is enabled, access_token might be null
+        const accessToken = data.access_token || '';
+        const refreshToken = data.refresh_token || '';
+        const user = data.user || data;
 
         return {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            accessToken,
+            refreshToken,
             expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
-            user: data.user,
+            user,
         };
     },
 
-    async signInWithPassword(email: string, password: string): Promise<SupabaseAuthSession> {
+    async signInWithPassword(
+        email: string,
+        password: string,
+        options?: { captchaToken?: string }
+    ): Promise<SupabaseAuthSession> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
 
         const endpoint = `${config.url}/auth/v1/token?grant_type=password`;
+        const body: Record<string, unknown> = { email, password };
+        if (options?.captchaToken) {
+            body.gotrue_meta_security = { captcha_token: options.captchaToken };
+        }
+
         const res = await fetch(endpoint, {
             method: 'POST',
             headers: createHeaders(config),
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify(body),
         });
 
         const data = await res.json();
@@ -164,7 +189,7 @@ export const supabaseClient = {
         };
     },
 
-    getOAuthUrl(provider: 'google' | 'apple', redirectTo?: string): string {
+    getOAuthUrl(provider: 'google' | 'apple', redirectTo?: string, codeChallenge?: string): string {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
 
@@ -174,7 +199,187 @@ export const supabaseClient = {
             redirect_to: redirect,
         });
 
+        if (codeChallenge) {
+            params.set('code_challenge', codeChallenge);
+            params.set('code_challenge_method', 'S256');
+        }
+
         return `${config.url}/auth/v1/authorize?${params.toString()}`;
+    },
+
+    async prepareOAuthPkceUrl(provider: 'google', redirectTo?: string): Promise<string> {
+        const randomBytes = new Uint8Array(32);
+        if (typeof window !== 'undefined' && window.crypto) {
+            window.crypto.getRandomValues(randomBytes);
+        } else if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+            globalThis.crypto.getRandomValues(randomBytes);
+        }
+
+        // Base64URL encode verifier
+        const verifier = Array.from(randomBytes)
+            .map(b => b.toString(36))
+            .join('')
+            .slice(0, 48);
+
+        try {
+            appStorage.setItem('gf_oauth_pkce_verifier', verifier);
+        } catch {
+            // fallback
+        }
+
+        // Compute SHA-256 challenge
+        let challenge = verifier;
+        if (typeof crypto !== 'undefined' && crypto.subtle) {
+            const encoder = new TextEncoder();
+            const digest = await crypto.subtle.digest('SHA-256', encoder.encode(verifier));
+            challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+
+        return this.getOAuthUrl(provider, redirectTo, challenge);
+    },
+
+    async exchangePkceCode(code: string): Promise<SupabaseAuthSession> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        let verifier = '';
+        try {
+            verifier = appStorage.getItem('gf_oauth_pkce_verifier') || '';
+            appStorage.removeItem('gf_oauth_pkce_verifier');
+        } catch {
+            // fallback
+        }
+
+        const endpoint = `${config.url}/auth/v1/token?grant_type=pkce`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify({
+                auth_code: code,
+                code_verifier: verifier,
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.msg || data.error_description || data.message || 'Failed to exchange PKCE code.');
+        }
+
+        return {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+            user: data.user,
+        };
+    },
+
+    async verifyEmailOtp(
+        email: string,
+        token: string,
+        type: 'signup' | 'recovery' | 'email_change' = 'signup'
+    ): Promise<SupabaseAuthSession> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/verify`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify({ email, token, type }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.msg || data.error_description || data.message || 'Invalid or expired verification code.');
+        }
+
+        return {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+            user: data.user,
+        };
+    },
+
+    async resendVerificationEmail(email: string, captchaToken?: string): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/resend`;
+        const body: Record<string, unknown> = {
+            type: 'signup',
+            email,
+        };
+        if (captchaToken) {
+            body.gotrue_meta_security = { captcha_token: captchaToken };
+        }
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.msg || data.error_description || data.message || 'Failed to resend confirmation email.');
+        }
+    },
+
+    async updateUser(
+        accessToken: string,
+        attributes: { email?: string; password?: string; data?: Record<string, unknown> }
+    ): Promise<SupabaseUserData> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/user`;
+        const res = await fetch(endpoint, {
+            method: 'PUT',
+            headers: createHeaders(config, accessToken),
+            body: JSON.stringify(attributes),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.msg || data.error_description || data.message || 'Failed to update user profile.');
+        }
+
+        return data as SupabaseUserData;
+    },
+
+    async resetPasswordForEmail(email: string, redirectTo?: string, captchaToken?: string): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/recover`;
+        const body: Record<string, unknown> = {
+            email,
+        };
+        if (redirectTo) {
+            body.redirect_to = redirectTo;
+        }
+        if (captchaToken) {
+            body.gotrue_meta_security = { captcha_token: captchaToken };
+        }
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify(body),
+        });
+
+        // Anti-enumeration: treat status ok or error uniformly if needed, but report network failure
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            // Only throw if rate-limited or fatal
+            if (res.status === 429) {
+                throw new Error(data.msg || 'Too many requests. Please wait.');
+            }
+        }
     },
 
     async refreshSession(refreshToken: string): Promise<SupabaseAuthSession> {
@@ -337,5 +542,26 @@ export const supabaseClient = {
             fetch(`${config.url}/rest/v1/vault_headers`, { method: 'DELETE', headers }),
             fetch(`${config.url}/rest/v1/vault_records`, { method: 'DELETE', headers }),
         ]);
+    },
+
+    async deleteOwnAccount(accessToken: string): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) return;
+
+        // 1. Delete vault records & headers
+        await this.clearAllVaultRecords(accessToken).catch(() => {});
+
+        // 2. Call Postgres RPC delete_own_account
+        const endpoint = `${config.url}/rest/v1/rpc/delete_own_account`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config, accessToken),
+            body: JSON.stringify({}),
+        });
+
+        if (!res.ok && res.status !== 404) {
+            const err = await res.text().catch(() => '');
+            console.warn('[Supabase] delete_own_account RPC response:', res.status, err);
+        }
     },
 };

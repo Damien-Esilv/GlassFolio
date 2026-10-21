@@ -180,6 +180,28 @@ export function generateBackupData(): BackupPayload {
 }
 
 /**
+ * Trigger transactions only CSV download
+ */
+export async function exportTransactionsCSV(): Promise<void> {
+    const transactions = db.getTransactions();
+    const csvContent = objectsToCSV(transactions as unknown as Record<string, unknown>[]);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const today = new Date().toISOString().split('T')[0];
+    downloadFile(blob, `glassfolio-transactions-${today}.csv`);
+}
+
+/**
+ * Trigger transactions only JSON download
+ */
+export async function exportTransactionsJSON(): Promise<void> {
+    const transactions = db.getTransactions();
+    const jsonContent = JSON.stringify({ transactions }, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const today = new Date().toISOString().split('T')[0];
+    downloadFile(blob, `glassfolio-transactions-${today}.json`);
+}
+
+/**
  * Trigger full backup JSON download
  */
 export async function exportBackupJSON(): Promise<void> {

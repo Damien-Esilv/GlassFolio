@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Lock, ShieldCheck, ShieldAlert, KeyRound, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Lock, ShieldCheck, ShieldAlert, KeyRound, AlertCircle, CheckCircle2, X, RefreshCw, Info } from 'lucide-react';
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { vaultService } from '../../src/services/security/vaultService';
 import { totpService } from '../../src/services/security/totpService';
+import { isErr } from '../../src/types/result';
 import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { PasskeyManager } from './PasskeyManager';
 import { SecretsVaultPanel } from './SecretsVaultPanel';
 import { SessionAuditPanel } from './SessionAuditPanel';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
+import { RecoveryKeyDialog } from './RecoveryKeyDialog';
 import { evaluatePassword } from '../../src/services/security/passwordValidator';
 
 export const SecuritySettingsTab: React.FC = () => {
@@ -28,6 +31,15 @@ export const SecuritySettingsTab: React.FC = () => {
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
     const [passwordSuccess, setPasswordSuccess] = useState('');
+
+    // Regenerate Recovery Key state
+    const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+    const [regeneratePassword, setRegeneratePassword] = useState('');
+    const [isRegenerating, setIsRegenerating] = useState(false);
+    const [regenerateError, setRegenerateError] = useState('');
+    const [newRecoveryKey, setNewRecoveryKey] = useState<string | null>(null);
+
+    const isGoogleAccount = user?.authProvider === 'google';
 
     const refreshTotpStatus = async () => {
         try {
@@ -88,6 +100,27 @@ export const SecuritySettingsTab: React.FC = () => {
         }
     };
 
+    const handleRegenerateRecoveryKey = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setRegenerateError('');
+        setIsRegenerating(true);
+
+        try {
+            const res = await vaultService.regenerateRecoveryKey(regeneratePassword);
+            if (isErr(res)) {
+                setRegenerateError(res.error.message);
+                return;
+            }
+            setShowRegenerateModal(false);
+            setRegeneratePassword('');
+            setNewRecoveryKey(res.value.recoveryKey);
+        } catch (err: unknown) {
+            setRegenerateError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+        } finally {
+            setIsRegenerating(false);
+        }
+    };
+
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border space-y-4";
 
     return (
@@ -115,23 +148,42 @@ export const SecuritySettingsTab: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap self-start xl:self-center">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setShowChangePassword(true)}
-                            className="text-xs whitespace-nowrap"
-                        >
-                            <KeyRound size={14} className="mr-1.5 shrink-0" />
-                            {t('security:vaultSection.changeMasterPassword')}
-                        </Button>
+                    <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+                        {isGoogleAccount ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-subtle border border-subtle text-xs text-subtle">
+                                <Info size={14} className="text-brand shrink-0" />
+                                <span>{t('security:vaultSection.managedByGoogle', 'Authentication & Vault managed by Google OAuth')}</span>
+                            </div>
+                        ) : (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setShowChangePassword(true)}
+                                    className="text-xs whitespace-nowrap w-full justify-center sm:justify-start"
+                                >
+                                    <KeyRound size={14} className="mr-1.5 shrink-0" />
+                                    {t('security:vaultSection.changeMasterPassword')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setShowRegenerateModal(true)}
+                                    className="text-xs whitespace-nowrap w-full justify-center sm:justify-start"
+                                >
+                                    <RefreshCw size={14} className="mr-1.5 shrink-0" />
+                                    {t('security:vaultSection.regenerateRecoveryKey', 'Regenerate Recovery Key')}
+                                </Button>
+                            </>
+                        )}
                         <Button
                             type="button"
                             variant="secondary"
                             size="sm"
                             onClick={() => lockVault()}
-                            className="text-xs whitespace-nowrap"
+                            className="text-xs whitespace-nowrap w-full justify-center sm:justify-start"
                         >
                             <Lock size={14} className="mr-1.5 shrink-0" />
                             {t('security:vaultSection.lockNow')}
@@ -145,22 +197,35 @@ export const SecuritySettingsTab: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
-                            {isTotpEnabled ? <ShieldCheck size={22} className="text-success" /> : <ShieldAlert size={22} />}
+                            {isGoogleAccount ? (
+                                <ShieldCheck size={22} className="text-brand" />
+                            ) : isTotpEnabled ? (
+                                <ShieldCheck size={22} className="text-success" />
+                            ) : (
+                                <ShieldAlert size={22} />
+                            )}
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm font-semibold text-primary">
                                     {t('security:totp.title')}
                                 </h3>
-                                <span
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
-                                        isTotpEnabled
-                                            ? 'bg-success/10 text-success border border-success/20'
-                                            : 'bg-subtle text-tertiary border border-subtle'
-                                    }`}
-                                >
-                                    {isTotpEnabled ? t('security:totp.statusEnabled') : t('security:totp.statusDisabled')}
-                                </span>
+                                {isGoogleAccount ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 bg-brand/10 text-brand border border-brand/20">
+                                        <ShieldCheck size={12} className="shrink-0" />
+                                        <span>{t('security:totp.statusGoogle', 'Managed by Google')}</span>
+                                    </span>
+                                ) : (
+                                    <span
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                                            isTotpEnabled
+                                                ? 'bg-success/10 text-success border border-success/20'
+                                                : 'bg-subtle text-tertiary border border-subtle'
+                                        }`}
+                                    >
+                                        {isTotpEnabled ? t('security:totp.statusEnabled') : t('security:totp.statusDisabled')}
+                                    </span>
+                                )}
                             </div>
                             <p className="text-xs text-secondary mt-0.5">
                                 {t('security:totp.subtitle')}
@@ -169,7 +234,12 @@ export const SecuritySettingsTab: React.FC = () => {
                     </div>
 
                     <div className="shrink-0">
-                        {isTotpEnabled ? (
+                        {isGoogleAccount ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-subtle border border-subtle text-xs text-subtle">
+                                <Info size={14} className="text-brand shrink-0" />
+                                <span>{t('security:totp.managedByGoogle', '2FA is managed directly by your Google Account')}</span>
+                            </div>
+                        ) : isTotpEnabled ? (
                             <Button
                                 type="button"
                                 variant="danger"
@@ -210,8 +280,8 @@ export const SecuritySettingsTab: React.FC = () => {
             </div>
 
             {/* Change Master Password Modal */}
-            {showChangePassword && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+            {showChangePassword && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
                     <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
                         <button
                             type="button"
@@ -312,7 +382,8 @@ export const SecuritySettingsTab: React.FC = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* TOTP Enrollment Dialog */}
@@ -324,6 +395,86 @@ export const SecuritySettingsTab: React.FC = () => {
                     refreshTotpStatus();
                 }}
             />
+
+            {/* Regenerate Recovery Key Confirmation Modal */}
+            {showRegenerateModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+                    <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+                        <button
+                            type="button"
+                            onClick={() => setShowRegenerateModal(false)}
+                            className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
+                                <RefreshCw size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-primary">
+                                    {t('security:vaultSection.regenerateTitle', 'Regenerate Emergency Recovery Key')}
+                                </h2>
+                                <p className="text-xs text-secondary mt-0.5">
+                                    {t('security:vaultSection.regenerateSubtitle', 'Confirm your master password to derive a fresh 256-bit recovery key.')}
+                                </p>
+                            </div>
+                        </div>
+
+                        {regenerateError && (
+                            <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <span>{regenerateError}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleRegenerateRecoveryKey} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-secondary mb-1">
+                                    {t('security:vaultSection.masterPasswordConfirm', 'Master Password')}
+                                </label>
+                                <input
+                                    type="password"
+                                    required
+                                    autoFocus
+                                    value={regeneratePassword}
+                                    onChange={(e) => setRegeneratePassword(e.target.value)}
+                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => setShowRegenerateModal(false)}
+                                    className="flex-1"
+                                >
+                                    {t('security:vaultSection.cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    isLoading={isRegenerating}
+                                    className="flex-1"
+                                >
+                                    {t('security:vaultSection.confirmRegenerate', 'Regenerate')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Display newly generated recovery key dialog */}
+            {newRecoveryKey && (
+                <RecoveryKeyDialog
+                    recoveryKey={newRecoveryKey}
+                    onConfirmed={() => setNewRecoveryKey(null)}
+                />
+            )}
         </div>
     );
 };

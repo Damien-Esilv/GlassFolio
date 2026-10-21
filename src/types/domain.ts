@@ -28,11 +28,16 @@ export interface UserPreferences {
   pinnedBadgeIds?: string[];
 }
 
+export type AuthProviderType = 'local' | 'email' | 'google' | 'demo';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
+  authProvider?: AuthProviderType;
+  emailVerified?: boolean;
+  pendingEmail?: string;
   preferences?: UserPreferences;
   xp: number;
   level: number;

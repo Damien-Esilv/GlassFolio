@@ -5,6 +5,7 @@ import { SyncedBackingStorageProvider } from '../../../../src/services/storage/S
 import { vaultService } from '../../../../src/services/security/vaultService';
 import { userRepository } from '../../../../src/services/repositories';
 import { supabaseClient } from '../../../../src/services/supabase/supabaseClient';
+import type { User } from '../../../../src/types/domain';
 
 describe('authService & Access Control Security (TGLA-047)', () => {
     let auth: LocalAuthProvider;
@@ -232,6 +233,42 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect(vaultService.isUnlocked()).toBe(true);
         });
 
+        it('signs in cloud user and synchronizes authProvider and emailVerified on existing user record', async () => {
+            const strongPassword = 'MasterPassword2026!#';
+            vi.spyOn(supabaseClient, 'signInWithPassword').mockResolvedValue({
+                accessToken: 'test-token',
+                refreshToken: 'test-refresh',
+                expiresAt: Date.now() + 3600000,
+                user: {
+                    id: 'sb-sync-user',
+                    email: 'sync@glassfolio.com',
+                    email_confirmed_at: new Date().toISOString(),
+                    user_metadata: { name: 'Sync User' },
+                },
+            });
+            await userRepository.saveUser({
+                id: 'local-1',
+                name: 'Sync User',
+                email: 'sync@glassfolio.com',
+                avatar: '/avatar.jpg',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+                authProvider: 'local',
+                emailVerified: false,
+            });
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            vi.spyOn(vaultService, 'isUnlocked').mockReturnValue(false);
+            vi.spyOn(vaultService, 'unlock').mockResolvedValue({ authKey: new Uint8Array(32) });
+
+            const result = await sbAuth.signIn('sync@glassfolio.com', strongPassword);
+            expect(result.user.authProvider).toBe('email');
+            expect(result.user.emailVerified).toBe(true);
+            const saved = await userRepository.getUser();
+            expect(saved?.authProvider).toBe('email');
+            expect(saved?.emailVerified).toBe(true);
+        });
+
         it('handles signIn error and registers failure lockout', async () => {
             vi.spyOn(supabaseClient, 'signInWithPassword').mockRejectedValue(new Error('Invalid login credentials'));
             await expect(sbAuth.signIn('wrong@glassfolio.com', 'badpass')).rejects.toThrow('Invalid login credentials');
@@ -329,6 +366,293 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect(res?.user.email).toBe('oauth@gmail.com');
             expect(resetVaultSpy).toHaveBeenCalled();
         });
+
+        it('blocks OAuth login and prevents account conflict if vault has password auth', async () => {
+            window.location.hash = '#access_token=conflict-tok&refresh_token=conflict-ref&expires_in=3600';
+            vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
+                id: 'sb-conflict-1',
+                email: 'conflict@example.com',
+                user_metadata: { name: 'Conflict User' },
+            });
+            vi.spyOn(vaultService, 'isDemoVault').mockReturnValue(false);
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            const wrapped = { alg: 'AES-KW' as const, wrapped: 'wrapped', createdAt: new Date().toISOString() };
+            vi.spyOn(vaultService, 'getVaultHeader').mockReturnValue({
+                version: 1,
+                authProvider: 'email',
+                kdf: { algorithm: 'pbkdf2-sha256', iterations: 600000, salt: 'saltsalt' },
+                dekAlgorithm: 'AES-256-GCM',
+                wrappedKeys: {
+                    password: wrapped,
+                    recovery: wrapped,
+                    passkeys: [],
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                dekCreatedAt: new Date().toISOString(),
+            });
+
+            await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/already exists with this email address/i);
+        });
+
+        it('handles changePassword with validation and updates Supabase', async () => {
+            const user: User = {
+                id: 'u-pw-1',
+                name: 'PW User',
+                email: 'pw@example.com',
+                avatar: '/avatar.jpg',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+                authProvider: 'email',
+            };
+            await userRepository.saveUser(user);
+
+            // Google account rejected
+            const googleUser: User = { ...user, authProvider: 'google' };
+            await userRepository.saveUser(googleUser);
+            await expect(sbAuth.changePassword('old', 'new')).rejects.toThrow(/google/i);
+
+            // Back to email user
+            await userRepository.saveUser(user);
+
+            // Weak new password
+            await expect(sbAuth.changePassword('old', 'weak')).rejects.toThrow(/NIST/i);
+
+            // Invalid current password
+            vi.spyOn(vaultService, 'changePassword').mockRejectedValue(new Error('Current password verification failed.'));
+            await expect(sbAuth.changePassword('wrong', 'Strong-Master-Key-2026!#')).rejects.toThrow(/password/i);
+
+            // Valid password change
+            vi.spyOn(vaultService, 'changePassword').mockResolvedValue(undefined);
+            const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
+
+            // Set session token
+            (sbAuth as any).supabaseSession = { accessToken: 'live-tok', user: { id: 'u-pw-1' } };
+            await sbAuth.changePassword('old-good', 'Strong-Master-Key-2026!#');
+            expect(updateSpy).toHaveBeenCalledWith('live-tok', { password: 'Strong-Master-Key-2026!#' });
+        });
+
+        it('handles changeEmail with validation and security restrictions', async () => {
+            const user: User = {
+                id: 'u-em-1',
+                name: 'Email User',
+                email: 'old@example.com',
+                avatar: '/avatar.jpg',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+                authProvider: 'email',
+            };
+            await userRepository.saveUser(user);
+
+            // Google user locked
+            await userRepository.saveUser({ ...user, authProvider: 'google' });
+            await expect(sbAuth.changeEmail('password', 'new@example.com')).rejects.toThrow(/google/i);
+
+            // Invalid email address format
+            await userRepository.saveUser(user);
+            await expect(sbAuth.changeEmail('password', 'invalid-email-address')).rejects.toThrow(/valid email/i);
+
+            // Email user - incorrect password
+            await userRepository.saveUser(user);
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(false);
+            await expect(sbAuth.changeEmail('wrong-pass', 'new@example.com')).rejects.toThrow(/password/i);
+
+            // Active session required
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(true);
+            (sbAuth as any).supabaseSession = null;
+            await expect(sbAuth.changeEmail('correct-pass', 'new@example.com')).rejects.toThrow(/session/i);
+
+            // Successful email change initiation
+            const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
+            (sbAuth as any).supabaseSession = { accessToken: 'tok-email', user: { id: 'u-em-1' } };
+
+            await sbAuth.changeEmail('correct-pass', 'new@example.com');
+            expect(updateSpy).toHaveBeenCalledWith('tok-email', { email: 'new@example.com' });
+        });
+
+        it('handles recoverPassword with active session and password rotation', async () => {
+            // Weak password
+            await expect(sbAuth.recoverPassword('valid-key', 'weak')).rejects.toThrow(/NIST/i);
+
+            // Recovery failed
+            vi.spyOn(vaultService, 'recoverPasswordWithRecoveryKey').mockResolvedValue({
+                success: false,
+                error: { message: 'Corrupt slot' },
+            } as any);
+            await expect(sbAuth.recoverPassword('bad-key', 'Strong-Master-Key-2026!#')).rejects.toThrow(/Corrupt slot/i);
+
+            // Recovery success with session update
+            vi.spyOn(vaultService, 'recoverPasswordWithRecoveryKey').mockResolvedValue({
+                success: true,
+                value: { newRecoveryKey: 'NEW-ROTATED-KEY-1234' },
+            } as any);
+            const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
+            (sbAuth as any).supabaseSession = { accessToken: 'session-tok', user: { id: 'u-1' } };
+
+            const res = await sbAuth.recoverPassword('good-key', 'Strong-Master-Key-2026!#');
+            expect(res.newRecoveryKey).toBe('NEW-ROTATED-KEY-1234');
+            expect(updateSpy).toHaveBeenCalled();
+        });
+
+        it('handles resendEmailVerification and verifyEmailOtp', async () => {
+            // Resend email verification without email or session throws
+            (sbAuth as any).supabaseSession = null;
+            await expect(sbAuth.resendEmailVerification()).rejects.toThrow(/required/i);
+
+            const resendSpy = vi.spyOn(supabaseClient, 'resendVerificationEmail').mockResolvedValue();
+            await sbAuth.resendEmailVerification('verify@example.com');
+            expect(resendSpy).toHaveBeenCalledWith('verify@example.com');
+
+            // verifyEmailOtp
+            vi.spyOn(supabaseClient, 'verifyEmailOtp').mockResolvedValue({
+                accessToken: 'otp-access',
+                refreshToken: 'otp-refresh',
+                expiresAt: Date.now() + 3600000,
+                user: { id: 'otp-user-1', email: 'verified@example.com', user_metadata: { name: 'Verified' } },
+            });
+
+            await userRepository.clearUser();
+            const result = await sbAuth.verifyEmailOtp('verified@example.com', '123456');
+            expect(result.user.emailVerified).toBe(true);
+            expect(result.user.email).toBe('verified@example.com');
+
+            // verifyEmailOtp when user already exists
+            const existingUser: User = {
+                id: 'otp-user-1',
+                name: 'Verified Existing',
+                email: 'verified@example.com',
+                avatar: '/avatar.jpg',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 100,
+                level: 2,
+                authProvider: 'email',
+                emailVerified: false,
+            };
+            await userRepository.saveUser(existingUser);
+            const resultExisting = await sbAuth.verifyEmailOtp('verified@example.com', '123456');
+            expect(resultExisting.user.emailVerified).toBe(true);
+
+            // test redirectToUrl
+            const assignSpy = vi.fn();
+            Object.defineProperty(window, 'location', {
+                value: { assign: assignSpy, hash: '' },
+                writable: true,
+            });
+            (sbAuth as any).redirectToUrl('https://supabase.co/oauth');
+            expect(assignSpy).toHaveBeenCalledWith('https://supabase.co/oauth');
+        });
+
+        it('handles requestPasswordReset', async () => {
+            const resetSpy = vi.spyOn(supabaseClient, 'resetPasswordForEmail').mockResolvedValue();
+            await sbAuth.requestPasswordReset('forgot@example.com');
+            expect(resetSpy).toHaveBeenCalledWith('forgot@example.com', undefined);
+        });
+
+        it('exercises LocalAuthProvider implementation of new Epic 20 methods', async () => {
+            const local = new LocalAuthProvider();
+            await local.requestPasswordReset('local@example.com');
+            await local.resendEmailVerification();
+
+            const dummyUser: User = {
+                id: 'loc-1',
+                name: 'Local',
+                email: 'local@example.com',
+                avatar: '/a.png',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+            };
+            await userRepository.saveUser(dummyUser);
+
+            const otpRes = await local.verifyEmailOtp('local@example.com', '123456');
+            expect(otpRes.user.emailVerified).toBe(true);
+
+            // changePassword weak
+            await expect(local.changePassword('old', 'weak')).rejects.toThrow(/NIST/i);
+
+            // changePassword wrong old
+            vi.spyOn(vaultService, 'changePassword').mockRejectedValue(new Error('Current password verification failed.'));
+            await expect(local.changePassword('wrong', 'Strong-Master-Key-2026!#')).rejects.toThrow(/password/i);
+
+            // changePassword success
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(true);
+            vi.spyOn(vaultService, 'changePassword').mockResolvedValue(undefined);
+            await local.changePassword('correct', 'Strong-Master-Key-2026!#');
+
+            // changeEmail
+            await expect(local.changeEmail('pass', 'bad-email')).rejects.toThrow(/valid email/i);
+            await local.changeEmail('pass', 'newlocal@example.com');
+            const updated = await userRepository.getUser();
+            expect(updated?.email).toBe('newlocal@example.com');
+
+            // recoverPassword
+            vi.spyOn(vaultService, 'recoverPasswordWithRecoveryKey').mockResolvedValue({
+                success: true,
+                value: { newRecoveryKey: 'NEW-LOCAL-REC-1234' },
+            } as any);
+            const recRes = await local.recoverPassword('key', 'Strong-Master-Key-2026!#');
+            expect(recRes.newRecoveryKey).toBe('NEW-LOCAL-REC-1234');
+
+            // deleteAccountPermanently - wrong password
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(false);
+            await expect(local.deleteAccountPermanently({ password: 'wrong' })).rejects.toThrow(/master password/i);
+
+            // deleteAccountPermanently - success
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(true);
+            const resetSpy = vi.spyOn(vaultService, 'resetVault').mockResolvedValue(undefined);
+            await local.deleteAccountPermanently({ password: 'correct' });
+            expect(resetSpy).toHaveBeenCalled();
+            expect(await userRepository.getUser()).toBeNull();
+        });
+
+        it('handles deleteAccountPermanently for SupabaseAuthProvider (Email and Google OAuth)', async () => {
+            const provider = new SupabaseAuthProvider();
+            (provider as any).supabaseSession = { accessToken: 'mock-access-token' };
+            vi.spyOn(vaultService, 'resetVault').mockResolvedValue(undefined);
+            const deleteRpcSpy = vi.spyOn(supabaseClient, 'deleteOwnAccount').mockResolvedValue(undefined);
+
+            // 1. Email account without password
+            await userRepository.saveUser({
+                id: 'cloud-u1',
+                email: 'cloud@example.com',
+                name: 'Cloud User',
+                authProvider: 'email',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+            });
+            await expect(provider.deleteAccountPermanently({})).rejects.toThrow(/Password is required/i);
+
+            // 2. Email account with invalid password
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(false);
+            await expect(provider.deleteAccountPermanently({ password: 'bad' })).rejects.toThrow(/master password/i);
+
+            // 3. Email account with valid password
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(true);
+            await provider.deleteAccountPermanently({ password: 'valid-password' });
+            expect(deleteRpcSpy).toHaveBeenCalled();
+            expect(await userRepository.getUser()).toBeNull();
+
+            // 4. Google account with invalid confirmation text
+            await userRepository.saveUser({
+                id: 'cloud-g1',
+                email: 'google@example.com',
+                name: 'Google User',
+                authProvider: 'google',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+            });
+            await expect(provider.deleteAccountPermanently({ confirmationText: 'NON' })).rejects.toThrow(/Confirmation text must match/i);
+
+            // 5. Google account with valid confirmation text (DELETE / SUPPRIMER)
+            await provider.deleteAccountPermanently({ confirmationText: 'SUPPRIMER' });
+            expect(await userRepository.getUser()).toBeNull();
+        });
     });
 
     describe('Dual-Mode Factory (VITE_DEPLOYMENT_MODE)', () => {
@@ -350,7 +674,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             vi.spyOn(supabaseConfigModule, 'isSupabaseConfigured').mockReturnValue(true);
 
             expect(createAuthProvider('cloud')).toBeInstanceOf(SupabaseAuthProvider);
-            expect(createAuthProvider('local')).toBeInstanceOf(SupabaseAuthProvider);
+            expect(createAuthProvider('local')).toBeInstanceOf(LocalAuthProvider);
         });
     });
 });

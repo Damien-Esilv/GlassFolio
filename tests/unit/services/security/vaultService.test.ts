@@ -212,5 +212,21 @@ describe('VaultService Lifecycle, Migration & Key Rotation (TGLA-041)', () => {
 
             unsubscribe();
         });
+
+        it('rejects recoverPasswordWithRecoveryKey when recovery key is invalid', async () => {
+            await vaultService.setup('CorrectPassword123!');
+            await vaultService.lock();
+
+            const res = await vaultService.recoverPasswordWithRecoveryKey(
+                '0000-0000-0000-0000-0000-0000-0000-0000',
+                'NewStrongPass2026!#'
+            );
+            expect(res.success).toBe(false);
+        });
+
+        it('rejects rotateDek when password is invalid', async () => {
+            await vaultService.setup('CorrectPassword123!');
+            await expect(vaultService.rotateDek('WrongPass123!')).rejects.toThrow(InvalidVaultCredentialsError);
+        });
     });
 });

@@ -180,9 +180,22 @@ export const NotificationBellDropdown: React.FC<NotificationBellDropdownProps> =
                   {/* Content */}
                   <div className="flex-1 min-w-0 pr-6">
                     <div className="flex items-center gap-1.5">
-                      <p className={`text-xs font-semibold truncate ${!alert.read ? 'text-primary' : 'text-secondary'}`}>
-                        {alert.title}
-                      </p>
+                      {alert.actionUrl ? (
+                        <Link
+                          to={alert.actionUrl}
+                          onClick={() => {
+                            if (!alert.read) markAlertAsRead(alert.id);
+                            setIsOpen(false);
+                          }}
+                          className={`text-xs font-semibold truncate hover:underline ${!alert.read ? 'text-primary' : 'text-secondary'}`}
+                        >
+                          {alert.title}
+                        </Link>
+                      ) : (
+                        <p className={`text-xs font-semibold truncate ${!alert.read ? 'text-primary' : 'text-secondary'}`}>
+                          {alert.title}
+                        </p>
+                      )}
                       {!alert.read && (
                         <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" aria-hidden="true" />
                       )}

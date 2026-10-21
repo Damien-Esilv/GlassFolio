@@ -1,32 +1,60 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import {
     User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette,
-    TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles
+    TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles,
+    Info, AlertCircle, X, FileSpreadsheet, UserX, AlertTriangle
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences, NotificationCategoryPreferences } from '../types';
 import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
-import { exportBackupJSON, exportRGPDZip } from '../src/services/exportService';
+import { exportBackupJSON, exportRGPDZip, exportTransactionsCSV } from '../src/services/exportService';
 import { BackupMergeWizard } from '../components/BackupMergeWizard';
 import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
 import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
 import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../src/constants/themeCatalog';
+import { authService } from '../src/services/security/authService';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
-    const { user, updateProfile } = useAuth();
+    const { user, updateProfile, deleteAccount } = useAuth();
     const { resetToSeedData } = useData();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showBackupWizard, setShowBackupWizard] = useState(false);
+
+    // Delete Account (GDPR) Modal State
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
+
+    const handleDeleteAccount = async () => {
+        setDeleteError('');
+        setIsDeletingAccount(true);
+        try {
+            await deleteAccount({
+                password: deletePassword,
+                confirmationText: deleteConfirmText,
+            });
+            setShowDeleteAccountModal(false);
+            window.location.assign('/login');
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : t('settings:dataAndBackup.invalidPasswordOrConfirm');
+            setDeleteError(msg);
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
 
     // Check URL params for active tab
     useEffect(() => {
@@ -66,6 +94,10 @@ const Settings: React.FC = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
+    const [showEmailChangeModal, setShowEmailChangeModal] = useState(false);
+    const [emailChangePassword, setEmailChangePassword] = useState('');
+    const [emailChangeError, setEmailChangeError] = useState('');
+    const [isChangingEmail, setIsChangingEmail] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,8 +122,38 @@ const Settings: React.FC = () => {
         fileInputRef.current?.click();
     };
 
+    const handleConfirmEmailChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEmailChangeError('');
+        setIsChangingEmail(true);
+        try {
+            if (authService.changeEmail) {
+                await authService.changeEmail(emailChangePassword, profileData.email);
+            }
+            setShowEmailChangeModal(false);
+            setEmailChangePassword('');
+            // Save remaining profile data (like name)
+            await updateProfile({ name: profileData.name });
+            setSuccessMsg(t('settings:profile.emailChangeDispatched', 'Confirmation emails sent to verify email change.'));
+            setTimeout(() => setSuccessMsg(''), 5000);
+        } catch (err: unknown) {
+            setEmailChangeError(err instanceof Error ? err.message : t('common:error'));
+        } finally {
+            setIsChangingEmail(false);
+        }
+    };
+
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (profileData.email !== user?.email) {
+            if (user?.authProvider === 'google') {
+                setProfileData(prev => ({ ...prev, email: user?.email || '' }));
+                return;
+            }
+            setShowEmailChangeModal(true);
+            return;
+        }
+
         setIsSaving(true);
         try {
             await updateProfile(profileData);
@@ -301,14 +363,29 @@ const Settings: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.emailAddress')}</label>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="block text-xs font-medium text-secondary">{t('settings:profile.emailAddress')}</label>
+                                                {user?.authProvider === 'google' && (
+                                                    <span className="text-[10px] text-subtle flex items-center gap-1 font-medium bg-subtle px-2 py-0.5 rounded border border-subtle">
+                                                        <Lock size={10} className="text-brand" />
+                                                        {t('settings:profile.managedByGoogle', 'Managed by Google')}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <input
                                                 type="email"
                                                 name="email"
                                                 value={profileData.email}
+                                                disabled={user?.authProvider === 'google'}
                                                 onChange={handleProfileChange}
-                                                className="w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+                                                className={`w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 ${user?.authProvider === 'google' ? 'opacity-60 cursor-not-allowed' : ''}`}
                                             />
+                                            {user?.pendingEmail && (
+                                                <p className="text-xs text-warning mt-1.5 flex items-center gap-1">
+                                                    <Info size={12} />
+                                                    {t('settings:profile.pendingEmailConfirmation', { email: user.pendingEmail, defaultValue: `Pending confirmation on ${user.pendingEmail}` })}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -814,12 +891,25 @@ const Settings: React.FC = () => {
                                     {t('settings:dataAndBackup.subtitle')}
                                 </p>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <button
+                                        onClick={exportTransactionsCSV}
+                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                    >
+                                        <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:scale-110 transition-transform">
+                                            <FileSpreadsheet size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.exportTransactions')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.exportTransactionsInfo')}</p>
+                                        </div>
+                                    </button>
+
                                     <button
                                         onClick={exportBackupJSON}
                                         className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
                                     >
-                                        <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:scale-110 transition-transform">
+                                        <div className="p-2 rounded-lg bg-brand/10 text-brand w-fit group-hover:scale-110 transition-transform">
                                             <Download size={20} />
                                         </div>
                                         <div>
@@ -898,7 +988,137 @@ const Settings: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Delete Account (GDPR) */}
+                            <div className="p-4 rounded-xl border border-negative/40 bg-negative-subtle">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="p-2 rounded-lg bg-negative-subtle text-negative shrink-0 mt-0.5">
+                                            <UserX size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.deleteAccountTitle')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5 leading-relaxed">{t('settings:dataAndBackup.deleteAccountSubtitle')}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="danger" size="sm" onClick={() => setShowDeleteAccountModal(true)} className="shrink-0 whitespace-nowrap">
+                                        {t('settings:dataAndBackup.deleteAccountButton')}
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
+                    )}
+
+                    {/* Delete Account GDPR Confirmation Modal (Portal) */}
+                    {showDeleteAccountModal && typeof document !== 'undefined' && createPortal(
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                            <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5 animate-scale-up">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDeleteAccountModal(false);
+                                        setDeletePassword('');
+                                        setDeleteConfirmText('');
+                                        setDeleteError('');
+                                    }}
+                                    className="absolute top-4 right-4 p-1.5 text-tertiary hover:text-primary rounded-lg hover:bg-subtle transition-colors"
+                                    aria-label={t('settings:dataAndBackup.cancel')}
+                                >
+                                    <X size={18} />
+                                </button>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-negative-subtle text-negative flex items-center justify-center shrink-0">
+                                        <AlertTriangle size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-primary">
+                                            {t('settings:dataAndBackup.deleteModalTitle')}
+                                        </h3>
+                                        <p className="text-xs text-negative font-medium mt-0.5">
+                                            {t('settings:dataAndBackup.deleteModalWarning')}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3.5 bg-subtle border border-subtle rounded-xl space-y-2">
+                                    <p className="text-xs text-secondary leading-relaxed">
+                                        {t('settings:dataAndBackup.downloadBeforeDelete')}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={exportRGPDZip}
+                                        className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline font-medium"
+                                    >
+                                        <Download size={14} />
+                                        {t('settings:dataAndBackup.downloadGdprArchive')}
+                                    </button>
+                                </div>
+
+                                {deleteError && (
+                                    <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                                        <AlertCircle size={16} className="shrink-0" />
+                                        <span>{deleteError}</span>
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    {user?.authProvider === 'google' ? (
+                                        <div>
+                                            <label className="block text-xs font-medium text-primary mb-1">
+                                                {t('settings:dataAndBackup.confirmGoogleLabel')}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={deleteConfirmText}
+                                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                                placeholder={t('settings:dataAndBackup.confirmGooglePlaceholder')}
+                                                className="w-full px-3 py-2 text-sm bg-subtle text-primary border border-subtle rounded-xl focus:ring-1 focus:ring-negative focus:border-negative"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="block text-xs font-medium text-primary mb-1">
+                                                {t('settings:dataAndBackup.confirmPasswordLabel')}
+                                            </label>
+                                            <input
+                                                type="password"
+                                                value={deletePassword}
+                                                onChange={(e) => setDeletePassword(e.target.value)}
+                                                placeholder={t('settings:dataAndBackup.confirmPasswordPlaceholder')}
+                                                className="w-full px-3 py-2 text-sm bg-subtle text-primary border border-subtle rounded-xl focus:ring-1 focus:ring-negative focus:border-negative"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-end gap-3 pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setShowDeleteAccountModal(false);
+                                            setDeletePassword('');
+                                            setDeleteConfirmText('');
+                                            setDeleteError('');
+                                        }}
+                                    >
+                                        {t('settings:dataAndBackup.cancel')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="danger"
+                                        size="sm"
+                                        isLoading={isDeletingAccount}
+                                        onClick={handleDeleteAccount}
+                                    >
+                                        {t('settings:dataAndBackup.confirmDeleteButton')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
                     )}
 
                     {/* ================= FISCAL TAB ================= */}
@@ -1047,6 +1267,88 @@ const Settings: React.FC = () => {
                     setTimeout(() => setSuccessMsg(''), 4000);
                 }}
             />
+
+            {/* Secure Email Change Re-Authentication Modal */}
+            {showEmailChangeModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+                    <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowEmailChangeModal(false);
+                                setProfileData(prev => ({ ...prev, email: user?.email || '' }));
+                            }}
+                            className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
+                                <Lock size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-primary">
+                                    {t('settings:profile.confirmEmailChangeTitle', 'Confirm Email Change')}
+                                </h2>
+                                <p className="text-xs text-secondary mt-0.5">
+                                    {t('settings:profile.confirmEmailChangeSubtitle', 'Enter your current master password to verify this security request.')}
+                                </p>
+                            </div>
+                        </div>
+
+                        {emailChangeError && (
+                            <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <span>{emailChangeError}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleConfirmEmailChange} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-secondary mb-1">
+                                    {t('settings:profile.currentPassword', 'Current Master Password')}
+                                </label>
+                                <input
+                                    type="password"
+                                    required
+                                    autoFocus
+                                    value={emailChangePassword}
+                                    onChange={(e) => setEmailChangePassword(e.target.value)}
+                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            <p className="text-xs text-tertiary">
+                                {t('settings:profile.emailConfirmationNotice', 'A confirmation email will be sent to both your current address and your new address.')}
+                            </p>
+
+                            <div className="flex gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => {
+                                        setShowEmailChangeModal(false);
+                                        setProfileData(prev => ({ ...prev, email: user?.email || '' }));
+                                    }}
+                                    className="flex-1"
+                                >
+                                    {t('common:buttons.cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    isLoading={isChangingEmail}
+                                    className="flex-1"
+                                >
+                                    {t('common:buttons.confirm')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

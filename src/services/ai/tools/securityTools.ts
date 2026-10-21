@@ -14,6 +14,7 @@ import { totpService } from '../../security/totpService';
 import { passkeyService } from '../../security/passkeyService';
 import { secretsService, SafeSecretItem } from '../../security/secretsService';
 import { auditLogService, AuditLogEntry } from '../../security/auditLogService';
+import { userRepository } from '../../repositories';
 
 export const getSecurityStatusTool: AIToolDefinition<
   { includeAuditHistory?: boolean },
@@ -24,6 +25,9 @@ export const getSecurityStatusTool: AIToolDefinition<
     isTotpEnabled: boolean;
     passkeysCount: number;
     secretsCount: number;
+    authProvider?: string;
+    emailVerified?: boolean;
+    hasRecoverySlot?: boolean;
     recentAuditEvents?: AuditLogEntry[];
   }
 > = {
@@ -46,6 +50,8 @@ export const getSecurityStatusTool: AIToolDefinition<
     const isTotpEnabled = await totpService.isEnabled();
     const passkeys = await passkeyService.listPasskeys();
     const secrets = await secretsService.listSecrets();
+    const user = await userRepository.getUser();
+    const header = vaultService.getVaultHeader();
 
     let recentAuditEvents: AuditLogEntry[] | undefined;
     if (params.includeAuditHistory !== false) {
@@ -59,6 +65,9 @@ export const getSecurityStatusTool: AIToolDefinition<
       isTotpEnabled,
       passkeysCount: passkeys.length,
       secretsCount: secrets.length,
+      authProvider: user?.authProvider,
+      emailVerified: user?.emailVerified,
+      hasRecoverySlot: Boolean(header?.wrappedKeys?.recovery || header?.recoverySlot),
       recentAuditEvents,
     };
   },

@@ -34,7 +34,7 @@ export const RecoveryKeyDialog: React.FC<RecoveryKeyDialogProps> = ({ recoveryKe
             `RECOVERY KEY : ${recoveryKey}`,
             '',
             'IMPORTANT SECURITY NOTICE:',
-            'This 160-bit emergency key is your ONLY safeguard if you ever forget',
+            'This 256-bit emergency recovery key is your ONLY safeguard if you ever forget',
             'your master password. GlassFolio servers and developers cannot recover',
             'your encrypted financial data without this key.',
             'Keep this file in a secure password manager or offline safe.',
