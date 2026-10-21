@@ -197,6 +197,7 @@ export const supabaseClient = {
         const params = new URLSearchParams({
             provider,
             redirect_to: redirect,
+            prompt: 'select_account',
         });
 
         if (codeChallenge) {
@@ -542,8 +543,8 @@ export const supabaseClient = {
 
         const headers = createHeaders(config, accessToken);
         await Promise.all([
-            fetch(`${config.url}/rest/v1/vault_headers`, { method: 'DELETE', headers }),
-            fetch(`${config.url}/rest/v1/vault_records`, { method: 'DELETE', headers }),
+            fetch(`${config.url}/rest/v1/vault_headers?user_id=not.is.null`, { method: 'DELETE', headers }),
+            fetch(`${config.url}/rest/v1/vault_records?user_id=not.is.null`, { method: 'DELETE', headers }),
         ]);
     },
 

@@ -24,10 +24,12 @@ import { authService } from '../src/services/security/authService';
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile, deleteAccount } = useAuth();
-    const { resetToSeedData } = useData();
+    const { resetAccountDataToZero } = useData();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>('profile');
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [hasExportedBeforeReset, setHasExportedBeforeReset] = useState(false);
+    const [isExportingForReset, setIsExportingForReset] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showBackupWizard, setShowBackupWizard] = useState(false);
 
@@ -951,35 +953,73 @@ const Settings: React.FC = () => {
                                 <ImportBatchList compact limit={5} showTitle />
                             </div>
 
-                            {/* Reset Demo Data */}
+                            {/* Reset Account Data */}
                             <div className="p-4 rounded-xl border border-negative/30 bg-negative-subtle">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-negative-subtle text-negative">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="p-2 rounded-lg bg-negative-subtle text-negative shrink-0 mt-0.5">
                                             <RotateCcw size={18} />
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-primary">{t('settings:dataAndBackup.resetDemoTitle')}</p>
-                                            <p className="text-xs text-tertiary mt-0.5">{t('settings:dataAndBackup.resetDemoInfo')}</p>
+                                            <p className="text-xs text-tertiary mt-0.5 leading-relaxed">{t('settings:dataAndBackup.resetDemoInfo')}</p>
                                         </div>
                                     </div>
                                     {!showResetConfirm ? (
-                                        <Button variant="danger" size="sm" onClick={() => setShowResetConfirm(true)}>
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            onClick={() => {
+                                                setHasExportedBeforeReset(false);
+                                                setShowResetConfirm(true);
+                                            }}
+                                            className="shrink-0 whitespace-nowrap"
+                                        >
                                             {t('settings:dataAndBackup.reset')}
                                         </Button>
                                     ) : (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-negative font-medium">{t('settings:dataAndBackup.confirmReset')}</span>
-                                            <Button variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>{t('settings:dataAndBackup.cancel')}</Button>
+                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                isLoading={isExportingForReset}
+                                                onClick={async () => {
+                                                    setIsExportingForReset(true);
+                                                    try {
+                                                        await exportBackupJSON();
+                                                        await exportRGPDZip();
+                                                        setHasExportedBeforeReset(true);
+                                                    } finally {
+                                                        setIsExportingForReset(false);
+                                                    }
+                                                }}
+                                            >
+                                                <Download size={14} className="mr-1.5" />
+                                                {hasExportedBeforeReset
+                                                    ? t('settings:dataAndBackup.backupsExportedReady')
+                                                    : t('settings:dataAndBackup.exportAndUnlockReset')}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setShowResetConfirm(false);
+                                                    setHasExportedBeforeReset(false);
+                                                }}
+                                            >
+                                                {t('settings:dataAndBackup.cancel')}
+                                            </Button>
                                             <Button
                                                 variant="danger"
                                                 size="sm"
+                                                disabled={!hasExportedBeforeReset || isResetting}
                                                 isLoading={isResetting}
                                                 onClick={async () => {
                                                     setIsResetting(true);
-                                                    await resetToSeedData();
+                                                    await resetAccountDataToZero();
                                                     setIsResetting(false);
                                                     setShowResetConfirm(false);
+                                                    setHasExportedBeforeReset(false);
                                                 }}
                                             >
                                                 {t('settings:dataAndBackup.yesReset')}

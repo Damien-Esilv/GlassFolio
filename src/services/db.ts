@@ -61,7 +61,7 @@ const STORAGE_KEYS = {
 // Helper: Simulate network delay
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const isRealUserVaultActive = (): boolean => {
+export const isRealUserVaultActive = (): boolean => {
     try {
         const raw = appStorage.getBacking().getItem(VAULT_HEADER_KEY);
         if (!raw) return false;
@@ -109,12 +109,19 @@ class MockDB {
 
     getAchievements(): Achievement[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
-        if (!stored) return initialAchievements;
+        const isReal = isRealUserVaultActive();
+        const baseAchievements = isReal
+            ? initialAchievements.map(a => ({ ...a, currentLevel: 0, unlocked: false, currentValue: 0 }))
+            : initialAchievements;
+        if (!stored) return baseAchievements;
 
         try {
             const storedList = JSON.parse(stored) as Achievement[];
+            if (isReal && storedList.length === 0) {
+                return baseAchievements;
+            }
             const map = new Map<string, Achievement>();
-            initialAchievements.forEach(a => map.set(a.id, a));
+            baseAchievements.forEach(a => map.set(a.id, a));
             storedList.forEach(a => {
                 const initial = map.get(a.id);
                 map.set(a.id, {
@@ -128,7 +135,7 @@ class MockDB {
             });
             return Array.from(map.values());
         } catch {
-            return initialAchievements;
+            return baseAchievements;
         }
     }
 
@@ -147,7 +154,8 @@ class MockDB {
 
     getPinnedBadges(): string[] {
         const stored = appStorage.getItem(STORAGE_KEYS.PINNED_BADGES);
-        return stored ? JSON.parse(stored) : ['ac4', 'ac3', 'ac1'];
+        if (stored) return JSON.parse(stored);
+        return isRealUserVaultActive() ? [] : ['ac4', 'ac3', 'ac1'];
     }
 
     savePinnedBadges(ids: string[]) {
@@ -509,6 +517,31 @@ class MockDB {
      */
     resetToInitialData(): void {
         Object.values(STORAGE_KEYS).forEach(key => appStorage.removeItem(key));
+        appStorage.removeItem('glassfolio_price_cache');
+        appStorage.removeItem('gf_manual_price_history');
+    }
+
+    /**
+     * Resets all user portfolio, transaction, goal, alert, and gamification records
+     * to empty arrays ('[]') so a real account is 100% blank without falling back to demo seed data.
+     */
+    resetAccountDataToZero(): void {
+        const zeroKeys = [
+            STORAGE_KEYS.TRANSACTIONS,
+            STORAGE_KEYS.POSITIONS,
+            STORAGE_KEYS.ALERTS,
+            STORAGE_KEYS.ALERT_RULES,
+            STORAGE_KEYS.GOALS,
+            STORAGE_KEYS.ACHIEVEMENTS,
+            STORAGE_KEYS.ASSET_GROUPS,
+            STORAGE_KEYS.QUESTS,
+            STORAGE_KEYS.PINNED_BADGES,
+            STORAGE_KEYS.ACCOUNTS,
+            STORAGE_KEYS.IMPORT_BATCHES,
+            STORAGE_KEYS.UNIFIED_TRANSACTIONS,
+            STORAGE_KEYS.ASSET_POSITIONS,
+        ];
+        zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
         appStorage.removeItem('glassfolio_price_cache');
         appStorage.removeItem('gf_manual_price_history');
     }

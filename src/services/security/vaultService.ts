@@ -217,6 +217,10 @@ export class VaultService {
                 'glassfolio_unified_transactions',
                 'glassfolio_import_batches',
                 'glassfolio_asset_positions',
+                'glassfolio_achievements',
+                'glassfolio_quests',
+                'glassfolio_pinned_badges',
+                'glassfolio_asset_groups',
             ];
             for (const k of EMPTY_KEYS) {
                 if (appStorage.getItem(k) === null) {
@@ -542,6 +546,10 @@ export class VaultService {
             'glassfolio_unified_transactions',
             'glassfolio_import_batches',
             'glassfolio_asset_positions',
+            'glassfolio_achievements',
+            'glassfolio_quests',
+            'glassfolio_pinned_badges',
+            'glassfolio_asset_groups',
         ];
         for (const k of EMPTY_KEYS) {
             if (appStorage.getItem(k) === null) {

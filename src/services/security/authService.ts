@@ -121,9 +121,7 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        await vaultService.resetVault();
         const setupRes = await vaultService.setup(masterPassword);
         const recoveryKey = setupRes.recoveryKey;
 
@@ -194,11 +192,8 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        // If a vault is already initialized (e.g. from a previous demo session or locked state),
-        // reset it so the new account gets a clean, unlocked E2EE vault
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        // Reset any previous vault or unencrypted demo remnants so the new account gets a clean, unlocked E2EE vault
+        await vaultService.resetVault();
 
         // Initialize encrypted vault
         const setupRes = await vaultService.setup(password);
@@ -637,6 +632,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 }
             }
         } else {
+            await vaultService.resetVault();
             await vaultService.setupOAuthVault(oauthVaultSecret);
         }
 
@@ -644,6 +640,10 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         let user = await userRepository.getUser();
         const googleName = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || oauthEmail.split('@')[0] || 'Investor';
         const googleAvatar = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || `https://i.pravatar.cc/150?u=${encodeURIComponent(sbUser.id)}`;
+
+        if (user && (user.id === 'u1' || user.email.toLowerCase() === 'demo@glassfolio.com' || (user.id !== sbUser.id && user.email.toLowerCase() !== oauthEmail))) {
+            user = null;
+        }
 
         if (!user) {
             user = {
@@ -708,10 +708,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         const sbSession = await supabaseClient.signUp(email, password, name, options);
         this.persistSession(sbSession);
 
-        // 3. Setup client-side encrypted vault
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        // 3. Setup client-side encrypted vault (clean slate before setup)
+        await vaultService.resetVault();
         const setupRes = await vaultService.setup(password);
 
         // 4. Save User record with email provider
@@ -799,6 +797,9 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             // 5. Retrieve or reconstruct user profile
             const isEmailConfirmed = Boolean(sbSession.user.email_confirmed_at);
             let user = await userRepository.getUser();
+            if (user && (user.id === 'u1' || user.email.toLowerCase() === 'demo@glassfolio.com' || (user.id !== sbSession.user.id && user.email.toLowerCase() !== cleanEmail))) {
+                user = null;
+            }
             if (!user) {
                 user = {
                     id: sbSession.user.id,
