@@ -275,13 +275,14 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         });
 
         it('redirects to OAuth URL when Supabase is configured', async () => {
-            vi.spyOn(supabaseClient, 'getOAuthUrl').mockReturnValue('https://supabase.example.com/oauth/google');
+            vi.spyOn(supabaseClient, 'prepareOAuthPkceUrl').mockResolvedValue('https://supabase.example.com/oauth/google');
             const redirectSpy = vi.spyOn(sbAuth as any, 'redirectToUrl').mockImplementation(() => {});
 
             const supabaseConfigModule = await import('../../../../src/services/supabase/supabaseClient');
             vi.spyOn(supabaseConfigModule, 'isSupabaseConfigured').mockReturnValue(true);
 
             sbAuth.signInWithOAuth('google');
+            await new Promise((r) => setTimeout(r, 0));
             expect(redirectSpy).toHaveBeenCalledWith('https://supabase.example.com/oauth/google');
         });
 
@@ -365,6 +366,59 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect(res).not.toBeNull();
             expect(res?.user.email).toBe('oauth@gmail.com');
             expect(resetVaultSpy).toHaveBeenCalled();
+        });
+
+        it('handles successful handleOAuthCallback with PKCE code in window.location.search', async () => {
+            delete (window as any).location;
+            window.location = new URL('http://localhost:3000/?code=valid-pkce-code') as any;
+
+            vi.spyOn(supabaseClient, 'exchangePkceCode').mockResolvedValue({
+                accessToken: 'pkce-access-tok',
+                refreshToken: 'pkce-refresh-tok',
+                expiresAt: Date.now() + 3600000,
+                user: { id: 'sb-pkce-1', email: 'pkce@gmail.com', user_metadata: { name: 'PKCE User' } },
+            });
+            vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
+                id: 'sb-pkce-1',
+                email: 'pkce@gmail.com',
+                user_metadata: { name: 'PKCE User' },
+            });
+
+            const res = await sbAuth.handleOAuthCallback();
+            expect(res).not.toBeNull();
+            expect(res?.user.email).toBe('pkce@gmail.com');
+            expect(res?.user.authProvider).toBe('google');
+        });
+
+        it('handles successful handleOAuthCallback with PKCE code in window.location.hash', async () => {
+            delete (window as any).location;
+            window.location = new URL('http://localhost:3000/#/login?code=valid-hash-code') as any;
+
+            vi.spyOn(supabaseClient, 'exchangePkceCode').mockResolvedValue({
+                accessToken: 'pkce-hash-tok',
+                refreshToken: 'pkce-hash-ref',
+                expiresAt: Date.now() + 3600000,
+                user: { id: 'sb-pkce-2', email: 'hash@gmail.com', user_metadata: { name: 'Hash User' } },
+            });
+            vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
+                id: 'sb-pkce-2',
+                email: 'hash@gmail.com',
+                user_metadata: { name: 'Hash User' },
+            });
+
+            const res = await sbAuth.handleOAuthCallback();
+            expect(res).not.toBeNull();
+            expect(res?.user.email).toBe('hash@gmail.com');
+            expect(res?.user.authProvider).toBe('google');
+        });
+
+        it('handles PKCE exchange failure gracefully without throwing', async () => {
+            delete (window as any).location;
+            window.location = new URL('http://localhost:3000/?code=bad-pkce-code') as any;
+
+            vi.spyOn(supabaseClient, 'exchangePkceCode').mockRejectedValue(new Error('Invalid PKCE'));
+            const res = await sbAuth.handleOAuthCallback();
+            expect(res).toBeNull();
         });
 
         it('blocks OAuth login and prevents account conflict if vault has password auth', async () => {

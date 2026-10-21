@@ -520,19 +520,43 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         let refreshToken: string | null = null;
         let expiresIn: string | null = null;
 
-        // Check 1: PKCE code query parameter (?code=...)
+        // Check 1: PKCE code query parameter (?code=...) in window.location.search or window.location.hash
         const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
+        let code = urlParams.get('code');
+        let codeInHash = false;
+
+        if (!code && window.location.hash) {
+            const hash = window.location.hash;
+            const qIndex = hash.indexOf('?');
+            if (qIndex !== -1) {
+                const hashParams = new URLSearchParams(hash.slice(qIndex + 1));
+                code = hashParams.get('code');
+                codeInHash = true;
+            } else if (hash.includes('code=')) {
+                const cleanHash = hash.replace(/^[#/?]+/, '');
+                const hashParams = new URLSearchParams(cleanHash);
+                code = hashParams.get('code');
+                codeInHash = true;
+            }
+        }
+
         if (code) {
             try {
                 const pkceSession = await supabaseClient.exchangePkceCode(code);
                 accessToken = pkceSession.accessToken;
                 refreshToken = pkceSession.refreshToken;
                 expiresIn = String(Math.floor((pkceSession.expiresAt - Date.now()) / 1000));
+
                 // Clean URL search query without page reload
-                urlParams.delete('code');
-                const newSearch = urlParams.toString() ? `?${urlParams.toString()}` : '';
-                window.history.replaceState(null, '', window.location.pathname + newSearch + window.location.hash);
+                if (window.location.search.includes('code=')) {
+                    urlParams.delete('code');
+                    const newSearch = urlParams.toString() ? `?${urlParams.toString()}` : '';
+                    window.history.replaceState(null, '', window.location.pathname + newSearch + window.location.hash);
+                }
+                if (codeInHash && window.location.hash.includes('code=')) {
+                    const cleanHash = window.location.hash.replace(/[?&]code=[^&#]+/, '').replace(/\?$/, '');
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+                }
             } catch (pkceErr) {
                 console.error('[authService] PKCE exchange error', pkceErr);
             }
@@ -967,7 +991,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             return super.signInWithOAuth(provider);
         }
 
-        const redirectUrl = supabaseClient.getOAuthUrl(provider);
+        const redirectUrl = await supabaseClient.prepareOAuthPkceUrl(provider);
         this.redirectToUrl(redirectUrl);
         // Returns promise that never resolves as browser is redirecting
         return new Promise(() => {});

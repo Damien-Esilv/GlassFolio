@@ -228,10 +228,13 @@ export const supabaseClient = {
         }
 
         // Compute SHA-256 challenge
+        const subtleCrypto = (typeof window !== 'undefined' ? window.crypto?.subtle : undefined)
+            || (typeof globalThis !== 'undefined' ? globalThis.crypto?.subtle : undefined);
+
         let challenge = verifier;
-        if (typeof crypto !== 'undefined' && crypto.subtle) {
+        if (subtleCrypto) {
             const encoder = new TextEncoder();
-            const digest = await crypto.subtle.digest('SHA-256', encoder.encode(verifier));
+            const digest = await subtleCrypto.digest('SHA-256', encoder.encode(verifier));
             challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
                 .replace(/\+/g, '-')
                 .replace(/\//g, '_')
