@@ -449,6 +449,82 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/already exists with this email address/i);
         });
 
+        it('handles handleOAuthCallback when unlockOAuthVault fails by recreating a clean OAuth vault', async () => {
+            window.location.hash = '#access_token=oauth-tok-recover&refresh_token=oauth-ref-recover&expires_in=3600';
+            vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
+                id: 'sb-recover-1',
+                email: 'recover@gmail.com',
+                user_metadata: { name: 'Recover User', avatar_url: 'https://avatar.google.com/pic' },
+            });
+            vi.spyOn(vaultService, 'isDemoVault').mockReturnValue(false);
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            vi.spyOn(vaultService, 'isUnlocked').mockReturnValue(false);
+            const wrapped = { alg: 'AES-KW' as const, wrapped: 'wrapped', createdAt: new Date().toISOString() };
+            vi.spyOn(vaultService, 'getVaultHeader').mockReturnValue({
+                version: 1,
+                authProvider: 'google',
+                kdf: { algorithm: 'pbkdf2-sha256', iterations: 600000, salt: 'saltsalt' },
+                dekAlgorithm: 'AES-256-GCM',
+                wrappedKeys: {
+                    password: wrapped,
+                    recovery: null,
+                    passkeys: [],
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                dekCreatedAt: new Date().toISOString(),
+            });
+            const unlockSpy = vi.spyOn(vaultService, 'unlockOAuthVault').mockRejectedValue(new Error('Corrupted vault'));
+            const resetSpy = vi.spyOn(vaultService, 'resetVault').mockResolvedValue();
+            const setupSpy = vi.spyOn(vaultService, 'setupOAuthVault').mockResolvedValue();
+
+            const res = await sbAuth.handleOAuthCallback();
+            expect(unlockSpy).toHaveBeenCalled();
+            expect(resetSpy).toHaveBeenCalled();
+            expect(setupSpy).toHaveBeenCalled();
+            expect(res?.user.email).toBe('recover@gmail.com');
+        });
+
+        it('updates user avatar if Google OAuth returns an updated avatar', async () => {
+            window.location.hash = '#access_token=oauth-avatar-tok&refresh_token=oauth-avatar-ref&expires_in=3600';
+            vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
+                id: 'sb-avatar-1',
+                email: 'avatar@gmail.com',
+                user_metadata: { name: 'Avatar User', avatar_url: 'https://new-avatar.com/photo.png' },
+            });
+            await userRepository.saveUser({
+                id: 'sb-avatar-1',
+                name: 'Avatar User',
+                email: 'avatar@gmail.com',
+                avatar: 'https://old-avatar.com/photo.png',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+                authProvider: 'google',
+            });
+            vi.spyOn(vaultService, 'isDemoVault').mockReturnValue(false);
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            vi.spyOn(vaultService, 'isUnlocked').mockReturnValue(true);
+
+            const res = await sbAuth.handleOAuthCallback();
+            expect(res?.user.avatar).toBe('https://new-avatar.com/photo.png');
+        });
+
+        it('resets existing vault on signup if vault is already initialized', async () => {
+            vi.spyOn(supabaseClient, 'signUp').mockResolvedValue({
+                accessToken: 'signup-tok',
+                refreshToken: 'signup-ref',
+                expiresAt: Date.now() + 3600000,
+                user: { id: 'sb-signup-init', email: 'init@example.com', email_confirmed_at: '2026-01-01' },
+            });
+            vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+            const resetSpy = vi.spyOn(vaultService, 'resetVault').mockResolvedValue();
+            vi.spyOn(vaultService, 'setup').mockResolvedValue({ success: true, recoveryKey: 'key' } as any);
+
+            await sbAuth.signUp('init@example.com', 'ValidPass2026!#$', 'Init User');
+            expect(resetSpy).toHaveBeenCalled();
+        });
+
         it('handles changePassword with validation and updates Supabase', async () => {
             const user: User = {
                 id: 'u-pw-1',

@@ -1,8 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <!-- Solid white background with rounded squircle corners -->
-  <rect width="120" height="120" rx="26" ry="26" fill="#ffffff"/>
-  
-  <!-- Centered Diamond: 68x68 with rounded corners rx=18, rotated 45deg -->
+  <!-- Centered Diamond: 68x68 with rounded corners rx=18, rotated 45deg on transparent background -->
   <g transform="translate(60, 60)">
     <rect x="-34" y="-34" width="68" height="68" rx="18" fill="#137fec" transform="rotate(45)"/>
     

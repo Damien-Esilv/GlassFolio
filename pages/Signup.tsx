@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
@@ -14,10 +14,16 @@ import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiB
 
 const Signup: React.FC = () => {
    const { t } = useTranslation();
-   const { signup, setupLocalVault } = useAuth();
+   const { user, signup, setupLocalVault } = useAuth();
    const navigate = useNavigate();
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
+
+   useEffect(() => {
+      if (user) {
+         navigate('/', { replace: true });
+      }
+   }, [user, navigate]);
 
    const [name, setName] = useState('');
    const [email, setEmail] = useState('');

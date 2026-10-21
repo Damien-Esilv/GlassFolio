@@ -571,7 +571,29 @@ export class VaultService {
             this.setStatus('unlocked');
             this.resetAutoLockTimer();
         } catch {
-            throw new InvalidVaultCredentialsError();
+            // Backward-compatibility fallback for pre-Epic 20 OAuth vaults (PBKDF2)
+            try {
+                const { kek: legacyKek } = await deriveMasterKeys(oauthSecret, header.kdf);
+                const runtimeDek = await unwrapDek(header.wrappedKeys.password.wrapped, legacyKek, true);
+                const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+                await encrypted.flush();
+                appStorage.attachEncrypted(encrypted);
+
+                // Auto-upgrade wrapped key to HKDF oauthKek
+                const newOauthKek = await deriveOAuthKek(oauthSecret, header.kdf.salt);
+                const newWrapped = await wrapDek(runtimeDek, newOauthKek);
+                header.wrappedKeys.password.wrapped = newWrapped;
+                if (header.passwordSlot) {
+                    header.passwordSlot.wrapped = newWrapped;
+                }
+                header.authProvider = 'google';
+                appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
+
+                this.setStatus('unlocked');
+                this.resetAutoLockTimer();
+            } catch {
+                throw new InvalidVaultCredentialsError();
+            }
         }
     }
 

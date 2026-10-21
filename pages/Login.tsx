@@ -41,6 +41,12 @@ const Login: React.FC = () => {
    }, []);
 
    useEffect(() => {
+      if (user) {
+         navigate(from, { replace: true });
+      }
+   }, [user, navigate, from]);
+
+   useEffect(() => {
       if (lockoutSeconds <= 0) return;
       const interval = setInterval(() => {
          const remaining = authService.getLockoutRemainingSeconds();

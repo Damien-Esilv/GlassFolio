@@ -628,8 +628,13 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                     await vaultService.unlockOAuthVault(oauthVaultSecret);
                 }
             } catch (err) {
-                console.error('[authService] E2EE vault OAuth unlock error', err);
-                throw new Error('Failed to unlock vault with OAuth credentials.');
+                console.error('[authService] E2EE vault OAuth unlock error, recreating clean OAuth vault', err);
+                if (!header || header.authProvider === 'google' || !header.authProvider) {
+                    await vaultService.resetVault();
+                    await vaultService.setupOAuthVault(oauthVaultSecret);
+                } else {
+                    throw new Error('Failed to unlock vault with OAuth credentials.');
+                }
             }
         } else {
             await vaultService.setupOAuthVault(oauthVaultSecret);
