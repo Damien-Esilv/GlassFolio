@@ -15,10 +15,19 @@ export const goalService = {
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
         const rates = await currencyService.getExchangeRates(uniqueCurrencies, baseCurrency);
 
-        // Helper to get position market value converted to base currency
-        const getPosValueInBase = (p: typeof positions[0]) => {
-            return currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
-        };
+        // BOLT OPTIMIZATION:
+        // Pre-compute base currency market values for all positions ONCE before goals loop
+        // to avoid redundant O(Goals * Links * Positions) FX conversions and currencyService calls.
+        const positionBaseValues = positions.map(p => ({
+            pos: p,
+            baseValue: currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates)
+        }));
+
+        // Stack-scoped O(1) Map lookups for positions and asset groups to eliminate repeated linear searches.
+        const posBySymbolMap = new Map(positionBaseValues.map(item => [item.pos.symbol, item]));
+        const assetGroupMap = new Map(
+            assetGroups.map(g => [g.id, { group: g, symbolSet: new Set(g.symbols) }])
+        );
 
         // Perform the heavy lifting "server-side"
         const processedGoals = goals.map(goal => {
@@ -27,21 +36,31 @@ export const goalService = {
             if (goal.method === 'dynamic' && goal.linkedAssets) {
                 goal.linkedAssets.forEach(link => {
                     if (link.type === 'asset') {
-                        const pos = positions.find(p => p.symbol === link.id);
-                        if (pos) currentAmount += getPosValueInBase(pos) * (link.percentage / 100);
+                        const item = posBySymbolMap.get(link.id);
+                        if (item) {
+                            currentAmount += item.baseValue * (link.percentage / 100);
+                        }
                     } else if (link.type === 'class') {
-                        // Sum all assets of this class converted to base currency
-                        const classTotal = positions
-                            .filter(p => isAssetClassMatch(p.type, link.id))
-                            .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        // Sum pre-computed base values of matching asset class
+                        let classTotal = 0;
+                        for (let i = 0; i < positionBaseValues.length; i++) {
+                            const item = positionBaseValues[i];
+                            if (isAssetClassMatch(item.pos.type, link.id)) {
+                                classTotal += item.baseValue;
+                            }
+                        }
                         currentAmount += classTotal * (link.percentage / 100);
                     } else if (link.type === 'group') {
-                        // Sum all assets in this group converted to base currency
-                        const group = assetGroups.find(g => g.id === link.id);
-                        if (group) {
-                            const groupTotal = positions
-                                .filter(p => group.symbols.includes(p.symbol))
-                                .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        // Sum pre-computed base values of positions matching asset group
+                        const groupEntry = assetGroupMap.get(link.id);
+                        if (groupEntry) {
+                            let groupTotal = 0;
+                            for (let i = 0; i < positionBaseValues.length; i++) {
+                                const item = positionBaseValues[i];
+                                if (groupEntry.symbolSet.has(item.pos.symbol)) {
+                                    groupTotal += item.baseValue;
+                                }
+                            }
                             currentAmount += groupTotal * (link.percentage / 100);
                         }
                     }

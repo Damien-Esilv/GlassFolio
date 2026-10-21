@@ -12,4 +12,7 @@
 **Learning:** In tax engine calculations (`enrichTransactions`, `calculateCTOCapitalGains`, `calculateCryptoGains`, `calculateDividendTax`, `generateFormMappings`), linear searches on accounts, institutes, instruments and tax form cases scaled at O(N * (A + I + Inst)). Pre-indexing lookups with stack-scoped Maps and extracting the fiscal year using fast-path ISO string slicing with date fallback reduces complexity to O(N + A + I + Inst) while eliminating thousands of redundant `Date` object allocations.
 **Action:** Always maintain stack-scoped Map indexing for entity enrichment and use safe string-slice parsing with fallback for ISO date filtering.
 
+## 2026-10-21 - Pre-computed Base Values & O(1) Lookups for Dynamic Goal Calculation
+**Learning:** In financial goal calculations (`goalService.getGoals`), executing `currencyService.convertAmount` and linear `positions.find()` / `group.symbols.includes()` scans inside nested loops per goal link resulted in O(Goals * Links * Positions) FX conversions and array searches. Pre-computing converted base currency values once into an array ($O(Positions)$) and constructing stack-scoped `Map`/`Set` containers reduces computation to $O(Positions + Goals * Links)$ while maintaining strict tenant isolation.
+**Action:** Pre-compute FX conversions once per portfolio position before evaluation loops and index group symbols in stack-scoped Sets for instant set membership queries.
 
