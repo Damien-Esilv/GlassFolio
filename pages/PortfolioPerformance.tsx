@@ -197,21 +197,22 @@ const PortfolioPerformance: React.FC = () => {
          });
       }
 
-      // Helper to compute curve value for any asset category or ticker at index i
-      const getItemVal = (itemKey: string, index: number): number => {
-         if (itemKey === 'All' || itemKey === 'Global Portfolio') {
-            // "All" is the aggregate average of all portfolio asset classes
-            let sum = 0;
-            ASSET_CLASSES.forEach((cls) => {
-               sum += getItemVal(cls, index);
-            });
-            return Math.round((sum / ASSET_CLASSES.length) * 100) / 100;
-         }
+      // BOLT OPTIMIZATION: Stack-scoped cache for item curve parameters to avoid redundant
+      // string hashing, category conditional branching, and trigonometric startOffset re-calculations on every point iteration.
+      interface CurveItemParams {
+         scale: number;
+         drift: number;
+         freq1: number;
+         freq2: number;
+         phase1: number;
+         phase2: number;
+         startOffset: number;
+      }
+      const itemParamsMap = new Map<string, CurveItemParams>();
 
-         // Use live historical API data if available for reference ticker
-         if (!isAssetCategory(itemKey) && referenceHistoryMap[itemKey] && referenceHistoryMap[itemKey][index] !== undefined) {
-            return referenceHistoryMap[itemKey][index];
-         }
+      const getItemParams = (itemKey: string): CurveItemParams => {
+         let params = itemParamsMap.get(itemKey);
+         if (params) return params;
 
          let seed1 = 0;
          let seed2 = 0;
@@ -221,8 +222,6 @@ const PortfolioPerformance: React.FC = () => {
          }
          seed1 = Math.abs(seed1 % 1000) + 1;
          seed2 = Math.abs(seed2 % 1000) + 1;
-
-         if (index === 0) return 0;
 
          let scale = 2.5;
          let drift = 0.02;
@@ -254,12 +253,37 @@ const PortfolioPerformance: React.FC = () => {
          const freq2 = 0.45 + (seed2 % 9) * 0.04;
          const phase1 = (seed1 % 11) * 0.5;
          const phase2 = (seed2 % 7) * 0.7;
+         const startOffset = (Math.sin(phase1) * 1.5 + Math.cos(phase2 * 0.4) * 0.8) * scale;
+
+         params = { scale, drift, freq1, freq2, phase1, phase2, startOffset };
+         itemParamsMap.set(itemKey, params);
+         return params;
+      };
+
+      // Helper to compute curve value for any asset category or ticker at index i
+      const getItemVal = (itemKey: string, index: number): number => {
+         if (itemKey === 'All' || itemKey === 'Global Portfolio') {
+            // "All" is the aggregate average of all portfolio asset classes
+            let sum = 0;
+            ASSET_CLASSES.forEach((cls) => {
+               sum += getItemVal(cls, index);
+            });
+            return Math.round((sum / ASSET_CLASSES.length) * 100) / 100;
+         }
+
+         // Use live historical API data if available for reference ticker
+         if (!isAssetCategory(itemKey) && referenceHistoryMap[itemKey] && referenceHistoryMap[itemKey][index] !== undefined) {
+            return referenceHistoryMap[itemKey][index];
+         }
+
+         if (index === 0) return 0;
+
+         const { scale, drift, freq1, freq2, phase1, phase2, startOffset } = getItemParams(itemKey);
 
          const cycle1 = Math.sin(index * freq1 + phase1);
          const cycle2 = Math.cos(index * freq2 + phase2 * 0.4);
 
          const rawReturn = (cycle1 * 1.5 + cycle2 * 0.8) * scale + (index * drift);
-         const startOffset = (Math.sin(phase1) * 1.5 + Math.cos(phase2 * 0.4) * 0.8) * scale;
          const relativeReturn = rawReturn - startOffset;
 
          return Math.round(relativeReturn * 100) / 100;
@@ -546,9 +570,9 @@ const PortfolioPerformance: React.FC = () => {
                </div>
             </div>
 
-            <div className="h-[380px] w-full">
+            <div className="h-[380px] w-full" key={`${timeRange}-${benchmarkRate}`}>
                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart key={`${timeRange}-${benchmarkRate}`} data={combinedChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
+                  <AreaChart data={combinedChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
                      <defs>
                         <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.35} />
@@ -853,7 +877,7 @@ const PortfolioPerformance: React.FC = () => {
                         {t('reports:performance.percentReturn')}
                      </span>
                   </div>
-                  <div className="h-[280px] w-full">
+                  <div className="h-[280px] w-full" key={`chart1-${compareTimeRange}-${curveMode}`}>
                      <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={comparisonChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
                            <XAxis
@@ -985,7 +1009,7 @@ const PortfolioPerformance: React.FC = () => {
                         {t('reports:performance.indexEvolution')}
                      </span>
                   </div>
-                  <div className="h-[280px] w-full">
+                  <div className="h-[280px] w-full" key={`chart2-${compareTimeRange}-${curveMode}`}>
                      <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={comparisonChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
                            <XAxis
