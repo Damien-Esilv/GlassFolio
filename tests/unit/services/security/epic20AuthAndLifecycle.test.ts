@@ -225,6 +225,25 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
             expect(verification.success).toBe(true);
         });
 
+        it('rejects expired proof-of-work challenges to prevent replay attacks', async () => {
+            const expiredTimestamp = (Date.now() - 15 * 60 * 1000).toString(36); // 15 mins old (>10m limit)
+            const expiredChallenge = `gf-pow:${expiredTimestamp}:dGVzdF9yYW5kb21fYmFzZTY0`;
+            const solution = await antiBotService.solveChallenge(expiredChallenge);
+
+            const res = await antiBotService.verify({
+                honeypot: '',
+                mountedAt: Date.now() - 2000,
+                powChallenge: expiredChallenge,
+                powNonce: solution.nonce,
+                powHash: solution.hash,
+            });
+
+            expect(res.success).toBe(false);
+            if (!isOk(res)) {
+                expect(res.error.field).toBe('pow');
+            }
+        });
+
         it('rejects submissions with missing or invalid proof-of-work telemetry', async () => {
             // Missing pow
             const missingRes = await antiBotService.verify({

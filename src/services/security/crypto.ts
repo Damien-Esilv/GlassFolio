@@ -277,11 +277,25 @@ export const verifyProofOfWork = async (
     challenge: string,
     nonce: number,
     claimedHash: string,
-    difficultyZeroNibbles = 3
+    difficultyZeroNibbles = 3,
+    maxAgeMs = 10 * 60 * 1000 // Anti-replay: 10 minutes max challenge age
 ): Promise<boolean> => {
     try {
         const targetPrefix = '0'.repeat(difficultyZeroNibbles);
         if (!claimedHash.startsWith(targetPrefix)) return false;
+
+        // Challenge structure: <prefix>:<timestamp_base36>:<random_b64>
+        const parts = challenge.split(':');
+        if (parts.length < 3) return false;
+
+        const timestamp = parseInt(parts[1], 36);
+        if (isNaN(timestamp)) return false;
+
+        const now = Date.now();
+        // Reject expired challenges or post-dated challenges (clock skew > 60s)
+        if (now - timestamp > maxAgeMs || timestamp > now + 60_000) {
+            return false;
+        }
 
         const s = subtle();
         const payload = `${challenge}:${nonce}`;
