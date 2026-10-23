@@ -34,7 +34,9 @@ describe('exportService - objectsToCSV', () => {
     const items = [
       { id: '1', label: '=1+1', note: '+SUM(A1:A10)' },
       { id: '2', label: '-100_payload', note: '@EXCEL' },
-      { id: '3', label: '\tTAB_INJECT', note: '\rCARRIAGE_RETURN' }
+      { id: '3', label: '\tTAB_INJECT', note: '\rCARRIAGE_RETURN' },
+      { id: '4', label: '%CMD', note: "|' /C calc'!A0" },
+      { id: '5', label: '   =SUM(1)', note: ' \t@EXCEL' }
     ];
     const csv = objectsToCSV(items);
 
@@ -44,15 +46,21 @@ describe('exportService - objectsToCSV', () => {
     expect(csv).toContain("'@EXCEL");
     expect(csv).toContain("'\tTAB_INJECT");
     expect(csv).toContain("'\rCARRIAGE_RETURN");
+    expect(csv).toContain("'%CMD");
+    expect(csv).toContain("'|' /C calc'!A0");
+    expect(csv).toContain("'   =SUM(1)");
+    expect(csv).toContain("' \t@EXCEL");
   });
 
-  it('preserves numeric types without prefixing single quotes', () => {
+  it('preserves numeric types and pure numeric strings without prefixing single quotes', () => {
     const items = [
-      { id: 1, amount: -50.25, bonus: 10 }
+      { id: 1, amount: -50.25, bonus: 10, strVal: '-100.50', posStr: '+5.2' }
     ];
     const csv = objectsToCSV(items);
-    expect(csv).toContain('1,-50.25,10');
+    expect(csv).toContain('1,-50.25,10,-100.50,+5.2');
     expect(csv).not.toContain("'-50.25");
+    expect(csv).not.toContain("'-100.50");
+    expect(csv).not.toContain("'+5.2");
   });
 
   it('handles quotes and special characters in values', () => {
