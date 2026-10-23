@@ -13,3 +13,7 @@
 **Action:** Always maintain stack-scoped Map indexing for entity enrichment and use safe string-slice parsing with fallback for ISO date filtering.
 
 
+
+## 2026-03-30 - Stack-Scoped O(1) Position Indexing & Single-Pass Cash Aggregation in Alert Service
+**Learning:** In multi-domain notification engines (`evaluateSmartAlerts`), iterating through positions array per rule ($O(R \times P)$) and re-calculating total cash via separate `.filter().reduce()` passes adds unnecessary allocations and $O(N)$ overhead per rule. Building a stack-scoped `Map<string, Position>` and accumulating `totalCash` in a single $O(P)$ pass reduces overall evaluation complexity to $O(P + R)$ while preserving tenant memory isolation.
+**Action:** Always pre-index positions into stack-scoped Maps and aggregate cash totals in a single upfront loop before running itemized alert or tax rule evaluations.
