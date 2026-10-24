@@ -16,26 +16,29 @@ export interface AchievementUnlockEvent {
  * Returns the highest streak achieved or current active streak.
  */
 function calculateDcaStreak(transactions: Transaction[]): number {
-    const buyTxs = transactions.filter(t =>
-        (t.type === 'Buy' || t.type === 'Deposit') &&
-        t.status === 'Completed' &&
-        t.date
-    );
-    if (buyTxs.length === 0) return 0;
-
     const monthSet = new Set<string>();
-    buyTxs.forEach(t => {
-        try {
-            const d = new Date(t.date);
-            if (!isNaN(d.getTime())) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                monthSet.add(`${yyyy}-${mm}`);
+
+    // BOLT OPTIMIZATION: Combine filter and date formatting in a single pass O(N),
+    // using fast ISO string slicing (slice(0, 7)) for standard YYYY-MM dates to avoid Date allocations.
+    for (const t of transactions) {
+        if ((t.type === 'Buy' || t.type === 'Deposit') && t.status === 'Completed' && t.date) {
+            // Check for standard 2-digit month ISO format (e.g., "2024-01-15" or "2024-01")
+            if (/^\d{4}-\d{2}/.test(t.date)) {
+                monthSet.add(t.date.slice(0, 7));
+            } else {
+                try {
+                    const d = new Date(t.date);
+                    if (!isNaN(d.getTime())) {
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        monthSet.add(`${yyyy}-${mm}`);
+                    }
+                } catch {
+                    // Ignore invalid date strings
+                }
             }
-        } catch {
-            // Ignore invalid date strings
         }
-    });
+    }
 
     const months = Array.from(monthSet).sort();
     if (months.length === 0) return 0;
@@ -69,16 +72,32 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
     let maxMonths = 0;
     const now = Date.now();
 
-    activeSymbols.forEach(sym => {
-        const symTxs = transactions.filter(t => t.symbol === sym && (t.type === 'Buy' || t.type === 'Deposit'));
-        symTxs.forEach(t => {
+    // BOLT OPTIMIZATION: Pre-group buy/deposit transaction timestamps by symbol in a single pass O(N)
+    // instead of repeatedly scanning transactions with Array.prototype.filter for each active symbol (O(S * N)).
+    const symTxsMap = new Map<string, number[]>();
+    for (const t of transactions) {
+        if ((t.type === 'Buy' || t.type === 'Deposit') && activeSymbols.has(t.symbol)) {
             const txTime = new Date(t.date).getTime();
             if (!isNaN(txTime) && txTime <= now) {
+                let times = symTxsMap.get(t.symbol);
+                if (!times) {
+                    times = [];
+                    symTxsMap.set(t.symbol, times);
+                }
+                times.push(txTime);
+            }
+        }
+    }
+
+    for (const sym of activeSymbols) {
+        const times = symTxsMap.get(sym);
+        if (times) {
+            for (const txTime of times) {
                 const months = Math.floor((now - txTime) / (1000 * 60 * 60 * 24 * 30.4375));
                 if (months > maxMonths) maxMonths = months;
             }
-        });
-    });
+        }
+    }
 
     return maxMonths;
 }
@@ -89,16 +108,26 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
 function calculateWeeklyTrackingStreak(transactions: Transaction[]): number {
     if (transactions.length === 0) return 0;
     const weekSet = new Set<string>();
-    transactions.forEach(t => {
+
+    // BOLT OPTIMIZATION: Cache Jan 1st metadata per year to avoid thousands of redundant new Date(year, 0, 1) allocations.
+    const jan1Cache = new Map<number, { time: number; day: number }>();
+
+    for (const t of transactions) {
         const d = new Date(t.date);
-        if (!isNaN(d.getTime())) {
+        const dTime = d.getTime();
+        if (!isNaN(dTime)) {
             const year = d.getFullYear();
-            const oneJan = new Date(year, 0, 1);
-            const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-            const week = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
+            let jan1 = jan1Cache.get(year);
+            if (!jan1) {
+                const oneJan = new Date(year, 0, 1);
+                jan1 = { time: oneJan.getTime(), day: oneJan.getDay() };
+                jan1Cache.set(year, jan1);
+            }
+            const numberOfDays = Math.floor((dTime - jan1.time) / (24 * 60 * 60 * 1000));
+            const week = Math.ceil((numberOfDays + jan1.day + 1) / 7);
             weekSet.add(`${year}-W${week}`);
         }
-    });
+    }
     return Math.max(1, weekSet.size);
 }
 
