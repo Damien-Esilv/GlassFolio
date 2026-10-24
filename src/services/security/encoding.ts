@@ -83,3 +83,17 @@ export const fromBase32 = (value: string): Bytes => {
     }
     return new Uint8Array(out);
 };
+
+// ── Timing-Safe Comparison ───────────────────────────────────────────────────
+
+/**
+ * Constant-time string comparison to prevent timing side-channel attacks on secret/hash verifications.
+ */
+export const constantTimeCompare = (a: string, b: string): boolean => {
+    let diff = a.length ^ b.length;
+    const len = Math.min(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+        diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return diff === 0;
+};

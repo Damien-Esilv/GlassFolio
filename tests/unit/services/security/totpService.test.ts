@@ -8,7 +8,7 @@ import {
     verifyBackupCode,
     totpService,
 } from '../../../../src/services/security/totpService';
-import { toBase32, utf8Encode } from '../../../../src/services/security/encoding';
+import { constantTimeCompare, toBase32, utf8Encode } from '../../../../src/services/security/encoding';
 import { appStorage } from '../../../../src/services/storage/appStorage';
 
 describe('totpService (RFC 6238 & Anti-Replay)', () => {
@@ -100,6 +100,14 @@ describe('totpService (RFC 6238 & Anti-Replay)', () => {
         // Attempt 2: Replaying the EXACT same valid code within the same 30-second window MUST be rejected
         const replayAttempt = await totpService.verify(currentCode);
         expect(replayAttempt).toBe(false);
+    });
+
+    it('timing-safe constantTimeCompare correctly compares strings regardless of length or content', () => {
+        expect(constantTimeCompare('secret123', 'secret123')).toBe(true);
+        expect(constantTimeCompare('secret123', 'secret124')).toBe(false);
+        expect(constantTimeCompare('secret123', 'secret12')).toBe(false);
+        expect(constantTimeCompare('', '')).toBe(true);
+        expect(constantTimeCompare('a', 'b')).toBe(false);
     });
 
     it('stores backup codes hashed (SHA-256), accepts them once, and permanently consumes them', async () => {

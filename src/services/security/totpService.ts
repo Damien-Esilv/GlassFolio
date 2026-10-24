@@ -10,7 +10,7 @@
  *   - E2EE storage in appStorage (encrypted at rest).
  */
 
-import { fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
+import { constantTimeCompare, fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
 import { appStorage } from '../storage/appStorage';
 
 const TOTP_STORAGE_KEY = 'glassfolio_security_totp';
@@ -182,13 +182,20 @@ export const verifyBackupCode = async (
     }
 
     const testHash = await hashBackupCode(code);
-    const index = hashedCodes.indexOf(testHash);
+    let foundIndex = -1;
 
-    if (index === -1) {
+    for (let i = 0; i < hashedCodes.length; i++) {
+        if (constantTimeCompare(hashedCodes[i], testHash)) {
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (foundIndex === -1) {
         return { valid: false, remainingHashes: hashedCodes };
     }
 
-    const remainingHashes = [...hashedCodes.slice(0, index), ...hashedCodes.slice(index + 1)];
+    const remainingHashes = [...hashedCodes.slice(0, foundIndex), ...hashedCodes.slice(foundIndex + 1)];
     return { valid: true, remainingHashes };
 };
 
