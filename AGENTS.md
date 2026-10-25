@@ -188,7 +188,8 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
          ```
        - Le workflow CI GitHub Actions `notion-sync` (`scripts/notion-sync.mjs`) extrait automatiquement l'ensemble de ces clés `TGLA-*`, passe chacune de ces tâches à `Fait` dans Notion et lie directement l'URL et le hash du commit squashed final.
        - Ainsi, **l'historique Git sur `main` reste 100% linéaire et propre**, et **100% de la traçabilité Notion est préservée** vers ce commit de livraison unique.
-     - L'arborescence résultante sur GitHub doit être strictement linéaire et limpide : un seul commit net par feature ou bugfix.
+     - **Forme du merge (comme les Epics précédents)** : lorsque l'utilisateur demande de « merger », l'agent **squashe d'abord les commits de la branche en un seul commit**, puis fusionne cette branche dans `main` avec un **commit de merge explicite** : `git merge --no-ff <branche> -m "merge: integrate <branche> into main"`. **Jamais de fast-forward** (`--ff-only`) : l'historique GitHub doit montrer la branche qui part de `main` puis y revient, avec le commit squashé de feature et le commit de merge.
+     - Résultat attendu sur `main` : un commit de merge `merge: integrate <branche> into main` dont le second parent est l'unique commit de la feature (message contenant tous les `TGLA-xxx` / `BUG-xxx` et les lignes `Closes`).
    - **Nettoyage drastique des branches distantes** : Dès qu'une branche est fusionnée dans `main`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
 
 3. **Garantie 6-Gates Pré-Merge (Local)** :
