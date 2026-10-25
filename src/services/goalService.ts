@@ -15,10 +15,23 @@ export const goalService = {
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
         const rates = await currencyService.getExchangeRates(uniqueCurrencies, baseCurrency);
 
-        // Helper to get position market value converted to base currency
-        const getPosValueInBase = (p: typeof positions[0]) => {
-            return currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
-        };
+        // ⚡ OPTIMIZATION: Pre-calculate base-currency market value for each position in a single O(P) pass,
+        // and pre-index lookups using stack-scoped O(1) Maps to replace repeated O(P) linear searches
+        // (find/filter) inside the goal processing loops.
+        const positionsWithBaseValue = positions.map(p => ({
+            ...p,
+            baseValue: currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates)
+        }));
+
+        const positionsBySymbol = new Map<string, typeof positionsWithBaseValue[0]>();
+        for (const pos of positionsWithBaseValue) {
+            positionsBySymbol.set(pos.symbol, pos);
+        }
+
+        const assetGroupsById = new Map<string, AssetGroup>();
+        for (const group of assetGroups) {
+            assetGroupsById.set(group.id, group);
+        }
 
         // Perform the heavy lifting "server-side"
         const processedGoals = goals.map(goal => {
@@ -27,21 +40,29 @@ export const goalService = {
             if (goal.method === 'dynamic' && goal.linkedAssets) {
                 goal.linkedAssets.forEach(link => {
                     if (link.type === 'asset') {
-                        const pos = positions.find(p => p.symbol === link.id);
-                        if (pos) currentAmount += getPosValueInBase(pos) * (link.percentage / 100);
+                        // O(1) Map lookup replacing linear Array.find()
+                        const pos = positionsBySymbol.get(link.id);
+                        if (pos) currentAmount += pos.baseValue * (link.percentage / 100);
                     } else if (link.type === 'class') {
-                        // Sum all assets of this class converted to base currency
-                        const classTotal = positions
-                            .filter(p => isAssetClassMatch(p.type, link.id))
-                            .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        // Sum pre-calculated baseValues for assets matching this class
+                        let classTotal = 0;
+                        for (const pos of positionsWithBaseValue) {
+                            if (isAssetClassMatch(pos.type, link.id)) {
+                                classTotal += pos.baseValue;
+                            }
+                        }
                         currentAmount += classTotal * (link.percentage / 100);
                     } else if (link.type === 'group') {
-                        // Sum all assets in this group converted to base currency
-                        const group = assetGroups.find(g => g.id === link.id);
+                        // O(1) group lookup and Set lookup for symbols
+                        const group = assetGroupsById.get(link.id);
                         if (group) {
-                            const groupTotal = positions
-                                .filter(p => group.symbols.includes(p.symbol))
-                                .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                            const symbolSet = new Set(group.symbols);
+                            let groupTotal = 0;
+                            for (const pos of positionsWithBaseValue) {
+                                if (symbolSet.has(pos.symbol)) {
+                                    groupTotal += pos.baseValue;
+                                }
+                            }
                             currentAmount += groupTotal * (link.percentage / 100);
                         }
                     }
