@@ -6,11 +6,20 @@
 
 import { TransactionType, TransactionSubType } from '../../types/types.backend';
 
+const CANONICAL_TYPES: ReadonlySet<string> = new Set([
+    'BUY', 'SELL', 'DEPOSIT', 'WITHDRAW', 'INCOME', 'EXPENSE', 'TRANSFER', 'SWAP',
+    'ADJUSTMENT', 'BALANCE_ADJUSTMENT', 'SNAPSHOT_ADJUSTMENT',
+]);
+
 /**
  * Normalize raw transaction type string to standard TransactionType.
  */
 export function normalizeTransactionType(rawType: string): TransactionType {
     if (!rawType) return 'BUY';
+
+    // Exact canonical value (e.g. the `operation` column of GlassFolio's own export): keep it as is.
+    const canonical = rawType.trim().toUpperCase();
+    if (CANONICAL_TYPES.has(canonical)) return canonical as TransactionType;
 
     const lower = rawType.toLowerCase().trim();
 

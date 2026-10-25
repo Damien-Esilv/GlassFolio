@@ -16,8 +16,12 @@ export const PRESET_PATTERNS: Record<string, string[]> = {
     'BoursoBank-Alt': ['Date opération', 'Date valeur', 'Libellé', 'Montant', 'Solde'],
     'TradeRepublic': ['Date', 'Type', 'ISIN', 'Name', 'Shares', 'Price', 'Amount'],
     'Coinbase': ['Timestamp', 'Transaction Type', 'Asset', 'Quantity Transacted'],
-    'Kraken': ['txid', 'time', 'type', 'pair', 'price', 'vol', 'fee']
+    'Kraken': ['txid', 'time', 'type', 'pair', 'price', 'vol', 'fee'],
+    // GlassFolio's own transactions CSV export (kept last so broker formats win).
+    'GlassFolio': ['instrument', 'symbol', 'amount', 'price', 'total', 'fees', 'status', 'currency', 'source']
 };
+
+const GLASSFOLIO_EXPORT_MARKERS = ['operation', 'instrument', 'symbol', 'total', 'fees'];
 
 /**
  * Explicit per-broker overrides. Each entry lists candidate header names in
@@ -96,6 +100,18 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         quantity: ['vol'],
         amountPrimary: ['cost'],
         feeAmount: ['fee']
+    },
+    'GlassFolio': {
+        externalId: ['id'],
+        transactionDate: ['date'],
+        type: ['operation', 'type'],
+        assetSymbol: ['symbol'],
+        assetName: ['instrument'],
+        rawLabel: ['instrument'],
+        priceUnit: ['price'],
+        quantity: ['amount'],
+        amountPrimary: ['total'],
+        feeAmount: ['fees']
     }
 };
 
@@ -135,6 +151,12 @@ export function getPresetMappings(presetName: string, headers: string[]): FieldM
 export function detectPreset(headers: string[]): { presetName: string; mappings: FieldMappings } | null {
     if (!headers || headers.length === 0) return null;
     const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+
+    // GlassFolio's own export is recognised first: its generic column names (date, type, price, amount…)
+    // would otherwise be mistaken for a broker format. `operation` is unique to it.
+    if (GLASSFOLIO_EXPORT_MARKERS.every(marker => lowerHeaders.includes(marker))) {
+        return { presetName: 'GlassFolio', mappings: getPresetMappings('GlassFolio', headers) };
+    }
 
     for (const [presetName, patterns] of Object.entries(PRESET_PATTERNS)) {
         const matches = patterns.filter(p =>

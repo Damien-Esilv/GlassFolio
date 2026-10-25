@@ -89,7 +89,7 @@
     "backupWizard": {
         "title": "Importer & Restaurer un Backup JSON",
         "subtitle": "Sélectionnez votre fichier glassfolio-backup.json",
-        "uploadHint": "Cliquez pour charger le fichier de sauvegarde (.json)",
+        "uploadHint": "Cliquez pour charger une sauvegarde (.json) ou une archive RGPD (.zip)",
         "uploadSubhint": "Accepte les sauvegardes au format GlassFolio",
         "entitiesReady": "entités prêtes à l'importation",
         "changeFile": "Changer de fichier",
@@ -103,7 +103,21 @@
         "executeReset": "Exécuter la restauration complète",
         "restoreSuccess": "Restauration complète effectuée avec succès !",
         "mergeSuccess": "Fusion terminée : {{count}} éléments importés ou mis à jour !",
-        "importError": "Erreur lors de l'importation"
+        "importError": "Erreur lors de l'importation",
+        "transactionsOnly": "Importer uniquement les transactions",
+        "transactionsOnlyDesc": "Sélectionne les transactions et les comptes, établissements, instruments et lots d'import qu'elles référencent ; le reste de votre compte n'est pas touché.",
+        "errors": {
+            "unreadable": "Impossible de lire le fichier JSON.",
+            "not_an_object": "Fichier JSON invalide.",
+            "missing_data": "Structure de sauvegarde non reconnue (champ data manquant ou invalide).",
+            "prototype_pollution": "Données refusées : tentative de pollution de prototype détectée.",
+            "invalid_collection": "Format de collection invalide pour « {{collection}} » : un tableau est attendu.",
+            "checksum_mismatch": "Fichier altéré ou incomplet : la somme de contrôle ne correspond pas aux données.",
+            "invalid_zip": "Archive ZIP illisible ou corrompue.",
+            "unsupported_compression": "Compression ZIP non prise en charge.",
+            "crc_mismatch": "Archive ZIP corrompue : un fichier ne passe pas le contrôle d'intégrité.",
+            "zip_no_backup": "Cette archive ne contient pas de sauvegarde GlassFolio (data/glassfolio-backup-….json)."
+        }
     },
     "legal": {
         "title": "Légal & confidentialité",

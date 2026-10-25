@@ -1,5 +1,6 @@
 import { db, delay } from '../db';
 import { appStorage } from '../storage/appStorage';
+import { verifyBackupChecksum } from './backupIntegrity';
 
 /**
  * Backup Import & Restore Service (JSON)
@@ -7,9 +8,21 @@ import { appStorage } from '../storage/appStorage';
  * prototype pollution protection and non-destructive merges.
  */
 
+/** Machine-readable validation errors; the UI translates them (settings:backupWizard.errors.*). */
+export type BackupErrorCode =
+    | 'unreadable'
+    | 'not_an_object'
+    | 'missing_data'
+    | 'prototype_pollution'
+    | 'invalid_collection'
+    | 'checksum_mismatch';
+
 export interface BackupValidationResult {
     valid: boolean;
-    error?: string;
+    error?: BackupErrorCode;
+    /** Interpolation values for the translated message (e.g. the offending collection). */
+    errorParams?: { collection?: string };
+    /** True only when a checksum was present AND matches the data (see `validateBackup`). */
     checksumVerified?: boolean;
     payload?: {
         version: string;
@@ -50,19 +63,19 @@ export function validateBackupContent(fileText: string): BackupValidationResult 
     try {
         const json = JSON.parse(fileText);
         if (!json || typeof json !== 'object') {
-            return { valid: false, error: 'Fichier JSON invalide' };
+            return { valid: false, error: 'not_an_object' };
         }
         if (!json.data || typeof json.data !== 'object' || Array.isArray(json.data)) {
-            return { valid: false, error: 'Structure de sauvegarde non reconnue (champ data manquant ou invalide)' };
+            return { valid: false, error: 'missing_data' };
         }
 
         // Validate each data collection is an array
         for (const [key, val] of Object.entries(json.data)) {
             if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-                return { valid: false, error: 'Tentative de pollution de prototype détectée dans les données' };
+                return { valid: false, error: 'prototype_pollution' };
             }
             if (!Array.isArray(val)) {
-                return { valid: false, error: `Format de collection invalide pour '${key}', tableau attendu` };
+                return { valid: false, error: 'invalid_collection', errorParams: { collection: key } };
             }
         }
 
@@ -71,7 +84,7 @@ export function validateBackupContent(fileText: string): BackupValidationResult 
 
         return {
             valid: true,
-            checksumVerified: Boolean(json.checksum),
+            checksumVerified: false,
             payload: {
                 version: String(json.version || '1.0.0'),
                 exportedAt: String(json.exportedAt || new Date().toISOString()),
@@ -81,14 +94,66 @@ export function validateBackupContent(fileText: string): BackupValidationResult 
             }
         };
     } catch {
-        return { valid: false, error: 'Impossible de lire le fichier JSON' };
+        return { valid: false, error: 'unreadable' };
     }
 }
 
+/**
+ * Full validation: structure, then integrity. A backup whose checksum does not match its data is
+ * rejected; a backup without checksum (older exports) is accepted but not marked as verified.
+ */
+export async function validateBackup(fileText: string): Promise<BackupValidationResult> {
+    const result = validateBackupContent(fileText);
+    if (!result.valid) return result;
+    const status = await verifyBackupChecksum(JSON.parse(fileText));
+    if (status === 'mismatch') return { valid: false, error: 'checksum_mismatch' };
+    return { ...result, checksumVerified: status === 'verified' };
+}
 
-export async function restoreBackupReset(data: Record<string, any[]>): Promise<void> {
+/** Collections that make up the transactions of an account (ledger plus what its rows reference). */
+export const TRANSACTION_ENTITY_KEYS = [
+    'unifiedTransactions',
+    'transactions',
+    'accounts',
+    'institutes',
+    'instruments',
+    'importBatches',
+] as const;
+
+/** Keeps only the transaction-related collections of a backup. */
+export function pickTransactionEntities(data: Record<string, any[]>): Record<string, any[]> {
+    return Object.fromEntries(
+        Object.entries(data).filter(([key, rows]) => (TRANSACTION_ENTITY_KEYS as readonly string[]).includes(key) && rows.length > 0)
+    );
+}
+
+/** Merges only the transactions (and their accounts, institutes, instruments, batches) of a backup. */
+export async function mergeTransactionsOnly(data: Record<string, any[]>): Promise<{ importedCount: number }> {
+    return mergeBackupData(pickTransactionEntities(data));
+}
+
+/** Keeps the API keys already stored locally: exports never contain them. */
+function mergeAiSettingsKeepingKeys(incoming: Record<string, any>): Record<string, any> {
+    try {
+        const current = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}') as Record<string, any>;
+        const keys: Record<string, any> = {};
+        if (current.apiKey) keys.apiKey = current.apiKey;
+        if (current.customApiKey) keys.customApiKey = current.customApiKey;
+        return { ...incoming, ...keys };
+    } catch {
+        return incoming;
+    }
+}
+
+export async function restoreBackupReset(backupData: Record<string, any[]>): Promise<void> {
     await delay(300);
     db.clearAll();
+
+    // An empty collection means "nothing stored" (GDPR archives only carry persisted data): skip it so
+    // built-in reference data (mapping presets, instruments, achievement levels) is not wiped.
+    const data: Record<string, any[]> = Object.fromEntries(
+        Object.entries(backupData).filter(([, rows]) => !Array.isArray(rows) || rows.length > 0)
+    );
     
     if (data.transactions) db.saveTransactions(data.transactions);
     if (data.positions) db.savePositions(data.positions);
@@ -134,7 +199,7 @@ export async function restoreBackupReset(data: Record<string, any[]>): Promise<v
         appStorage.setItem('glassfolio_gamification_v1', JSON.stringify(data.gamification[0]));
     }
     if (data.aiSettings && data.aiSettings.length > 0) {
-        appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify(data.aiSettings[0]));
+        appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify(mergeAiSettingsKeepingKeys(data.aiSettings[0])));
     }
     if (data.aiConversations && data.aiConversations.length > 0) {
         appStorage.setItem('glassfolio_ai_chats_v1', JSON.stringify(data.aiConversations));
