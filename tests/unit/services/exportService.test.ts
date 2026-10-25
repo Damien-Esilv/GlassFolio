@@ -13,6 +13,7 @@ import {
   exportRGPDZip
 } from '../../../src/services/exportService';
 import { appStorage } from '../../../src/services/storage/appStorage';
+import { VAULT_HEADER_KEY } from '../../../src/services/storage/storageKeys';
 
 describe('exportService - objectsToCSV', () => {
   it('returns empty string for empty array', () => {
@@ -135,6 +136,7 @@ describe('exportService - generateBackupData', () => {
   });
 
   it('triggers transactions-only exports without errors', async () => {
+    appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify({ isDemo: false }));
     // Mock document.createElement & click for downloadFile helper
     const clickMock = vi.fn();
     const linkMock = { href: '', download: '', click: clickMock };

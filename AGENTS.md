@@ -160,7 +160,7 @@ Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doi
 
 ### Protocole Git, Branching & DevSecOps (Règle Recruiter-Grade)
 
-Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et auditeurs open-source :
+Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et des auditeurs :
 
 1. **Interdiction formelle de commiter ou fusionner sur `main` sans demande explicite de l'utilisateur** :
    - `main` est une branche protégée réservée exclusivement aux versions de production validées par l'utilisateur.
@@ -207,7 +207,7 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
 
 5. **Architecture Dual-Remote (Lab Privé vs Vitrine Publique)** :
    - `origin` : dépôt de travail privé (toutes branches de sprint, discussions et historiques détaillés).
-   - `public` : dépôt miroir public open-source (uniquement les releases propres validées de `main`).
+   - `public` : dépôt miroir public en code source disponible, licence PolyForm Noncommercial (uniquement les releases propres validées de `main`).
    - Synchronisation vers la vitrine publique :
      ```bash
      git checkout main

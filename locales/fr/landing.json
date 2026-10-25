@@ -234,8 +234,8 @@
     "cookiesStorage": "Cookies & Stockage Local",
     "accessibility": "Accessibilité (RGAA)",
     "cookiePreferencesBtn": "Préférences Cookies",
-    "regulatoryDisclaimer": "Avertissement AMF / DGFiP : GlassFolio est un projet logiciel open-source à vocation informative. Les simulations et analyses sont fournies à titre purement pédagogique et ne constituent jamais un conseil en investissement financier, juridique ou fiscal personnalisé.",
+    "regulatoryDisclaimer": "Avertissement AMF / DGFiP : GlassFolio est un projet logiciel à code source disponible, à vocation informative. Les simulations et analyses sont fournies à titre purement pédagogique et ne constituent jamais un conseil en investissement financier, juridique ou fiscal personnalisé.",
     "trademarkNotice": "Usage Nominatif des Marques : L'ensemble des noms de banques, courtiers, plateformes d'échange et marques tiers cités sur GlassFolio (notamment BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase) sont la propriété exclusive de leurs titulaires respectifs. Ils sont mentionnés uniquement à des fins d'interopérabilité technique et de référence descriptive (Art. L.713-6 du Code de la Propriété Intellectuelle / Règlement sur la marque de l'UE Art. 14).",
-    "copyright": "© {{year}} GlassFolio — Architecture FinTech Open-Source E2EE."
+    "copyright": "© {{year}} GlassFolio — Architecture FinTech E2EE à code source disponible."
   }
 }

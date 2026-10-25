@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// Inter is self-hosted (no request to Google Fonts, hence no visitor IP sent to a third party).
+import './src/fonts.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

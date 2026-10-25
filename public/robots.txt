@@ -7,4 +7,4 @@ Allow: /terms
 Allow: /cookies
 Allow: /accessibility
 
-Sitemap: https://glassfolio.com/sitemap.xml
+Sitemap: https://glassfolio.dev/sitemap.xml

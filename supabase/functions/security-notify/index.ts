@@ -12,11 +12,23 @@ interface SecurityNotificationRequest {
 
 const rateLimitMap = new Map<string, number>();
 
+// CORS is limited to the app origins (comma-separated ALLOWED_ORIGINS secret overrides the default).
+const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://app.glassfolio.dev')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const resolveAllowedOrigin = (req: Request): string => {
+  const origin = req.headers.get('Origin') || '';
+  return allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+};
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': resolveAllowedOrigin(req),
+        'Vary': 'Origin',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       },
     });
@@ -80,7 +92,8 @@ serve(async (req: Request) => {
 
     // In a live environment, dispatch via configured SMTP transport.
     // For local and standard operation, log the dispatch event and return success.
-    console.log(`[security-notify] Dispatched: ${action} for ${user.email} (${subject})`);
+    // Personal data minimisation: the recipient address is never written to the function logs.
+    console.log(`[security-notify] Dispatched: ${action} for user ${user.id}`);
 
     return new Response(
       JSON.stringify({
@@ -94,7 +107,8 @@ serve(async (req: Request) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': resolveAllowedOrigin(req),
+        'Vary': 'Origin',
         },
       }
     );

@@ -82,7 +82,9 @@
         "confirmDeleteButton": "Permanently Delete",
         "deleting": "Deleting account...",
         "deleteSuccess": "Your account has been deleted successfully.",
-        "invalidPasswordOrConfirm": "Invalid password or confirmation text."
+        "invalidPasswordOrConfirm": "Invalid password or confirmation text.",
+        "exportUnavailableDemo": "The demo account holds no personal data: export is only available for a real account.",
+        "gdprReadme": "GlassFolio — Personal data export archive (GDPR Art. 15 and 20)\nGenerated on {{date}} in your browser: no data went through a server.\n\nContents:\n- manifest.json: file list, item count per collection, secrets deliberately excluded.\n- profile.json: your profile (identifier, email, name, preferences). Password hashes and salts are excluded.\n- consent.json: your cookie / audience-measurement consent choice.\n- security-summary.json: two-factor status and passkey count (no secrets).\n- data/: full JSON backup and one CSV file per data type (spreadsheet-friendly).\n\nOnly data actually stored in your account is included; no demo data.\nTo exercise your other rights (rectification, objection, restriction), see the Privacy Policy."
     },
     "backupWizard": {
         "title": "Import & Restore a JSON Backup",
@@ -102,5 +104,11 @@
         "restoreSuccess": "Full restoration completed successfully!",
         "mergeSuccess": "Merge completed: {{count}} items imported or updated!",
         "importError": "Error during importation"
+    },
+    "legal": {
+        "title": "Legal & privacy",
+        "subtitle": "Documents in force (version {{version}}): legal notice, privacy, terms of use, cookies and accessibility.",
+        "cookiePreferences": "Cookie preferences",
+        "rightsHint": "To exercise your rights (rectification, objection, restriction), use the export and account deletion options on this page, or write to {{email}}."
     }
 }

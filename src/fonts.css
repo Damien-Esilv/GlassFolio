@@ -1,0 +1,8 @@
+/* Inter, self-hosted (latin subset, single variable woff2): no request to Google Fonts. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+}

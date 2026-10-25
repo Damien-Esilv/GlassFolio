@@ -12,13 +12,15 @@ import { useTranslation } from 'react-i18next';
 import { UserPreferences, NotificationCategoryPreferences } from '../types';
 import ImportBatchList from '../components/ImportBatchList';
 import { useData } from '../context/DataContext';
-import { exportBackupJSON, exportRGPDZip, exportTransactionsCSV } from '../src/services/exportService';
+import { canExportAccountData, exportBackupJSON, exportRGPDZip, exportTransactionsCSV } from '../src/services/exportService';
 import { BackupMergeWizard } from '../components/BackupMergeWizard';
 import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
 import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
 import { UserAvatar } from '../components/ui/UserAvatar';
+import { openConsentPreferences } from '../src/services/consentService';
+import { LEGAL_CONTACT_EMAIL, LEGAL_DOCUMENTS_VERSION } from '../src/config/legal';
 import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../src/constants/themeCatalog';
 import { authService } from '../src/services/security/authService';
 import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
@@ -51,6 +53,9 @@ const Settings: React.FC = () => {
     const [settingsStepUp, setSettingsStepUp] = useState<SettingsStepUp | null>(null);
     const emailChangeDoneRef = useRef(false);
     const protectExport = (run: () => Promise<void> | void) => () => setSettingsStepUp({ kind: 'export', run });
+    // The demo account owns no personal data: exports are only offered for a real account.
+    const exportAllowed = canExportAccountData();
+    const exportButtonState = exportAllowed ? '' : 'opacity-50 cursor-not-allowed';
 
     const handleRequestDeleteAccount = () => {
         setDeleteError('');
@@ -769,11 +774,18 @@ const Settings: React.FC = () => {
                                 <p className="text-xs text-tertiary mb-6">
                                     {t('settings:dataAndBackup.subtitle')}
                                 </p>
+                                {!exportAllowed && (
+                                    <p className="text-xs text-warning bg-warning-subtle border border-warning/30 rounded-lg p-3 mb-4" role="note">
+                                        {t('settings:dataAndBackup.exportUnavailableDemo')}
+                                    </p>
+                                )}
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <button
                                         onClick={protectExport(exportTransactionsCSV)}
-                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                        disabled={!exportAllowed}
+                                        title={exportAllowed ? undefined : t('settings:dataAndBackup.exportUnavailableDemo')}
+                                        className={`p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group ${exportButtonState}`}
                                     >
                                         <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:scale-110 transition-transform">
                                             <FileSpreadsheet size={20} />
@@ -786,7 +798,9 @@ const Settings: React.FC = () => {
 
                                     <button
                                         onClick={protectExport(exportBackupJSON)}
-                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                        disabled={!exportAllowed}
+                                        title={exportAllowed ? undefined : t('settings:dataAndBackup.exportUnavailableDemo')}
+                                        className={`p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group ${exportButtonState}`}
                                     >
                                         <div className="p-2 rounded-lg bg-brand/10 text-brand w-fit group-hover:scale-110 transition-transform">
                                             <Download size={20} />
@@ -799,7 +813,9 @@ const Settings: React.FC = () => {
 
                                     <button
                                         onClick={protectExport(exportRGPDZip)}
-                                        className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
+                                        disabled={!exportAllowed}
+                                        title={exportAllowed ? undefined : t('settings:dataAndBackup.exportUnavailableDemo')}
+                                        className={`p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group ${exportButtonState}`}
                                     >
                                         <div className="p-2 rounded-lg bg-positive-subtle text-positive w-fit group-hover:scale-110 transition-transform">
                                             <FileText size={20} />
@@ -856,6 +872,7 @@ const Settings: React.FC = () => {
                                         </Button>
                                     ) : (
                                         <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+                                            {exportAllowed && (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
@@ -877,10 +894,11 @@ const Settings: React.FC = () => {
                                                     ? t('settings:dataAndBackup.backupsExportedReady')
                                                     : t('settings:dataAndBackup.exportAndUnlockReset')}
                                             </Button>
+                                            )}
                                             <Button
                                                 variant="danger"
                                                 size="sm"
-                                                disabled={!hasExportedBeforeReset || isResetting}
+                                                disabled={(exportAllowed && !hasExportedBeforeReset) || isResetting}
                                                 isLoading={isResetting}
                                                 className="w-full justify-center text-xs whitespace-nowrap"
                                                 onClick={async () => {
@@ -907,6 +925,42 @@ const Settings: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Legal & Privacy (E15) */}
+                            <div className={cardStyle}>
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                                        <Scale size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-primary">{t('settings:legal.title')}</h3>
+                                        <p className="text-xs text-tertiary mt-0.5 leading-relaxed">
+                                            {t('settings:legal.subtitle', { version: LEGAL_DOCUMENTS_VERSION })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {(['legal', 'privacy', 'terms', 'cookies', 'accessibility'] as const).map((doc) => (
+                                        <Link
+                                            key={doc}
+                                            to={`/${doc}`}
+                                            className="px-3 py-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-secondary hover:text-primary transition-colors"
+                                        >
+                                            {t(`legal:center.tabs.${doc}`)}
+                                        </Link>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={openConsentPreferences}
+                                        className="px-3 py-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-secondary hover:text-primary transition-colors"
+                                    >
+                                        {t('settings:legal.cookiePreferences')}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-tertiary mt-4 leading-relaxed">
+                                    {t('settings:legal.rightsHint', { email: LEGAL_CONTACT_EMAIL })}
+                                </p>
                             </div>
 
                             {/* Delete Account (GDPR) */}
@@ -964,6 +1018,7 @@ const Settings: React.FC = () => {
                                     <p className="text-xs text-secondary leading-relaxed">
                                         {t('settings:dataAndBackup.downloadBeforeDelete')}
                                     </p>
+                                    {exportAllowed && (
                                     <button
                                         type="button"
                                         onClick={protectExport(exportRGPDZip)}
@@ -972,6 +1027,7 @@ const Settings: React.FC = () => {
                                         <Download size={14} />
                                         {t('settings:dataAndBackup.downloadGdprArchive')}
                                     </button>
+                                    )}
                                 </div>
 
                                 {deleteError && (

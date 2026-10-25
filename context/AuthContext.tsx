@@ -3,7 +3,7 @@ import { User } from '../types';
 import { userRepository } from '../src/services/repositories';
 import { vaultService } from '../src/services/security/vaultService';
 import { authService } from '../src/services/security/authService';
-import { AuthResult, SecondFactorMethod } from '../src/services/security/authTypes';
+import { AuthResult, SecondFactorMethod, SignUpOptions } from '../src/services/security/authTypes';
 import { appStorage } from '../src/services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../src/services/storage/storageKeys';
 
@@ -12,7 +12,7 @@ import { consumeUrlBootstrapParams } from '../src/config/urlBootstrap';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, options?: { captchaToken?: string }) => Promise<AuthResult>;
-  signup: (email: string, password: string, name: string, options?: { captchaToken?: string }) => Promise<void>;
+  signup: (email: string, password: string, name: string, options?: SignUpOptions) => Promise<void>;
   verifySignupOtp: (email: string, token: string) => Promise<string>;
   /** Address confirmed through the emailed link: creates the vault with the in-memory password. */
   continueSignupAfterLink: () => Promise<string>;
@@ -258,7 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.recoveryKey;
   };
 
-  const signup = async (email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<void> => {
+  const signup = async (email: string, password: string, name: string, options?: SignUpOptions): Promise<void> => {
     if (authService.beginSignupVerification) {
       await authService.beginSignupVerification(email, password, name, options);
       return;

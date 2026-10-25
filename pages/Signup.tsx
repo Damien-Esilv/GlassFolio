@@ -3,7 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key, Info } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
+import { createLegalAcceptance, LEGAL_DOCUMENTS_VERSION } from '../src/config/legal';
 import { PasswordStrengthMeter } from '../components/security/PasswordStrengthMeter';
 import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
 import { evaluatePassword } from '../src/services/security/passwordValidator';
@@ -34,6 +35,7 @@ const Signup: React.FC = () => {
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [error, setError] = useState('');
+   const [acceptedLegal, setAcceptedLegal] = useState(false);
    const [isLoading, setIsLoading] = useState(false);
    const [pendingRecoveryKey, setPendingRecoveryKey] = useState<string | null>(null);
    const [signupStage, setSignupStage] = useState<'form' | 'verification'>('form');
@@ -152,6 +154,11 @@ const Signup: React.FC = () => {
       e.preventDefault();
       setError('');
 
+      if (!acceptedLegal) {
+         setError(t('auth:signup.acceptLegalRequired'));
+         return;
+      }
+
       const evalResult = evaluatePassword(password);
       if (!evalResult.isValid) {
          setError(t('auth:signup.passwordWeakError'));
@@ -178,7 +185,7 @@ const Signup: React.FC = () => {
             }
 
             const payload = antiBotRef.current?.getPayload();
-            await signup(email, password, name, { captchaToken: payload?.captchaToken });
+            await signup(email, password, name, { captchaToken: payload?.captchaToken, legalAcceptance: createLegalAcceptance() });
             setSignupStage('verification');
             return;
          }
@@ -346,9 +353,26 @@ const Signup: React.FC = () => {
                   <PasswordStrengthMeter password={password} />
                </div>
 
-               <div className="text-xs text-secondary mt-2">
-                  {t('auth:signup.termsText')}
-               </div>
+               <label className="flex items-start gap-2.5 text-xs text-secondary mt-2 cursor-pointer" htmlFor="accept-legal">
+                  <input
+                     id="accept-legal"
+                     type="checkbox"
+                     required
+                     checked={acceptedLegal}
+                     onChange={(e) => setAcceptedLegal(e.target.checked)}
+                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary"
+                  />
+                  <span>
+                     <Trans
+                        i18nKey="auth:signup.acceptLegal"
+                        values={{ version: LEGAL_DOCUMENTS_VERSION }}
+                        components={{
+                           terms: <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                           privacy: <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                        }}
+                     />
+                  </span>
+               </label>
 
                {isLocal && showOverwriteConfirm && (
                   <div>
@@ -418,6 +442,15 @@ const Signup: React.FC = () => {
                      </svg>
                      {t('auth:signup.signUpWithGoogle', 'Continue with Google')}
                   </button>
+                  <p className="text-xs text-tertiary mt-3 text-center">
+                     <Trans
+                        i18nKey="auth:signup.googleLegalNotice"
+                        components={{
+                           terms: <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                           privacy: <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                        }}
+                     />
+                  </p>
                </div>
             )}
 

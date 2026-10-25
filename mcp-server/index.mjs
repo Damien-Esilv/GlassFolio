@@ -146,6 +146,22 @@ const TOOLS = [
     }
   },
   {
+    name: 'get_privacy_status',
+    description: 'Get the legal and privacy status of GlassFolio: legal documents version and paths, privacy contact, cookie consent state and where to exercise GDPR rights.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'export_gdpr_archive',
+    description: 'Download the GDPR access / portability archive of the current real account in the app (requires confirmation). The archive is never returned to the assistant. Account deletion is intentionally not available as a tool.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
     name: 'list_notifications',
     description: 'List all notifications and alerts with optional category filter (portfolio, fiscal, goals, security, system), read filter, and limit.',
     inputSchema: {
@@ -422,6 +438,23 @@ async function handleToolCall(name, args) {
     case 'resend_verification_email': {
       return {
         content: [{ type: 'text', text: JSON.stringify({ success: false, message: 'No pending email verification for this account.' }, null, 2) }]
+      };
+    }
+    case 'get_privacy_status': {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({
+          deploymentMode: 'local',
+          documentsVersion: '2026-10-25',
+          documents: { legalNotice: '/legal', privacyPolicy: '/privacy', termsOfUse: '/terms', cookies: '/cookies', accessibility: '/accessibility' },
+          contactEmail: 'privacy@glassfolio.dev',
+          consent: { status: 'unset' },
+          dataRights: { exportAvailable: false, exportLocation: 'Settings > Data & Backups > GDPR export', deletionLocation: 'Settings > Data & Backups > Delete my account' }
+        }, null, 2) }]
+      };
+    }
+    case 'export_gdpr_archive': {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ success: false, message: 'The GDPR archive is generated in the app browser after user confirmation. Open Settings > Data & Backups > GDPR export.' }, null, 2) }]
       };
     }
     case 'list_notifications': {

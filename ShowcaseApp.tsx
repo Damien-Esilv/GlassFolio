@@ -8,7 +8,7 @@ import './src/i18n';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
-import { Analytics } from '@vercel/analytics/react';
+import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
@@ -75,7 +75,7 @@ export const ShowcaseApp: React.FC = () => {
           </Routes>
         </React.Suspense>
         <ConsentBanner />
-        <Analytics />
+        <ConsentGatedAnalytics />
       </Router>
     </AuthProvider>
   );

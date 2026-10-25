@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  ExternalLink,
 } from 'lucide-react';
 import {
   getConsent,
@@ -23,6 +22,7 @@ import {
   ConsentRecord,
 } from '../src/services/consentService';
 import { useAuth } from '../context/AuthContext';
+import { LEGAL_TEXT_VARS, SUBPROCESSOR_IDS } from '../src/config/legal';
 import { getAppUrl, buildAppDestinationUrl, getAppTarget } from '../src/config/deployment';
 
 type LegalTab = 'legal' | 'privacy' | 'terms' | 'cookies' | 'accessibility';
@@ -42,6 +42,93 @@ function resolveActiveTab(pathname: string): LegalTab {
   if (pathname.includes('/accessibility')) return 'accessibility';
   return 'legal';
 }
+
+const COOKIE_ROW_KEYS = [
+  'vaultHeader',
+  'vaultPayload',
+  'themeLang',
+  'consent',
+  'supabaseSession',
+  'oauthVerifier',
+  'marketCaches',
+  'uiState',
+] as const;
+
+type LegalDocKey = 'legalNotice' | 'privacy' | 'terms';
+
+interface LegalSection {
+  id: string;
+  title: string;
+  paragraphs?: string[];
+  items?: string[];
+  callout?: { tone: 'positive' | 'warning'; text: string };
+  table?: 'subprocessors';
+}
+
+const CALLOUT_CLASSES: Record<'positive' | 'warning', string> = {
+  positive: 'bg-positive-subtle/40 border-positive/30 text-positive',
+  warning: 'bg-warning-subtle/60 border-warning/30 text-primary',
+};
+
+const LegalDocument: React.FC<{ docKey: LegalDocKey }> = ({ docKey }) => {
+  const { t } = useTranslation();
+  const sections = t(`legal:${docKey}.sections`, { returnObjects: true, ...LEGAL_TEXT_VARS }) as unknown as LegalSection[];
+
+  return (
+    <article className="space-y-6">
+      <div className="border-b border-subtle pb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-primary">{t(`legal:${docKey}.title`)}</h2>
+        <p className="text-xs text-tertiary mt-1">{t(`legal:${docKey}.lastUpdated`, LEGAL_TEXT_VARS)}</p>
+      </div>
+
+      {Array.isArray(sections) && sections.map((section, index) => (
+        <section key={section.id} className={`space-y-2.5 ${index > 0 ? 'pt-4 border-t border-subtle' : ''}`}>
+          <h3 className="text-base font-bold text-primary">{section.title}</h3>
+          {section.paragraphs?.map((paragraph) => (
+            <p key={paragraph} className="text-secondary">{paragraph}</p>
+          ))}
+          {section.callout && (
+            <div className={`p-4 rounded-xl border text-xs font-semibold leading-relaxed ${CALLOUT_CLASSES[section.callout.tone]}`}>
+              {section.callout.text}
+            </div>
+          )}
+          {section.items && (
+            <ul className="space-y-2 text-secondary pl-1">
+              {section.items.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand mt-2 shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {section.table === 'subprocessors' && (
+            <div className="overflow-x-auto rounded-xl border border-subtle">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-subtle text-secondary font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">{t('legal:privacy.subprocessors.headerName')}</th>
+                    <th className="py-3 px-4">{t('legal:privacy.subprocessors.headerPurpose')}</th>
+                    <th className="py-3 px-4">{t('legal:privacy.subprocessors.headerLocation')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-subtle">
+                  {SUBPROCESSOR_IDS.map((id) => (
+                    <tr key={id}>
+                      <td className="py-3 px-4 font-bold text-primary">{t(`legal:privacy.subprocessors.${id}.name`)}</td>
+                      <td className="py-3 px-4 text-secondary">{t(`legal:privacy.subprocessors.${id}.purpose`)}</td>
+                      <td className="py-3 px-4 text-tertiary">{t(`legal:privacy.subprocessors.${id}.location`)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
+    </article>
+  );
+};
 
 const LegalCenter: React.FC = () => {
   const { t } = useTranslation();
@@ -148,141 +235,10 @@ const LegalCenter: React.FC = () => {
 
         {/* Tab Contents */}
         <div className="bg-card border border-subtle rounded-2xl p-6 sm:p-10 shadow-xl leading-relaxed text-sm">
-          {/* TAB 1: MENTIONS LÉGALES */}
-          {activeTab === 'legal' && (
-            <article className="space-y-6">
-              <div className="border-b border-subtle pb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-primary">
-                  {t('legal:legalNotice.title')}
-                </h2>
-                <p className="text-xs text-tertiary mt-1">{t('legal:legalNotice.lastUpdated')}</p>
-              </div>
-
-              <section className="space-y-2.5">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:legalNotice.publisherTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:legalNotice.publisherText')}</p>
-                <ul className="list-disc list-inside space-y-1 text-secondary font-medium pl-1">
-                  <li>{t('legal:legalNotice.publisherName')}</li>
-                  <li>{t('legal:legalNotice.publisherStatus')}</li>
-                  <li>{t('legal:legalNotice.publisherContact')}</li>
-                  <li>{t('legal:legalNotice.publisherProfile')}</li>
-                </ul>
-              </section>
-
-              <section className="space-y-2.5 pt-4 border-t border-subtle">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:legalNotice.hostingTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:legalNotice.hostingText')}</p>
-                <ul className="list-disc list-inside space-y-1 text-secondary pl-1">
-                  <li>{t('legal:legalNotice.hostingPrimary')}</li>
-                  <li>{t('legal:legalNotice.hostingSecondary')}</li>
-                </ul>
-              </section>
-
-              <section className="space-y-2.5 pt-4 border-t border-subtle">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:legalNotice.ipTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:legalNotice.ipText')}</p>
-              </section>
-            </article>
-          )}
-
-          {/* TAB 2: PRIVACY POLICY (RGPD) */}
-          {activeTab === 'privacy' && (
-            <article className="space-y-6">
-              <div className="border-b border-subtle pb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-primary">
-                  {t('legal:privacy.title')}
-                </h2>
-                <p className="text-xs text-tertiary mt-1">{t('legal:privacy.lastUpdated')}</p>
-              </div>
-
-              <section className="space-y-2.5">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:privacy.e2eeTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:privacy.e2eeText')}</p>
-                <div className="p-4 rounded-xl bg-positive-subtle/40 border border-positive/30 text-positive text-xs font-semibold">
-                  {t('legal:privacy.e2eeNoServer')}
-                </div>
-              </section>
-
-              <section className="space-y-2.5 pt-4 border-t border-subtle">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:privacy.externalTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:privacy.externalText')}</p>
-                <ul className="space-y-2 text-secondary pl-1">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand mt-2 shrink-0" />
-                    <span>{t('legal:privacy.externalYahoo')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand mt-2 shrink-0" />
-                    <span>{t('legal:privacy.externalAi')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand mt-2 shrink-0" />
-                    <span>{t('legal:privacy.externalCdn')}</span>
-                  </li>
-                </ul>
-              </section>
-
-              <section className="space-y-2.5 pt-4 border-t border-subtle">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:privacy.rightsTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:privacy.rightsText')}</p>
-                <ul className="space-y-2 text-secondary pl-1">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 size={16} className="text-positive mt-0.5 shrink-0" />
-                    <span>{t('legal:privacy.rightAccess')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 size={16} className="text-positive mt-0.5 shrink-0" />
-                    <span>{t('legal:privacy.rightErasure')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <ExternalLink size={16} className="text-brand mt-0.5 shrink-0" />
-                    <span>{t('legal:privacy.rightComplaint')}</span>
-                  </li>
-                </ul>
-              </section>
-            </article>
-          )}
-
-          {/* TAB 3: TERMS OF USE (CGU) */}
-          {activeTab === 'terms' && (
-            <article className="space-y-6">
-              <div className="border-b border-subtle pb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-primary">
-                  {t('legal:terms.title')}
-                </h2>
-                <p className="text-xs text-tertiary mt-1">{t('legal:terms.lastUpdated')}</p>
-              </div>
-
-              <section className="space-y-3">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:terms.disclaimerTitle')}
-                </h3>
-                <div className="p-4 rounded-xl bg-warning-subtle/60 border border-warning/30 text-primary text-xs font-semibold leading-relaxed">
-                  {t('legal:terms.disclaimerImportant')}
-                </div>
-                <p className="text-secondary">{t('legal:terms.disclaimerDetail')}</p>
-              </section>
-
-              <section className="space-y-2.5 pt-4 border-t border-subtle">
-                <h3 className="text-base font-bold text-primary">
-                  {t('legal:terms.asIsTitle')}
-                </h3>
-                <p className="text-secondary">{t('legal:terms.asIsText')}</p>
-              </section>
-            </article>
-          )}
+          {/* TAB 1-3: Mentions légales, Privacy Policy (RGPD), Terms of Use (CGU) */}
+          {activeTab === 'legal' && <LegalDocument docKey="legalNotice" />}
+          {activeTab === 'privacy' && <LegalDocument docKey="privacy" />}
+          {activeTab === 'terms' && <LegalDocument docKey="terms" />}
 
           {/* TAB 4: COOKIES & LOCAL STORAGE */}
           {activeTab === 'cookies' && (
@@ -312,7 +268,7 @@ const LegalCenter: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-subtle">
-                      {(['vaultHeader', 'vaultPayload', 'themeLang', 'consent'] as const).map((rowKey) => (
+                      {COOKIE_ROW_KEYS.map((rowKey) => (
                         <tr key={rowKey} className="hover:bg-subtle/30 transition-colors">
                           <td className="py-3 px-4 font-mono font-bold text-brand">
                             {t(`legal:cookies.rows.${rowKey}.key`)}
@@ -433,7 +389,7 @@ const LegalCenter: React.FC = () => {
                 <h3 className="text-base font-bold text-primary">
                   {t('legal:accessibility.feedbackTitle')}
                 </h3>
-                <p className="text-secondary">{t('legal:accessibility.feedbackText')}</p>
+                <p className="text-secondary">{t('legal:accessibility.feedbackText', LEGAL_TEXT_VARS)}</p>
               </section>
             </article>
           )}

@@ -18,6 +18,7 @@ import {
   getEmailVerificationStatusTool,
   resendVerificationEmailTool,
 } from './securityTools';
+import { getPrivacyStatusTool, exportGdprArchiveTool } from './legalTools';
 import {
   listNotificationsTool,
   manageNotificationsTool,
@@ -53,6 +54,8 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(manageNotificationsTool);
   aiToolRegistry.registerTool(listAlertRulesTool);
   aiToolRegistry.registerTool(createAlertRuleTool);
+  aiToolRegistry.registerTool(getPrivacyStatusTool);
+  aiToolRegistry.registerTool(exportGdprArchiveTool);
 }
 
 // Auto-register on import
@@ -82,4 +85,6 @@ export {
   manageNotificationsTool,
   listAlertRulesTool,
   createAlertRuleTool,
+  getPrivacyStatusTool,
+  exportGdprArchiveTool,
 };

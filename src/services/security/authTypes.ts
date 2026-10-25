@@ -3,6 +3,13 @@
  */
 
 import { User } from '../../types/domain';
+import type { LegalAcceptance } from '../../config/legal';
+
+/** Options shared by the sign-up entry points: anti-bot proof and the accepted legal documents version. */
+export interface SignUpOptions {
+    captchaToken?: string;
+    legalAcceptance?: LegalAcceptance;
+}
 
 export interface PasswordRuleEvaluation {
     id: 'length' | 'uppercase' | 'lowercase' | 'digit' | 'symbol' | 'common';
@@ -62,7 +69,7 @@ export interface VerifyTokenHashResult {
 }
 
 export interface IAuthProvider {
-    signUp(email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<AuthResult>;
+    signUp(email: string, password: string, name: string, options?: SignUpOptions): Promise<AuthResult>;
     signIn(email: string, password: string, options?: { captchaToken?: string }): Promise<AuthResult>;
     signInWithOAuth(provider: 'google' | 'apple'): Promise<void | AuthResult>;
     signOut(): Promise<void>;
@@ -81,7 +88,7 @@ export interface IAuthProvider {
     recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
     resendEmailVerification?(email?: string): Promise<void>;
     verifyEmailOtp?(email: string, token: string): Promise<AuthResult>;
-    beginSignupVerification?(email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<PendingSignup>;
+    beginSignupVerification?(email: string, password: string, name: string, options?: SignUpOptions): Promise<PendingSignup>;
     /** Creates the vault of a verified sign-up; arguments default to the in-memory sign-up draft. */
     preparePendingSignup?(email?: string, password?: string, name?: string): Promise<string>;
     completePendingSignup?(): Promise<AuthResult>;
