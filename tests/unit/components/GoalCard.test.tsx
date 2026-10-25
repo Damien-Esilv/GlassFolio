@@ -2,7 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GoalCard } from '../../../components/GoalCard';
-import { FinancialGoal } from '../../../src/types';
+import { FinancialGoal } from '../../../src/types/domain';
+import '@testing-library/jest-dom/vitest';
 
 vi.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({

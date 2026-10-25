@@ -57,6 +57,9 @@ importers:
       '@types/node':
         specifier: ^22.14.0
         version: 22.20.5
+      '@types/testing-library__jest-dom':
+        specifier: ^6.0.0
+        version: 6.0.0(@testing-library/dom@10.4.2)(vitest@5.0.5)
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.71.0
         version: 8.72.0(@typescript-eslint/parser@8.72.0(eslint@9.39.5)(typescript@5.8.3))(eslint@9.39.5)(typescript@5.8.3)
@@ -736,6 +739,10 @@ packages:
 
   '@types/qrcode@1.5.6':
     resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
+
+  '@types/testing-library__jest-dom@6.0.0':
+    resolution: {integrity: sha512-bnreXCgus6IIadyHNlN/oI5FfX4dWgvGhOPvpr7zzCYDGAPIfvyIoAozMBINmhmsVuqV0cncejF2y5KC7ScqOg==}
+    deprecated: This is a stub types definition. @testing-library/jest-dom provides its own type definitions, so you do not need this installed.
 
   '@types/use-sync-external-store@0.0.6':
     resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
@@ -2854,6 +2861,13 @@ snapshots:
   '@types/qrcode@1.5.6':
     dependencies:
       '@types/node': 22.20.5
+
+  '@types/testing-library__jest-dom@6.0.0(@testing-library/dom@10.4.2)(vitest@5.0.5)':
+    dependencies:
+      '@testing-library/jest-dom': 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.5)
+    transitivePeerDependencies:
+      - '@testing-library/dom'
+      - vitest
 
   '@types/use-sync-external-store@0.0.6': {}
 
