@@ -237,6 +237,12 @@
             "amountRequired": "Le montant est requis",
             "assetSymbolRequired": "Le symbole de l'actif est requis",
             "identifierRequired": "Le symbole ou le code ISIN est requis"
+        },
+        "costBasis": {
+            "label": "Méthode de calcul du prix de revient",
+            "wac": "Coût moyen pondéré (PRU)",
+            "fifo": "FIFO — premier entré, premier sorti",
+            "hint": "Utilisée pour le PRU et les plus-values réalisées de ce compte. La changer recalcule toutes les positions."
         }
     },
     "cashWizard": {
@@ -345,7 +351,9 @@
                 "status": "Statut",
                 "asset": "Actif",
                 "totalValue": "Valeur totale"
-            }
+            },
+            "invalidRows": "{{count}} ligne(s) ignorée(s)",
+            "rowNumber": "Ligne {{row}}"
         },
         "options": {
             "title": "Comment souhaitez-vous importer ?",
@@ -355,7 +363,9 @@
             "syntheticTitle": "Générer des transactions synthétiques",
             "syntheticDescription": "Calculer et créer des transactions BUY/SELL pour réconcilier avec l'historique existant.",
             "syntheticBestFor": "Idéal pour : conserver l'historique, suivi P&L précis",
-            "syntheticInfo": "Le système comparera votre snapshot aux positions existantes et créera des transactions BUY/SELL synthétiques pour réconcilier les différences."
+            "syntheticInfo": "Le système comparera votre snapshot aux positions existantes et créera des transactions BUY/SELL synthétiques pour réconcilier les différences.",
+            "closeMissingTitle": "Clôturer les positions absentes de ce fichier",
+            "closeMissingDescription": "Le snapshot représente l'état complet du compte : les actifs détenus mais absents du fichier sont remis à zéro (ajustement non fiscal). Décochez pour un fichier partiel."
         },
         "reconciliation": {
             "title": "Aperçu de réconciliation",
@@ -364,7 +374,8 @@
                 "increased": "Augmenté",
                 "decreased": "Diminué",
                 "unchanged": "Inchangé",
-                "needsInput": "À compléter"
+                "needsInput": "À compléter",
+                "closed": "Clôturées"
             },
             "table": {
                 "asset": "Actif",
@@ -373,15 +384,28 @@
                 "delta": "Delta",
                 "action": "Action",
                 "price": "Prix",
-                "status": "Statut"
+                "status": "Statut",
+                "quantity": "Quantité",
+                "avgPrice": "PRU",
+                "investedDelta": "Δ investi"
             },
             "requiresInput": "{{count}} position(s) nécessitent un prix de vente. Veuillez saisir le prix auquel vous avez vendu.",
             "actions": {
                 "buy": "ACHAT",
-                "sell": "VENTE"
+                "sell": "VENTE",
+                "unchanged": "Inchangée",
+                "close": "Clôture",
+                "new": "Nouvelle",
+                "increase": "Hausse",
+                "decrease": "Baisse",
+                "costBasis": "Mise à jour du PRU"
             },
             "enterPrice": "Saisir le prix",
-            "clickToEdit": "Cliquer pour éditer"
+            "clickToEdit": "Cliquer pour éditer",
+            "investedBefore": "Investi avant",
+            "investedAfter": "Investi après",
+            "syntheticHint": "Chaque écart est enregistré comme un ajustement de solde non fiscal.",
+            "replaceHint": "Le compte correspondra exactement à ce snapshot ; réimporter le même fichier ne change rien."
         },
         "complete": {
             "title": "Import snapshot terminé !",
@@ -402,6 +426,53 @@
             "failedToAnalyzeData": "Échec de l'analyse des données",
             "commitFailed": "Échec de la validation",
             "failedToCommitImport": "Échec de la finalisation de l'import"
+        },
+        "warnings": {
+            "negativeImpliedPrice": "Le PRU baisse alors que la quantité augmente : l'ajustement réduit le prix de revient."
         }
+    },
+    "importFormat": {
+        "title": "Format de fichier détecté",
+        "encoding": "Encodage",
+        "delimiter": "Séparateur",
+        "dateFormat": "Ordre des dates",
+        "preset": "Format courtier",
+        "noPreset": "Générique (colonnes reconnues automatiquement)",
+        "encodings": {
+            "utf-8": "UTF-8",
+            "utf-16le": "UTF-16 (Excel Unicode)",
+            "utf-16be": "UTF-16 BE",
+            "windows-1252": "Windows-1252 (Excel / banques françaises)"
+        },
+        "delimiters": {
+            "comma": "Virgule ( , )",
+            "semicolon": "Point-virgule ( ; )",
+            "tab": "Tabulation",
+            "pipe": "Barre verticale ( | )"
+        },
+        "dateFormats": {
+            "auto": "Automatique (d'après la colonne)",
+            "dayFirst": "Jour en premier (JJ/MM/AAAA)",
+            "monthFirst": "Mois en premier (MM/JJ/AAAA)"
+        },
+        "duplicateFile": {
+            "title": "Ce fichier a déjà été importé le {{date}} ({{count}} transactions).",
+            "description": "Le réimporter peut dupliquer des données ; les lignes déjà connues sont ignorées automatiquement.",
+            "viewHistory": "Voir l'historique des imports"
+        }
+    },
+    "mappingProfiles": {
+        "title": "Profils de mapping",
+        "suggestion": "Le profil « {{name}} » correspond aux colonnes de ce fichier.",
+        "apply": "Appliquer",
+        "empty": "Aucun profil enregistré. Mappez les colonnes une fois, puis enregistrez-les comme profil.",
+        "presetBadge": "(prédéfini)",
+        "rename": "Renommer le profil {{name}}",
+        "delete": "Supprimer le profil {{name}}",
+        "renameLabel": "Nouveau nom du profil",
+        "confirmRename": "Valider le nouveau nom",
+        "cancelRename": "Annuler le renommage",
+        "namePlaceholder": "Nom du profil (ex. Bourso PEA)",
+        "save": "Enregistrer le profil"
     }
 }

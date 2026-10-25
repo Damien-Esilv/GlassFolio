@@ -19,7 +19,8 @@ import {
     SourceOrigin,
     MappingTemplate,
     ENGINE_VERSION,
-    FieldError
+    FieldError,
+    Instrument
 } from '../../types/types.backend';
 import { db, delay } from '../db';
 import {
@@ -138,13 +139,15 @@ export {
     normalizeTransactionType,
     inferTransactionSubType,
     parseDate,
-    parseDecimal
+    parseDecimal,
+    detectDateFormat
 } from './typeNormalizer';
 import {
     normalizeTransactionType,
     inferTransactionSubType,
     parseDate,
-    parseDecimal
+    parseDecimal,
+    detectDateFormat
 } from './typeNormalizer';
 
 export { parseCSVText } from './csvParser';
@@ -209,11 +212,30 @@ export async function parseFile(
 
     // Helper to get value from row
     const getValue = (row: string[], mapping: string | number | undefined): string | undefined => {
-        if (mapping === undefined) return undefined;
+        if (mapping === undefined || mapping === '') return undefined;
         if (typeof mapping === 'number') return row[mapping];
         const idx = headers.indexOf(mapping);
         return idx >= 0 ? row[idx] : undefined;
     };
+
+    // Resolve each distinct asset once (rows run concurrently; without this every
+    // row re-reads and re-parses the whole instrument store)
+    const instrumentCache = new Map<string, Promise<Instrument>>();
+    const resolveInstrument = (hint: Parameters<typeof instrumentService.findOrCreateInstrument>[0]): Promise<Instrument> => {
+        const key = [hint.symbol, hint.isin, hint.exchange, hint.network, hint.contractAddress, hint.denominationCurrency].join('|');
+        let pending = instrumentCache.get(key);
+        if (!pending) {
+            pending = instrumentService.findOrCreateInstrument(hint);
+            instrumentCache.set(key, pending);
+        }
+        return pending;
+    };
+    const instrumentsById = new Map<string, Instrument>();
+    // New instruments are denominated in the target account currency (EUR for a PEA, not USD)
+    const accountCurrency = db.getAccountById(config.accountId)?.defaultCurrency;
+
+    // Resolve day/month ordering once for the whole column (explicit config wins)
+    const dateHint = config.dateFormat || detectDateFormat(rows.map(r => getValue(r, mappings!.transactionDate) || ''));
 
     // Parse each row
     const candidates: StagedTransaction[] = await Promise.all(rows.map(async (row, rowIndex) => {
@@ -229,13 +251,23 @@ export async function parseFile(
         const rawFees = getValue(row, mappings!.feeAmount);
 
         // Parse date
-        const transactionDate = parseDate(rawDateStr) ||
+        const transactionDate = parseDate(rawDateStr, dateHint) ||
             (config.mode === 'snapshot' ? (config.referenceDate || new Date().toISOString()) : undefined);
+
+        // Amount: explicit column, otherwise derived from quantity × unit price
+        let amountValue = parseDecimal(rawAmount);
+        if (!amountValue) {
+            const derivedQty = parseDecimal(getValue(row, mappings!.quantity));
+            const derivedPrice = parseDecimal(getValue(row, mappings!.priceUnit));
+            if (derivedQty && derivedPrice) {
+                amountValue = (Math.abs(parseFloat(derivedQty)) * parseFloat(derivedPrice)).toString();
+            }
+        }
 
         // Compute row hash
         const rowHash = await computeRowHash(
             transactionDate || '',
-            parseDecimal(rawAmount) || '0',
+            amountValue || '0',
             rawSymbol,
             normalizeTransactionType(rawType),
             parseDecimal(rawFees)
@@ -250,7 +282,7 @@ export async function parseFile(
             type: txType,
             subType,
             rawType: rawType || 'Unknown',
-            amountPrimary: parseDecimal(rawAmount) || undefined,
+            amountPrimary: amountValue || undefined,
             assetSymbol: rawSymbol?.toUpperCase().trim() || undefined,
             rowHash,
             sourceOrigin: 'FILE' as SourceOrigin,
@@ -267,13 +299,17 @@ export async function parseFile(
         if (label) parsed.label = label;
 
         const valueDate = getValue(row, mappings!.valueDate);
-        if (valueDate) parsed.valueDate = parseDate(valueDate) || undefined;
+        if (valueDate) parsed.valueDate = parseDate(valueDate, dateHint) || undefined;
 
         const priceUnit = getValue(row, mappings!.priceUnit);
         if (priceUnit) parsed.priceUnit = parseDecimal(priceUnit) || undefined;
 
         const quantity = getValue(row, mappings!.quantity);
         if (quantity) parsed.quantity = parseDecimal(quantity) || undefined;
+        // No quantity column but amount and unit price: quantity = |amount| / price
+        if (!parsed.quantity && parsed.amountPrimary && parsed.priceUnit && parseFloat(parsed.priceUnit) > 0) {
+            parsed.quantity = (Math.abs(parseFloat(parsed.amountPrimary)) / parseFloat(parsed.priceUnit)).toString();
+        }
 
         const assetIsin = getValue(row, mappings!.assetIsin);
         if (assetIsin) parsed.assetIsin = assetIsin.trim();
@@ -303,7 +339,8 @@ export async function parseFile(
         let instrumentId: string | undefined;
         if (parsed.assetSymbol) {
             try {
-                const instrument = await instrumentService.findOrCreateInstrument({
+                const instrument = await resolveInstrument({
+                    denominationCurrency: accountCurrency,
                     symbol: parsed.assetSymbol,
                     isin: parsed.assetIsin,
                     name: assetNameVal?.trim(),
@@ -313,6 +350,7 @@ export async function parseFile(
                 });
                 instrumentId = instrument.id;
                 parsed.instrumentId = instrumentId;
+                instrumentsById.set(instrument.id, instrument);
             } catch {
                 // Instrument resolution failed — will be caught by validation
             }
@@ -332,7 +370,7 @@ export async function parseFile(
         parsed.metadata = { ...originalRow };
 
         // Resolve instrument type for validation context
-        const resolvedInstrument = instrumentId ? db.getInstrumentById(instrumentId) : undefined;
+        const resolvedInstrument = instrumentId ? instrumentsById.get(instrumentId) : undefined;
 
         // Validate with instrument context
         const rowData: RowData = {
@@ -410,7 +448,8 @@ export async function commitBatch(
     fileName: string,
     fileHash: string,
     userId: string = 'default-user',
-    referenceDate?: string
+    referenceDate?: string,
+    delimiter: string = ','
 ): Promise<CommitResult & { batch?: ImportBatch }> {
     await delay(300);
 
@@ -488,7 +527,7 @@ export async function commitBatch(
             engineVersion: ENGINE_VERSION,
             metadata: {
                 totalRows: transactions.length,
-                delimiter: ',',
+                delimiter,
                 referenceDate
             }
         };
@@ -586,12 +625,17 @@ export async function getImportHistory(): Promise<ImportBatch[]> {
 export {
     saveMappingTemplate,
     getMappingTemplates,
-    deleteMappingTemplate
+    deleteMappingTemplate,
+    renameMappingTemplate,
+    findTemplateForHeaders,
+    computeHeaderSignature
 } from './mappingTemplateService';
 import {
     saveMappingTemplate,
     getMappingTemplates,
-    deleteMappingTemplate
+    deleteMappingTemplate,
+    renameMappingTemplate,
+    findTemplateForHeaders
 } from './mappingTemplateService';
 
 // ============================================================================
@@ -627,6 +671,8 @@ export const importManager = {
     saveMappingTemplate,
     getMappingTemplates,
     deleteMappingTemplate,
+    renameMappingTemplate,
+    findTemplateForHeaders,
     validateBackupContent,
     restoreBackupReset,
     mergeBackupData

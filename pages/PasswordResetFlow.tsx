@@ -7,6 +7,7 @@ import { authService } from '../src/services/security/authService';
 import { evaluatePassword } from '../src/services/security/passwordValidator';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
+import { mapAuthErrorMessage } from '../src/services/security/authErrorMapper';
 
 interface PasswordResetFlowProps {
     initialMode?: 'request' | 'recover';
@@ -46,7 +47,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
         if (antiBotRef.current) {
             const botCheck = await antiBotRef.current.validate();
             if (!botCheck.success) {
-                setError(botCheck.error.message);
+                setError(mapAuthErrorMessage(botCheck.error, t, 'common:errors.auth.antiBot'));
                 return;
             }
         }
@@ -91,7 +92,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
         if (antiBotRef.current) {
             const botCheck = await antiBotRef.current.validate();
             if (!botCheck.success) {
-                setError(botCheck.error.message);
+                setError(mapAuthErrorMessage(botCheck.error, t, 'common:errors.auth.antiBot'));
                 return;
             }
         }
@@ -105,7 +106,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
             // Mandatory Rotation: open dialog with the newly generated recovery key
             setNewRotatedRecoveryKey(res.newRecoveryKey);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('auth:recovery.failed', 'Failed to recover vault. Invalid recovery key.'));
+            setError(mapAuthErrorMessage(err, t, 'auth:recovery.failed'));
         } finally {
             setIsLoading(false);
         }

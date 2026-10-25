@@ -21,6 +21,8 @@ export interface FieldError {
     message: string;
     severity: 'error' | 'warning';
     code?: string;
+    /** Interpolation values for the i18n message `common:errors.importValidation.<code>` */
+    params?: Record<string, string>;
 }
 
 export interface RowValidationResult {
@@ -257,7 +259,8 @@ export function validateCurrency(
                 field: fieldName,
                 message: `Currency must be ISO 4217. Got: ${normalized}`,
                 severity: 'error',
-                code: 'CURRENCY_NOT_ISO'
+                code: 'CURRENCY_NOT_ISO',
+                params: { value: normalized }
             });
         }
     } else {
@@ -269,7 +272,8 @@ export function validateCurrency(
                     field: fieldName,
                     message: `Unknown currency/asset code: ${normalized}`,
                     severity: 'warning',
-                    code: 'CURRENCY_UNKNOWN'
+                    code: 'CURRENCY_UNKNOWN',
+                    params: { value: normalized }
                 });
             }
         }
@@ -307,7 +311,8 @@ export function validateISIN(
             field: fieldName,
             message: `ISIN check digit invalid: ${normalized}`,
             severity: 'warning',
-            code: 'ISIN_CHECKDIGIT_INVALID'
+            code: 'ISIN_CHECKDIGIT_INVALID',
+            params: { value: normalized }
         });
     }
 
@@ -479,8 +484,10 @@ export function validateInstrumentIdentification(
                 errors.push({
                     field: 'assetIdentification',
                     message: `${instrumentType.toUpperCase()} requires ISIN or (symbol + exchange)`,
-                    severity: 'error',
-                    code: 'INSTRUMENT_ID_INSUFFICIENT'
+                    // Market-data readiness only: the row is still a valid journal entry
+                    severity: 'warning',
+                    code: 'INSTRUMENT_ID_INSUFFICIENT',
+                    params: { type: instrumentType.toUpperCase() }
                 });
             }
             break;
@@ -491,7 +498,8 @@ export function validateInstrumentIdentification(
                 errors.push({
                     field: 'assetIdentification',
                     message: 'Crypto requires exchange, network, or contract address',
-                    severity: 'error',
+                    // Market-data readiness only: the row is still a valid journal entry
+                    severity: 'warning',
                     code: 'CRYPTO_CONTEXT_REQUIRED'
                 });
             }
@@ -660,7 +668,8 @@ export function validateSellQuantity(
             field: 'quantity',
             message: `Cannot sell ${sell} ${symbol} - only ${position} available`,
             severity: 'error',
-            code: 'OVERSELL'
+            code: 'OVERSELL',
+            params: { sell: String(sell), symbol: String(symbol), position: String(position) }
         };
     }
 

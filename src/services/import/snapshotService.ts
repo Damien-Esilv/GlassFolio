@@ -12,12 +12,19 @@ import {
     TransactionType,
     SourceOrigin,
     ImportMode,
-    FieldError
+    FieldError,
+    ImportBatch,
+    ENGINE_VERSION
 } from '../../types';
 import { db, delay } from '../db';
-import { computeRowHash } from '../core/transactionManager';
-import { parseCSVText, parseDate, parseDecimal } from './importManager';
+import { computeRowHash, computeFileHash, transactionManager, CommitResult } from '../core/transactionManager';
+import { portfolioService } from '../portfolioService';
+import { parseCSVText, parseDate, parseDecimal, detectDateFormat } from './importManager';
 import { instrumentService } from '../instrumentService';
+import { buildLedger, QTY_EPSILON } from '../portfolio/positionLedger';
+
+/** Cost basis differences below half a cent are rounding noise */
+const COST_EPSILON = 0.005;
 
 // ============================================================================
 // TYPES
@@ -73,6 +80,11 @@ export interface ReconciliationDiff {
     // Delta
     deltaQty: string;
     deltaTotalCost: string;
+    /** Exact (unrounded) cost basis change applied by the adjustment */
+    deltaCostBasis: string;
+
+    /** Asset held on the account but absent from the snapshot file */
+    isClosure: boolean;
 
     // Synthetic transaction to generate
     syntheticType: 'BALANCE_ADJUSTMENT' | 'NONE';
@@ -127,6 +139,26 @@ export interface ReconciliationResult {
     warnings: string[];
 }
 
+export interface ReconciliationOptions {
+    /** Close assets held on the account that are absent from the snapshot (default true) */
+    closeMissing?: boolean;
+}
+
+/** Snapshot commit strategy: 'replace' = snapshot-only mode, 'synthetic' = reconciliation journal */
+export type SnapshotCommitMode = 'replace' | 'synthetic';
+
+export interface SnapshotCommitParams {
+    mode: SnapshotCommitMode;
+    positions: SnapshotPosition[];
+    accountId: string;
+    batchId: string;
+    date: string;
+    userId: string;
+    closeMissing?: boolean;
+    /** Pre-computed reconciliation (synthetic mode, may include user edits) */
+    diffs?: ReconciliationDiff[];
+}
+
 // ============================================================================
 // MAPPABLE FIELDS
 // ============================================================================
@@ -151,7 +183,7 @@ function rowToObject(row: string[], headers: string[]): Record<string, string> {
 }
 
 function getValue(row: string[], headers: string[], mapping: string | number | undefined): string | undefined {
-    if (mapping === undefined) return undefined;
+    if (mapping === undefined || mapping === '') return undefined;
     if (typeof mapping === 'number') return row[mapping];
     const idx = headers.indexOf(mapping);
     return idx >= 0 ? row[idx] : undefined;
@@ -171,6 +203,7 @@ export async function parseSnapshotFile(
     await delay(200);
 
     const { headers, rows, delimiter } = parseCSVText(csvText);
+    const dateHint = detectDateFormat(rows.map(r => getValue(r, headers, mappings.purchaseDate) || ''));
 
     const positions: StagedSnapshotPosition[] = rows.map((row, rowIndex) => {
         const originalRow = rowToObject(row, headers);
@@ -193,7 +226,8 @@ export async function parseSnapshotFile(
             errors.push({
                 field: 'assetSymbol',
                 message: 'At least Symbol or ISIN is required',
-                severity: 'error'
+                severity: 'error',
+                code: 'ASSET_ID_REQUIRED'
             });
         }
 
@@ -203,7 +237,8 @@ export async function parseSnapshotFile(
             errors.push({
                 field: 'quantity',
                 message: 'Quantity is required',
-                severity: 'error'
+                severity: 'error',
+                code: 'SNAPSHOT_QTY_REQUIRED'
             });
         } else {
             const qty = parseFloat(quantity);
@@ -211,7 +246,8 @@ export async function parseSnapshotFile(
                 errors.push({
                     field: 'quantity',
                     message: 'Quantity cannot be negative',
-                    severity: 'error'
+                    severity: 'error',
+                    code: 'QTY_NEGATIVE'
                 });
             }
         }
@@ -222,7 +258,8 @@ export async function parseSnapshotFile(
             errors.push({
                 field: 'avgPrice',
                 message: 'Average price is required',
-                severity: 'error'
+                severity: 'error',
+                code: 'SNAPSHOT_PRICE_REQUIRED'
             });
         } else {
             const price = parseFloat(avgPrice);
@@ -230,13 +267,14 @@ export async function parseSnapshotFile(
                 errors.push({
                     field: 'avgPrice',
                     message: 'Price cannot be negative',
-                    severity: 'error'
+                    severity: 'error',
+                    code: 'PRICE_NEGATIVE'
                 });
             }
         }
 
         // Parse optional date
-        const purchaseDate = rawDate ? parseDate(rawDate) || undefined : undefined;
+        const purchaseDate = rawDate ? parseDate(rawDate, dateHint) || undefined : undefined;
 
         // Build display name
         const displayName = assetName || assetSymbol || assetIsin || 'Unknown';
@@ -282,70 +320,42 @@ export async function parseSnapshotFile(
 // ============================================================================
 
 /**
- * Get existing positions from transaction journal
+ * Get existing positions of an account, computed by the shared position ledger
+ * (same maths as the dashboard), grouped by instrument.
  */
 export async function getExistingPositions(accountId: string): Promise<ExistingPosition[]> {
     await delay(100);
 
-    const transactions = db.getUnifiedTransactions();
+    const transactions = db.getUnifiedTransactions().filter(tx => tx.accountId === accountId);
+    const methodFor = () => db.getAccountById(accountId)?.costBasisMethod ?? 'WAC';
+    const ledger = buildLedger(transactions, { methodFor });
 
-    // Group transactions by asset key
-    const positionMap = new Map<string, {
-        assetSymbol?: string;
-        assetIsin?: string;
-        assetName?: string;
-        totalQty: number;
-        totalCost: number;
-        sourceModes: Set<ImportMode>;
-    }>();
-
+    // Identity (symbol / ISIN / modes) per ledger key
+    const identity = new Map<string, { assetSymbol?: string; assetIsin?: string; sourceModes: Set<ImportMode> }>();
     for (const tx of transactions) {
-        if (tx.accountId !== accountId) continue;
-        if (!['BUY', 'SELL', 'BALANCE_ADJUSTMENT', 'SNAPSHOT_ADJUSTMENT'].includes(tx.type)) continue;
-
-        const key = tx.assetIsin || tx.assetSymbol;
-        if (!key) continue;
-
-        const existing = positionMap.get(key) || {
-            assetSymbol: tx.assetSymbol,
-            assetIsin: tx.assetIsin,
-            assetName: undefined,
-            totalQty: 0,
-            totalCost: 0,
-            sourceModes: new Set<ImportMode>()
-        };
-
-        const qty = parseFloat(tx.quantity || tx.amountPrimary || '0');
-        const amount = parseFloat(tx.amountPrimary || '0');
-
-        if (tx.type === 'BUY' || tx.type === 'BALANCE_ADJUSTMENT' || tx.type === 'SNAPSHOT_ADJUSTMENT') {
-            existing.totalQty += Math.abs(qty);
-            existing.totalCost += Math.abs(amount);
-        } else if (tx.type === 'SELL') {
-            existing.totalQty -= Math.abs(qty);
-        }
-
-        existing.sourceModes.add(tx.sourceMode);
-        positionMap.set(key, existing);
+        const key = `${tx.accountId}:${tx.instrumentId || tx.assetIsin || tx.assetSymbol}`;
+        const entry = identity.get(key) || { sourceModes: new Set<ImportMode>() };
+        entry.assetSymbol = entry.assetSymbol || tx.assetSymbol || undefined;
+        entry.assetIsin = entry.assetIsin || tx.assetIsin || undefined;
+        if (['BUY', 'SELL', 'BALANCE_ADJUSTMENT', 'SNAPSHOT_ADJUSTMENT'].includes(tx.type)) entry.sourceModes.add(tx.sourceMode);
+        identity.set(key, entry);
     }
 
-    // Convert to array
     const positions: ExistingPosition[] = [];
-    for (const [key, pos] of positionMap) {
-        if (pos.totalQty <= 0) continue;
-
-        const avgPrice = pos.totalQty > 0 ? pos.totalCost / pos.totalQty : 0;
-        const sourceMode: ImportMode | 'mixed' = pos.sourceModes.size > 1 ? 'mixed' :
-            pos.sourceModes.values().next().value || 'history';
+    for (const { key, state } of ledger.values()) {
+        if (state.quantity <= QTY_EPSILON) continue;
+        const id = identity.get(key);
+        const modes = id?.sourceModes ?? new Set<ImportMode>();
+        const sourceMode: ImportMode | 'mixed' = modes.size > 1 ? 'mixed' : modes.values().next().value || 'history';
 
         positions.push({
-            assetSymbol: pos.assetSymbol,
-            assetIsin: pos.assetIsin,
-            assetName: pos.assetName,
-            quantity: pos.totalQty.toString(),
-            avgPrice: avgPrice.toString(),
-            totalCost: pos.totalCost.toString(),
-            assetKey: key,
+            assetSymbol: id?.assetSymbol,
+            assetIsin: id?.assetIsin,
+            assetName: undefined,
+            quantity: state.quantity.toString(),
+            avgPrice: (state.costBasis / state.quantity).toString(),
+            totalCost: state.costBasis.toString(),
+            assetKey: id?.assetIsin || id?.assetSymbol || key,
             sourceMode
         });
     }
@@ -357,122 +367,130 @@ export async function getExistingPositions(accountId: string): Promise<ExistingP
 // RECONCILIATION
 // ============================================================================
 
+interface DiffInput {
+    assetKey: string;
+    displayName: string;
+    assetSymbol?: string;
+    assetIsin?: string;
+    oldQty: number;
+    oldTotalCost: number;
+    newQty: number;
+    newAvgPrice: number;
+    existing?: ExistingPosition;
+    isClosure: boolean;
+}
+
+function buildDiff(input: DiffInput): ReconciliationDiff {
+    const { oldQty, oldTotalCost, newQty, newAvgPrice, existing } = input;
+    const oldAvgPrice = oldQty > 0 ? oldTotalCost / oldQty : 0;
+    const newTotalCost = newQty * newAvgPrice;
+    const deltaQty = newQty - oldQty;
+    const deltaCost = newTotalCost - oldTotalCost;
+
+    const qtyChanged = Math.abs(deltaQty) > QTY_EPSILON;
+    const costChanged = Math.abs(deltaCost) > COST_EPSILON;
+    const direction: ReconciliationDiff['direction'] = !qtyChanged ? 'none' : deltaQty > 0 ? 'increase' : 'decrease';
+    const syntheticType: ReconciliationDiff['syntheticType'] = qtyChanged || costChanged ? 'BALANCE_ADJUSTMENT' : 'NONE';
+
+    // Implied unit price of the adjustment (informative): Δcost / Δqty
+    const impliedPrice = qtyChanged ? deltaCost / deltaQty : 0;
+    const validationMessage = qtyChanged && impliedPrice < 0
+        ? 'snapshotWizard.warnings.negativeImpliedPrice'
+        : undefined;
+
+    return {
+        assetKey: input.assetKey,
+        displayName: input.displayName,
+        assetSymbol: input.assetSymbol,
+        assetIsin: input.assetIsin,
+        oldQty: oldQty.toString(),
+        oldAvgPrice: oldAvgPrice.toFixed(4),
+        oldTotalCost: oldTotalCost.toFixed(2),
+        newQty: newQty.toString(),
+        newAvgPrice: newAvgPrice.toFixed(4),
+        newTotalCost: newTotalCost.toFixed(2),
+        deltaQty: deltaQty.toFixed(4),
+        deltaTotalCost: deltaCost.toFixed(2),
+        deltaCostBasis: syntheticType === 'NONE' ? '0' : deltaCost.toString(),
+        isClosure: input.isClosure,
+        syntheticType,
+        syntheticQty: qtyChanged ? Math.abs(deltaQty).toString() : '0',
+        syntheticPrice: qtyChanged ? Math.abs(impliedPrice).toFixed(4) : '0',
+        direction,
+        requiresUserInput: false,
+        isValid: true,
+        validationMessage,
+        hasSourceModeConflict: !!existing && existing.sourceMode === 'history',
+        existingSourceMode: existing?.sourceMode
+    };
+}
+
 /**
- * Calculate reconciliation between new snapshot and existing positions
- * 
- * CRITICAL: When mixing snapshot with history, we generate BALANCE_ADJUSTMENT
- * transactions that are explicitly marked as non-fiscal.
+ * Calculate reconciliation between a new snapshot and existing positions.
+ *
+ * Guarantee: applying the generated adjustments to the existing positions
+ * yields exactly the snapshot (quantity AND cost basis), including PRU-only
+ * changes and, when closeMissing is on, assets absent from the file.
+ * Adjustments are BALANCE_ADJUSTMENT and therefore never fiscal.
  */
 export async function calculateReconciliation(
     newPositions: SnapshotPosition[],
-    existingPositions: ExistingPosition[]
+    existingPositions: ExistingPosition[],
+    options: ReconciliationOptions = {}
 ): Promise<ReconciliationResult> {
     await delay(100);
 
+    const closeMissing = options.closeMissing ?? true;
     const diffs: ReconciliationDiff[] = [];
     const warnings: string[] = [];
-    const processedExistingKeys = new Set<string>();
+    const matchedExisting = new Set<ExistingPosition>();
 
-    // Process each new position
     for (const newPos of newPositions) {
         const existing = existingPositions.find(ex =>
-            (ex.assetIsin && newPos.assetIsin && ex.assetIsin === newPos.assetIsin) ||
-            (ex.assetSymbol && newPos.assetSymbol && ex.assetSymbol.toUpperCase() === newPos.assetSymbol.toUpperCase())
+            !matchedExisting.has(ex) && (
+                (ex.assetIsin && newPos.assetIsin && ex.assetIsin === newPos.assetIsin) ||
+                (ex.assetSymbol && newPos.assetSymbol && ex.assetSymbol.toUpperCase() === newPos.assetSymbol.toUpperCase())
+            )
         );
+        if (existing) matchedExisting.add(existing);
 
-        if (existing) {
-            processedExistingKeys.add(existing.assetKey);
-        }
-
-        // Calculate values
-        const oldQty = existing ? parseFloat(existing.quantity) : 0;
-        const oldAvgPrice = existing ? parseFloat(existing.avgPrice) : 0;
-        const oldTotalCost = oldQty * oldAvgPrice;
-
-        const newQty = parseFloat(newPos.quantity);
-        const newAvgPrice = parseFloat(newPos.avgPrice);
-        const newTotalCost = newQty * newAvgPrice;
-
-        const deltaQty = newQty - oldQty;
-        const deltaTotalCost = newTotalCost - oldTotalCost;
-
-        // Check for source mode conflicts
-        const hasSourceModeConflict = !!existing && existing.sourceMode === 'history';
-        if (hasSourceModeConflict) {
-            warnings.push(
-                `Asset ${newPos.displayName} has history transactions. ` +
-                `Snapshot will create BALANCE_ADJUSTMENT (non-fiscal) to reconcile.`
-            );
-        }
-
-        // Determine synthetic transaction
-        let syntheticType: 'BALANCE_ADJUSTMENT' | 'NONE' = 'NONE';
-        let syntheticQty = '0';
-        let syntheticPrice = '0';
-        let direction: 'increase' | 'decrease' | 'none' = 'none';
-        let requiresUserInput = false;
-        let isValid = true;
-        let validationMessage: string | undefined;
-
-        if (Math.abs(deltaQty) > 0.000001) {
-            syntheticType = 'BALANCE_ADJUSTMENT';
-
-            if (deltaQty > 0) {
-                // Position increased
-                direction = 'increase';
-                syntheticQty = deltaQty.toString();
-
-                // Calculate implied price
-                const impliedPrice = deltaQty !== 0 ? deltaTotalCost / deltaQty : newAvgPrice;
-
-                if (impliedPrice < 0) {
-                    isValid = false;
-                    validationMessage = 'Calculated price is negative - check your average price';
-                    syntheticPrice = '0';
-                } else {
-                    syntheticPrice = impliedPrice.toFixed(4);
-                }
-            } else {
-                // Position decreased
-                direction = 'decrease';
-                syntheticQty = Math.abs(deltaQty).toString();
-
-                // For decreases, we need user to provide sell price (snapshot doesn't tell us)
-                // UNLESS we're just doing a balance adjustment
-                requiresUserInput = false; // Balance adjustments don't need price
-                syntheticPrice = oldAvgPrice.toFixed(4); // Use old PRU as reference
-            }
-        }
-
-        diffs.push({
+        const diff = buildDiff({
             assetKey: newPos.assetKey,
             displayName: newPos.displayName,
-            assetSymbol: newPos.assetSymbol,
-            assetIsin: newPos.assetIsin,
-            oldQty: oldQty.toString(),
-            oldAvgPrice: oldAvgPrice.toFixed(4),
-            oldTotalCost: oldTotalCost.toFixed(2),
-            newQty: newQty.toString(),
-            newAvgPrice: newAvgPrice.toFixed(4),
-            newTotalCost: newTotalCost.toFixed(2),
-            deltaQty: deltaQty.toFixed(4),
-            deltaTotalCost: deltaTotalCost.toFixed(2),
-            syntheticType,
-            syntheticQty,
-            syntheticPrice,
-            direction,
-            requiresUserInput,
-            isValid,
-            validationMessage,
-            hasSourceModeConflict,
-            existingSourceMode: existing?.sourceMode
+            assetSymbol: newPos.assetSymbol || existing?.assetSymbol,
+            assetIsin: newPos.assetIsin || existing?.assetIsin,
+            oldQty: existing ? parseFloat(existing.quantity) : 0,
+            oldTotalCost: existing ? parseFloat(existing.totalCost) : 0,
+            newQty: parseFloat(newPos.quantity),
+            newAvgPrice: parseFloat(newPos.avgPrice),
+            existing,
+            isClosure: false
         });
+        if (diff.hasSourceModeConflict) warnings.push(newPos.displayName);
+        diffs.push(diff);
     }
 
-    // Calculate stats
+    if (closeMissing) {
+        for (const existing of existingPositions) {
+            if (matchedExisting.has(existing) || parseFloat(existing.quantity) <= QTY_EPSILON) continue;
+            diffs.push(buildDiff({
+                assetKey: existing.assetKey,
+                displayName: existing.assetName || existing.assetSymbol || existing.assetIsin || existing.assetKey,
+                assetSymbol: existing.assetSymbol,
+                assetIsin: existing.assetIsin,
+                oldQty: parseFloat(existing.quantity),
+                oldTotalCost: parseFloat(existing.totalCost),
+                newQty: 0,
+                newAvgPrice: 0,
+                existing,
+                isClosure: true
+            }));
+        }
+    }
+
     const stats = {
-        newAssets: diffs.filter(d => d.oldQty === '0').length,
-        increasePositions: diffs.filter(d => d.direction === 'increase' && d.oldQty !== '0').length,
+        newAssets: diffs.filter(d => parseFloat(d.oldQty) === 0 && d.direction === 'increase').length,
+        increasePositions: diffs.filter(d => d.direction === 'increase' && parseFloat(d.oldQty) !== 0).length,
         decreasePositions: diffs.filter(d => d.direction === 'decrease').length,
         unchangedPositions: diffs.filter(d => d.syntheticType === 'NONE').length,
         requiresInput: diffs.filter(d => d.requiresUserInput).length,
@@ -508,12 +526,13 @@ export async function generateReconciliationTransactions(
 
         const qty = parseFloat(diff.syntheticQty);
         const price = parseFloat(diff.syntheticPrice);
-        const total = qty * price;
+        const costDelta = parseFloat(diff.deltaCostBasis ?? diff.deltaTotalCost);
 
         // Resolve instrument
         let instrumentId = '';
         try {
             const instrument = await instrumentService.findOrCreateInstrument({
+                denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
                 symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
                 isin: diff.assetIsin,
                 name: diff.displayName
@@ -526,10 +545,10 @@ export async function generateReconciliationTransactions(
         // Compute row hash for this synthetic transaction
         const rowHash = await computeRowHash(
             defaultDate,
-            total.toString(),
+            costDelta.toString(),
             diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
             'BALANCE_ADJUSTMENT',
-            '0'
+            diff.syntheticQty
         );
 
         const tx: UnifiedTransaction = {
@@ -548,10 +567,13 @@ export async function generateReconciliationTransactions(
             sourceMode: 'snapshot',
             transactionDate: defaultDate,
             type: 'BALANCE_ADJUSTMENT' as TransactionType,
-            rawType: `Balance Adjustment (Snapshot Reconciliation - ${diff.direction})`,
-            label: `${diff.direction === 'increase' ? '+' : '-'}${qty} ${diff.displayName} @ ${price}`,
-            rawLabel: `Snapshot reconciliation: ${diff.direction}`,
-            amountPrimary: diff.direction === 'increase' ? (-total).toString() : total.toString(),
+            rawType: `Balance Adjustment (Snapshot Reconciliation - ${diff.isClosure ? 'closure' : diff.direction})`,
+            label: diff.direction === 'none'
+                ? `${diff.displayName}: ${diff.oldAvgPrice} → ${diff.newAvgPrice}`
+                : `${diff.direction === 'increase' ? '+' : '-'}${qty} ${diff.displayName} @ ${price}`,
+            rawLabel: `Snapshot reconciliation: ${diff.isClosure ? 'closure' : diff.direction}`,
+            // Cash view of the cost basis change: money "invested" is negative
+            amountPrimary: (-costDelta).toString(),
             assetSymbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
             assetIsin: diff.assetIsin,
             priceUnit: diff.syntheticPrice,
@@ -563,6 +585,8 @@ export async function generateReconciliationTransactions(
                 syntheticTransaction: true,
                 fromSnapshot: true,
                 reconciliationType: diff.direction,
+                costDelta,
+                isClosure: diff.isClosure,
                 oldQty: diff.oldQty,
                 newQty: diff.newQty,
                 deltaQty: diff.deltaQty,
@@ -599,6 +623,7 @@ export async function createPositionTransactions(
         let instrumentId = '';
         try {
             const instrument = await instrumentService.findOrCreateInstrument({
+                denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
                 symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
                 isin: pos.assetIsin,
                 name: pos.displayName
@@ -647,7 +672,9 @@ export async function createPositionTransactions(
             version: 1,
             metadata: {
                 snapshotImport: true,
-                displayName: pos.displayName
+                displayName: pos.displayName,
+                reconciliationType: 'increase',
+                costDelta: total
             }
         };
 
@@ -655,6 +682,91 @@ export async function createPositionTransactions(
     }
 
     return transactions;
+}
+
+/**
+ * Build the transactions of a snapshot import.
+ *
+ * - 'synthetic': the reconciliation diffs become BALANCE_ADJUSTMENT rows.
+ * - 'replace' (snapshot-only): the account is set to the snapshot. New assets
+ *   become SNAPSHOT_ADJUSTMENT rows (keeping their purchase date), assets
+ *   already held are reconciled — re-importing the same file adds nothing.
+ */
+export async function buildSnapshotCommit(params: SnapshotCommitParams): Promise<UnifiedTransaction[]> {
+    const { mode, positions, accountId, batchId, date, userId, closeMissing } = params;
+
+    if (mode === 'synthetic' && params.diffs) {
+        return generateReconciliationTransactions(params.diffs, batchId, accountId, date, userId);
+    }
+
+    const existing = await getExistingPositions(accountId);
+    const { diffs } = await calculateReconciliation(positions, existing, { closeMissing });
+
+    if (mode === 'synthetic') {
+        return generateReconciliationTransactions(diffs, batchId, accountId, date, userId);
+    }
+
+    const newAssetKeys = new Set(
+        diffs.filter(d => parseFloat(d.oldQty) === 0 && d.direction === 'increase').map(d => d.assetKey)
+    );
+    const newAssetPositions = positions.filter(p => newAssetKeys.has(p.assetKey));
+    const adjustments = diffs.filter(d => !newAssetKeys.has(d.assetKey));
+
+    return [
+        ...await createPositionTransactions(newAssetPositions, batchId, accountId, date, userId),
+        ...await generateReconciliationTransactions(adjustments, batchId, accountId, date, userId)
+    ];
+}
+
+export interface CommitSnapshotParams extends Omit<SnapshotCommitParams, 'batchId' | 'date'> {
+    rawContent: string;
+    fileName: string;
+    totalRows: number;
+    date?: string;
+}
+
+/**
+ * Build and atomically persist a snapshot import (transactions + batch), then
+ * refresh derived positions. Shared by the wizard and the AI / MCP tool.
+ */
+export async function commitSnapshotImport(params: CommitSnapshotParams): Promise<CommitResult & { batch?: ImportBatch }> {
+    const batchId = `batch-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = params.date || new Date().toISOString();
+
+    const transactions = await buildSnapshotCommit({ ...params, batchId, date: now });
+    const batch: ImportBatch = {
+        id: batchId,
+        ownerId: params.userId,
+        accountId: params.accountId,
+        importMode: 'snapshot',
+        fileName: params.fileName,
+        fileHash: await computeFileHash(params.rawContent),
+        transactionCount: transactions.length,
+        skippedCount: params.totalRows - params.positions.length,
+        importedAt: now,
+        importedBy: params.userId,
+        status: 'completed',
+        engineVersion: ENGINE_VERSION,
+        metadata: { totalRows: params.totalRows }
+    };
+
+    try {
+        transactionManager.begin();
+        transactionManager.addTransactions(transactions);
+        transactionManager.addBatch(batch);
+        const result = transactionManager.commit();
+        if (!result.success) return result;
+        await portfolioService.recalculatePositions();
+        return { ...result, batch };
+    } catch (error) {
+        transactionManager.rollback();
+        return {
+            success: false,
+            transactionCount: 0,
+            batchId: null,
+            error: error instanceof Error ? error.message : 'Commit failed'
+        };
+    }
 }
 
 /**
@@ -697,6 +809,8 @@ export const snapshotService = {
     calculateReconciliation,
     generateReconciliationTransactions,
     createPositionTransactions,
+    buildSnapshotCommit,
+    commitSnapshotImport,
     detectSourceModeConflict,
     SNAPSHOT_MAPPABLE_FIELDS
 };

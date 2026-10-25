@@ -11,6 +11,8 @@ export const VAULT_HEADER_KEY = 'gf_vault_header';
 export const CONSENT_STORAGE_KEY = 'gf_consent_v1';
 export const PUBLIC_THEME_STORAGE_KEY = 'gf_public_theme';
 export const PUBLIC_LANG_STORAGE_KEY = 'gf_public_lang';
+/** RP ID of the server passkeys (cloud mode). Public deployment metadata, read while locked. */
+export const PASSKEY_RP_ID_STORAGE_KEY = 'gf_passkey_rp_id';
 
 const SENSITIVE_PREFIX = 'glassfolio_';
 

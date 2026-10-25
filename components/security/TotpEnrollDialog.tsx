@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Copy, Check, Download, AlertCircle, X, KeyRound } from 'lucide-react';
 import Button from '../Button';
 import { mfaService, TotpEnrollmentDraft } from '../../src/services/security/mfaService';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 interface TotpEnrollDialogProps {
     isOpen: boolean;
@@ -50,7 +51,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                 setEnrollment(draft);
             })
             .catch((err: unknown) => {
-                if (!cancelled) setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
+                if (!cancelled) setError(mapAuthErrorMessage(err, t, 'security:totp.invalidCode'));
             });
         return () => {
             cancelled = true;
@@ -110,7 +111,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                 onClose();
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
+            setError(mapAuthErrorMessage(err, t, 'security:totp.invalidCode'));
         } finally {
             setIsVerifying(false);
         }

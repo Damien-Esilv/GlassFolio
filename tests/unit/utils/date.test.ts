@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatChartDate, getRolling12MonthsLabels } from '../../../utils/date';
+import { formatDate, formatChartDate, getRolling12MonthsLabels, getISOWeekNumber, getStartOfCurrentWeek } from '../../../utils/date';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // formatDate
@@ -130,5 +130,35 @@ describe('getRolling12MonthsLabels', () => {
   it('uses current date by default without crashing', () => {
     const labels = getRolling12MonthsLabels();
     expect(labels).toHaveLength(12);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// getISOWeekNumber & getStartOfCurrentWeek
+// ══════════════════════════════════════════════════════════════════════════════
+describe('getISOWeekNumber', () => {
+  it('calculates correct ISO week for given dates', () => {
+    // 2026-10-25 is a Sunday in week 43
+    expect(getISOWeekNumber(new Date(2026, 9, 25))).toBe(43);
+    // 2026-01-01 is a Thursday in week 1
+    expect(getISOWeekNumber(new Date(2026, 0, 1))).toBe(1);
+    // 2024-06-15 is in week 24
+    expect(getISOWeekNumber(new Date(2024, 5, 15))).toBe(24);
+  });
+
+  it('defaults to current date without error', () => {
+    const week = getISOWeekNumber();
+    expect(week).toBeGreaterThanOrEqual(1);
+    expect(week).toBeLessThanOrEqual(53);
+  });
+});
+
+describe('getStartOfCurrentWeek', () => {
+  it('returns Monday of the given week', () => {
+    // Sunday 2026-10-25 -> Monday 2026-10-19
+    const monday = getStartOfCurrentWeek(new Date(2026, 9, 25));
+    expect(monday.getDay()).toBe(1); // Monday
+    expect(monday.getDate()).toBe(19);
+    expect(monday.getHours()).toBe(0);
   });
 });

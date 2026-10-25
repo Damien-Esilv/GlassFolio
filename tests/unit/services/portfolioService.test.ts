@@ -97,6 +97,8 @@ describe('portfolioService', () => {
       expect(summary.totalPL).toBe(15255.5);
       expect(summary.plPercent).toBeCloseTo(92.46, 2);
       expect(Array.isArray(summary.chartData)).toBe(true);
+      expect(summary.chartData.length).toBeGreaterThan(0);
+      expect(summary.chartData[0]).toHaveProperty('invested');
     });
   });
 });

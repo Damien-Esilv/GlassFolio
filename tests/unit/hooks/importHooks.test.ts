@@ -115,6 +115,11 @@ vi.mock('../../../src/services/importService', () => ({
     ParseResult: undefined,
 }));
 
+vi.mock('../../../src/services/import/csvWorkerClient', async importOriginal => {
+    const actual = await importOriginal<typeof import('../../../src/services/import/csvWorkerClient')>();
+    return { ...actual, readAndParseCsvFile: vi.fn(actual.readAndParseCsvFile) };
+});
+
 vi.mock('../../../src/services/import/snapshotService', () => ({
     snapshotService: {
         detectSourceModeConflict: vi.fn(async () => 'NONE'),
@@ -299,10 +304,8 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
         });
 
         it('failed upload shows error message', async () => {
-            const { parseCSVText } = await import('../../../src/services/importService');
-            vi.mocked(parseCSVText).mockImplementationOnce(() => {
-                throw new Error('Parse error');
-            });
+            const { readAndParseCsvFile } = await import('../../../src/services/import/csvWorkerClient');
+            vi.mocked(readAndParseCsvFile).mockRejectedValueOnce(new Error('Parse error'));
 
             const { result } = renderHook(() => useImportWizard());
             await waitFor(() => expect(result.current.isLoading).toBe(false));

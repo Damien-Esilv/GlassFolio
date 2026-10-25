@@ -16,6 +16,7 @@ import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { RecoveryKeyDialog } from './RecoveryKeyDialog';
 import { StepUpAuthModal } from './StepUpAuthModal';
 import { evaluatePassword } from '../../src/services/security/passwordValidator';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 export const SecuritySettingsTab: React.FC = () => {
     const { t } = useTranslation();
@@ -96,7 +97,7 @@ export const SecuritySettingsTab: React.FC = () => {
                         setPasswordSuccess('');
                     }, 2500);
                 } catch (err: unknown) {
-                    setPasswordError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+                    setPasswordError(mapAuthErrorMessage(err, t, 'security:lockScreen.invalidCredentials'));
                 } finally {
                     setIsSubmittingPassword(false);
                 }
@@ -105,7 +106,7 @@ export const SecuritySettingsTab: React.FC = () => {
                 setRegenerateError('');
                 const res = await vaultService.regenerateRecoveryKey(password);
                 if (isErr(res)) {
-                    setRegenerateError(res.error.message);
+                    setRegenerateError(mapAuthErrorMessage(res.error, t, 'security:lockScreen.invalidCredentials'));
                     return;
                 }
                 setNewRecoveryKey(res.value.recoveryKey);

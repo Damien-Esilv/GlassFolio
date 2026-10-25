@@ -24,6 +24,13 @@ import {
   listAlertRulesTool,
   createAlertRuleTool,
 } from './notificationTools';
+import {
+  previewCsvImportTool,
+  previewSnapshotImportTool,
+  importSnapshotTool,
+  getCostBasisMethodTool,
+  setCostBasisMethodTool,
+} from './importTools';
 
 /**
  * Initializes and registers all standard GlassFolio AI / MCP tools.
@@ -53,6 +60,11 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(manageNotificationsTool);
   aiToolRegistry.registerTool(listAlertRulesTool);
   aiToolRegistry.registerTool(createAlertRuleTool);
+  aiToolRegistry.registerTool(previewCsvImportTool);
+  aiToolRegistry.registerTool(previewSnapshotImportTool);
+  aiToolRegistry.registerTool(importSnapshotTool);
+  aiToolRegistry.registerTool(getCostBasisMethodTool);
+  aiToolRegistry.registerTool(setCostBasisMethodTool);
 }
 
 // Auto-register on import
@@ -82,4 +94,9 @@ export {
   manageNotificationsTool,
   listAlertRulesTool,
   createAlertRuleTool,
+  previewCsvImportTool,
+  previewSnapshotImportTool,
+  importSnapshotTool,
+  getCostBasisMethodTool,
+  setCostBasisMethodTool,
 };

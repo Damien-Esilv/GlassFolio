@@ -36,6 +36,7 @@ import { toBase64 } from './encoding';
 import { Result, ok, err, ValidationError } from '../../types/result';
 import {
     InvalidVaultCredentialsError,
+    PasskeySlotInfo,
     VaultAlreadyInitializedError,
     VaultHeader,
     VaultHeaderCorruptedError,
@@ -322,7 +323,8 @@ export class VaultService {
         credentialId: string,
         label: string,
         prfSecret: Uint8Array,
-        masterPassword?: string
+        masterPassword?: string,
+        meta: { rpId?: string; transports?: string[] } = {}
     ): Promise<void> {
         await delay(300);
         const header = this.getVaultHeader();
@@ -355,6 +357,8 @@ export class VaultService {
                 label,
                 createdAt: new Date().toISOString(),
                 salt: slotSalt,
+                ...(meta.rpId ? { rpId: meta.rpId } : {}),
+                ...(meta.transports?.length ? { transports: meta.transports } : {}),
             },
         ];
 
@@ -404,12 +408,37 @@ export class VaultService {
     }
 
     /** Passkeys able to unlock the vault. Read from the plaintext header, so available while locked. */
-    public listPasskeySlots(): Array<{ credentialId: string; label: string }> {
+    public listPasskeySlots(): PasskeySlotInfo[] {
         try {
-            return (this.getVaultHeader()?.wrappedKeys?.passkeys || []).map(p => ({ credentialId: p.credentialId, label: p.label }));
+            return (this.getVaultHeader()?.wrappedKeys?.passkeys || []).map(p => ({
+                credentialId: p.credentialId,
+                label: p.label,
+                ...(p.rpId ? { rpId: p.rpId } : {}),
+                ...(p.transports?.length ? { transports: p.transports } : {}),
+            }));
         } catch {
             return [];
         }
+    }
+
+    /**
+     * Records the relying party / transports of a slot created before they were stored.
+     * Header metadata only (no key material), so it works while the vault is locked.
+     */
+    public updatePasskeySlotMeta(credentialId: string, meta: { rpId?: string; transports?: string[] }): void {
+        const header = this.getVaultHeader();
+        if (!header?.wrappedKeys?.passkeys?.some(p => p.credentialId === credentialId)) return;
+        const passkeys = header.wrappedKeys.passkeys.map(p => p.credentialId === credentialId
+            ? {
+                ...p,
+                ...(meta.rpId ? { rpId: meta.rpId } : {}),
+                ...(meta.transports?.length ? { transports: meta.transports } : {}),
+            }
+            : p);
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify({
+            ...header,
+            wrappedKeys: { ...header.wrappedKeys, passkeys },
+        }));
     }
 
     /**

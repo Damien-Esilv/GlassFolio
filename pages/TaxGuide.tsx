@@ -24,6 +24,7 @@ import { DEFAULT_FISCAL_YEAR } from '../src/constants/fiscalConstants';
 import { useAuth } from '../context/AuthContext';
 import { FRENCH_DEPARTMENTS, getUserFiscalDeadline, getEffectiveCalendar, getTaxZoneForDepartment } from '../src/services/fiscal/taxCalendarService';
 import Button from '../components/Button';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../src/constants/animations';
 
 // ── Topic definitions ────────────────────────────────────────────────────────
 type TopicId = 'cto' | 'pea' | 'crypto' | 'dividends' | 'foreign' | 'pfuBareme' | 'losses' | 'calendar';
@@ -584,7 +585,7 @@ const TaxGuide: React.FC = () => {
                             key={topic.id}
                             onClick={() => setActiveTopic(topic.id)}
                             className="text-left bg-card border border-subtle hover:border-strong rounded-2xl p-5 group transition-all hover:shadow-lg animate-slide-in-left flex flex-col"
-                            style={{ animationDelay: `${idx * 50}ms` }}
+                            style={{ animationDelay: `${idx * STAGGER_DELAY_MS}ms` }}
                         >
                             <div className="p-2.5 rounded-xl bg-brand/10 text-brand mb-4 w-fit group-hover:scale-105 transition-transform">
                                 <Icon size={20} />

@@ -1,6 +1,7 @@
 import { Transaction } from '../../types';
 import { UnifiedTransaction, Account, Institute, Instrument, InstrumentType } from '../types';
 import { db } from './db';
+import { resolveQuantity } from './portfolio/positionLedger';
 
 /**
  * Map InstrumentType to legacy asset class
@@ -78,7 +79,7 @@ export function convertToLegacyTransaction(
 
     const symbol = instrument?.marketIdentifier.symbol || unified.assetSymbol || '';
 
-    const qty = parseFloat(unified.quantity || unified.amountPrimary || '0');
+    const qty = resolveQuantity(unified);
     const price = parseFloat(unified.priceUnit || '0');
     const amount = parseFloat(unified.amountPrimary || '0');
     const fee = parseFloat(unified.feeAmount || '0');

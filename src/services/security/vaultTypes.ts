@@ -19,10 +19,27 @@ export interface WrappedKeyEntry {
     salt?: string;
 }
 
-/** Reserved for TGLA-042 (WebAuthn PRF unlock). */
+/** WebAuthn PRF unlock slot (TGLA-042). */
 export interface PasskeyWrappedKeyEntry extends WrappedKeyEntry {
     credentialId: string;
     label: string;
+    /**
+     * Relying party the credential was created for. Cloud passkeys are created with the
+     * Supabase RP ID (which can be a parent domain of the app host); local passkeys with the
+     * page host. The unlock ceremony must use the same value or the platform cannot find the
+     * credential (Safari then offers a security key / QR code instead).
+     */
+    rpId?: string;
+    /** Transports reported at creation (internal, hybrid, usb...), sent back as hints. */
+    transports?: string[];
+}
+
+/** Public, non-secret description of a passkey slot (readable while the vault is locked). */
+export interface PasskeySlotInfo {
+    credentialId: string;
+    label: string;
+    rpId?: string;
+    transports?: string[];
 }
 
 /** Single serializable record stored under `gf_vault_header`. */

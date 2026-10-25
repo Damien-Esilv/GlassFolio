@@ -5,6 +5,7 @@ import { ShieldAlert, X, AlertCircle, Fingerprint, Lock, KeyRound, Loader2 } fro
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { stepUpService, StepUpRequirements } from '../../src/services/security/stepUpService';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 export interface StepUpAuthModalProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
         if (!cancelled) setRequirements(next);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('security:stepUp.invalidPassword'));
+        if (!cancelled) setError(mapAuthErrorMessage(err, t, 'security:stepUp.invalidPassword'));
       });
     return () => {
       cancelled = true;
@@ -85,7 +86,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
     } catch (err: unknown) {
       const msg = err instanceof Error && err.name === 'RecentSignInRequiredError'
         ? t('security:stepUp.recentSignInRequired')
-        : err instanceof Error ? err.message : t('security:stepUp.invalidPassword');
+        : mapAuthErrorMessage(err, t, 'security:stepUp.invalidPassword');
       setError(msg);
     } finally {
       setIsLoading(false);

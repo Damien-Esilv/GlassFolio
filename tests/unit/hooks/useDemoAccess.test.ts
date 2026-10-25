@@ -91,7 +91,8 @@ describe('useDemoAccess hook (TGLA-057 / TGLA-058)', () => {
       await result.current.launchDemo('/');
     });
 
-    expect(result.current.demoError).toBe('Vault locked or credentials invalid');
+    // Unknown service text is never shown raw: the translated login failure is used instead
+    expect(result.current.demoError).toBe('Failed to login');
     expect(result.current.isLaunchingDemo).toBe(false);
   });
 });

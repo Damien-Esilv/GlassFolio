@@ -13,9 +13,31 @@
 import { fromBase64, toBase64, utf8Encode } from './encoding';
 import { appStorage } from '../storage/appStorage';
 import { vaultService } from './vaultService';
+import type { PasskeySlotInfo } from './vaultTypes';
+import { PASSKEY_RP_ID_STORAGE_KEY } from '../storage/storageKeys';
 
 const PASSKEYS_STORAGE_KEY = 'glassfolio_security_passkeys';
 const PRF_INPUT_LABEL = 'glassfolio:vault-prf:v1';
+
+/** Machine-readable passkey failures, translated by the UI (`common:errors.passkey.<code>`). */
+export type PasskeyErrorCode = 'UNSUPPORTED' | 'NO_SLOT' | 'NO_PRF' | 'NOT_REGISTERED' | 'CANCELLED' | 'FAILED';
+
+export class PasskeyError extends Error {
+    constructor(public readonly code: PasskeyErrorCode, message: string) {
+        super(message);
+        this.name = 'PasskeyError';
+    }
+}
+
+/** A dismissed or timed-out browser prompt surfaces as NotAllowedError / AbortError. */
+const toPasskeyError = (error: unknown): PasskeyError => {
+    if (error instanceof PasskeyError) return error;
+    const name = error instanceof Error ? error.name : '';
+    if (name === 'NotAllowedError' || name === 'AbortError') {
+        return new PasskeyError('CANCELLED', 'Passkey prompt was cancelled or timed out.');
+    }
+    return new PasskeyError('FAILED', error instanceof Error ? error.message : 'Passkey authentication failed.');
+};
 
 export interface PasskeyRecord {
     id: string; // base64 credential ID
@@ -30,6 +52,8 @@ export interface PasskeyRecord {
 
 export interface PasskeyAttestation {
     credentialId: string;
+    /** Relying party the credential is scoped to (server RP ID in cloud mode, page host locally). */
+    rpId: string;
     algorithm: number;
     transports?: string[];
     prfEnabled: boolean;
@@ -62,6 +86,22 @@ const toBase64Url = (data: ArrayBuffer | ArrayBufferView): string =>
 
 const getRpId = (): string =>
     typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+
+/** WebAuthn only accepts an RP ID equal to the page host or one of its registrable parents. */
+export const isRpIdUsableHere = (rpId: string, host: string = getRpId()): boolean =>
+    host === rpId || host.endsWith(`.${rpId}`);
+
+/** Allow-list entry with optional transport hints (internal, hybrid...). */
+export interface CredentialHint {
+    id: string;
+    transports?: string[];
+}
+
+const toHintedDescriptors = (hints: CredentialHint[]): PublicKeyCredentialDescriptor[] =>
+    hints.flatMap(hint => toDescriptors([hint.id]).map(descriptor => ({
+        ...descriptor,
+        ...(hint.transports?.length ? { transports: hint.transports as AuthenticatorTransport[] } : {}),
+    })));
 
 const randomChallenge = (): Uint8Array => {
     const challenge = new Uint8Array(32);
@@ -235,6 +275,7 @@ export const passkeyService = {
         const prf = readPrf(credential);
         return {
             credentialId: toBase64(new Uint8Array(credential.rawId)),
+            rpId: publicKey.rp?.id || getRpId(),
             algorithm: attestation.getPublicKeyAlgorithm?.() ?? -7,
             transports: attestation.getTransports?.(),
             prfEnabled: prf.enabled,
@@ -249,35 +290,46 @@ export const passkeyService = {
      */
     async authenticate(params: {
         allowCredentialIds?: string[];
+        /** Allow-list with transport hints; takes precedence over allowCredentialIds. */
+        allowCredentials?: CredentialHint[];
+        /** Relying party of the credentials (defaults to the page host). */
+        rpId?: string;
         serverOptions?: Record<string, unknown>;
         withPrf?: boolean;
     } = {}): Promise<PasskeyAssertion> {
         if (typeof navigator === 'undefined' || !navigator.credentials?.get) {
-            throw new Error('WebAuthn is not supported in this environment.');
+            throw new PasskeyError('UNSUPPORTED', 'WebAuthn is not supported in this environment.');
         }
 
-        const allowIds = params.allowCredentialIds || [];
+        const hints: CredentialHint[] = params.allowCredentials
+            ?? (params.allowCredentialIds || []).map(id => ({ id }));
+        const allowIds = hints.map(hint => hint.id);
         const publicKey: PublicKeyCredentialRequestOptions = params.serverOptions
             ? decodeRequestOptions(params.serverOptions)
             : {
                 challenge: randomChallenge(),
-                rpId: getRpId(),
+                rpId: params.rpId || getRpId(),
                 timeout: 60000,
-                ...(allowIds.length > 0 ? { allowCredentials: toDescriptors(allowIds) } : {}),
+                ...(hints.length > 0 ? { allowCredentials: toHintedDescriptors(hints) } : {}),
             };
         publicKey.userVerification = 'required';
         if (params.withPrf) {
             publicKey.extensions = await withPrfExtension(publicKey.extensions);
         }
 
-        const assertion = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null;
+        let assertion: PublicKeyCredential | null;
+        try {
+            assertion = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null;
+        } catch (error) {
+            throw toPasskeyError(error);
+        }
         if (!assertion) {
-            throw new Error('Passkey authentication was cancelled or failed.');
+            throw new PasskeyError('CANCELLED', 'Passkey authentication was cancelled or failed.');
         }
 
         const credentialId = toBase64(new Uint8Array(assertion.rawId));
         if (!params.serverOptions && allowIds.length > 0 && !allowIds.includes(credentialId)) {
-            throw new Error('This passkey is not registered for this account.');
+            throw new PasskeyError('NOT_REGISTERED', 'This passkey is not registered for this account.');
         }
 
         return {
@@ -287,20 +339,77 @@ export const passkeyService = {
         };
     },
 
-    /** Unlocks the vault with a passkey enrolled in it. Works offline: the header lists the slots. */
-    async unlockVault(): Promise<string> {
-        const slots = vaultService.listPasskeySlots();
-        if (slots.length === 0) {
-            throw new Error('No passkey can unlock this vault yet.');
+    /** Remembers the RP ID used by the server passkeys so a locked vault can use it offline. */
+    rememberServerRpId(rpId: string | undefined): void {
+        if (!rpId) return;
+        try {
+            appStorage.setItem(PASSKEY_RP_ID_STORAGE_KEY, rpId);
+        } catch {
+            // Non-critical cache
         }
+    },
+
+    getRememberedServerRpId(): string | undefined {
+        try {
+            return appStorage.getItem(PASSKEY_RP_ID_STORAGE_KEY) || undefined;
+        } catch {
+            return undefined;
+        }
+    },
+
+    /** True when at least one passkey slot of the vault can be used from this page's host. */
+    canUnlockVaultHere(): boolean {
+        return this.usableVaultSlots().length > 0;
+    },
+
+    /**
+     * Passkey slots this page can use. A credential is bound to its RP ID: a passkey created on
+     * app.example.com (or example.com) cannot be used from localhost, e.g. a Docker local build.
+     * Slots created before the RP ID was stored are kept (resolved at unlock time).
+     */
+    usableVaultSlots(): PasskeySlotInfo[] {
+        return vaultService.listPasskeySlots().filter(slot => !slot.rpId || isRpIdUsableHere(slot.rpId));
+    },
+
+    /**
+     * Unlocks the vault with a passkey enrolled in it. Works offline: the header lists the slots
+     * with their RP ID. A single WebAuthn ceremony is run (Safari requires a user gesture per
+     * ceremony), scoped to the RP ID the credentials were created for.
+     *
+     * @param options.legacyRpId RP ID for slots enrolled before it was stored (cloud mode: the
+     *   Supabase RP ID, fetched before the click); defaults to the page host. It is a plain value
+     *   on purpose: any network call between the click and the ceremony makes Safari drop the
+     *   user gesture.
+     */
+    async unlockVault(options: { legacyRpId?: string } = {}): Promise<string> {
+        const slots = this.usableVaultSlots();
+        if (slots.length === 0) {
+            throw new PasskeyError('NO_SLOT', 'No passkey can unlock this vault on this site.');
+        }
+
+        const known = slots.filter(slot => slot.rpId);
+        const legacy = slots.filter(slot => !slot.rpId);
+        // Prefer the RP ID shared by most slots; legacy slots are resolved once.
+        const counts = new Map<string, number>();
+        known.forEach(slot => counts.set(slot.rpId as string, (counts.get(slot.rpId as string) || 0) + 1));
+        let rpId = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (!rpId) {
+            rpId = options.legacyRpId && isRpIdUsableHere(options.legacyRpId) ? options.legacyRpId : getRpId();
+        }
+
+        const candidates = slots.filter(slot => !slot.rpId || slot.rpId === rpId);
         const { credentialId, prfSecret } = await this.authenticate({
-            allowCredentialIds: slots.map(slot => slot.credentialId),
+            rpId,
+            allowCredentials: candidates.map(slot => ({ id: slot.credentialId, transports: slot.transports })),
             withPrf: true,
         });
         if (!prfSecret) {
-            throw new Error('This passkey cannot unlock the vault on this device.');
+            throw new PasskeyError('NO_PRF', 'This passkey cannot unlock the vault on this device.');
         }
         await vaultService.unlockWithPasskeyPrf(credentialId, prfSecret);
+        if (legacy.some(slot => slot.credentialId === credentialId)) {
+            vaultService.updatePasskeySlotMeta(credentialId, { rpId });
+        }
         return credentialId;
     },
 

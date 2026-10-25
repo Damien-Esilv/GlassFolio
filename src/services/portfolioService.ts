@@ -1,11 +1,13 @@
 import { Position, PositionFilter, DashboardSummary } from '../../types';
+import type { ChartPriceMode } from '../types/domain';
 import { db, delay } from './db';
-import { refreshPositionPrices } from './priceService';
+import { refreshPositionPrices, fetchRealPriceHistory, HistoricalPricePoint } from './priceService';
 import { currencyService } from './currencyService';
 import { formatChartDate, DateFormatPattern } from '../../utils/date';
 import { roundCurrency } from '../../utils/currency';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
+import { buildLedger, applyTransaction, defaultLedgerKey, emptyLedgerState, sortChronologically, LedgerState } from './portfolio/positionLedger';
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
@@ -46,65 +48,38 @@ export const portfolioService = {
         const accountMap = new Map(accounts.map(a => [a.id, a]));
         const instituteMap = new Map(institutes.map(i => [i.id, i]));
 
-        // Sort unified transactions by date ascending
-        const sortedTxs = [...unifiedTxs].sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+        // Replay the journal through the shared ledger (WAC or FIFO per account)
+        const ledger = buildLedger(unifiedTxs, {
+            keyOf: tx => (tx.instrumentId ? `${tx.accountId}:${tx.instrumentId}` : null),
+            methodFor: accountId => accountMap.get(accountId)?.costBasisMethod ?? 'WAC'
+        });
 
-        // Group by (accountId, instrumentId) for proper isolation
         const positionMap = new Map<string, Position>();
 
-        for (const tx of sortedTxs) {
-            if (!tx.instrumentId) continue;
-
-            const instrument = instrumentMap.get(tx.instrumentId);
-            const account = accountMap.get(tx.accountId);
+        for (const { key, state, firstTx, lastTx } of ledger.values()) {
+            const instrument = instrumentMap.get(firstTx.instrumentId);
+            const account = accountMap.get(firstTx.accountId);
             const institute = account ? instituteMap.get(account.instituteId) : null;
-            const symbol = instrument?.marketIdentifier.symbol || tx.assetSymbol;
+            const symbol = instrument?.marketIdentifier.symbol || firstTx.assetSymbol;
+            const isCash = instrument?.type === 'cash';
+            const lastPrice = isCash ? 1 : parseFloat(lastTx.priceUnit || '0') || (state.quantity > 0 ? state.costBasis / state.quantity : 0);
 
-            const key = `${tx.accountId}:${tx.instrumentId}`;
-
-            let pos = positionMap.get(key);
-            if (!pos) {
-                pos = {
-                    id: `pos-${Math.random().toString(36).substr(2, 9)}`,
-                    instrument: instrument?.name || tx.label || symbol,
-                    symbol,
-                    quantity: 0,
-                    avgCost: 0,
-                    lastPrice: parseFloat(tx.priceUnit || '0'),
-                    marketValue: 0,
-                    unrealizedPL: 0,
-                    unrealizedPLPercent: 0,
-                    currency: instrument?.denominationCurrency || tx.feeAsset || 'EUR',
-                    type: instrument ? (instrument.type === 'stock' ? 'Equity' : instrument.type === 'crypto' ? 'Crypto' : instrument.type === 'cash' ? 'Cash' : 'ETF') : 'Equity',
-                    source: institute?.name || 'Unknown',
-                    bankName: institute?.name,
-                    accountName: account?.name
-                };
-            }
-
-            const qty = parseFloat(tx.quantity || tx.amountPrimary || '0');
-            const price = parseFloat(tx.priceUnit || '0');
-            const fees = parseFloat(tx.feeAmount || '0');
-            const amount = parseFloat(tx.amountPrimary || '0');
-
-            if (tx.type === 'BUY' || tx.type === 'DEPOSIT' || tx.type === 'BALANCE_ADJUSTMENT' || tx.type === 'SNAPSHOT_ADJUSTMENT') {
-                // Cost basis includes fees (CRITICAL for French PRU calculation)
-                const totalCost = (pos.quantity * pos.avgCost) + Math.abs(amount) + fees;
-                const totalQty = pos.quantity + qty;
-
-                if (totalQty > 0) {
-                    pos.avgCost = totalCost / totalQty;
-                }
-                pos.quantity = totalQty;
-                if (price > 0) pos.lastPrice = price;
-            } else if (tx.type === 'SELL' || tx.type === 'WITHDRAW') {
-                pos.quantity -= Math.abs(qty);
-                if (price > 0) pos.lastPrice = price;
-            }
-
-            if (pos.quantity < 0) pos.quantity = 0;
-
-            positionMap.set(key, pos);
+            positionMap.set(key, {
+                id: `pos-${Math.random().toString(36).substr(2, 9)}`,
+                instrument: instrument?.name || firstTx.label || symbol,
+                symbol,
+                quantity: state.quantity,
+                avgCost: state.quantity > 0 ? state.costBasis / state.quantity : 0,
+                lastPrice,
+                marketValue: 0,
+                unrealizedPL: 0,
+                unrealizedPLPercent: 0,
+                currency: instrument?.denominationCurrency || firstTx.feeAsset || 'EUR',
+                type: instrument ? (instrument.type === 'stock' ? 'Equity' : instrument.type === 'crypto' ? 'Crypto' : instrument.type === 'cash' ? 'Cash' : 'ETF') : 'Equity',
+                source: institute?.name || 'Unknown',
+                bankName: institute?.name,
+                accountName: account?.name
+            });
         }
 
         // Filter out zero positions
@@ -127,7 +102,8 @@ export const portfolioService = {
         timeRange: string = '1Y',
         baseCurrency: string = 'EUR',
         locale: string = 'fr-FR',
-        dateFormatPattern: DateFormatPattern = 'DD/MM/YYYY'
+        dateFormatPattern: DateFormatPattern = 'DD/MM/YYYY',
+        options: { chartMode?: ChartPriceMode } = {}
     ): Promise<DashboardSummary> => {
         await delay(150);
         let positions = await portfolioRepository.getPositions();
@@ -156,8 +132,12 @@ export const portfolioService = {
         const totalPL = roundCurrency(totalValue - totalInvested);
         const plPercent = totalInvested > 0 ? roundCurrency((totalPL / totalInvested) * 100) : 0;
 
-        const transactions = await transactionRepository.getAll();
+        // Imports live in the unified journal; the legacy store only backs old demo data
+        const unifiedTxs = sortChronologically(db.getUnifiedTransactions());
+        const useUnifiedJournal = unifiedTxs.length > 0;
+        const transactions = useUnifiedJournal ? [] : await transactionRepository.getAll();
         const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const firstTxDate = useUnifiedJournal ? unifiedTxs[0].transactionDate : sortedTxs[0]?.date;
 
         const now = new Date();
         let startDate = new Date();
@@ -186,8 +166,8 @@ export const portfolioService = {
                 labelFormat = 'month';
                 break;
             case 'ALL':
-                if (sortedTxs.length > 0) {
-                    startDate = new Date(sortedTxs[0].date);
+                if (firstTxDate) {
+                    startDate = new Date(firstTxDate);
                 } else {
                     startDate.setFullYear(now.getFullYear() - 2);
                 }
@@ -217,9 +197,60 @@ export const portfolioService = {
         let txIdx = 0;
         const assetQuantities: Record<string, number> = {};
 
+        // Historical mode: real closing prices per held asset (cached 15 min by priceService)
+        const histories = new Map<string, HistoricalPricePoint[]>();
+        if (options.chartMode === 'historical') {
+            await Promise.all(positions.filter(p => p.type !== 'Cash').map(async p => {
+                try {
+                    const points = await fetchRealPriceHistory(p, timeRange);
+                    if (points.length > 0) histories.set(p.symbol, [...points].sort((a, b) => a.timestamp - b.timestamp));
+                } catch {
+                    // Missing history falls back to the estimate for this asset
+                }
+            }));
+        }
+        const historicalPriceAt = (symbol: string, timeMs: number): number | null => {
+            const points = histories.get(symbol);
+            if (!points) return null;
+            let lo = 0;
+            let hi = points.length - 1;
+            if (timeMs <= points[0].timestamp) return points[0].price;
+            while (lo < hi) {
+                const mid = Math.ceil((lo + hi) / 2);
+                if (points[mid].timestamp <= timeMs) lo = mid;
+                else hi = mid - 1;
+            }
+            return points[lo].price;
+        };
+
+        // Unified journal: replay through the shared ledger so snapshot adjustments,
+        // decreases and cash statements move the curve exactly like the positions
+        const instrumentSymbols = new Map(db.getInstruments().map(i => [i.id, i.marketIdentifier.symbol]));
+        const unifiedWithTime = unifiedTxs.map(tx => ({ tx, time: new Date(tx.transactionDate).getTime() }));
+        const ledgerStates = new Map<string, LedgerState>();
+        const ledgerSymbols = new Map<string, string>();
+        const accountMethods = new Map(db.getAccounts().map(a => [a.id, a.costBasisMethod ?? 'WAC']));
+        let unifiedIdx = 0;
+
         const chartData = Array.from({ length: pointCount }, (_, i) => {
             const pointTimeMs = startDate.getTime() + i * timeStepMs;
             const pointTime = new Date(pointTimeMs);
+
+            while (unifiedIdx < unifiedWithTime.length && unifiedWithTime[unifiedIdx].time <= pointTimeMs) {
+                const { tx } = unifiedWithTime[unifiedIdx];
+                const key = defaultLedgerKey(tx);
+                if (key) {
+                    const next = applyTransaction(ledgerStates.get(key) ?? emptyLedgerState(), tx, accountMethods.get(tx.accountId) ?? 'WAC');
+                    ledgerStates.set(key, next);
+                    const symbol = instrumentSymbols.get(tx.instrumentId) || tx.assetSymbol;
+                    ledgerSymbols.set(key, symbol);
+                    // Re-aggregate this symbol across accounts
+                    assetQuantities[symbol] = Array.from(ledgerStates.entries())
+                        .filter(([k]) => ledgerSymbols.get(k) === symbol)
+                        .reduce((sum, [, st]) => sum + st.quantity, 0);
+                }
+                unifiedIdx++;
+            }
 
             // Incrementally accumulate transactions up to pointTimeMs
             while (txIdx < txsWithTime.length && txsWithTime[txIdx].time <= pointTimeMs) {
@@ -233,8 +264,9 @@ export const portfolioService = {
             }
 
             let pointValue = 0;
+            let pointInvested = 0;
 
-            if (txIdx > 0) {
+            if (txIdx > 0 || unifiedIdx > 0) {
                 const progress = (pointTimeMs - startDate.getTime()) / totalDuration;
 
                 Object.entries(assetQuantities).forEach(([symbol, qty]) => {
@@ -243,13 +275,18 @@ export const portfolioService = {
                     const costPrice = pos ? pos.avgCost : 1;
                     const posCurr = pos?.currency || 'EUR';
 
-                    // Deterministic subtle market curve so performance looks realistic like Finary
+                    // Real close when available, otherwise a deterministic interpolation between cost and current price
+                    const realPrice = historicalPriceAt(symbol, pointTimeMs);
                     const noise = 1 + (Math.sin(i * 1.3 + symbol.length) * 0.012);
-                    const simulatedHistoricalPrice = (costPrice + (currentPrice - costPrice) * progress) * noise;
+                    const simulatedHistoricalPrice = realPrice ?? (costPrice + (currentPrice - costPrice) * progress) * noise;
                     const itemValNative = qty * simulatedHistoricalPrice;
                     const itemValBase = currencyService.convertAmount(itemValNative, posCurr, baseCurrency, rates);
 
                     pointValue += itemValBase;
+
+                    const itemCostNative = qty * costPrice;
+                    const itemCostBase = currencyService.convertAmount(itemCostNative, posCurr, baseCurrency, rates);
+                    pointInvested += itemCostBase;
                 });
             }
 
@@ -257,7 +294,8 @@ export const portfolioService = {
 
             return {
                 name,
-                value: roundCurrency(pointValue)
+                value: roundCurrency(pointValue),
+                invested: roundCurrency(pointInvested)
             };
         });
 

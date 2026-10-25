@@ -237,6 +237,12 @@
             "amountRequired": "Amount is required",
             "assetSymbolRequired": "Asset symbol is required",
             "identifierRequired": "Symbol or ISIN code is required"
+        },
+        "costBasis": {
+            "label": "Cost basis method",
+            "wac": "Weighted average cost (PRU)",
+            "fifo": "FIFO — first in, first out",
+            "hint": "Used for this account's average cost and realized gains. Changing it recalculates every position."
         }
     },
     "cashWizard": {
@@ -345,7 +351,9 @@
                 "status": "Status",
                 "asset": "Asset",
                 "totalValue": "Total Value"
-            }
+            },
+            "invalidRows": "{{count}} row(s) ignored",
+            "rowNumber": "Row {{row}}"
         },
         "options": {
             "title": "How do you want to import?",
@@ -355,7 +363,9 @@
             "syntheticTitle": "Generate Synthetic Transactions",
             "syntheticDescription": "Calculate and create BUY/SELL transactions to reconcile with existing history.",
             "syntheticBestFor": "Best for: Maintaining transaction history, accurate P&L tracking",
-            "syntheticInfo": "The system will compare your snapshot with existing positions and create synthetic BUY/SELL transactions to reconcile the differences."
+            "syntheticInfo": "The system will compare your snapshot with existing positions and create synthetic BUY/SELL transactions to reconcile the differences.",
+            "closeMissingTitle": "Close positions missing from this file",
+            "closeMissingDescription": "The snapshot is the full state of the account: assets held but absent from the file are set to zero (non-fiscal adjustment). Untick for a partial file."
         },
         "reconciliation": {
             "title": "Reconciliation Preview",
@@ -364,7 +374,8 @@
                 "increased": "Increased",
                 "decreased": "Decreased",
                 "unchanged": "Unchanged",
-                "needsInput": "Needs Input"
+                "needsInput": "Needs Input",
+                "closed": "Closed"
             },
             "table": {
                 "asset": "Asset",
@@ -373,15 +384,28 @@
                 "delta": "Delta",
                 "action": "Action",
                 "price": "Price",
-                "status": "Status"
+                "status": "Status",
+                "quantity": "Quantity",
+                "avgPrice": "Avg price",
+                "investedDelta": "Invested Δ"
             },
             "requiresInput": "{{count}} position(s) require a sell price. Please enter the price at which you sold.",
             "actions": {
                 "buy": "BUY",
-                "sell": "SELL"
+                "sell": "SELL",
+                "unchanged": "Unchanged",
+                "close": "Close",
+                "new": "New",
+                "increase": "Increase",
+                "decrease": "Decrease",
+                "costBasis": "Avg price update"
             },
             "enterPrice": "Enter price",
-            "clickToEdit": "Click to edit"
+            "clickToEdit": "Click to edit",
+            "investedBefore": "Invested before",
+            "investedAfter": "Invested after",
+            "syntheticHint": "Each change is recorded as a non-fiscal balance adjustment.",
+            "replaceHint": "The account will match this snapshot exactly; re-importing the same file changes nothing."
         },
         "complete": {
             "title": "Snapshot Import Complete!",
@@ -402,6 +426,53 @@
             "failedToAnalyzeData": "Failed to analyze data",
             "commitFailed": "Commit failed",
             "failedToCommitImport": "Failed to commit import"
+        },
+        "warnings": {
+            "negativeImpliedPrice": "The average price dropped while the quantity grew: the adjustment lowers the cost basis."
         }
+    },
+    "importFormat": {
+        "title": "Detected file format",
+        "encoding": "Encoding",
+        "delimiter": "Delimiter",
+        "dateFormat": "Date order",
+        "preset": "Broker format",
+        "noPreset": "Generic (columns recognised automatically)",
+        "encodings": {
+            "utf-8": "UTF-8",
+            "utf-16le": "UTF-16 (Excel Unicode)",
+            "utf-16be": "UTF-16 BE",
+            "windows-1252": "Windows-1252 (Excel / French banks)"
+        },
+        "delimiters": {
+            "comma": "Comma ( , )",
+            "semicolon": "Semicolon ( ; )",
+            "tab": "Tab",
+            "pipe": "Pipe ( | )"
+        },
+        "dateFormats": {
+            "auto": "Automatic (from the column)",
+            "dayFirst": "Day first (DD/MM/YYYY)",
+            "monthFirst": "Month first (MM/DD/YYYY)"
+        },
+        "duplicateFile": {
+            "title": "This exact file was already imported on {{date}} ({{count}} transactions).",
+            "description": "Importing it again may duplicate data; already-known rows are skipped automatically.",
+            "viewHistory": "View import history"
+        }
+    },
+    "mappingProfiles": {
+        "title": "Mapping profiles",
+        "suggestion": "Profile \"{{name}}\" matches this file's columns.",
+        "apply": "Apply",
+        "empty": "No saved profile yet. Map the columns once, then save them as a profile.",
+        "presetBadge": "(preset)",
+        "rename": "Rename profile {{name}}",
+        "delete": "Delete profile {{name}}",
+        "renameLabel": "New profile name",
+        "confirmRename": "Confirm rename",
+        "cancelRename": "Cancel rename",
+        "namePlaceholder": "Profile name (e.g. Bourso PEA)",
+        "save": "Save profile"
     }
 }

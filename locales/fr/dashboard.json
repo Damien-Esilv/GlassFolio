@@ -27,5 +27,12 @@
     "cash": "Cash",
     "noPositionsYet": "Aucune position disponible",
     "noAssetsAllocation": "Aucun actif à répartir",
-    "noAssetsAllocationHint": "Ajoutez des transactions ou des actifs pour visualiser votre répartition."
+    "noAssetsAllocationHint": "Ajoutez des transactions ou des actifs pour visualiser votre répartition.",
+    "chartMode": {
+        "label": "Source des prix de la courbe",
+        "historical": "Cours réels",
+        "simulated": "Estimation",
+        "historicalHint": "Positions valorisées avec les cours de clôture historiques réels",
+        "simulatedHint": "Estimation lissée entre votre prix de revient et le cours actuel"
+    }
 }

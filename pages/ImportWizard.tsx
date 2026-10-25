@@ -37,6 +37,11 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useImportWizard, MAPPABLE_FIELDS, WizardStep } from '../hooks/importHooks';
+import { useAuth } from '../context/AuthContext';
+import DetectedFormatPanel from '../components/import/DetectedFormatPanel';
+import DuplicateFileBanner from '../components/import/DuplicateFileBanner';
+import MappingProfilesPanel from '../components/import/MappingProfilesPanel';
+import { formatFieldError } from '../components/import/formatFieldError';
 import { InstituteType, AccountType, WrapperType } from '../src/types';
 import { useTranslation } from 'react-i18next';
 
@@ -45,7 +50,8 @@ import { useTranslation } from 'react-i18next';
 // ============================================================================
 
 const ImportWizard: React.FC = () => {
-  const wizard = useImportWizard();
+  const { user } = useAuth();
+  const wizard = useImportWizard(user?.id || 'default-user');
   const { t } = useTranslation('transactions');
 
   // For snapshot mode, show dedicated SnapshotWizard from step 3 onwards
@@ -112,6 +118,9 @@ const ImportWizard: React.FC = () => {
             rawCSVText={wizard.rawCSVText}
             headers={wizard.headers}
             previewRows={wizard.previewRows}
+            existingBatch={wizard.existingBatch}
+            userId={user?.id || 'default-user'}
+            fileName={wizard.file?.name}
             onBack={() => wizard.goToStep(2)}
             onComplete={wizard.reset}
           />
@@ -479,6 +488,20 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
             </div>
           )}
 
+          {/* Cost basis method (applies to every position of the account) */}
+          <label className="mt-6 block">
+            <span className="block text-xs font-bold text-secondary uppercase mb-1">{t('importWizard.costBasis.label')}</span>
+            <select
+              value={wizard.selectedAccount?.costBasisMethod ?? 'WAC'}
+              onChange={e => void wizard.setCostBasisMethod(e.target.value as 'WAC' | 'FIFO')}
+              className="w-full sm:w-auto bg-subtle border border-subtle text-primary text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary"
+            >
+              <option value="WAC">{t('importWizard.costBasis.wac')}</option>
+              <option value="FIFO">{t('importWizard.costBasis.fifo')}</option>
+            </select>
+            <span className="block text-xs text-secondary mt-1">{t('importWizard.costBasis.hint')}</span>
+          </label>
+
           {/* Continue Button */}
           <div className="mt-6 flex justify-end">
             <Button
@@ -565,26 +588,6 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
         />
       </label>
 
-      {/* Saved Templates */}
-      {wizard.mappingTemplates.length > 0 && (
-        <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-secondary uppercase mb-3">{t('importWizard.upload.savedTemplates')}</h3>
-          <div className="flex flex-wrap gap-2">
-            {wizard.mappingTemplates.map(tpl => (
-              <button
-                key={tpl.id}
-                onClick={() => wizard.applyTemplate(tpl.id)}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${wizard.selectedTemplateId === tpl.id
-                  ? 'bg-brand text-white'
-                  : 'bg-subtle text-secondary hover:bg-card-hover'
-                  }`}
-              >
-                {tpl.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -595,16 +598,6 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
 
 const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
   const { t } = useTranslation('transactions');
-  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-
-  const handleSaveTemplate = async () => {
-    if (templateName.trim()) {
-      await wizard.saveAsTemplate(templateName.trim());
-      setShowSaveTemplate(false);
-      setTemplateName('');
-    }
-  };
 
   // Check if a header is mapped to any field
   const isHeaderMapped = (header: string): boolean => {
@@ -615,6 +608,28 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
+      <DuplicateFileBanner batch={wizard.existingBatch} />
+
+      <DetectedFormatPanel
+        encoding={wizard.fileEncoding}
+        delimiter={wizard.delimiter}
+        dateFormat={wizard.dateFormat}
+        detectedPreset={wizard.detectedPreset}
+        onDelimiterChange={wizard.setDelimiter}
+        onDateFormatChange={wizard.setDateFormat}
+      />
+
+      <MappingProfilesPanel
+        templates={wizard.mappingTemplates}
+        selectedId={wizard.selectedTemplateId}
+        suggestedId={wizard.suggestedTemplateId}
+        canSave={wizard.isValidMappingForAnalysis}
+        onApply={wizard.applyTemplate}
+        onSave={wizard.saveAsTemplate}
+        onDelete={wizard.deleteTemplate}
+        onRename={wizard.renameTemplate}
+      />
+
       {/* Detected Preset Banner */}
       {wizard.detectedPreset && (
         <div className="bg-success/10 border border-success/20 rounded-xl p-4 flex items-center gap-3">
@@ -659,29 +674,6 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-bold text-primary">{t('importWizard.mapping.columnMapping')}</h2>
 
-          {!showSaveTemplate ? (
-            <button
-              onClick={() => setShowSaveTemplate(true)}
-              className="flex items-center gap-2 text-brand hover:text-brand/80 text-sm"
-            >
-              <Save size={16} /> {t('importWizard.mapping.saveTemplate')}
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={templateName}
-                onChange={e => setTemplateName(e.target.value)}
-                placeholder={t('importWizard.mapping.templateNamePlaceholder')}
-                className="bg-subtle border border-subtle text-primary rounded-lg px-3 py-1.5 text-sm focus:ring-primary focus:border-primary"
-                autoFocus
-              />
-              <Button size="sm" onClick={handleSaveTemplate}>{t('common:buttons.save')}</Button>
-              <button onClick={() => setShowSaveTemplate(false)} className="text-secondary hover:text-primary">
-                <X size={16} />
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Missing Identifier Warning */}
@@ -937,7 +929,7 @@ const StagingRow: React.FC<{
       <td className="px-4 py-3">
         {tx.errors.length > 0 && (
           <span className="text-error text-xs">
-            {tx.errors.map(e => e.message).join(', ')}
+            {tx.errors.map(e => formatFieldError(t, e)).join(', ')}
           </span>
         )}
       </td>

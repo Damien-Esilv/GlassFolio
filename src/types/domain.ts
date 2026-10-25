@@ -26,7 +26,11 @@ export interface UserPreferences {
   dateFormat?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   fiscalProfile?: FiscalProfile;
   pinnedBadgeIds?: string[];
+  /** Portfolio curve source: real historical closes, or the interpolated estimate */
+  chartPriceMode?: ChartPriceMode;
 }
+
+export type ChartPriceMode = 'historical' | 'simulated';
 
 export type AuthProviderType = 'local' | 'email' | 'google' | 'demo';
 
@@ -211,7 +215,7 @@ export interface DashboardSummary {
   totalCost: number;
   totalPL: number;
   plPercent: number;
-  chartData: { name: string; value: number }[];
+  chartData: { name: string; value: number; invested?: number }[];
 }
 
 export interface TransactionFilter {

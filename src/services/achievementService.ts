@@ -86,7 +86,7 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
 /**
  * Calculates active tracking streak (distinct active weeks from transactions).
  */
-function calculateWeeklyTrackingStreak(transactions: Transaction[]): number {
+export function calculateWeeklyTrackingStreak(transactions: Transaction[]): number {
     if (transactions.length === 0) return 0;
     const weekSet = new Set<string>();
     transactions.forEach(t => {

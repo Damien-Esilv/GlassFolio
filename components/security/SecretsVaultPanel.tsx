@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyRound, Plus, Trash2, Eye, EyeOff, AlertCircle, X, Check } from 'lucide-react';
 import Button from '../Button';
 import { secretsService, SafeSecretItem, SecretItem } from '../../src/services/security/secretsService';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 export const SecretsVaultPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -43,7 +44,7 @@ export const SecretsVaultPanel: React.FC = () => {
             setValue('');
             setShowPlainValue(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save secret');
+            setError(mapAuthErrorMessage(err, t, 'common:errors.secrets.saveFailed'));
         } finally {
             setIsSaving(false);
         }

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key, Fingerprint, Sparkles } from 'lucide-react';
+import { Lock, KeyRound, ShieldAlert, AlertCircle, RefreshCw, Key, Fingerprint, Sparkles, LogOut } from 'lucide-react';
 import Button from '../Button';
 import { vaultService } from '../../src/services/security/vaultService';
 import { authService } from '../../src/services/security/authService';
 import { passkeyService, isPasskeySupported } from '../../src/services/security/passkeyService';
+import { passkeyAccountService } from '../../src/services/security/passkeyAccountService';
+import { getAuthCapabilities } from '../../src/services/security/authCapabilities';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 interface LockScreenProps {
     onUnlocked?: () => void;
@@ -14,7 +18,12 @@ interface LockScreenProps {
 export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const { t } = useTranslation();
     const { refreshData } = useData();
+    const { user, logout } = useAuth();
     const isDemo = vaultService.isDemoVault();
+    // Online: the account lives on the server, so the lock screen also offers to sign out and never
+    // wipes the (synced) vault. Local: the vault is the account; locking is the only "sign out".
+    const isCloud = getAuthCapabilities().mode === 'cloud';
+    const canSignOut = isCloud && !!user && !isDemo;
 
     const [password, setPassword] = useState(isDemo ? 'password' : '');
     const [recoveryKey, setRecoveryKey] = useState('');
@@ -24,9 +33,15 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const [passkeySupported, setPasskeySupported] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    // RP ID of passkeys enrolled before it was stored in the vault (cloud), resolved before any click
+    const [legacyRpId, setLegacyRpId] = useState<string | undefined>(undefined);
+    const canUsePasskey = passkeySupported && passkeyService.canUnlockVaultHere();
 
     React.useEffect(() => {
         isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
+        if (passkeyService.usableVaultSlots().some(slot => !slot.rpId)) {
+            passkeyAccountService.resolveServerRpId().then(setLegacyRpId).catch(() => undefined);
+        }
     }, []);
 
     const handleUnlockDemo = async () => {
@@ -53,11 +68,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
         setError(null);
         setIsLoading(true);
         try {
-            await passkeyService.unlockVault();
+            await passkeyService.unlockVault({ legacyRpId });
             await refreshData();
             onUnlocked?.();
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+            setError(mapAuthErrorMessage(err, t, 'common:errors.passkey.FAILED'));
         } finally {
             setIsLoading(false);
         }
@@ -103,18 +118,13 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
         setIsResetting(true);
         setError(null);
         try {
-            if (isDemo) {
-                await vaultService.resetVault();
-                await authService.signIn('demo@glassfolio.com', 'password');
-                await refreshData();
-                setShowResetConfirm(false);
-                onUnlocked?.();
-            } else {
-                await vaultService.resetVault();
-                await refreshData();
-                setShowResetConfirm(false);
-                window.location.reload();
-            }
+            // Demo vault only: a real vault is never wiped from the lock screen
+            if (!isDemo) return;
+            await vaultService.resetVault();
+            await authService.signIn('demo@glassfolio.com', 'password');
+            await refreshData();
+            setShowResetConfirm(false);
+            onUnlocked?.();
         } catch (err) {
             console.error('Failed to reset vault', err);
             setError(t('security:lockScreen.resetFailed'));
@@ -150,10 +160,10 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                     <div className="mb-5 p-3.5 bg-brand/10 border border-brand/20 rounded-xl space-y-2.5 animate-in fade-in">
                         <div className="flex items-center gap-2 text-xs font-semibold text-brand">
                             <Sparkles size={15} className="shrink-0" />
-                            <span>{t('security:lockScreen.demoBannerTitle', 'Mode Démonstration Actif')}</span>
+                            <span>{t('security:lockScreen.demoBannerTitle')}</span>
                         </div>
                         <p className="text-[11px] text-secondary leading-relaxed">
-                            {t('security:lockScreen.demoBannerDesc', 'Vous explorez le portefeuille fictif. Déverrouillez en 1 clic sans avoir à taper votre mot de passe.')}
+                            {t('security:lockScreen.demoBannerDesc')}
                         </p>
                         <Button
                             type="button"
@@ -163,7 +173,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                             isLoading={isLoading}
                         >
                             <Sparkles size={14} className="mr-1.5" />
-                            {t('security:lockScreen.unlockDemoButton', 'Déverrouiller la démo (1-clic)')}
+                            {t('security:lockScreen.unlockDemoButton')}
                         </Button>
                     </div>
                 )}
@@ -201,7 +211,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                             {isLoading ? t('security:lockScreen.unlocking') : t('security:lockScreen.unlockButton')}
                         </Button>
 
-                        {passkeySupported && vaultService.hasPasskeySlot() && (
+                        {canUsePasskey && (
                             <button
                                 type="button"
                                 onClick={handleUnlockWithPasskey}
@@ -272,20 +282,37 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                     </form>
                 )}
 
-                {/* Escape Hatch Divider & Button */}
-                <div className="mt-8 pt-6 border-t border-subtle text-center">
-                    <p className="text-[11px] text-tertiary mb-2">
-                        {t('security:lockScreen.forgotPrompt')}
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() => setShowResetConfirm(true)}
-                        className="text-xs text-error/80 hover:text-error transition-colors inline-flex items-center gap-1.5 underline decoration-error/30"
-                    >
-                        <ShieldAlert size={14} />
-                        {t('security:lockScreen.resetButton')}
-                    </button>
-                </div>
+                {/* Escape hatch: sign out online; the "reset & reload demo data" action only exists for the
+                    demo vault — a real vault is never wiped from the lock screen (recovery key or passkey instead) */}
+                {canSignOut ? (
+                    <div className="mt-8 pt-6 border-t border-subtle text-center">
+                        <p className="text-[11px] text-tertiary mb-2">
+                            {t('security:lockScreen.signOutPrompt', { email: user?.email })}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={logout}
+                            className="text-xs text-secondary hover:text-primary transition-colors inline-flex items-center gap-1.5"
+                        >
+                            <LogOut size={14} />
+                            {t('security:lockScreen.signOutButton')}
+                        </button>
+                    </div>
+                ) : isDemo && (
+                    <div className="mt-8 pt-6 border-t border-subtle text-center">
+                        <p className="text-[11px] text-tertiary mb-2">
+                            {t('security:lockScreen.forgotPrompt')}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setShowResetConfirm(true)}
+                            className="text-xs text-error/80 hover:text-error transition-colors inline-flex items-center gap-1.5 underline decoration-error/30"
+                        >
+                            <ShieldAlert size={14} />
+                            {t('security:lockScreen.resetButton')}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Confirmation Modal for Reset Vault */}

@@ -5,6 +5,7 @@ import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { getAuthCapabilities } from '../../src/services/security/authCapabilities';
 import { SecondFactorMethod } from '../../src/services/security/authTypes';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 interface TwoFactorChallengeModalProps {
     isOpen: boolean;
@@ -39,7 +40,7 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
         try {
             await completeSecondFactor(cleanCode);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
+            setError(mapAuthErrorMessage(err, t, 'security:totp.invalidCode'));
         } finally {
             setIsLoading(false);
         }
@@ -51,7 +52,7 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
         try {
             await completeSecondFactorWithPasskey();
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+            setError(mapAuthErrorMessage(err, t, 'common:errors.passkey.FAILED'));
         } finally {
             setIsLoading(false);
         }

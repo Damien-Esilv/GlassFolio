@@ -261,12 +261,21 @@ export interface Account {
      */
     openedAt?: string;
 
+    /**
+     * Cost basis method used to value positions and realized P&L.
+     * WAC = weighted average cost (French PRU, default) · FIFO = first in, first out lots.
+     */
+    costBasisMethod?: CostBasisMethod;
+
     /** ISO DateTime - when created */
     createdAt: string;
 
     /** ISO DateTime - last update */
     updatedAt: string;
 }
+
+/** Cost basis valuation method for an account */
+export type CostBasisMethod = 'WAC' | 'FIFO';
 
 /**
  * ImportBatch - Tracks each file import for rollback capability
@@ -521,6 +530,9 @@ export interface UnifiedTransaction {
  * Saved mapping template for file imports
  * Allows users to save column mappings for reuse (e.g., "My Binance Export")
  */
+/** Import wizard a mapping profile applies to */
+export type MappingTemplateMode = 'history' | 'snapshot' | 'cash';
+
 export interface MappingTemplate {
     /** UUID */
     id: string;
@@ -542,6 +554,12 @@ export interface MappingTemplate {
 
     /** CSV delimiter if non-standard */
     delimiter?: string;
+
+    /** Wizard the profile belongs to (absent = 'history' for pre-E28 profiles) */
+    mode?: MappingTemplateMode;
+
+    /** Normalized header signature of the file the profile was saved from */
+    headerSignature?: string;
 
     /** Whether this is a system preset */
     isPreset: boolean;
@@ -649,6 +667,8 @@ export interface FieldError {
     message: string;
     severity: 'error' | 'warning';
     code?: string;
+    /** Interpolation values for the i18n message `common:errors.importValidation.<code>` */
+    params?: Record<string, string>;
 }
 
 /**

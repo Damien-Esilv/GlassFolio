@@ -45,7 +45,12 @@ export interface ParsedCSV {
     headers: string[];
     rows: string[][];
     delimiter: string;
+    /** Number of preamble lines (titles, export notes) skipped before the header row */
+    headerRowIndex?: number;
 }
+
+/** Text encodings the CSV decoder can recognise */
+export type CsvEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'windows-1252';
 
 /**
  * Helper to create a unique asset key
@@ -70,4 +75,6 @@ export interface FieldError {
     message: string;
     severity: 'error' | 'warning';
     code?: string;
+    /** Interpolation values for the i18n message `common:errors.importValidation.<code>` */
+    params?: Record<string, string>;
 }
