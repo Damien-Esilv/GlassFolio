@@ -34,7 +34,8 @@ describe('exportService - objectsToCSV', () => {
     const items = [
       { id: '1', label: '=1+1', note: '+SUM(A1:A10)' },
       { id: '2', label: '-100_payload', note: '@EXCEL' },
-      { id: '3', label: '\tTAB_INJECT', note: '\rCARRIAGE_RETURN' }
+      { id: '3', label: '\tTAB_INJECT', note: '\rCARRIAGE_RETURN' },
+      { id: '4', label: '%PERCENT_INJECT', note: '|PIPE_INJECT' }
     ];
     const csv = objectsToCSV(items);
 
@@ -44,6 +45,8 @@ describe('exportService - objectsToCSV', () => {
     expect(csv).toContain("'@EXCEL");
     expect(csv).toContain("'\tTAB_INJECT");
     expect(csv).toContain("'\rCARRIAGE_RETURN");
+    expect(csv).toContain("'%PERCENT_INJECT");
+    expect(csv).toContain("'|PIPE_INJECT");
   });
 
   it('preserves numeric types without prefixing single quotes', () => {
