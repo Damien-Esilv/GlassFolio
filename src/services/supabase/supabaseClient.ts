@@ -24,6 +24,14 @@ export interface SupabaseAuthSession {
         user_metadata?: {
             name?: string;
             avatar_url?: string;
+            glassfolio_signup_state?: string;
+            new_email?: string;
+            locale?: string;
+        };
+        app_metadata?: {
+            provider?: string;
+            /** Stamped server-side once the vault header exists (migration 0003). */
+            glassfolio_signup_state?: string;
         };
     };
 }
@@ -43,6 +51,55 @@ export interface SupabaseVaultRecordRow {
     created_at: string;
     updated_at: string;
 }
+
+export type SupabaseMfaFactorType = 'totp' | 'webauthn' | 'phone';
+export interface SupabaseMfaFactor {
+    id: string;
+    factor_type: SupabaseMfaFactorType;
+    status: 'verified' | 'unverified';
+    friendly_name?: string;
+}
+
+export interface SupabaseMfaChallenge { id: string; }
+
+/** WebAuthn options as JSON: binary fields are base64url strings (Supabase passkeys, experimental). */
+export interface PasskeyCeremonyOptions {
+    challenge_id: string;
+    options: Record<string, unknown>;
+}
+
+export interface SupabasePasskey {
+    id: string;
+    friendly_name?: string;
+    created_at: string;
+    last_used_at?: string;
+}
+
+export type AuthenticatorAssuranceLevel = 'aal1' | 'aal2';
+
+export interface SessionAssurance {
+    aal: AuthenticatorAssuranceLevel;
+    /** Authentication methods of the session, most recent first (JWT `amr` claim). */
+    amr: Array<{ method: string; timestamp: number }>;
+}
+
+/**
+ * Reads the assurance claims of a Supabase access token. The token is not verified here:
+ * the server enforces them (RLS), the client only uses them to decide which step to show.
+ */
+export const getSessionAssurance = (accessToken: string): SessionAssurance => {
+    try {
+        const payload = accessToken.split('.')[1] ?? '';
+        const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
+        const claims = JSON.parse(json) as { aal?: string; amr?: Array<{ method: string; timestamp: number }> };
+        return {
+            aal: claims.aal === 'aal2' ? 'aal2' : 'aal1',
+            amr: Array.isArray(claims.amr) ? claims.amr : [],
+        };
+    } catch {
+        return { aal: 'aal1', amr: [] };
+    }
+};
 
 const getEnvVar = (key: string): string | undefined => {
     const metaEnv = typeof import.meta !== 'undefined'
@@ -97,7 +154,9 @@ export interface SupabaseUserData {
     app_metadata?: {
         provider?: string;
         providers?: string[];
+        glassfolio_signup_state?: string;
     };
+    factors?: SupabaseMfaFactor[];
 }
 
 const createHeaders = (config: SupabaseConfig, accessToken?: string): Record<string, string> => {
@@ -109,6 +168,19 @@ const createHeaders = (config: SupabaseConfig, accessToken?: string): Record<str
         headers['Authorization'] = `Bearer ${accessToken}`;
     }
     return headers;
+};
+
+const passkeyRequest = async <T>(path: string, init: RequestInit, accessToken?: string): Promise<T> => {
+    const config = getSupabaseConfig();
+    if (!config) throw new Error('Supabase is not configured.');
+    const res = await fetch(`${config.url}/auth/v1${path}`, { ...init, headers: createHeaders(config, accessToken) });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!res.ok) {
+        const code = (data as { error_code?: string }).error_code;
+        throw new Error(code || (data as { msg?: string; message?: string }).msg || (data as { message?: string }).message || `Passkey request failed (HTTP ${res.status}).`);
+    }
+    return data as T;
 };
 
 export const supabaseClient = {
@@ -128,7 +200,7 @@ export const supabaseClient = {
             email,
             password,
             // `locale` selects the language of branded auth emails (supabase/templates).
-            data: { name, locale: options?.locale },
+            data: { name, locale: options?.locale, glassfolio_signup_state: 'pending' },
         };
         if (options?.captchaToken) {
             body.gotrue_meta_security = { captcha_token: options.captchaToken };
@@ -313,7 +385,7 @@ export const supabaseClient = {
     /** Verifies an email link (`token_hash` from the branded confirmation email). */
     async verifyTokenHash(
         tokenHash: string,
-        type: 'signup' | 'email_change' | 'recovery' = 'signup'
+        type: 'signup' | 'email_change' | 'recovery' | 'magiclink' | 'invite' | 'email' = 'signup'
     ): Promise<SupabaseAuthSession> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
@@ -330,8 +402,8 @@ export const supabaseClient = {
         }
 
         return {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            accessToken: data.access_token || '',
+            refreshToken: data.refresh_token || '',
             expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
             user: data.user,
         };
@@ -364,7 +436,7 @@ export const supabaseClient = {
 
     async updateUser(
         accessToken: string,
-        attributes: { email?: string; password?: string; data?: Record<string, unknown> }
+        attributes: { email?: string; password?: string; nonce?: string; data?: Record<string, unknown> }
     ): Promise<SupabaseUserData> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
@@ -459,7 +531,8 @@ export const supabaseClient = {
         const config = getSupabaseConfig();
         if (!config) return;
 
-        const endpoint = `${config.url}/auth/v1/logout`;
+        // `local` ends this session only; GoTrue's default (`global`) would sign out every device.
+        const endpoint = `${config.url}/auth/v1/logout?scope=local`;
         try {
             await fetch(endpoint, {
                 method: 'POST',
@@ -467,6 +540,100 @@ export const supabaseClient = {
             });
         } catch {
             // Best effort sign out
+        }
+    },
+
+    /** GoTrue has no factor listing route: factors come with the user object (`GET /user`). */
+    async listMfaFactors(accessToken: string, options?: { includeUnverified?: boolean }): Promise<SupabaseMfaFactor[]> {
+        const user = await this.getUser(accessToken);
+        const factors = user.factors ?? [];
+        return options?.includeUnverified ? factors : factors.filter(factor => factor.status === 'verified');
+    },
+
+    async enrollMfaFactor(accessToken: string, factorType: SupabaseMfaFactorType, friendlyName?: string): Promise<Record<string, unknown>> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+        const res = await fetch(`${config.url}/auth/v1/factors`, { method: 'POST', headers: createHeaders(config, accessToken), body: JSON.stringify({ factor_type: factorType, friendly_name: friendlyName }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || data.message || 'Unable to enroll MFA factor.');
+        return data as Record<string, unknown>;
+    },
+
+    async challengeMfaFactor(accessToken: string, factorId: string): Promise<SupabaseMfaChallenge> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+        const res = await fetch(`${config.url}/auth/v1/factors/${encodeURIComponent(factorId)}/challenge`, { method: 'POST', headers: createHeaders(config, accessToken), body: '{}' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || data.message || 'Unable to challenge MFA factor.');
+        return data as SupabaseMfaChallenge;
+    },
+
+    async verifyMfaFactor(accessToken: string, factorId: string, challengeId: string, code: string): Promise<SupabaseAuthSession> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+        const res = await fetch(`${config.url}/auth/v1/factors/${encodeURIComponent(factorId)}/verify`, { method: 'POST', headers: createHeaders(config, accessToken), body: JSON.stringify({ challenge_id: challengeId, code }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || data.message || 'MFA verification failed.');
+        return { accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + (data.expires_in || 3600) * 1000, user: data.user };
+    },
+
+    async unenrollMfaFactor(accessToken: string, factorId: string): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+        const res = await fetch(`${config.url}/auth/v1/factors/${encodeURIComponent(factorId)}`, { method: 'DELETE', headers: createHeaders(config, accessToken) });
+        if (!res.ok) throw new Error('Unable to remove MFA factor.');
+    },
+
+    // ── Passkeys (GoTrue /passkeys, experimental) ─────────────────────────────
+
+    async startPasskeyRegistration(accessToken: string): Promise<PasskeyCeremonyOptions> {
+        return passkeyRequest<PasskeyCeremonyOptions>('/passkeys/registration/options', { method: 'POST', body: '{}' }, accessToken);
+    },
+
+    async verifyPasskeyRegistration(accessToken: string, challengeId: string, credential: Record<string, unknown>): Promise<SupabasePasskey> {
+        return passkeyRequest<SupabasePasskey>('/passkeys/registration/verify', {
+            method: 'POST',
+            body: JSON.stringify({ challenge_id: challengeId, credential }),
+        }, accessToken);
+    },
+
+    async startPasskeyAuthentication(): Promise<PasskeyCeremonyOptions> {
+        return passkeyRequest<PasskeyCeremonyOptions>('/passkeys/authentication/options', { method: 'POST', body: '{}' });
+    },
+
+    async verifyPasskeyAuthentication(challengeId: string, credential: Record<string, unknown>): Promise<SupabaseAuthSession> {
+        const data = await passkeyRequest<{ access_token: string; refresh_token: string; expires_in?: number; user: SupabaseAuthSession['user'] }>(
+            '/passkeys/authentication/verify',
+            { method: 'POST', body: JSON.stringify({ challenge_id: challengeId, credential }) }
+        );
+        return {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+            user: data.user,
+        };
+    },
+
+    async listPasskeys(accessToken: string): Promise<SupabasePasskey[]> {
+        const data = await passkeyRequest<SupabasePasskey[] | { passkeys?: SupabasePasskey[] }>('/passkeys', { method: 'GET' }, accessToken);
+        return Array.isArray(data) ? data : data.passkeys ?? [];
+    },
+
+    async deletePasskey(accessToken: string, passkeyId: string): Promise<void> {
+        await passkeyRequest<unknown>(`/passkeys/${encodeURIComponent(passkeyId)}`, { method: 'DELETE' }, accessToken);
+    },
+
+    async notifySecurityEvent(accessToken: string, action: 'passkey_added' | 'passkey_removed', passkeyName: string): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) return;
+        try {
+            await fetch(`${config.url}/functions/v1/security-notify`, {
+                method: 'POST',
+                headers: createHeaders(config, accessToken),
+                body: JSON.stringify({ action, passkeyName }),
+            });
+        } catch {
+            // Best-effort notification, does not block security operations
         }
     },
 
@@ -482,7 +649,8 @@ export const supabaseClient = {
             headers: createHeaders(config, accessToken),
         });
 
-        if (!res.ok) return null;
+        // Fail loudly: callers must never mistake an unreachable vault for a missing one.
+        if (!res.ok) throw new Error(`Unable to read the vault header (HTTP ${res.status}).`);
         const rows = (await res.json()) as SupabaseVaultHeaderRow[];
         return rows[0] || null;
     },
@@ -524,7 +692,7 @@ export const supabaseClient = {
             headers: createHeaders(config, accessToken),
         });
 
-        if (!res.ok) return [];
+        if (!res.ok) throw new Error(`Unable to read vault records (HTTP ${res.status}).`);
         return (await res.json()) as SupabaseVaultRecordRow[];
     },
 
@@ -566,25 +734,14 @@ export const supabaseClient = {
         });
     },
 
-    async clearAllVaultRecords(accessToken: string): Promise<void> {
-        const config = getSupabaseConfig();
-        if (!config) return;
-
-        const headers = createHeaders(config, accessToken);
-        await Promise.all([
-            fetch(`${config.url}/rest/v1/vault_headers?user_id=not.is.null`, { method: 'DELETE', headers }),
-            fetch(`${config.url}/rest/v1/vault_records?user_id=not.is.null`, { method: 'DELETE', headers }),
-        ]);
-    },
-
+    /**
+     * Deletes the account server-side. The RPC removes the vault rows itself, after checking the
+     * session's assurance level and a recent authentication, so nothing is deleted beforehand.
+     */
     async deleteOwnAccount(accessToken: string): Promise<void> {
         const config = getSupabaseConfig();
-        if (!config) return;
+        if (!config) throw new Error('Supabase is not configured.');
 
-        // 1. Delete vault records & headers
-        await this.clearAllVaultRecords(accessToken).catch(() => {});
-
-        // 2. Call Postgres RPC delete_own_account
         const endpoint = `${config.url}/rest/v1/rpc/delete_own_account`;
         const res = await fetch(endpoint, {
             method: 'POST',
@@ -592,9 +749,9 @@ export const supabaseClient = {
             body: JSON.stringify({}),
         });
 
-        if (!res.ok && res.status !== 404) {
-            const err = await res.text().catch(() => '');
-            console.warn('[Supabase] delete_own_account RPC response:', res.status, err);
+        if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as { message?: string };
+            throw new Error(data.message || `Account deletion failed (HTTP ${res.status}).`);
         }
     },
 };

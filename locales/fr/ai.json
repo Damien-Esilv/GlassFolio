@@ -140,7 +140,11 @@
       "model": "Nom du modèle",
       "modelPlaceholder": "Entrez l'identifiant exact de votre modèle...",
       "modelHelp": "Indiquez l'identifiant exact du modèle souhaité chez votre fournisseur.",
-      "modelRequiredNotice": "Identifiant de modèle obligatoire. Aucun modèle par défaut n'est appliqué afin d'éviter les versions obsolètes."
+      "modelRequiredNotice": "Identifiant de modèle obligatoire. Aucun modèle par défaut n'est appliqué afin d'éviter les versions obsolètes.",
+      "testConnection": "Tester la connexion",
+      "testing": "Test en cours...",
+      "success": "Connexion réussie ! La clé API est valide.",
+      "failure": "Échec de connexion. Veuillez vérifier votre clé API."
     },
     "security": {
       "title": "Garde-fous & Mode d'Autorisation",

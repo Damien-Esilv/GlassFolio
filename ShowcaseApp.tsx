@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
-import { buildAppDestinationUrl } from './src/config/deployment';
+import { buildAppDestinationUrl, getAppUrl } from './src/config/deployment';
 import './src/i18n';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
@@ -17,12 +17,25 @@ const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const isAppRoute = location.pathname === '/login' || location.pathname === '/signup' || location.pathname.startsWith('/auth/');
+    const isAppRoute =
+      location.pathname === '/login' ||
+      location.pathname === '/signup' ||
+      location.pathname === '/forgot-password' ||
+      location.pathname === '/reset-password' ||
+      location.pathname.startsWith('/auth/');
     const targetPath = isAppRoute
       ? `${location.pathname}${location.search}${location.hash}`
       : '/';
+
+    const appUrl = getAppUrl();
+    if (!appUrl) {
+      // In local development or standalone mode without an app domain configured,
+      // prevent infinite reload loop by remaining in place.
+      return;
+    }
+
     const destination = buildAppDestinationUrl(targetPath);
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && destination && destination !== window.location.href) {
       window.location.assign(destination);
     }
   }, [location.pathname, location.search, location.hash]);
@@ -55,6 +68,8 @@ export const ShowcaseApp: React.FC = () => {
             <Route path="/login" element={<AppRedirectHandler />} />
             <Route path="/signup" element={<AppRedirectHandler />} />
             <Route path="/auth/confirm" element={<AppRedirectHandler />} />
+            <Route path="/forgot-password" element={<AppRedirectHandler />} />
+            <Route path="/reset-password" element={<AppRedirectHandler />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

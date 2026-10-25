@@ -13,7 +13,8 @@
 import { delay } from '../db';
 import { appStorage } from '../storage/appStorage';
 import { EncryptedStorageProvider } from '../storage/EncryptedStorageProvider';
-import { isGlassFolioKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
+import { isVaultScopedKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
+import { SyncedBackingStorageProvider } from '../storage/SyncedBackingStorageProvider';
 import {
     createKdfParams,
     deriveMasterKeys,
@@ -214,6 +215,7 @@ export class VaultService {
                 'glassfolio_alert_rules',
                 'glassfolio_goals',
                 'glassfolio_accounts',
+                'glassfolio_institutes',
                 'glassfolio_unified_transactions',
                 'glassfolio_import_batches',
                 'glassfolio_asset_positions',
@@ -338,7 +340,9 @@ export class VaultService {
             throw new InvalidVaultCredentialsError();
         }
 
-        const passkeyKek = await derivePasskeyKek(prfSecret, header.kdf.salt);
+        // Each slot has its own salt so it survives password changes (which renew kdf.salt).
+        const slotSalt = toBase64(randomBytes(SALT_BYTES));
+        const passkeyKek = await derivePasskeyKek(prfSecret, slotSalt);
         const wrappedPasskey = await wrapDek(extractableDek, passkeyKek);
 
         const existingPasskeys = header.wrappedKeys.passkeys || [];
@@ -350,7 +354,7 @@ export class VaultService {
                 credentialId,
                 label,
                 createdAt: new Date().toISOString(),
-                salt: header.kdf.salt,
+                salt: slotSalt,
             },
         ];
 
@@ -396,6 +400,54 @@ export class VaultService {
             return { authKey: new Uint8Array(32) };
         } catch {
             throw new InvalidVaultCredentialsError();
+        }
+    }
+
+    /** Passkeys able to unlock the vault. Read from the plaintext header, so available while locked. */
+    public listPasskeySlots(): Array<{ credentialId: string; label: string }> {
+        try {
+            return (this.getVaultHeader()?.wrappedKeys?.passkeys || []).map(p => ({ credentialId: p.credentialId, label: p.label }));
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Checks if a passkey PRF keyslot is registered in the vault header.
+     */
+    public hasPasskeySlot(credentialId?: string): boolean {
+        try {
+            const header = this.getVaultHeader();
+            const passkeys = header?.wrappedKeys?.passkeys;
+            if (!passkeys || passkeys.length === 0) return false;
+            if (credentialId) {
+                return passkeys.some(p => p.credentialId === credentialId);
+            }
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Removes a passkey PRF keyslot from the vault header.
+     */
+    public removePasskeyPrf(credentialId: string): void {
+        try {
+            const header = this.getVaultHeader();
+            if (!header || !header.wrappedKeys?.passkeys) return;
+            const updatedPasskeys = header.wrappedKeys.passkeys.filter(p => p.credentialId !== credentialId);
+            const updatedHeader: VaultHeader = {
+                ...header,
+                wrappedKeys: {
+                    ...header.wrappedKeys,
+                    passkeys: updatedPasskeys,
+                },
+                updatedAt: new Date().toISOString(),
+            };
+            appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+        } catch {
+            // no-op if header missing or corrupted
         }
     }
 
@@ -661,7 +713,10 @@ export class VaultService {
         await delay(400);
         const header = this.getVaultHeader();
         if (!header) return err(new ValidationError('Vault is not initialized.'));
-        if (!header.wrappedKeys.recovery && !header.recoverySlot) {
+        // `recovery: null` means it was revoked (e.g. by a DEK rotation): never fall back to the
+        // legacy alias, which would still wrap the previous key.
+        const recoveryEntry = header.wrappedKeys.recovery === undefined ? header.recoverySlot : header.wrappedKeys.recovery;
+        if (!recoveryEntry) {
             return err(new ValidationError('No recovery key slot configured on this vault.'));
         }
 
@@ -671,7 +726,6 @@ export class VaultService {
         }
 
         try {
-            const recoveryEntry = header.wrappedKeys.recovery || header.recoverySlot!;
             const recoverySalt = recoveryEntry.salt || header.kdf.salt;
             const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
             wipe(recoveryBytes);
@@ -771,18 +825,24 @@ export class VaultService {
         // 4. Wrap new DEK with current password KEK
         const newWrappedPassword = await wrapDek(newExtractableDek, derived.kek);
 
-        // 5. Update header
+        // 5. Update header. Every other slot still wraps the previous DEK: the recovery key must be
+        //    regenerated and passkeys re-enrolled.
+        const passwordEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: newWrappedPassword,
+            createdAt: new Date().toISOString(),
+            salt: header.kdf.salt,
+        };
         const updatedHeader: VaultHeader = {
             ...header,
             wrappedKeys: {
                 ...header.wrappedKeys,
-                password: {
-                    alg: 'AES-KW',
-                    wrapped: newWrappedPassword,
-                    createdAt: new Date().toISOString(),
-                },
-                recovery: null, // Recovery key must be regenerated after full DEK rotation
+                password: passwordEntry,
+                recovery: null,
+                passkeys: [],
             },
+            passwordSlot: passwordEntry,
+            recoverySlot: null,
             updatedAt: new Date().toISOString(),
             dekCreatedAt: new Date().toISOString(),
         };
@@ -801,8 +861,9 @@ export class VaultService {
     }
 
     /**
-     * Escape hatch: completely wipes the vault header and all GlassFolio records.
+     * Escape hatch: wipes this device's vault header and encrypted records.
      * Returns to uninitialized state so demo accounts or fresh setup can proceed.
+     * In cloud mode the server-side vault is left untouched.
      */
     public async resetVault(): Promise<void> {
         await delay(300);
@@ -814,11 +875,10 @@ export class VaultService {
         }
 
         const backing = appStorage.getBacking();
-        const allKeys = backing.keys();
-        for (const key of allKeys) {
-            if (isGlassFolioKey(key) || key === VAULT_HEADER_KEY) {
-                backing.removeItem(key);
-            }
+        if (backing instanceof SyncedBackingStorageProvider) {
+            backing.removeVaultKeys(isVaultScopedKey);
+        } else {
+            backing.keys().filter(isVaultScopedKey).forEach(key => backing.removeItem(key));
         }
 
         this.setStatus('uninitialized');

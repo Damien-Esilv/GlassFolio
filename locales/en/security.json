@@ -26,7 +26,8 @@
         "invalidCredentials": "The master password or recovery key is incorrect.",
         "lockVault": "Lock Vault",
         "vaultStatusUnlocked": "Vault Unlocked (AES-256-GCM)",
-        "vaultStatusLocked": "Vault Locked"
+        "vaultStatusLocked": "Vault Locked",
+        "resetFailed": "The vault could not be reset. Please try again."
     },
     "header": {
         "lockVaultTooltip": "Lock encrypted vault immediately"
@@ -85,7 +86,9 @@
         "disableConfirmTitle": "Disable Two-Factor Authentication?",
         "disableConfirmMessage": "Are you sure you want to disable 2FA? Your account will only be protected by your master password.",
         "confirmDisable": "Yes, Disable 2FA",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "challengeSubtitleNoBackup": "Enter the 6-digit code from your authenticator app.",
+        "inputLabelNoBackup": "Security code"
     },
     "passkeys": {
         "title": "WebAuthn Passkeys",
@@ -102,7 +105,30 @@
         "authError": "Passkey authentication failed",
         "managedByGoogleBadge": "Managed by Google Account",
         "managedByGoogleTitle": "Biometric passkeys managed by Google",
-        "managedByGoogleDesc": "Your biometric passkeys (Touch ID, Face ID, Windows Hello) and trusted devices are managed and protected directly by your Google account."
+        "managedByGoogleDesc": "Your biometric passkeys (Touch ID, Face ID, Windows Hello) and trusted devices are managed and protected directly by your Google account.",
+        "challengeSubtitle": "Confirm it is you with one of your passkeys.",
+        "unlocksVaultBadge": "Unlocks your vault",
+        "signInOnlyBadge": "Sign-in only (vault asks for your password)",
+        "addConfirmTitle": "Add a passkey",
+        "addConfirmDescription": "Confirm your identity: your password also wraps the vault key for this passkey.",
+        "registeredWithoutPrf": "Passkey added. This authenticator cannot unlock the vault, so your password will still be asked after signing in."
+    },
+    "stepUp": {
+        "title": "Security Verification",
+        "description": "Please confirm your identity before proceeding with this sensitive operation.",
+        "passwordLabel": "Master Password",
+        "passwordPlaceholder": "Enter your master password",
+        "totpLabel": "Two-Factor Code",
+        "totpPlaceholder": "6-digit code",
+        "usePasskeyButton": "Verify with Passkey",
+        "passkeyVerified": "Passkey verified successfully",
+        "confirmButton": "Confirm & Proceed",
+        "cancelButton": "Cancel",
+        "invalidPassword": "Invalid master password",
+        "invalidTotp": "Invalid two-factor code",
+        "recentSignInRequired": "For your security, sign out and sign in again with Google, then retry within 10 minutes.",
+        "recentSignInOk": "You signed in recently with Google: confirm to continue.",
+        "passkeyRequired": "You will confirm with one of your passkeys."
     },
     "totpVerifyModal": {
         "title": "Two-Factor Verification Required",

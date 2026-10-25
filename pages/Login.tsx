@@ -6,31 +6,27 @@ import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert, ArrowLeft, Key
 import { useTranslation } from 'react-i18next';
 import { authService } from '../src/services/security/authService';
 import { vaultService } from '../src/services/security/vaultService';
-import { passkeyService, isPasskeySupported } from '../src/services/security/passkeyService';
-import { userRepository } from '../src/services/repositories';
+import { isPasskeySupported } from '../src/services/security/passkeyService';
 import { getDeploymentMode, isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl } from '../src/config/deployment';
 import { useDemoAccess } from '../src/hooks/useDemoAccess';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
-import { AuthResult } from '../src/services/security/authTypes';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
-   const { login, unlockLocalVault, user } = useAuth();
+   const { login, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
-   const [recoveryKey, setRecoveryKey] = useState('');
-   const [localUnlockMode, setLocalUnlockMode] = useState<'password' | 'recovery'>('password');
    const [passkeySupported, setPasskeySupported] = useState(false);
    const [error, setError] = useState('');
    const [isLoading, setIsLoading] = useState(false);
+   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
    const [lockoutSeconds, setLockoutSeconds] = useState(() => authService.getLockoutRemainingSeconds());
-   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
    const antiBotRef = useRef<AntiBotShieldHandle | null>(null);
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
@@ -45,6 +41,23 @@ const Login: React.FC = () => {
          navigate(from, { replace: true });
       }
    }, [user, navigate, from]);
+
+   // Verified account whose vault was never finalized: finish the sign-up (no secret in router state).
+   useEffect(() => {
+      if (pendingSignupCompletion) {
+         navigate('/signup', { state: { resume: true } });
+      }
+   }, [pendingSignupCompletion, navigate]);
+
+   const handleEnterVerificationCode = async () => {
+      setError('');
+      try {
+         await authService.resendEmailVerification?.(email);
+      } catch {
+         // The page still lets the user ask for a new code.
+      }
+      navigate('/signup', { state: { verify: true } });
+   };
 
    useEffect(() => {
       if (lockoutSeconds <= 0) return;
@@ -62,6 +75,7 @@ const Login: React.FC = () => {
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
+      setEmailNotConfirmed(false);
 
       const remaining = authService.getLockoutRemainingSeconds();
       if (remaining > 0) {
@@ -72,17 +86,9 @@ const Login: React.FC = () => {
 
       setIsLoading(true);
       try {
+         // Navigation happens once AuthContext sets the user, i.e. after any pending second factor.
          if (isLocal) {
-            if (localUnlockMode === 'recovery') {
-               await vaultService.unlockWithRecoveryKey(recoveryKey.trim());
-               const localUser = await userRepository.getUser();
-               if (!localUser) {
-                  await authService.unlockLocalVault('password');
-               }
-            } else {
-               await unlockLocalVault(password);
-            }
-            navigate(from, { replace: true });
+            await unlockLocalVault(password);
          } else {
             // Anti-bot check in cloud mode
             if (antiBotRef.current) {
@@ -95,17 +101,14 @@ const Login: React.FC = () => {
             }
 
             const payload = antiBotRef.current?.getPayload();
-            const loginRes = await login(email, password, { captchaToken: payload?.captchaToken });
-            if (loginRes.requiresTwoFactor) {
-               setShowTwoFactorModal(true);
-               setIsLoading(false);
-               return;
-            }
-            navigate(from, { replace: true });
+            await login(email, password, { captchaToken: payload?.captchaToken });
          }
       } catch (err: unknown) {
          const currentLockout = authService.getLockoutRemainingSeconds();
-         if (currentLockout > 0) {
+         if (err instanceof Error && err.name === 'EmailNotConfirmedError') {
+            setEmailNotConfirmed(true);
+            setError(t('auth:verification.emailNotConfirmed'));
+         } else if (currentLockout > 0) {
             setLockoutSeconds(currentLockout);
             setError(t('auth:login.accountLocked', { seconds: currentLockout }));
          } else {
@@ -117,13 +120,12 @@ const Login: React.FC = () => {
       }
    };
 
-   const handlePasskeyUnlock = async () => {
+   // Local: PRF unlock of this device's vault. Cloud: Supabase passkey sign-in (+ PRF unlock).
+   const handlePasskeySignIn = async () => {
       setError('');
       setIsLoading(true);
       try {
-         await passkeyService.authenticate();
-         await unlockLocalVault(password || 'password');
-         navigate(from, { replace: true });
+         await signInWithPasskey();
       } catch (err: unknown) {
          setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
       } finally {
@@ -235,6 +237,12 @@ const Login: React.FC = () => {
                </div>
             )}
 
+            {emailNotConfirmed && (
+               <Button type="button" variant="secondary" className="w-full mb-4" onClick={handleEnterVerificationCode}>
+                  {t('auth:verification.enterCodeButton')}
+               </Button>
+            )}
+
             {lockoutSeconds > 0 && (
                <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-center gap-2 text-warning text-xs">
                   <ShieldAlert size={16} className="shrink-0" />
@@ -244,7 +252,6 @@ const Login: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
                {isLocal ? (
-                  localUnlockMode === 'password' ? (
                      <div>
                         <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.masterPasswordLabel')}</label>
                         <div className="relative">
@@ -259,22 +266,6 @@ const Login: React.FC = () => {
                            />
                         </div>
                      </div>
-                  ) : (
-                     <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.recoveryKeyLabel')}</label>
-                        <div className="relative">
-                           <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
-                           <input
-                              type="text"
-                              required
-                              value={recoveryKey}
-                              onChange={(e) => setRecoveryKey(e.target.value)}
-                              className="w-full bg-subtle border border-subtle text-primary text-xs font-mono uppercase rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
-                              placeholder={t('auth:login.recoveryKeyPlaceholder')}
-                           />
-                        </div>
-                     </div>
-                  )
                ) : (
                   <>
                      <div>
@@ -316,34 +307,31 @@ const Login: React.FC = () => {
                </Button>
             </form>
 
-            <AntiBotShield ref={antiBotRef} />
+            {!isLocal && <AntiBotShield ref={antiBotRef} />}
 
             {isLocal && (
                <div className="mt-3 text-center">
-                  <button
-                     type="button"
-                     onClick={() => {
-                        setError('');
-                        setLocalUnlockMode(localUnlockMode === 'password' ? 'recovery' : 'password');
-                     }}
+                  {/* The recovery key resets the master password and is rotated at the same time. */}
+                  <Link
+                     to="/reset-password?mode=recover"
                      className="text-xs text-brand hover:text-brand/80 transition-colors inline-flex items-center gap-1.5"
                   >
                      <KeyRound size={13} />
-                     {localUnlockMode === 'password' ? t('auth:login.useRecoveryKey') : t('auth:login.usePassword')}
-                  </button>
+                     {t('auth:login.useRecoveryKey')}
+                  </Link>
                </div>
             )}
 
             <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
-               {isLocal && passkeySupported && (
+               {passkeySupported && (!isLocal || vaultService.hasPasskeySlot()) && (
                   <button
                      type="button"
-                     onClick={handlePasskeyUnlock}
+                     onClick={handlePasskeySignIn}
                      disabled={isLoading}
                      className="w-full flex items-center justify-center gap-2.5 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium shadow-sm"
                   >
                      <Fingerprint size={18} className="text-brand" />
-                     {t('auth:login.unlockWithPasskey')}
+                     {isLocal ? t('auth:login.unlockWithPasskey') : t('auth:login.signInWithPasskey')}
                   </button>
                )}
 
@@ -409,14 +397,13 @@ const Login: React.FC = () => {
             </div>
          </div>
 
-         {showTwoFactorModal && (
+         {pendingSecondFactor && (
             <TwoFactorChallengeModal
-               isOpen={showTwoFactorModal}
-               onSuccess={() => {
-                  setShowTwoFactorModal(false);
-                  navigate(from, { replace: true });
+               isOpen
+               methods={pendingSecondFactor}
+               onCancel={() => {
+                  void cancelSecondFactor();
                }}
-               onCancel={() => setShowTwoFactorModal(false)}
             />
          )}
       </div>

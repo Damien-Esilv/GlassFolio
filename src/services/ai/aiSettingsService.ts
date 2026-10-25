@@ -114,6 +114,74 @@ class AISettingsService {
       return false;
     }
   }
+
+  /**
+   * Tests connection to a Cloud AI provider using the provided API Key and Model.
+   */
+  public async testCloudConnection(
+    provider: string,
+    apiKey: string,
+    model?: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    if (!apiKey || !apiKey.trim()) {
+      return { ok: false, error: 'API key is required' };
+    }
+
+    try {
+      let url = '';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (provider === 'groq') {
+        url = 'https://api.groq.com/openai/v1/models';
+        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+      } else if (provider === 'openai') {
+        url = 'https://api.openai.com/v1/models';
+        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+      } else if (provider === 'openrouter') {
+        url = 'https://openrouter.ai/api/v1/models';
+        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+      } else if (provider === 'gemini') {
+        url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`;
+      } else if (provider === 'anthropic') {
+        url = 'https://api.anthropic.com/v1/messages';
+        headers['x-api-key'] = apiKey.trim();
+        headers['anthropic-version'] = '2023-06-01';
+        headers['dangerously-allow-browser'] = 'true';
+      } else {
+        return { ok: true };
+      }
+
+      const res = await fetch(url, {
+        method: provider === 'anthropic' ? 'POST' : 'GET',
+        headers,
+        body: provider === 'anthropic' ? JSON.stringify({
+          model: model || 'claude-3-5-sonnet-20241022',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'test' }]
+        }) : undefined,
+      });
+
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          errMsg = errData?.error?.message || errData?.message || errMsg;
+        } catch {
+          // fallback
+        }
+        return { ok: false, error: errMsg };
+      }
+
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
 }
 
 export const aiSettingsService = new AISettingsService();

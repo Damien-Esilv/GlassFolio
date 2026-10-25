@@ -130,7 +130,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                     <h2 className="text-xl font-bold text-primary">
                         {mode === 'request'
                             ? t('auth:recovery.requestTitle', 'Reset your password')
-                            : t('auth:recovery.vaultRecoveryTitle', 'Zero-Knowledge Vault Recovery')}
+                            : t('auth:recovery.vaultRecoveryTitle', 'Vault Recovery')}
                     </h2>
                     <p className="text-xs sm:text-sm text-subtle">
                         {mode === 'request'
@@ -316,25 +316,25 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                 </div>
             </div>
 
-            {/* Zero-Knowledge Lost Key Warning Modal */}
+            {/* Lost Key Warning Modal */}
             {showLostKeyWarning && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
                     <div className="w-full max-w-md p-6 rounded-2xl bg-card border border-subtle shadow-2xl space-y-4">
                         <div className="flex items-center space-x-3 text-negative">
                             <ShieldAlert size={28} />
                             <h3 className="text-lg font-bold">
-                                {t('auth:recovery.zeroKnowledgeTitle', 'Zero-Knowledge Security Notice')}
+                                {t('auth:recovery.e2eeNoticeTitle', 'Security Notice')}
                             </h3>
                         </div>
                         <p className="text-xs text-subtle leading-relaxed">
                             {t(
-                                'auth:recovery.zeroKnowledgeExplanation',
+                                'auth:recovery.e2eeNoticeExplanation',
                                 'GlassFolio uses client-side End-to-End Encryption (AES-256-GCM). Neither GlassFolio nor Supabase possesses your decryption keys. Without your master password or emergency recovery key, encrypted data cannot be decrypted by anyone.'
                             )}
                         </p>
                         <p className="text-xs text-subtle leading-relaxed">
                             {t(
-                                'auth:recovery.zeroKnowledgeResetWarning',
+                                'auth:recovery.e2eeNoticeResetWarning',
                                 'If you cannot find your emergency recovery key, you must initialize a new empty vault.'
                             )}
                         </p>

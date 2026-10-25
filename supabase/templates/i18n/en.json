@@ -23,8 +23,21 @@
         "email_change": {
             "subject": "Confirm your new Glassfolio email address",
             "heading": "Confirm your new email address",
-            "body": "You asked to change your Glassfolio email address to {{ .NewEmail }}. Confirm this change with the button below.",
+            "body": "A request was received to update the email address of your Glassfolio account to {{ .NewEmail }}. Confirm this change with the button below to apply the update.",
             "cta": "Confirm new email"
+        },
+        "magic_link": {
+            "subject": "Your Glassfolio sign-in link",
+            "heading": "Sign in to Glassfolio",
+            "body": "Enter the code below in the app or click the button to sign in to your Glassfolio account.",
+            "codeLabel": "Your sign-in code",
+            "cta": "Sign in to Glassfolio"
+        },
+        "invite": {
+            "subject": "You've been invited to Glassfolio",
+            "heading": "Accept your invitation",
+            "body": "You've been invited to join Glassfolio. Click the button below to accept your invitation and set up your vault.",
+            "cta": "Accept invitation"
         },
         "reauthentication": {
             "subject": "{{ .Token }} is your Glassfolio verification code",
@@ -51,6 +64,16 @@
             "subject": "A sign-in method was removed from your Glassfolio account",
             "heading": "A sign-in method was removed",
             "body": "Your {{ .Provider }} identity is no longer linked to your Glassfolio account ({{ .Email }})."
+        },
+        "mfa_factor_enrolled": {
+            "subject": "A two-factor authentication method was added to your Glassfolio account",
+            "heading": "Two-factor authentication method added",
+            "body": "A new {{ .FactorType }} factor was just activated on your Glassfolio account ({{ .Email }})."
+        },
+        "mfa_factor_unenrolled": {
+            "subject": "A two-factor authentication method was removed from your Glassfolio account",
+            "heading": "Two-factor authentication method removed",
+            "body": "The {{ .FactorType }} factor was removed from your Glassfolio account ({{ .Email }})."
         }
     }
 }

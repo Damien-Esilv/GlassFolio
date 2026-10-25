@@ -25,5 +25,7 @@
     "assetAllocation": "Répartition du patrimoine",
     "total": "Total",
     "cash": "Cash",
-    "noPositionsYet": "Aucune position disponible"
+    "noPositionsYet": "Aucune position disponible",
+    "noAssetsAllocation": "Aucun actif à répartir",
+    "noAssetsAllocationHint": "Ajoutez des transactions ou des actifs pour visualiser votre répartition."
 }

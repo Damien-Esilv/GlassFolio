@@ -14,6 +14,7 @@ import { AIChatDrawer } from './ai/AIChatDrawer';
 import { ConsentBanner } from './ConsentBanner';
 import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
+import { UserAvatar } from './ui/UserAvatar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -535,13 +536,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="hidden sm:block text-right">
                   <p className="text-xs font-bold">{user.name}</p>
                 </div>
-                <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-card overflow-hidden">
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-white">{user.name.charAt(0)}</span>
-                  )}
-                </div>
+                <UserAvatar name={user.name} email={user.email} avatar={user.avatar} size="sm" />
                 <ChevronDown size={14} className={`text-tertiary transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 

@@ -24,6 +24,7 @@ import {
 import { useSnapshotImport, SNAPSHOT_MAPPABLE_FIELDS } from '../hooks/useSnapshotImport';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { formatCurrency, CURRENCY_SYMBOLS } from '../utils/currency';
 
 // ============================================================================
@@ -50,6 +51,7 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
     onComplete
 }) => {
     const { t } = useTranslation('transactions');
+    const { refreshData } = useData();
     const snapshot = useSnapshotImport(accountId, rawCSVText, headers, previewRows);
 
     return (
@@ -590,6 +592,7 @@ const SnapshotCompleteStep: React.FC<{
     onComplete: () => void;
 }> = ({ snapshot, onComplete }) => {
     const { t } = useTranslation('transactions');
+    const { refreshData } = useData();
 
     return (
         <div className="max-w-2xl mx-auto text-center space-y-8">
@@ -629,10 +632,13 @@ const SnapshotCompleteStep: React.FC<{
             )}
 
             <div className="flex justify-center gap-4">
-                <Link to="/">
+                <Link to="/" onClick={() => { refreshData(); }}>
                     <Button size="lg">{t('snapshotWizard.complete.goToDashboard')}</Button>
                 </Link>
-                <Button variant="secondary" size="lg" onClick={onComplete}>
+                <Button variant="secondary" size="lg" onClick={async () => {
+                    await refreshData();
+                    onComplete();
+                }}>
                     {t('snapshotWizard.complete.importMore')}
                 </Button>
             </div>

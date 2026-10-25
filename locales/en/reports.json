@@ -61,7 +61,10 @@
         "modeAll": "All",
         "modeRealized": "Realized P&L",
         "modeUnrealized": "Unrealized P&L",
-        "assetBreakdown": "Unrealized P&L by Asset"
+        "assetBreakdown": "Unrealized P&L by Asset",
+        "noTransactions": "No transactions recorded to compute P&L",
+        "noPositions": "No active positions in the portfolio",
+        "noPnLData": "No gains or losses for this period"
     },
     "feeAnalysis": {
         "title": "Fee Analysis & Optimization",

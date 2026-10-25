@@ -6,6 +6,7 @@ import { trackPublicEvent } from '../services/consentService';
 import { getAppTarget, getAppUrl, buildAppDestinationUrl } from '../config/deployment';
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
+import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 
 export interface UseDemoAccessResult {
   launchDemo: (targetPath?: string) => Promise<void>;
@@ -63,8 +64,7 @@ export function useDemoAccess(): UseDemoAccessResult {
         const isFromWelcome = location.pathname === '/welcome' || location.pathname === '/';
         navigate(targetPath, { replace: !isFromWelcome });
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
-        setDemoError(message);
+        setDemoError(mapAuthErrorMessage(err, t, 'auth:login.failedToLogin'));
       } finally {
         setIsLaunchingDemo(false);
       }

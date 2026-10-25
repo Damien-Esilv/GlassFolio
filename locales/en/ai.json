@@ -140,7 +140,11 @@
       "model": "Model Name",
       "modelPlaceholder": "Enter exact model identifier...",
       "modelHelp": "Specify the exact model identifier provided by your service.",
-      "modelRequiredNotice": "Model identifier is required. No default model is forced to avoid deprecated versions."
+      "modelRequiredNotice": "Model identifier is required. No default model is forced to avoid deprecated versions.",
+      "testConnection": "Test Connection",
+      "testing": "Testing...",
+      "success": "Connection successful! API key is valid.",
+      "failure": "Connection failed. Please check your API key."
     },
     "security": {
       "title": "Guardrails & Authorization Mode",

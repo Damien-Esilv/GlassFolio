@@ -319,24 +319,44 @@ const Progress: React.FC = () => {
                             <PlusCircle size={18} /> {t('progress:goals.createNew')}
                         </Button>
                     </div>
-                    <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {sortedGoals.map((goal, idx) => (
-                            <div
-                                key={goal.id}
-                                className="animate-scale-up"
-                                style={{
-                                    animationDelay: `${idx * STAGGER_DELAY_MS}ms`
-                                }}
-                            >
-                                <GoalCard
-                                    goal={goal}
-                                    onEdit={handleEdit}
-                                    onDelete={deleteGoal}
-                                    onPin={toggleGoalPin}
-                                />
+                    {sortedGoals.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-center bg-card rounded-2xl border border-dashed border-subtle">
+                            <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mb-4">
+                                <Target size={32} />
                             </div>
-                        ))}
-                    </div>
+                            <h3 className="text-lg font-bold text-primary mb-1">
+                                {t('progress:goals.noGoals')}
+                            </h3>
+                            <p className="text-sm text-tertiary max-w-md mb-6">
+                                {t('progress:goals.noGoalsDescription')}
+                            </p>
+                            <Button 
+                                onClick={handleAddNew} 
+                                className="flex items-center gap-2 bg-brand text-white hover:bg-brand/90"
+                            >
+                                <PlusCircle size={18} /> {t('progress:goals.createNew')}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {sortedGoals.map((goal, idx) => (
+                                <div
+                                    key={goal.id}
+                                    className="animate-scale-up"
+                                    style={{
+                                        animationDelay: `${idx * STAGGER_DELAY_MS}ms`
+                                    }}
+                                >
+                                    <GoalCard
+                                        goal={goal}
+                                        onEdit={handleEdit}
+                                        onDelete={deleteGoal}
+                                        onPin={toggleGoalPin}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

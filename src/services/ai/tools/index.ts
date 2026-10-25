@@ -11,6 +11,7 @@ import {
 } from './gamificationTools';
 import {
   getSecurityStatusTool,
+  listAuthMethodsTool,
   listVaultSecretsTool,
   lockVaultTool,
   rotateEncryptionKeyTool,
@@ -42,6 +43,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(suggestNextMilestoneTool);
   aiToolRegistry.registerTool(listQuestsTool);
   aiToolRegistry.registerTool(getSecurityStatusTool);
+  aiToolRegistry.registerTool(listAuthMethodsTool);
   aiToolRegistry.registerTool(listVaultSecretsTool);
   aiToolRegistry.registerTool(lockVaultTool);
   aiToolRegistry.registerTool(rotateEncryptionKeyTool);
@@ -70,6 +72,7 @@ export {
   suggestNextMilestoneTool,
   listQuestsTool,
   getSecurityStatusTool,
+  listAuthMethodsTool,
   listVaultSecretsTool,
   lockVaultTool,
   rotateEncryptionKeyTool,

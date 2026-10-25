@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { userRepository } from '../src/services/repositories';
 import { vaultService } from '../src/services/security/vaultService';
 import { authService } from '../src/services/security/authService';
-import { AuthResult } from '../src/services/security/authTypes';
+import { AuthResult, SecondFactorMethod } from '../src/services/security/authTypes';
 import { appStorage } from '../src/services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../src/services/storage/storageKeys';
 
@@ -12,9 +12,24 @@ import { consumeUrlBootstrapParams } from '../src/config/urlBootstrap';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, options?: { captchaToken?: string }) => Promise<AuthResult>;
-  signup: (email: string, password: string, name: string, options?: { captchaToken?: string }) => Promise<string | undefined>;
-  unlockLocalVault: (password: string) => Promise<void>;
-  setupLocalVault: (name: string, password: string) => Promise<string | undefined>;
+  signup: (email: string, password: string, name: string, options?: { captchaToken?: string }) => Promise<void>;
+  verifySignupOtp: (email: string, token: string) => Promise<string>;
+  /** Address confirmed through the emailed link: creates the vault with the in-memory password. */
+  continueSignupAfterLink: () => Promise<string>;
+  /** Cloud: a verified account whose vault was never finalized is waiting (after a sign-in). */
+  pendingSignupCompletion: boolean;
+  resumeSignup: () => Promise<string>;
+  cancelSignup: () => Promise<void>;
+  completeSignup: () => Promise<void>;
+  unlockLocalVault: (password: string) => Promise<AuthResult>;
+  /** Methods offered while a sign-in waits for its second factor; null when none is pending. */
+  pendingSecondFactor: SecondFactorMethod[] | null;
+  completeSecondFactor: (code: string) => Promise<void>;
+  completeSecondFactorWithPasskey: () => Promise<void>;
+  cancelSecondFactor: () => Promise<void>;
+  /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
+  signInWithPasskey: () => Promise<AuthResult>;
+  setupLocalVault: (name: string, password: string, options?: { overwriteExisting?: boolean }) => Promise<string | undefined>;
   logout: () => void;
   lockVault: () => Promise<void>;
   deleteAccount: (options?: { password?: string; confirmationText?: string }) => Promise<void>;
@@ -32,8 +47,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [vaultStatus, setVaultStatus] = useState<string>(() => vaultService.getStatus());
+  const [pendingSecondFactor, setPendingSecondFactor] = useState<SecondFactorMethod[] | null>(null);
+  const [pendingSignupCompletion, setPendingSignupCompletion] = useState(false);
+  // Local vault created but its recovery key not confirmed yet: the user is signed in on confirmation.
+  const pendingLocalUserRef = useRef<User | null>(null);
+  const userRef = useRef<User | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  /** Signs the user in only once nothing is pending (second factor, signup completion). */
+  const applyAuthResult = (res: AuthResult): AuthResult => {
+    if (res.requiresTwoFactor) {
+      setPendingSecondFactor(res.secondFactorMethods ?? ['totp']);
+    } else if (res.requiresSignupCompletion) {
+      setPendingSignupCompletion(true);
+    } else {
+      setPendingSecondFactor(null);
+      setUser(res.user);
+    }
+    return res;
+  };
 
   const loadUserFromRepo = async () => {
+    // A profile is only trusted from an unlocked vault: never a plaintext leftover (TGLA-101).
+    if (!vaultService.isUnlocked()) return;
     try {
       const storedUser = await userRepository.getUser();
       if (storedUser) {
@@ -59,7 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsub = vaultService.subscribeStatus((newStatus) => {
       setVaultStatus(newStatus);
-      if (newStatus === 'unlocked') {
+      // Unlocking only refreshes a user who is already signed in (lock screen). Signing in goes
+      // through the explicit flows below, which check the second factor first (TGLA-101).
+      if (newStatus === 'unlocked' && userRef.current) {
         loadUserFromRepo();
       }
     });
@@ -73,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (authService.handleOAuthCallback) {
           const oauthRes = await authService.handleOAuthCallback();
           if (oauthRes) {
-            setUser(oauthRes.user);
+            applyAuthResult(oauthRes);
             return;
           }
         }
@@ -99,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           await loadUserFromRepo();
-          if (bootstrappedTheme || bootstrappedLang) {
+          if ((bootstrappedTheme || bootstrappedLang) && vaultService.isUnlocked()) {
             const storedUser = await userRepository.getUser();
             if (storedUser) {
               storedUser.preferences = {
@@ -182,28 +222,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.preferences?.language]);
 
   const login = async (email: string, password: string, options?: { captchaToken?: string }): Promise<AuthResult> => {
-    const res = await authService.signIn(email, password, options);
-    if (!res.requiresTwoFactor) {
-      setUser(res.user);
+    return applyAuthResult(await authService.signIn(email, password, options));
+  };
+
+  const unlockLocalVault = async (password: string): Promise<AuthResult> => {
+    if (!authService.unlockLocalVault) throw new Error('Local vault unlock is unavailable.');
+    return applyAuthResult(await authService.unlockLocalVault(password));
+  };
+
+  const completeSecondFactor = async (code: string): Promise<void> => {
+    if (!authService.verifySecondFactor) throw new Error('Second factor verification is unavailable.');
+    applyAuthResult(await authService.verifySecondFactor(code));
+  };
+
+  const completeSecondFactorWithPasskey = async (): Promise<void> => {
+    if (!authService.verifySecondFactorWithPasskey) throw new Error('Passkey verification is unavailable.');
+    applyAuthResult(await authService.verifySecondFactorWithPasskey());
+  };
+
+  const signInWithPasskey = async (): Promise<AuthResult> => {
+    if (!authService.signInWithPasskey) throw new Error('Passkey sign-in is unavailable.');
+    return applyAuthResult(await authService.signInWithPasskey());
+  };
+
+  const cancelSecondFactor = async (): Promise<void> => {
+    setPendingSecondFactor(null);
+    await authService.cancelSecondFactor?.();
+  };
+
+  const setupLocalVault = async (name: string, password: string, options?: { overwriteExisting?: boolean }): Promise<string | undefined> => {
+    if (!authService.setupLocalVault) throw new Error('Local vault setup is unavailable.');
+    const res = await authService.setupLocalVault(name, password, options);
+    // Signed in only once the recovery key is confirmed (completeSignup).
+    pendingLocalUserRef.current = res.user;
+    return res.recoveryKey;
+  };
+
+  const signup = async (email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<void> => {
+    if (authService.beginSignupVerification) {
+      await authService.beginSignupVerification(email, password, name, options);
+      return;
     }
-    return res;
+    await authService.signUp(email, password, name, options);
   };
 
-  const unlockLocalVault = async (password: string): Promise<void> => {
-    const res = await authService.unlockLocalVault(password);
-    setUser(res.user);
+  const verifySignupOtp = async (email: string, token: string): Promise<string> => {
+    if (!authService.verifyEmailOtp || !authService.preparePendingSignup) throw new Error('Email verification is unavailable.');
+    await authService.verifyEmailOtp(email, token);
+    return authService.preparePendingSignup();
   };
 
-  const setupLocalVault = async (name: string, password: string): Promise<string | undefined> => {
-    const res = await authService.setupLocalVault(name, password);
-    setUser(res.user);
-    return res.recoveryKey;
+  const continueSignupAfterLink = async (): Promise<string> => {
+    if (!authService.continueSignupAfterLinkVerification) throw new Error('Email verification is unavailable.');
+    return authService.continueSignupAfterLinkVerification();
   };
 
-  const signup = async (email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<string | undefined> => {
-    const res = await authService.signUp(email, password, name, options);
+  const resumeSignup = async (): Promise<string> => {
+    if (!authService.preparePendingSignup) throw new Error('Account completion is unavailable.');
+    return authService.preparePendingSignup();
+  };
+
+  const cancelSignup = async (): Promise<void> => {
+    setPendingSignupCompletion(false);
+    await authService.cancelPendingSignup?.();
+  };
+
+  const completeSignup = async (): Promise<void> => {
+    if (pendingLocalUserRef.current) {
+      const localUser = pendingLocalUserRef.current;
+      pendingLocalUserRef.current = null;
+      setUser(localUser);
+      return;
+    }
+    if (!authService.completePendingSignup) throw new Error('Account completion is unavailable.');
+    const res = await authService.completePendingSignup();
+    setPendingSignupCompletion(false);
     setUser(res.user);
-    return res.recoveryKey;
   };
 
   const logout = () => {
@@ -244,6 +338,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // If preferences are partial, merge them
           if (data.preferences) {
             updatedUser.preferences = {
+              ...(user.preferences || {}),
+              ...data.preferences,
               theme: data.preferences.theme ?? user.preferences?.theme ?? 'night',
               currency: data.preferences.currency ?? user.preferences?.currency ?? 'USD',
               notifications: data.preferences.notifications ?? user.preferences?.notifications ?? true,
@@ -274,7 +370,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       login,
       signup,
+      verifySignupOtp,
+      continueSignupAfterLink,
+      pendingSignupCompletion,
+      resumeSignup,
+      cancelSignup,
+      completeSignup,
       unlockLocalVault,
+      pendingSecondFactor,
+      completeSecondFactor,
+      completeSecondFactorWithPasskey,
+      cancelSecondFactor,
+      signInWithPasskey,
       setupLocalVault,
       logout,
       lockVault,

@@ -18,15 +18,23 @@ import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../src/services/fis
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
 import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
+import { UserAvatar } from '../components/ui/UserAvatar';
 import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../src/constants/themeCatalog';
 import { authService } from '../src/services/security/authService';
+import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
     const { user, updateProfile, deleteAccount } = useAuth();
     const { resetAccountDataToZero } = useData();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>('profile');
+    const initialTab = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>(() => {
+        if (initialTab === 'fiscal' || initialTab === 'ai' || initialTab === 'security' || initialTab === 'preferences') {
+            return initialTab;
+        }
+        return 'profile';
+    });
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [hasExportedBeforeReset, setHasExportedBeforeReset] = useState(false);
     const [isExportingForReset, setIsExportingForReset] = useState(false);
@@ -35,27 +43,58 @@ const Settings: React.FC = () => {
 
     // Delete Account (GDPR) Modal State
     const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-    const [deletePassword, setDeletePassword] = useState('');
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
-    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [deleteError, setDeleteError] = useState('');
 
-    const handleDeleteAccount = async () => {
+    // Account deletion, email change and data exports all go through the step-up (stepUpService).
+    type SettingsStepUp = { kind: 'deleteAccount' } | { kind: 'changeEmail' } | { kind: 'export'; run: () => Promise<void> | void };
+    const [settingsStepUp, setSettingsStepUp] = useState<SettingsStepUp | null>(null);
+    const emailChangeDoneRef = useRef(false);
+    const protectExport = (run: () => Promise<void> | void) => () => setSettingsStepUp({ kind: 'export', run });
+
+    const handleRequestDeleteAccount = () => {
         setDeleteError('');
-        setIsDeletingAccount(true);
-        try {
-            await deleteAccount({
-                password: deletePassword,
-                confirmationText: deleteConfirmText,
-            });
-            setShowDeleteAccountModal(false);
-            window.location.assign('/login');
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : t('settings:dataAndBackup.invalidPasswordOrConfirm');
-            setDeleteError(msg);
-        } finally {
-            setIsDeletingAccount(false);
+        if (user?.authProvider === 'google') {
+            const confirm = deleteConfirmText.trim().toUpperCase();
+            if (confirm !== t('settings:dataAndBackup.confirmGooglePlaceholder').toUpperCase()) {
+                setDeleteError(t('settings:dataAndBackup.invalidPasswordOrConfirm'));
+                return;
+            }
         }
+        setSettingsStepUp({ kind: 'deleteAccount' });
+    };
+
+    const runSettingsStepUp = async ({ password }: { password: string }) => {
+        if (!settingsStepUp) return;
+        if (settingsStepUp.kind === 'export') {
+            await settingsStepUp.run();
+            return;
+        }
+        if (settingsStepUp.kind === 'changeEmail') {
+            if (authService.changeEmail) {
+                await authService.changeEmail(password, profileData.email);
+            }
+            emailChangeDoneRef.current = true;
+            await updateProfile({ name: profileData.name });
+            setSuccessMsg(t('settings:profile.emailChangeDispatched'));
+            setTimeout(() => setSuccessMsg(''), 5000);
+            return;
+        }
+        // The account is deleted server-side first (cloud); nothing local is wiped if that fails.
+        await deleteAccount({
+            password,
+            confirmationText: user?.authProvider === 'google' ? 'DELETE' : undefined,
+        });
+        setShowDeleteAccountModal(false);
+        window.location.assign('/login');
+    };
+
+    const closeSettingsStepUp = () => {
+        if (settingsStepUp?.kind === 'changeEmail' && !emailChangeDoneRef.current) {
+            setProfileData(prev => ({ ...prev, email: user?.email || '' }));
+        }
+        emailChangeDoneRef.current = false;
+        setSettingsStepUp(null);
     };
 
     // Check URL params for active tab
@@ -89,17 +128,13 @@ const Settings: React.FC = () => {
         fiscalShares: user?.preferences?.fiscalProfile?.fiscalShares || 1,
         otherTaxableIncome: user?.preferences?.fiscalProfile?.otherTaxableIncome || 0,
         hasOpted2OP: user?.preferences?.fiscalProfile?.hasOpted2OP || false,
-        taxResidenceCountries: user?.preferences?.fiscalProfile?.taxResidenceCountries || ['FR'],
-        department: user?.preferences?.fiscalProfile?.department || '75',
-        taxZone: user?.preferences?.fiscalProfile?.taxZone || 'zone_3',
+        taxResidenceCountries: user?.preferences?.fiscalProfile?.taxResidenceCountries || [],
+        department: user?.preferences?.fiscalProfile?.department || '',
+        taxZone: user?.preferences?.fiscalProfile?.taxZone || '',
     });
 
     const [isSaving, setIsSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
-    const [showEmailChangeModal, setShowEmailChangeModal] = useState(false);
-    const [emailChangePassword, setEmailChangePassword] = useState('');
-    const [emailChangeError, setEmailChangeError] = useState('');
-    const [isChangingEmail, setIsChangingEmail] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,27 +159,6 @@ const Settings: React.FC = () => {
         fileInputRef.current?.click();
     };
 
-    const handleConfirmEmailChange = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setEmailChangeError('');
-        setIsChangingEmail(true);
-        try {
-            if (authService.changeEmail) {
-                await authService.changeEmail(emailChangePassword, profileData.email);
-            }
-            setShowEmailChangeModal(false);
-            setEmailChangePassword('');
-            // Save remaining profile data (like name)
-            await updateProfile({ name: profileData.name });
-            setSuccessMsg(t('settings:profile.emailChangeDispatched', 'Confirmation emails sent to verify email change.'));
-            setTimeout(() => setSuccessMsg(''), 5000);
-        } catch (err: unknown) {
-            setEmailChangeError(err instanceof Error ? err.message : t('common:error'));
-        } finally {
-            setIsChangingEmail(false);
-        }
-    };
-
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         if (profileData.email !== user?.email) {
@@ -152,7 +166,7 @@ const Settings: React.FC = () => {
                 setProfileData(prev => ({ ...prev, email: user?.email || '' }));
                 return;
             }
-            setShowEmailChangeModal(true);
+            setSettingsStepUp({ kind: 'changeEmail' });
             return;
         }
 
@@ -245,21 +259,20 @@ const Settings: React.FC = () => {
         await updateProfile({ preferences: newPrefs });
     };
 
-    const saveFiscalProfile = async () => {
-        setIsSaving(true);
+    const handleFiscalChange = async (updates: Partial<typeof fiscalData>) => {
+        const newFiscal = { ...fiscalData, ...updates };
+        setFiscalData(newFiscal);
         try {
             await updateProfile({
                 preferences: {
                     ...prefData,
-                    fiscalProfile: fiscalData,
+                    fiscalProfile: newFiscal,
                 }
             });
-            setSuccessMsg(t('tax:settings.saved'));
-            setTimeout(() => setSuccessMsg(''), 3000);
+            setSuccessMsg(t('tax:settings.autoSaved'));
+            setTimeout(() => setSuccessMsg(''), 2500);
         } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSaving(false);
+            console.error('Failed to auto-save fiscal profile', err);
         }
     };
 
@@ -292,6 +305,13 @@ const Settings: React.FC = () => {
                         <span>{t('settings:tabs.preferences')}</span>
                     </button>
                     <button
+                        onClick={() => setActiveTab('security')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                    >
+                        <Lock size={18} className="shrink-0" />
+                        <span>{t('settings:tabs.security')}</span>
+                    </button>
+                    <button
                         onClick={() => setActiveTab('fiscal')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'fiscal' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
                     >
@@ -304,13 +324,6 @@ const Settings: React.FC = () => {
                     >
                         <Sparkles size={18} className="shrink-0" />
                         <span>{t('ai:settings.tab')}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('security')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
-                    >
-                        <Lock size={18} className="shrink-0" />
-                        <span>{t('settings:tabs.security')}</span>
                     </button>
                 </div>
 
@@ -325,15 +338,13 @@ const Settings: React.FC = () => {
 
                                 {/* Avatar Section */}
                                 <div className="flex items-center gap-6 mb-8 pb-8 border-b border-border">
-                                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-card bg-subtle shrink-0">
-                                        {user.avatar ? (
-                                            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-tertiary">
-                                                {user.name.charAt(0)}
-                                            </div>
-                                        )}
-                                    </div>
+                                    <UserAvatar
+                                        name={user?.name}
+                                        email={user?.email}
+                                        avatar={user?.avatar}
+                                        size="xl"
+                                        className="border-4 border-card"
+                                    />
 
                                     <div>
                                         <h3 className="text-lg font-medium text-primary">{t('settings:profile.profilePicture')}</h3>
@@ -721,15 +732,15 @@ const Settings: React.FC = () => {
                                                         type="range"
                                                         min={5}
                                                         max={50}
-                                                        step={5}
+                                                        step={1}
                                                         value={notifPrefs.dormantCashThresholdPercent}
                                                         onChange={(e) => handleDormantCashChange(parseInt(e.target.value, 10))}
                                                         className="w-full accent-primary bg-subtle h-2 rounded-lg cursor-pointer"
                                                     />
-                                                    <div className="flex justify-between text-[10px] text-tertiary mt-1">
-                                                        <span>5%</span>
-                                                        <span>25%</span>
-                                                        <span>50%</span>
+                                                    <div className="relative text-[10px] text-tertiary mt-1 h-3.5">
+                                                        <span className="absolute left-0">5%</span>
+                                                        <span className="absolute -translate-x-1/2" style={{ left: '44.44%' }}>25%</span>
+                                                        <span className="absolute right-0">50%</span>
                                                     </div>
                                                 </div>
 
@@ -750,140 +761,6 @@ const Settings: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* ── Fiscal Profile Card ── */}
-                            <div className={cardStyle}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Scale size={20} className="text-brand" />
-                                    <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
-                                </div>
-                                <p className="text-xs text-tertiary mb-6">{t('tax:settings.subtitle')}</p>
-
-                                <div className="space-y-5">
-                                    {/* Required fields banner */}
-                                    <div className="text-xs font-semibold text-brand uppercase tracking-wide">{t('tax:settings.requiredFields')}</div>
-
-                                    {/* Family Status */}
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium text-primary">{t('tax:settings.familyStatus')}</p>
-                                            <p className="text-xs text-tertiary">{t('tax:settings.familyStatusInfo')}</p>
-                                        </div>
-                                        <select
-                                            value={fiscalData.familyStatus}
-                                            onChange={e => setFiscalData(prev => ({ ...prev, familyStatus: e.target.value as any }))}
-                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[180px] focus:ring-primary focus:border-primary"
-                                        >
-                                            <option value="">—</option>
-                                            {(['single', 'married', 'pacs', 'divorced', 'widowed'] as const).map(s => (
-                                                <option key={s} value={s}>{t(`tax:settings.familyStatusOptions.${s}`)}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Fiscal Shares */}
-                                    <div className="flex items-center justify-between border-t border-border pt-5">
-                                        <div>
-                                            <p className="text-sm font-medium text-primary">{t('tax:settings.fiscalShares')}</p>
-                                            <p className="text-xs text-tertiary">{t('tax:settings.fiscalSharesInfo')}</p>
-                                        </div>
-                                        <select
-                                            value={fiscalData.fiscalShares}
-                                            onChange={e => setFiscalData(prev => ({ ...prev, fiscalShares: parseFloat(e.target.value) }))}
-                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[80px] focus:ring-primary focus:border-primary"
-                                        >
-                                            {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
-                                                <option key={n} value={n}>{n}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Optional fields separator */}
-                                    <div className="border-t border-border pt-5">
-                                        <div className="text-xs font-semibold text-secondary uppercase tracking-wide mb-4">{t('tax:settings.optionalFields')}</div>
-                                    </div>
-
-                                    {/* Other Taxable Income */}
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium text-primary">{t('tax:settings.otherIncome')}</p>
-                                            <p className="text-xs text-tertiary">{t('tax:settings.otherIncomeInfo')}</p>
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                step={1000}
-                                                value={fiscalData.otherTaxableIncome}
-                                                onChange={e => setFiscalData(prev => ({ ...prev, otherTaxableIncome: parseFloat(e.target.value) || 0 }))}
-                                                className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 pr-8 w-36 focus:ring-primary focus:border-primary text-right"
-                                            />
-                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">€</span>
-                                        </div>
-                                    </div>
-
-                                    {/* 2OP Option */}
-                                    <div className="flex items-center justify-between border-t border-border pt-5">
-                                        <div>
-                                            <p className="text-sm font-medium text-primary">{t('tax:settings.hasOpted2OP')}</p>
-                                            <p className="text-xs text-tertiary">{t('tax:settings.hasOpted2OPInfo')}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => setFiscalData(prev => ({ ...prev, hasOpted2OP: !prev.hasOpted2OP }))}
-                                            className={`w-12 h-6 rounded-full transition-colors relative ${fiscalData.hasOpted2OP ? 'bg-brand' : 'bg-black/20 dark:bg-white/20'}`}
-                                        >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${fiscalData.hasOpted2OP ? 'left-7' : 'left-1'}`} />
-                                        </button>
-                                    </div>
-
-                                    {/* French Department & Zone Selector */}
-                                    <div className="border-t border-border pt-5">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.department')}</p>
-                                                <p className="text-xs text-tertiary">{t('tax:settings.departmentInfo')}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    value={fiscalData.department}
-                                                    onChange={e => {
-                                                        const dept = e.target.value;
-                                                        const zone = getTaxZoneForDepartment(dept);
-                                                        setFiscalData(prev => ({ ...prev, department: dept, taxZone: zone }));
-                                                    }}
-                                                    className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[200px]"
-                                                >
-                                                    {FRENCH_DEPARTMENTS.map(d => (
-                                                        <option key={d.code} value={d.code}>
-                                                            {d.code} - {d.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <span className="px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-bold uppercase shrink-0">
-                                                    {fiscalData.taxZone?.replace('_', ' ') || 'ZONE 3'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Tax Residence Countries */}
-                                    <div className="border-t border-border pt-5">
-                                        <p className="text-sm font-medium text-primary mb-1">{t('tax:settings.taxResidence')}</p>
-                                        <p className="text-xs text-tertiary mb-3">{t('tax:settings.taxResidenceInfo')}</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {fiscalData.taxResidenceCountries.map(c => (
-                                                <span key={c} className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">{t(`tax:common.country.${c}`, { defaultValue: c })}</span>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-tertiary mt-2 italic">Multi-country support coming soon.</p>
-                                    </div>
-
-                                    {/* Save */}
-                                    <div className="flex justify-between items-center border-t border-border pt-5">
-                                        <span className="text-success text-sm font-medium">{successMsg}</span>
-                                        <Button onClick={saveFiscalProfile} isLoading={isSaving}>{t('common:buttons.save')}</Button>
-                                    </div>
-                                </div>
-                            </div>
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-2 flex items-center gap-2">
                                     <Database size={20} className="text-primary" />
@@ -895,7 +772,7 @@ const Settings: React.FC = () => {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <button
-                                        onClick={exportTransactionsCSV}
+                                        onClick={protectExport(exportTransactionsCSV)}
                                         className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
                                     >
                                         <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:scale-110 transition-transform">
@@ -908,7 +785,7 @@ const Settings: React.FC = () => {
                                     </button>
 
                                     <button
-                                        onClick={exportBackupJSON}
+                                        onClick={protectExport(exportBackupJSON)}
                                         className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
                                     >
                                         <div className="p-2 rounded-lg bg-brand/10 text-brand w-fit group-hover:scale-110 transition-transform">
@@ -921,7 +798,7 @@ const Settings: React.FC = () => {
                                     </button>
 
                                     <button
-                                        onClick={exportRGPDZip}
+                                        onClick={protectExport(exportRGPDZip)}
                                         className="p-4 rounded-xl border border-border bg-subtle hover:bg-card-hover text-left flex flex-col justify-between gap-3 transition-all group"
                                     >
                                         <div className="p-2 rounded-lg bg-positive-subtle text-positive w-fit group-hover:scale-110 transition-transform">
@@ -978,12 +855,13 @@ const Settings: React.FC = () => {
                                             {t('settings:dataAndBackup.reset')}
                                         </Button>
                                     ) : (
-                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                        <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
                                                 isLoading={isExportingForReset}
-                                                onClick={async () => {
+                                                className="w-full justify-center text-xs whitespace-nowrap"
+                                                onClick={protectExport(async () => {
                                                     setIsExportingForReset(true);
                                                     try {
                                                         await exportBackupJSON();
@@ -992,28 +870,19 @@ const Settings: React.FC = () => {
                                                     } finally {
                                                         setIsExportingForReset(false);
                                                     }
-                                                }}
+                                                })}
                                             >
-                                                <Download size={14} className="mr-1.5" />
+                                                <Download size={14} className="mr-1.5 shrink-0" />
                                                 {hasExportedBeforeReset
                                                     ? t('settings:dataAndBackup.backupsExportedReady')
                                                     : t('settings:dataAndBackup.exportAndUnlockReset')}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setShowResetConfirm(false);
-                                                    setHasExportedBeforeReset(false);
-                                                }}
-                                            >
-                                                {t('settings:dataAndBackup.cancel')}
                                             </Button>
                                             <Button
                                                 variant="danger"
                                                 size="sm"
                                                 disabled={!hasExportedBeforeReset || isResetting}
                                                 isLoading={isResetting}
+                                                className="w-full justify-center text-xs whitespace-nowrap"
                                                 onClick={async () => {
                                                     setIsResetting(true);
                                                     await resetAccountDataToZero();
@@ -1023,6 +892,17 @@ const Settings: React.FC = () => {
                                                 }}
                                             >
                                                 {t('settings:dataAndBackup.yesReset')}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="w-full justify-center text-xs"
+                                                onClick={() => {
+                                                    setShowResetConfirm(false);
+                                                    setHasExportedBeforeReset(false);
+                                                }}
+                                            >
+                                                {t('settings:dataAndBackup.cancel')}
                                             </Button>
                                         </div>
                                     )}
@@ -1057,7 +937,6 @@ const Settings: React.FC = () => {
                                     type="button"
                                     onClick={() => {
                                         setShowDeleteAccountModal(false);
-                                        setDeletePassword('');
                                         setDeleteConfirmText('');
                                         setDeleteError('');
                                     }}
@@ -1087,7 +966,7 @@ const Settings: React.FC = () => {
                                     </p>
                                     <button
                                         type="button"
-                                        onClick={exportRGPDZip}
+                                        onClick={protectExport(exportRGPDZip)}
                                         className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline font-medium"
                                     >
                                         <Download size={14} />
@@ -1117,18 +996,7 @@ const Settings: React.FC = () => {
                                             />
                                         </div>
                                     ) : (
-                                        <div>
-                                            <label className="block text-xs font-medium text-primary mb-1">
-                                                {t('settings:dataAndBackup.confirmPasswordLabel')}
-                                            </label>
-                                            <input
-                                                type="password"
-                                                value={deletePassword}
-                                                onChange={(e) => setDeletePassword(e.target.value)}
-                                                placeholder={t('settings:dataAndBackup.confirmPasswordPlaceholder')}
-                                                className="w-full px-3 py-2 text-sm bg-subtle text-primary border border-subtle rounded-xl focus:ring-1 focus:ring-negative focus:border-negative"
-                                            />
-                                        </div>
+                                        <p className="text-xs text-secondary">{t('security:stepUp.description')}</p>
                                     )}
                                 </div>
 
@@ -1139,7 +1007,6 @@ const Settings: React.FC = () => {
                                         size="sm"
                                         onClick={() => {
                                             setShowDeleteAccountModal(false);
-                                            setDeletePassword('');
                                             setDeleteConfirmText('');
                                             setDeleteError('');
                                         }}
@@ -1150,8 +1017,7 @@ const Settings: React.FC = () => {
                                         type="button"
                                         variant="danger"
                                         size="sm"
-                                        isLoading={isDeletingAccount}
-                                        onClick={handleDeleteAccount}
+                                        onClick={handleRequestDeleteAccount}
                                     >
                                         {t('settings:dataAndBackup.confirmDeleteButton')}
                                     </Button>
@@ -1161,25 +1027,100 @@ const Settings: React.FC = () => {
                         document.body
                     )}
 
+                    {/* ================= SECURITY & ACCESS TAB ================= */}
+                    {activeTab === 'security' && (
+                        <SecuritySettingsTab />
+                    )}
+
                     {/* ================= FISCAL TAB ================= */}
                     {activeTab === 'fiscal' && (
                         <div className="animate-fade-in">
                             <div className={cardStyle}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Scale size={20} className="text-brand" />
-                                    <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Scale size={20} className="text-brand" />
+                                        <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
+                                    </div>
+                                    {successMsg && (
+                                        <span className="text-success text-xs font-medium animate-fade-in flex items-center gap-1">
+                                            <Check size={14} />
+                                            {successMsg}
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-xs text-tertiary mb-6">{t('tax:settings.subtitle')}</p>
+
                                 <div className="space-y-5">
                                     <div className="text-xs font-semibold text-brand uppercase tracking-wide">{t('tax:settings.requiredFields')}</div>
-                                    <div className="flex items-center justify-between">
+
+                                    {/* 1. Tax Residence Country */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.taxResidence')}</p>
+                                            <p className="text-xs text-tertiary">{t('tax:settings.taxResidenceInfo')}</p>
+                                        </div>
+                                        <select
+                                            value={fiscalData.taxResidenceCountries[0] || ''}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const newCountries = val ? [val] : [];
+                                                handleFiscalChange({
+                                                    taxResidenceCountries: newCountries,
+                                                    department: val === 'FR' ? fiscalData.department : '',
+                                                    taxZone: val === 'FR' ? fiscalData.taxZone : '',
+                                                });
+                                            }}
+                                            className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[200px] focus:ring-primary focus:border-primary"
+                                        >
+                                            <option value="">{t('tax:settings.noneOrUnspecified')}</option>
+                                            <option value="FR">{t('tax:settings.france')}</option>
+                                        </select>
+                                    </div>
+
+                                    {/* 2. French Department & Zone Selector (Conditional on FR) */}
+                                    {fiscalData.taxResidenceCountries.includes('FR') && (
+                                        <div className="border-t border-border pt-5">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.department')}</p>
+                                                    <p className="text-xs text-tertiary">{t('tax:settings.departmentInfo')}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        value={fiscalData.department}
+                                                        onChange={e => {
+                                                            const dept = e.target.value;
+                                                            const zone = dept ? getTaxZoneForDepartment(dept) : '';
+                                                            handleFiscalChange({ department: dept, taxZone: zone });
+                                                        }}
+                                                        className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[200px]"
+                                                    >
+                                                        <option value="">{t('tax:settings.selectDepartment')}</option>
+                                                        {FRENCH_DEPARTMENTS.map(d => (
+                                                            <option key={d.code} value={d.code}>
+                                                                {d.code} - {d.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {fiscalData.taxZone && (
+                                                        <span className="px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-bold uppercase shrink-0">
+                                                            {fiscalData.taxZone.replace('_', ' ')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 3. Family Status */}
+                                    <div className="flex items-center justify-between border-t border-border pt-5">
                                         <div>
                                             <p className="text-sm font-medium text-primary">{t('tax:settings.familyStatus')}</p>
                                             <p className="text-xs text-tertiary">{t('tax:settings.familyStatusInfo')}</p>
                                         </div>
                                         <select
                                             value={fiscalData.familyStatus}
-                                            onChange={e => setFiscalData(prev => ({ ...prev, familyStatus: e.target.value as any }))}
+                                            onChange={e => handleFiscalChange({ familyStatus: e.target.value as any })}
                                             className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[180px] focus:ring-primary focus:border-primary"
                                         >
                                             <option value="">—</option>
@@ -1188,6 +1129,8 @@ const Settings: React.FC = () => {
                                             ))}
                                         </select>
                                     </div>
+
+                                    {/* 4. Fiscal Shares */}
                                     <div className="flex items-center justify-between border-t border-border pt-5">
                                         <div>
                                             <p className="text-sm font-medium text-primary">{t('tax:settings.fiscalShares')}</p>
@@ -1195,7 +1138,7 @@ const Settings: React.FC = () => {
                                         </div>
                                         <select
                                             value={fiscalData.fiscalShares}
-                                            onChange={e => setFiscalData(prev => ({ ...prev, fiscalShares: parseFloat(e.target.value) }))}
+                                            onChange={e => handleFiscalChange({ fiscalShares: parseFloat(e.target.value) })}
                                             className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 min-w-[80px] focus:ring-primary focus:border-primary"
                                         >
                                             {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
@@ -1203,9 +1146,13 @@ const Settings: React.FC = () => {
                                             ))}
                                         </select>
                                     </div>
+
+                                    {/* Optional fields separator */}
                                     <div className="border-t border-border pt-5">
                                         <div className="text-xs font-semibold text-secondary uppercase tracking-wide mb-4">{t('tax:settings.optionalFields')}</div>
                                     </div>
+
+                                    {/* 5. Other Taxable Income */}
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-primary">{t('tax:settings.otherIncome')}</p>
@@ -1217,67 +1164,25 @@ const Settings: React.FC = () => {
                                                 min={0}
                                                 step={1000}
                                                 value={fiscalData.otherTaxableIncome}
-                                                onChange={e => setFiscalData(prev => ({ ...prev, otherTaxableIncome: parseFloat(e.target.value) || 0 }))}
+                                                onChange={e => handleFiscalChange({ otherTaxableIncome: parseFloat(e.target.value) || 0 })}
                                                 className="bg-subtle border border-subtle text-primary text-sm rounded-lg p-2 pr-8 w-36 focus:ring-primary focus:border-primary text-right"
                                             />
                                             <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">€</span>
                                         </div>
                                     </div>
+
+                                    {/* 6. 2OP Option */}
                                     <div className="flex items-center justify-between border-t border-border pt-5">
                                         <div>
                                             <p className="text-sm font-medium text-primary">{t('tax:settings.hasOpted2OP')}</p>
                                             <p className="text-xs text-tertiary">{t('tax:settings.hasOpted2OPInfo')}</p>
                                         </div>
                                         <button
-                                            onClick={() => setFiscalData(prev => ({ ...prev, hasOpted2OP: !prev.hasOpted2OP }))}
+                                            onClick={() => handleFiscalChange({ hasOpted2OP: !fiscalData.hasOpted2OP })}
                                             className={`w-12 h-6 rounded-full transition-colors relative ${fiscalData.hasOpted2OP ? 'bg-brand' : 'bg-black/20 dark:bg-white/20'}`}
                                         >
                                             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${fiscalData.hasOpted2OP ? 'left-7' : 'left-1'}`} />
                                         </button>
-                                    </div>
-                                    {/* French Department & Zone Selector */}
-                                    <div className="border-t border-border pt-5">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-medium text-primary mb-0.5">{t('tax:settings.department')}</p>
-                                                <p className="text-xs text-tertiary">{t('tax:settings.departmentInfo')}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    value={fiscalData.department}
-                                                    onChange={e => {
-                                                        const dept = e.target.value;
-                                                        const zone = getTaxZoneForDepartment(dept);
-                                                        setFiscalData(prev => ({ ...prev, department: dept, taxZone: zone }));
-                                                    }}
-                                                    className="bg-subtle border border-border text-primary text-sm rounded-lg p-2 min-w-[200px]"
-                                                >
-                                                    {FRENCH_DEPARTMENTS.map(d => (
-                                                        <option key={d.code} value={d.code}>
-                                                            {d.code} - {d.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <span className="px-2.5 py-1 rounded-lg bg-brand/10 text-brand text-xs font-bold uppercase shrink-0">
-                                                    {fiscalData.taxZone?.replace('_', ' ') || 'ZONE 3'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-border pt-5">
-                                        <p className="text-sm font-medium text-primary mb-1">{t('tax:settings.taxResidence')}</p>
-                                        <p className="text-xs text-tertiary mb-3">{t('tax:settings.taxResidenceInfo')}</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {fiscalData.taxResidenceCountries.map(c => (
-                                                <span key={c} className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">{t(`tax:common.country.${c}`, { defaultValue: c })}</span>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-tertiary mt-2 italic">Multi-country support coming soon.</p>
-                                    </div>
-                                    <div className="flex justify-between items-center border-t border-border pt-5">
-                                        <span className="text-success text-sm font-medium">{successMsg}</span>
-                                        <Button onClick={saveFiscalProfile} isLoading={isSaving}>{t('common:buttons.save')}</Button>
                                     </div>
                                 </div>
                             </div>
@@ -1289,11 +1194,6 @@ const Settings: React.FC = () => {
                         <div className="space-y-6 animate-fade-in">
                             <AISettingsTab />
                         </div>
-                    )}
-
-                    {/* ================= SECURITY & ACCESS TAB ================= */}
-                    {activeTab === 'security' && (
-                        <SecuritySettingsTab />
                     )}
                 </div>
             </div>
@@ -1308,87 +1208,21 @@ const Settings: React.FC = () => {
                 }}
             />
 
-            {/* Secure Email Change Re-Authentication Modal */}
-            {showEmailChangeModal && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
-                    <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowEmailChangeModal(false);
-                                setProfileData(prev => ({ ...prev, email: user?.email || '' }));
-                            }}
-                            className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
-                                <Lock size={24} />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-primary">
-                                    {t('settings:profile.confirmEmailChangeTitle', 'Confirm Email Change')}
-                                </h2>
-                                <p className="text-xs text-secondary mt-0.5">
-                                    {t('settings:profile.confirmEmailChangeSubtitle', 'Enter your current master password to verify this security request.')}
-                                </p>
-                            </div>
-                        </div>
-
-                        {emailChangeError && (
-                            <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
-                                <AlertCircle size={16} className="shrink-0" />
-                                <span>{emailChangeError}</span>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleConfirmEmailChange} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
-                                    {t('settings:profile.currentPassword', 'Current Master Password')}
-                                </label>
-                                <input
-                                    type="password"
-                                    required
-                                    autoFocus
-                                    value={emailChangePassword}
-                                    onChange={(e) => setEmailChangePassword(e.target.value)}
-                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
-                                    placeholder="••••••••"
-                                />
-                            </div>
-
-                            <p className="text-xs text-tertiary">
-                                {t('settings:profile.emailConfirmationNotice', 'A confirmation email will be sent to both your current address and your new address.')}
-                            </p>
-
-                            <div className="flex gap-2 pt-2">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={() => {
-                                        setShowEmailChangeModal(false);
-                                        setProfileData(prev => ({ ...prev, email: user?.email || '' }));
-                                    }}
-                                    className="flex-1"
-                                >
-                                    {t('common:buttons.cancel')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    isLoading={isChangingEmail}
-                                    className="flex-1"
-                                >
-                                    {t('common:buttons.confirm')}
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>,
-                document.body
-            )}
+            <StepUpAuthModal
+                isOpen={settingsStepUp !== null}
+                title={settingsStepUp?.kind === 'deleteAccount'
+                    ? t('settings:dataAndBackup.deleteModalTitle')
+                    : settingsStepUp?.kind === 'changeEmail'
+                        ? t('settings:profile.confirmEmailChangeTitle')
+                        : t('security:stepUp.title')}
+                description={settingsStepUp?.kind === 'changeEmail'
+                    ? t('settings:profile.emailConfirmationNotice')
+                    : t('security:stepUp.description')}
+                actionLabel={settingsStepUp?.kind === 'deleteAccount' ? t('settings:dataAndBackup.confirmDeleteButton') : undefined}
+                actionVariant={settingsStepUp?.kind === 'deleteAccount' ? 'danger' : 'primary'}
+                onVerified={runSettingsStepUp}
+                onClose={closeSettingsStepUp}
+            />
         </div>
     );
 };

@@ -7,6 +7,7 @@ import { TwoFactorChallengeModal } from '../../../../components/security/TwoFact
 import { EmailVerificationGate } from '../../../../components/security/EmailVerificationGate';
 import { PasswordResetFlow } from '../../../../pages/PasswordResetFlow';
 import { authService } from '../../../../src/services/security/authService';
+import { AuthProvider } from '../../../../context/AuthContext';
 
 // Initialize i18n for testing
 import '../../../../src/i18n';
@@ -37,10 +38,8 @@ describe('Epic 20 — Auth & Security UI Components', () => {
     });
 
     describe('TwoFactorChallengeModal', () => {
-        it('renders modal when isOpen is true and submits code to authService', async () => {
-            const onSuccess = vi.fn();
+        it('submits the code through AuthContext and only offers the account methods', async () => {
             const onCancel = vi.fn();
-
             vi.spyOn(authService, 'verifySecondFactor').mockResolvedValue({
                 user: {
                     id: 'usr-123',
@@ -62,25 +61,34 @@ describe('Epic 20 — Auth & Security UI Components', () => {
             });
 
             render(
-                <TwoFactorChallengeModal
-                    isOpen={true}
-                    onSuccess={onSuccess}
-                    onCancel={onCancel}
-                />
+                <AuthProvider>
+                    <TwoFactorChallengeModal isOpen={true} methods={['totp']} onCancel={onCancel} />
+                </AuthProvider>
             );
 
             expect(screen.getByText(/Two-Factor Authentication|Authentification à deux facteurs/i)).toBeDefined();
+            expect(screen.queryByRole('button', { name: /passkey/i })).toBeNull();
 
-            const input = screen.getByPlaceholderText(/000000/i);
+            const input = screen.getByRole('textbox');
             fireEvent.change(input, { target: { value: '123456' } });
-
-            const submitBtn = screen.getByRole('button', { name: /Verify/i });
-            fireEvent.click(submitBtn);
+            fireEvent.click(screen.getByRole('button', { name: /Verify|Vérifier/i }));
 
             await waitFor(() => {
                 expect(authService.verifySecondFactor).toHaveBeenCalledWith('123456');
-                expect(onSuccess).toHaveBeenCalled();
             });
+
+            fireEvent.click(screen.getByRole('button', { name: /Cancel|Annuler/i }));
+            expect(onCancel).toHaveBeenCalled();
+        });
+
+        it('shows only the passkey action for passkey-only accounts', () => {
+            render(
+                <AuthProvider>
+                    <TwoFactorChallengeModal isOpen={true} methods={['passkey']} onCancel={vi.fn()} />
+                </AuthProvider>
+            );
+            expect(screen.queryByRole('textbox')).toBeNull();
+            expect(screen.getByRole('button', { name: /passkey/i })).toBeDefined();
         });
     });
 

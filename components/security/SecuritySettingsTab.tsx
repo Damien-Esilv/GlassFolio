@@ -5,7 +5,8 @@ import { Lock, ShieldCheck, ShieldAlert, KeyRound, AlertCircle, CheckCircle2, X,
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { vaultService } from '../../src/services/security/vaultService';
-import { totpService } from '../../src/services/security/totpService';
+import { authService } from '../../src/services/security/authService';
+import { mfaService } from '../../src/services/security/mfaService';
 import { isErr } from '../../src/types/result';
 import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { PasskeyManager } from './PasskeyManager';
@@ -13,6 +14,7 @@ import { SecretsVaultPanel } from './SecretsVaultPanel';
 import { SessionAuditPanel } from './SessionAuditPanel';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { RecoveryKeyDialog } from './RecoveryKeyDialog';
+import { StepUpAuthModal } from './StepUpAuthModal';
 import { evaluatePassword } from '../../src/services/security/passwordValidator';
 
 export const SecuritySettingsTab: React.FC = () => {
@@ -25,7 +27,6 @@ export const SecuritySettingsTab: React.FC = () => {
 
     // Change Password Modal state
     const [showChangePassword, setShowChangePassword] = useState(false);
-    const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
@@ -33,18 +34,18 @@ export const SecuritySettingsTab: React.FC = () => {
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
     // Regenerate Recovery Key state
-    const [showRegenerateModal, setShowRegenerateModal] = useState(false);
-    const [regeneratePassword, setRegeneratePassword] = useState('');
-    const [isRegenerating, setIsRegenerating] = useState(false);
     const [regenerateError, setRegenerateError] = useState('');
     const [newRecoveryKey, setNewRecoveryKey] = useState<string | null>(null);
+
+    // Every sensitive action below goes through the same step-up (stepUpService).
+    const [stepUpAction, setStepUpAction] = useState<'enableTotp' | 'disableTotp' | 'changePassword' | 'regenerateRecoveryKey' | null>(null);
 
     const isGoogleAccount = user?.authProvider === 'google';
 
     const refreshTotpStatus = async () => {
         try {
-            const enabled = await totpService.isEnabled();
-            setIsTotpEnabled(enabled);
+            const status = await mfaService.getTotpStatus();
+            setIsTotpEnabled(status.enabled);
         } catch (err) {
             console.error('Failed to get 2FA status', err);
         }
@@ -54,18 +55,7 @@ export const SecuritySettingsTab: React.FC = () => {
         refreshTotpStatus();
     }, []);
 
-    const handleDisableTotp = async () => {
-        if (window.confirm(t('security:totp.disableConfirmMessage'))) {
-            try {
-                await totpService.disable();
-                await refreshTotpStatus();
-            } catch (err) {
-                console.error('Failed to disable 2FA', err);
-            }
-        }
-    };
-
-    const handleChangeMasterPassword = async (e: React.FormEvent) => {
+    const handleChangeMasterPassword = (e: React.FormEvent) => {
         e.preventDefault();
         setPasswordError('');
         setPasswordSuccess('');
@@ -80,45 +70,57 @@ export const SecuritySettingsTab: React.FC = () => {
             setPasswordError(t('auth:signup.passwordWeakError'));
             return;
         }
+        setStepUpAction('changePassword');
+    };
 
-        setIsSubmittingPassword(true);
-        try {
-            await vaultService.changePassword(oldPassword, newPassword);
-            setPasswordSuccess(t('security:vaultSection.passwordChangedSuccess'));
-            setOldPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-            setTimeout(() => {
-                setShowChangePassword(false);
-                setPasswordSuccess('');
-            }, 2500);
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials');
-            setPasswordError(msg);
-        } finally {
-            setIsSubmittingPassword(false);
+    const runVerifiedAction = async ({ password }: { password: string }) => {
+        switch (stepUpAction) {
+            case 'enableTotp':
+                setShowEnrollDialog(true);
+                return;
+            case 'disableTotp':
+                await mfaService.disableTotp();
+                await refreshTotpStatus();
+                return;
+            case 'changePassword':
+                setIsSubmittingPassword(true);
+                try {
+                    // Cloud: Supabase first, vault re-wrap second, rolled back together on failure.
+                    if (!authService.changePassword) throw new Error(t('security:lockScreen.invalidCredentials'));
+                    await authService.changePassword(password, newPassword);
+                    setPasswordSuccess(t('security:vaultSection.passwordChangedSuccess'));
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setTimeout(() => {
+                        setShowChangePassword(false);
+                        setPasswordSuccess('');
+                    }, 2500);
+                } catch (err: unknown) {
+                    setPasswordError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+                } finally {
+                    setIsSubmittingPassword(false);
+                }
+                return;
+            case 'regenerateRecoveryKey': {
+                setRegenerateError('');
+                const res = await vaultService.regenerateRecoveryKey(password);
+                if (isErr(res)) {
+                    setRegenerateError(res.error.message);
+                    return;
+                }
+                setNewRecoveryKey(res.value.recoveryKey);
+                return;
+            }
+            default:
+                return;
         }
     };
 
-    const handleRegenerateRecoveryKey = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setRegenerateError('');
-        setIsRegenerating(true);
-
-        try {
-            const res = await vaultService.regenerateRecoveryKey(regeneratePassword);
-            if (isErr(res)) {
-                setRegenerateError(res.error.message);
-                return;
-            }
-            setShowRegenerateModal(false);
-            setRegeneratePassword('');
-            setNewRecoveryKey(res.value.recoveryKey);
-        } catch (err: unknown) {
-            setRegenerateError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
-        } finally {
-            setIsRegenerating(false);
-        }
+    const stepUpCopy = {
+        enableTotp: { title: t('security:totp.title'), description: t('security:stepUp.description'), action: t('security:totp.enableButton') },
+        disableTotp: { title: t('security:totp.disableConfirmTitle'), description: t('security:totp.disableConfirmMessage'), action: t('security:totp.confirmDisable') },
+        changePassword: { title: t('security:vaultSection.changeMasterPassword'), description: t('security:stepUp.description'), action: t('security:vaultSection.submitChange') },
+        regenerateRecoveryKey: { title: t('security:vaultSection.regenerateTitle'), description: t('security:vaultSection.regenerateSubtitle'), action: t('security:vaultSection.confirmRegenerate') },
     };
 
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border space-y-4";
@@ -170,7 +172,7 @@ export const SecuritySettingsTab: React.FC = () => {
                                     type="button"
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() => setShowRegenerateModal(true)}
+                                    onClick={() => setStepUpAction('regenerateRecoveryKey')}
                                     className="text-xs whitespace-nowrap w-full justify-center sm:justify-start"
                                 >
                                     <RefreshCw size={14} className="mr-1.5 shrink-0" />
@@ -244,7 +246,7 @@ export const SecuritySettingsTab: React.FC = () => {
                                 type="button"
                                 variant="danger"
                                 size="sm"
-                                onClick={handleDisableTotp}
+                                onClick={() => setStepUpAction('disableTotp')}
                                 className="text-xs whitespace-nowrap"
                             >
                                 {t('security:totp.disableButton')}
@@ -253,7 +255,7 @@ export const SecuritySettingsTab: React.FC = () => {
                             <Button
                                 type="button"
                                 size="sm"
-                                onClick={() => setShowEnrollDialog(true)}
+                                onClick={() => setStepUpAction('enableTotp')}
                                 className="text-xs whitespace-nowrap"
                             >
                                 <ShieldCheck size={14} className="mr-1.5" />
@@ -322,20 +324,6 @@ export const SecuritySettingsTab: React.FC = () => {
                         <form onSubmit={handleChangeMasterPassword} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-medium text-secondary mb-1">
-                                    {t('security:vaultSection.oldPassword')}
-                                </label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={oldPassword}
-                                    onChange={(e) => setOldPassword(e.target.value)}
-                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
-                                    placeholder="••••••••"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:vaultSection.newPassword')}
                                 </label>
                                 <input
@@ -396,76 +384,11 @@ export const SecuritySettingsTab: React.FC = () => {
                 }}
             />
 
-            {/* Regenerate Recovery Key Confirmation Modal */}
-            {showRegenerateModal && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
-                    <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
-                        <button
-                            type="button"
-                            onClick={() => setShowRegenerateModal(false)}
-                            className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center shrink-0">
-                                <RefreshCw size={24} />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-primary">
-                                    {t('security:vaultSection.regenerateTitle', 'Regenerate Emergency Recovery Key')}
-                                </h2>
-                                <p className="text-xs text-secondary mt-0.5">
-                                    {t('security:vaultSection.regenerateSubtitle', 'Confirm your master password to derive a fresh 256-bit recovery key.')}
-                                </p>
-                            </div>
-                        </div>
-
-                        {regenerateError && (
-                            <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
-                                <AlertCircle size={16} className="shrink-0" />
-                                <span>{regenerateError}</span>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleRegenerateRecoveryKey} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
-                                    {t('security:vaultSection.masterPasswordConfirm', 'Master Password')}
-                                </label>
-                                <input
-                                    type="password"
-                                    required
-                                    autoFocus
-                                    value={regeneratePassword}
-                                    onChange={(e) => setRegeneratePassword(e.target.value)}
-                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
-                                    placeholder="••••••••"
-                                />
-                            </div>
-
-                            <div className="flex gap-2 pt-2">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={() => setShowRegenerateModal(false)}
-                                    className="flex-1"
-                                >
-                                    {t('security:vaultSection.cancel')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    isLoading={isRegenerating}
-                                    className="flex-1"
-                                >
-                                    {t('security:vaultSection.confirmRegenerate', 'Regenerate')}
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>,
-                document.body
+            {regenerateError && (
+                <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{regenerateError}</span>
+                </div>
             )}
 
             {/* Display newly generated recovery key dialog */}
@@ -475,6 +398,16 @@ export const SecuritySettingsTab: React.FC = () => {
                     onConfirmed={() => setNewRecoveryKey(null)}
                 />
             )}
+
+            <StepUpAuthModal
+                isOpen={stepUpAction !== null}
+                title={stepUpAction ? stepUpCopy[stepUpAction].title : undefined}
+                description={stepUpAction ? stepUpCopy[stepUpAction].description : undefined}
+                actionLabel={stepUpAction ? stepUpCopy[stepUpAction].action : undefined}
+                actionVariant={stepUpAction === 'disableTotp' ? 'danger' : 'primary'}
+                onVerified={runVerifiedAction}
+                onClose={() => setStepUpAction(null)}
+            />
         </div>
     );
 };

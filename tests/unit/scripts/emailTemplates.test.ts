@@ -23,6 +23,10 @@ describe('Email template builder (Epic E25 — TGLA-084)', () => {
             if (fields.enabled) expect(payload[fields.enabled]).toBe(true);
         }
         expect(payload.mailer_otp_length).toBe(6);
+        expect(payload.mailer_secure_email_change_enabled).toBe(true);
+        expect(payload.passkey_enabled).toBe(true);
+        expect(payload.webauthn_rp_id).toBe('glassfolio.dev');
+        expect(payload.mfa_totp_enroll_enabled).toBe(true);
     });
 
     it('branches on .Data.locale for every language with English as fallback', () => {
@@ -38,6 +42,20 @@ describe('Email template builder (Epic E25 — TGLA-084)', () => {
         const html = payload.mailer_templates_confirmation_content as string;
         expect(html).toContain('{{ .Token }}');
         expect(html).toContain('{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup');
+    });
+
+    it('recovery and email_change templates route to auth/confirm with token_hash', () => {
+        const recoveryHtml = payload.mailer_templates_recovery_content as string;
+        expect(recoveryHtml).toContain('{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery');
+
+        const emailChangeHtml = payload.mailer_templates_email_change_content as string;
+        expect(emailChangeHtml).toContain('{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change');
+
+        const magicLinkHtml = payload.mailer_templates_magic_link_content as string;
+        expect(magicLinkHtml).toContain('{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink');
+
+        const inviteHtml = payload.mailer_templates_invite_content as string;
+        expect(inviteHtml).toContain('{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite');
     });
 
     it('notification emails never expose a code or action link', () => {

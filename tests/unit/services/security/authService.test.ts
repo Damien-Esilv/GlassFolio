@@ -6,6 +6,7 @@ import { vaultService } from '../../../../src/services/security/vaultService';
 import { userRepository } from '../../../../src/services/repositories';
 import { supabaseClient } from '../../../../src/services/supabase/supabaseClient';
 import type { User } from '../../../../src/types/domain';
+import { mockRemoteVault } from '../../helpers/remoteVault';
 
 describe('authService & Access Control Security (TGLA-047)', () => {
     let auth: LocalAuthProvider;
@@ -82,8 +83,12 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         await vaultService.lock();
         expect(vaultService.isUnlocked()).toBe(false);
 
-        const signupRes = await auth.signUp('tets@example.com', strongPassword, 'Tets Cloud');
-        expect(signupRes.user.email).toBe('tets@example.com');
+        // A real local vault is the only copy of its data: it is never silently replaced
+        await expect(auth.signUp('tets@example.com', strongPassword, 'Tets Cloud')).rejects.toThrow(/already exists/i);
+        expect(vaultService.isDemoVault()).toBe(false);
+
+        const replaced = await auth.setupLocalVault('Tets Again', strongPassword, { overwriteExisting: true });
+        expect(replaced.user.name).toBe('Tets Again');
         expect(vaultService.isUnlocked()).toBe(true);
     });
 
@@ -121,7 +126,12 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         await auth.setupLocalVault('Real Investor', strongPassword);
         expect(vaultService.isDemoVault()).toBe(false);
 
-        // 2. Demo sign in resets and creates a demo vault with isDemo = true
+        // 2. The demo never replaces a real local vault
+        await expect(auth.signIn('demo@glassfolio.com', 'password')).rejects.toThrow(/already exists/i);
+        expect(vaultService.isDemoVault()).toBe(false);
+
+        // 3. Without a real vault, demo sign in creates a demo vault with isDemo = true
+        await vaultService.resetVault();
         await auth.signIn('demo@glassfolio.com', 'password');
         expect(vaultService.isDemoVault()).toBe(true);
     });
@@ -143,6 +153,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         };
 
         vi.spyOn(supabaseClient, 'getUser').mockResolvedValue(mockSbUser);
+        mockRemoteVault();
 
         // Mock window.location.hash with OAuth tokens
         window.location.hash = '#access_token=mock-token-abc&expires_in=3600';
@@ -184,6 +195,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await vaultService.resetVault();
             await userRepository.clearUser();
             vi.restoreAllMocks();
+            mockRemoteVault();
         });
 
         it('rejects signup with weak password based on NIST policy', async () => {
@@ -199,6 +211,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
                 user: { id: 'sb-uuid-456', email: 'cloud@example.com', user_metadata: { name: 'Cloud User' } },
             };
             vi.spyOn(supabaseClient, 'signUp').mockResolvedValue(mockSession as any);
+            vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
 
             const result = await sbAuth.signUp('cloud@example.com', strongPassword, 'Cloud User');
             expect(result.user.email).toBe('cloud@example.com');
@@ -312,10 +325,10 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect((newAuth as any).supabaseSession).toEqual(validSession);
         });
 
-        it('removes expired session from localStorage on instantiation', () => {
+        it('removes an expired session that cannot be refreshed, keeps a refreshable one', () => {
             const expiredSession = {
                 accessToken: 'stored-token',
-                refreshToken: 'stored-ref',
+                refreshToken: '',
                 expiresAt: Date.now() - 60000,
                 user: { id: 'u-123' },
             };
@@ -324,6 +337,10 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             const newAuth = new SupabaseAuthProvider();
             expect((newAuth as any).supabaseSession).toBeNull();
             expect(localStorage.getItem('gf_sb_session')).toBeNull();
+
+            localStorage.setItem('gf_sb_session', JSON.stringify({ ...expiredSession, refreshToken: 'stored-ref' }));
+            const refreshable = new SupabaseAuthProvider();
+            expect((refreshable as any).supabaseSession?.refreshToken).toBe('stored-ref');
         });
 
         it('handles corrupted localStorage data silently in restoreSessionFromStorage', () => {
@@ -520,6 +537,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
             const resetSpy = vi.spyOn(vaultService, 'resetVault').mockResolvedValue();
             vi.spyOn(vaultService, 'setup').mockResolvedValue({ success: true, recoveryKey: 'key' } as any);
+            vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
 
             await sbAuth.signUp('init@example.com', 'ValidPass2026!#$', 'Init User');
             expect(resetSpy).toHaveBeenCalled();
@@ -550,17 +568,22 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await expect(sbAuth.changePassword('old', 'weak')).rejects.toThrow(/NIST/i);
 
             // Invalid current password
-            vi.spyOn(vaultService, 'changePassword').mockRejectedValue(new Error('Current password verification failed.'));
-            await expect(sbAuth.changePassword('wrong', 'Strong-Master-Key-2026!#')).rejects.toThrow(/password/i);
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(false);
+            await expect(sbAuth.changePassword('wrong', 'Strong-Master-Key-2026!#')).rejects.toThrow(/current password/i);
 
-            // Valid password change
-            vi.spyOn(vaultService, 'changePassword').mockResolvedValue(undefined);
+            // Valid password change: Supabase first, vault re-wrap second
+            vi.spyOn(vaultService, 'verifyPassword').mockResolvedValue(true);
+            const vaultChange = vi.spyOn(vaultService, 'changePassword').mockResolvedValue(undefined);
             const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
-
-            // Set session token
-            (sbAuth as any).supabaseSession = { accessToken: 'live-tok', user: { id: 'u-pw-1' } };
+            (sbAuth as any).supabaseSession = { accessToken: 'live-tok', expiresAt: Date.now() + 3600000, user: { id: 'u-pw-1' } };
             await sbAuth.changePassword('old-good', 'Strong-Master-Key-2026!#');
             expect(updateSpy).toHaveBeenCalledWith('live-tok', { password: 'Strong-Master-Key-2026!#' });
+            expect(updateSpy.mock.invocationCallOrder[0]).toBeLessThan(vaultChange.mock.invocationCallOrder[0]);
+
+            // A vault failure puts the old password back on Supabase
+            vaultChange.mockRejectedValueOnce(new Error('disk full'));
+            await expect(sbAuth.changePassword('old-good', 'Strong-Master-Key-2026!#')).rejects.toThrow('disk full');
+            expect(updateSpy).toHaveBeenLastCalledWith('live-tok', { password: 'old-good' });
         });
 
         it('handles changeEmail with validation and security restrictions', async () => {
@@ -596,7 +619,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
 
             // Successful email change initiation
             const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
-            (sbAuth as any).supabaseSession = { accessToken: 'tok-email', user: { id: 'u-em-1' } };
+            (sbAuth as any).supabaseSession = { accessToken: 'tok-email', expiresAt: Date.now() + 3600000, user: { id: 'u-em-1' } };
 
             await sbAuth.changeEmail('correct-pass', 'new@example.com');
             expect(updateSpy).toHaveBeenCalledWith('tok-email', { email: 'new@example.com' });
@@ -619,7 +642,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
                 value: { newRecoveryKey: 'NEW-ROTATED-KEY-1234' },
             } as any);
             const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
-            (sbAuth as any).supabaseSession = { accessToken: 'session-tok', user: { id: 'u-1' } };
+            (sbAuth as any).supabaseSession = { accessToken: 'session-tok', expiresAt: Date.now() + 3600000, user: { id: 'u-1' } };
 
             const res = await sbAuth.recoverPassword('good-key', 'Strong-Master-Key-2026!#');
             expect(res.newRecoveryKey).toBe('NEW-ROTATED-KEY-1234');
@@ -683,7 +706,9 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         it('exercises LocalAuthProvider implementation of new Epic 20 methods', async () => {
             const local = new LocalAuthProvider();
             await local.requestPasswordReset('local@example.com');
-            await local.resendEmailVerification();
+            // Local mode has no email channel: verification never pretends to succeed
+            await expect(local.resendEmailVerification()).rejects.toThrow(/not available in local mode/i);
+            await expect(local.verifyEmailTokenHash('any-hash')).rejects.toThrow(/not available in local mode/i);
 
             const dummyUser: User = {
                 id: 'loc-1',
@@ -696,8 +721,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             };
             await userRepository.saveUser(dummyUser);
 
-            const otpRes = await local.verifyEmailOtp('local@example.com', '123456');
-            expect(otpRes.user.emailVerified).toBe(true);
+            await expect(local.verifyEmailOtp('local@example.com', '123456')).rejects.toThrow(/not available in local mode/i);
 
             // changePassword weak
             await expect(local.changePassword('old', 'weak')).rejects.toThrow(/NIST/i);
@@ -740,7 +764,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
 
         it('handles deleteAccountPermanently for SupabaseAuthProvider (Email and Google OAuth)', async () => {
             const provider = new SupabaseAuthProvider();
-            (provider as any).supabaseSession = { accessToken: 'mock-access-token' };
+            (provider as any).supabaseSession = { accessToken: 'mock-access-token', expiresAt: Date.now() + 3600000, user: { id: 'cloud-u1' } };
             vi.spyOn(vaultService, 'resetVault').mockResolvedValue(undefined);
             const deleteRpcSpy = vi.spyOn(supabaseClient, 'deleteOwnAccount').mockResolvedValue(undefined);
 
@@ -780,8 +804,24 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await expect(provider.deleteAccountPermanently({ confirmationText: 'NON' })).rejects.toThrow(/Confirmation text must match/i);
 
             // 5. Google account with valid confirmation text (DELETE / SUPPRIMER)
+            (provider as any).supabaseSession = { accessToken: 'mock-access-token', expiresAt: Date.now() + 3600000, user: { id: 'cloud-g1' } };
             await provider.deleteAccountPermanently({ confirmationText: 'SUPPRIMER' });
             expect(await userRepository.getUser()).toBeNull();
+
+            // 6. A refused RPC (e.g. no recent sign-in) wipes nothing locally
+            await userRepository.saveUser({
+                id: 'cloud-g1',
+                email: 'google@example.com',
+                name: 'Google User',
+                authProvider: 'google',
+                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
+                xp: 0,
+                level: 1,
+            });
+            (provider as any).supabaseSession = { accessToken: 'mock-access-token', expiresAt: Date.now() + 3600000, user: { id: 'cloud-g1' } };
+            deleteRpcSpy.mockRejectedValueOnce(new Error('reauthentication_required'));
+            await expect(provider.deleteAccountPermanently({ confirmationText: 'DELETE' })).rejects.toThrow('reauthentication_required');
+            expect(await userRepository.getUser()).not.toBeNull();
         });
     });
 

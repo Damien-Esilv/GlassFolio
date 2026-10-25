@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Transaction, Position, Alert, AlertRule, AlertRuleMetric, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
 import { useAuth } from './AuthContext';
@@ -91,8 +91,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveCelebration(data);
   }, []);
 
+  const userRef = useRef(user);
+  userRef.current = user;
+
   const refreshData = useCallback(async () => {
-    if (!user) {
+    const currentUser = userRef.current;
+    if (!currentUser) {
       setTransactions([]);
       setPositions([]);
       setAlerts([]);
@@ -108,7 +112,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setIsLoading(true);
-      const baseCurr = user?.preferences?.currency || 'EUR';
+      const baseCurr = currentUser?.preferences?.currency || 'EUR';
       const [txs, pos, alrts, rules, gls, achData, grps, activeQuests, pinned] = await Promise.all([
         transactionService.getTransactions(),
         portfolioService.getPositions(),
@@ -135,8 +139,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const evalResult = await alertService.evaluateSmartAlerts({
         positions: pos,
         totalPortfolioValue,
-        taxZone: user?.preferences?.fiscalProfile?.taxZone,
-        preferences: user?.preferences,
+        taxZone: currentUser?.preferences?.fiscalProfile?.taxZone,
+        preferences: currentUser?.preferences,
         goals: gls,
         quests: activeQuests,
       });
@@ -144,16 +148,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAlerts(evalResult.allAlerts);
 
       // Trigger toasts if fresh alerts detected and toasts not disabled in preferences
-      const notifPrefs = user?.preferences?.notificationPreferences;
-      const toastsEnabled = user?.preferences?.notifications !== false && notifPrefs?.inAppToasts !== false;
+      const notifPrefs = currentUser?.preferences?.notificationPreferences;
+      const toastsEnabled = currentUser?.preferences?.notifications !== false && notifPrefs?.inAppToasts !== false;
       if (evalResult.newAlerts.length > 0 && toastsEnabled) {
         setActiveToasts(prev => [...evalResult.newAlerts, ...prev].slice(0, 3));
       }
 
       // Update XP if gained (Game Engine Logic)
-      if (user && achData.xpGained > 0) {
-        const newXp = (user.xp || 0) + achData.xpGained;
-        const oldLevel = user.level || 1;
+      if (currentUser && achData.xpGained > 0) {
+        const newXp = (currentUser.xp || 0) + achData.xpGained;
+        const oldLevel = currentUser.level || 1;
         const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
         updateProfile({ xp: newXp, level: newLevel });
 
@@ -186,7 +190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, updateProfile, t]);
+  }, [user?.id, updateProfile, t]);
 
   /** Clears the 15-min price cache and triggers a full data reload with fresh prices. */
   const forceRefreshPrices = useCallback(async () => {

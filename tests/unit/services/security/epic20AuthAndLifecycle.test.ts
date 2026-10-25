@@ -13,6 +13,7 @@ import { supabaseClient } from '../../../../src/services/supabase/supabaseClient
 import { appStorage } from '../../../../src/services/storage/appStorage';
 import { isOk } from '../../../../src/types/result';
 import type { User } from '../../../../src/types/domain';
+import { mockRemoteVault } from '../../helpers/remoteVault';
 
 describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', () => {
     beforeEach(async () => {
@@ -53,6 +54,10 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
     });
 
     describe('2. Seamless Google OAuth (Option A 0-Password) & Account Conflict Guard', () => {
+        beforeEach(() => {
+            mockRemoteVault();
+        });
+
         it('initializes zero-password OAuth vault and sets authProvider to google', async () => {
             const sbAuth = new SupabaseAuthProvider();
             const fakeOAuthHash = '#access_token=google-oauth-token-123&refresh_token=refresh-token-456&expires_in=3600';
@@ -109,7 +114,7 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
 
     describe('3. Multi-Slot Cryptographic Lifecycle & 256-Bit Emergency Recovery Key', () => {
         it('preserves Recovery Key slot across master password changes', async () => {
-            const sbAuth = new SupabaseAuthProvider();
+            const sbAuth = new LocalAuthProvider();
             const oldPassword = 'Old-Vault-Secret-Key-2026!#';
             const newPassword = 'New-Vault-Secret-Key-2026!#';
 
@@ -259,55 +264,62 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
     });
 
     describe('5. Two-Factor Authentication (2FA) & Brute-Force Lockout', () => {
-        it('triggers requiresTwoFactor flag on signIn when TOTP is active', async () => {
+        it('cloud: requires the Supabase TOTP factor before opening the vault', async () => {
+            mockRemoteVault();
             const sbAuth = new SupabaseAuthProvider();
             const email = 'totp.user@example.com';
             const password = 'Strong-Password-2026!#';
+            await vaultService.setup(password, { authProvider: 'email' });
+            await vaultService.lock();
 
-            // Enroll TOTP
-            const enrollment = await totpService.initEnrollment(email);
-            const code = await generateTotpCode(enrollment.secret);
-            await totpService.confirmEnrollment(enrollment.secret, code, enrollment.hashedBackupCodes);
-            expect(await totpService.isEnabled()).toBe(true);
-
-            // Mock Supabase signIn
-            vi.spyOn(supabaseClient, 'signInWithPassword').mockResolvedValue({
+            const session = {
                 accessToken: 'test-token',
                 refreshToken: 'test-refresh',
                 expiresAt: Date.now() + 3600000,
                 user: { id: 'usr-totp-1', email, email_confirmed_at: new Date().toISOString() },
-            });
+            };
+            vi.spyOn(supabaseClient, 'signInWithPassword').mockResolvedValue(session);
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue([{ id: 'f-1', factor_type: 'totp', status: 'verified' }]);
 
             const signInRes = await sbAuth.signIn(email, password);
             expect(signInRes.requiresTwoFactor).toBe(true);
-            expect(signInRes.tempUserId).toBe('usr-totp-1');
+            expect(signInRes.secondFactorMethods).toEqual(['totp']);
+            expect(vaultService.isUnlocked()).toBe(false);
+            expect(localStorage.getItem('gf_sb_session')).toBeNull();
+
+            // Wrong code: still pending, failure counted
+            vi.spyOn(supabaseClient, 'challengeMfaFactor').mockResolvedValue({ id: 'ch-1' });
+            const verifySpy = vi.spyOn(supabaseClient, 'verifyMfaFactor').mockRejectedValueOnce(new Error('Invalid TOTP code'));
+            await expect(sbAuth.verifySecondFactor('000000')).rejects.toThrow(/Invalid two-factor/i);
+
+            // Right code: AAL2 session persisted, vault unlocked with the held password
+            verifySpy.mockResolvedValueOnce({ ...session, accessToken: 'aal2-token' });
+            const result = await sbAuth.verifySecondFactor('123456');
+            expect(result.user.id).toBe('usr-totp-1');
+            expect(vaultService.isUnlocked()).toBe(true);
+            expect(JSON.parse(localStorage.getItem('gf_sb_session') || '{}').accessToken).toBe('aal2-token');
         });
 
-        it('verifies second factor with valid TOTP code or emergency backup code', async () => {
-            const sbAuth = new SupabaseAuthProvider();
+        it('local: requires the TOTP (or a backup code) after the vault unlock, and locks on cancel', async () => {
+            const local = new LocalAuthProvider();
             const email = 'totp.verify@example.com';
-
-            const user: User = {
-                id: 'usr-totp-2',
-                name: 'TOTP User',
-                email,
-                avatar: '/avatar.jpg',
-                preferences: { theme: 'night', currency: 'EUR', notifications: true, language: 'en', dateFormat: 'DD/MM/YYYY' },
-                xp: 0,
-                level: 1,
-            };
-            await userRepository.saveUser(user);
-
+            const password = 'Strong-Vault-Secret-Key-2026!#';
+            await local.setupLocalVault('TOTP User', password);
             const enrollment = await totpService.initEnrollment(email);
             const currentCode = await generateTotpCode(enrollment.secret);
             await totpService.confirmEnrollment(enrollment.secret, currentCode, enrollment.hashedBackupCodes);
+            await vaultService.lock();
 
-            // Verify with backup code
-            const backupCode = enrollment.plainBackupCodes[0];
-            const result = await sbAuth.verifySecondFactor(backupCode);
-            expect(result.user.email).toBe(email);
+            const pending = await local.unlockLocalVault(password);
+            expect(pending.requiresTwoFactor).toBe(true);
+            expect(pending.secondFactorMethods).toEqual(['totp']);
 
-            // Ensure audit log recorded
+            await local.cancelSecondFactor();
+            expect(vaultService.isUnlocked()).toBe(false);
+
+            await local.unlockLocalVault(password);
+            const result = await local.verifySecondFactor(enrollment.plainBackupCodes[0]);
+            expect(result.user.name).toBe('TOTP User');
             const logs = await auditLogService.getEntries(5);
             expect(logs.some(l => l.event === 'totp_verified')).toBe(true);
         });

@@ -42,7 +42,7 @@ const RealizedUnrealizedPL: React.FC = () => {
    const realizedPL = useMemo(() => {
       const sellTxs = transactions.filter(tx => tx.type === 'Sell');
       if (sellTxs.length === 0) {
-         return 1450.00;
+         return 0;
       }
       return sellTxs.reduce((sum, tx) => {
          const gain = (tx.price * tx.amount) * 0.15;
@@ -312,116 +312,23 @@ const RealizedUnrealizedPL: React.FC = () => {
                <span className="text-xs text-tertiary font-semibold">{t('reports:pl.subtitle')}</span>
             </div>
 
-            <div className="h-[280px] w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                  <BarChart key={timeRange} data={periodicPLData} margin={{ top: 15, right: 25, left: 25, bottom: 0 }}>
-                     <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 600 }}
-                        interval="equidistantPreserveStart"
-                        minTickGap={30}
-                        dy={10}
-                     />
-                     <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-                        tickFormatter={(val) => `${val > 0 ? '+' : ''}${val}`}
-                     />
-                     <Tooltip
-                        content={({ active, payload }) => {
-                           if (active && payload && payload.length) {
-                              const val = Number(payload[0].value);
-                              const item = payload[0].payload;
-                              return (
-                                 <div className="bg-card border border-border p-2.5 rounded-xl shadow-lg text-xs font-bold space-y-1">
-                                    <p className="text-tertiary font-normal">{item.name}</p>
-                                    <p className={val >= 0 ? 'text-accent-green' : 'text-accent-red'}>
-                                       P&L: {val >= 0 ? '+' : ''}{formatCurrency(val, currency, locale)}
-                                    </p>
-                                 </div>
-                              );
-                           }
-                           return null;
-                        }}
-                     />
-                     <Bar dataKey="pl" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={ANIMATION_DURATION_MS} animationEasing={ANIMATION_EASING}>
-                        {periodicPLData.map((entry, index) => (
-                           <Cell
-                              key={`cell-${index}`}
-                              fill={entry.pl >= 0 ? 'var(--color-accent-green)' : 'var(--color-accent-red)'}
-                           />
-                        ))}
-                     </Bar>
-                  </BarChart>
-               </ResponsiveContainer>
-            </div>
-         </div>
-
-         {/* ROW 3: Charts Row */}
-         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Donut Chart: Realized vs Unrealized */}
-            <div className={`${cardStyle} flex flex-col justify-between`}>
-               <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.breakdownTitle')}</h3>
-               <div className="relative w-48 h-48 mx-auto my-auto flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                     <PieChart>
-                        <Pie
-                           data={distributionData}
-                           innerRadius={55}
-                           outerRadius={80}
-                           paddingAngle={4}
-                           dataKey="value"
-                           stroke="none"
-                           isAnimationActive={true}
-                           animationDuration={ANIMATION_DURATION_MS}
-                           animationEasing={ANIMATION_EASING}
-                        >
-                           {distributionData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                           ))}
-                        </Pie>
-                     </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                     <span className="text-xs font-bold text-tertiary uppercase tracking-wider">{t('reports:pl.totalPL')}</span>
-                     <span className="text-sm font-bold text-primary">
-                        {formatCurrency(totalPL, currency, locale, { maximumFractionDigits: 0 })}
-                     </span>
-                  </div>
+            {periodicPLData.every(d => d.pl === 0) ? (
+               <div className="h-[280px] w-full flex flex-col items-center justify-center text-center p-6 bg-subtle/30 rounded-xl border border-dashed border-subtle">
+                  <Calendar size={36} className="text-tertiary mb-2 opacity-50" />
+                  <p className="text-secondary text-xs font-semibold">{t('reports:pl.noPnLData')}</p>
+                  <p className="text-tertiary text-[11px] mt-1">{t('reports:pl.noTransactions')}</p>
                </div>
-
-               <div className="space-y-2 mt-6 pt-4 border-t border-subtle">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                     <span className="flex items-center gap-2 text-secondary">
-                        <span className="w-3 h-3 rounded-full bg-accent-green" />
-                        {t('reports:pl.realizedPL')}
-                     </span>
-                     <span className="text-primary">{formatCurrency(realizedPL, currency, locale)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs font-bold">
-                     <span className="flex items-center gap-2 text-secondary">
-                        <span className="w-3 h-3 rounded-full bg-brand" />
-                        {t('reports:pl.unrealizedPL')}
-                     </span>
-                     <span className="text-primary">{formatCurrency(unrealizedPL, currency, locale)}</span>
-                  </div>
-               </div>
-            </div>
-
-            {/* Position P&L Bar Chart */}
-            <div className={`${cardStyle} lg:col-span-2 flex flex-col justify-between`}>
-               <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.assetBreakdown')}</h3>
-               <div className="h-[280px] w-full -mx-2">
+            ) : (
+               <div className="h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={positionPLChartData} margin={{ top: 10, right: 20, left: 20, bottom: 25 }}>
+                     <BarChart key={timeRange} data={periodicPLData} margin={{ top: 15, right: 25, left: 25, bottom: 0 }}>
                         <XAxis
-                           dataKey="symbol"
+                           dataKey="name"
                            axisLine={false}
                            tickLine={false}
                            tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 600 }}
+                           interval="equidistantPreserveStart"
+                           minTickGap={30}
                            dy={10}
                         />
                         <YAxis
@@ -437,7 +344,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                                  const item = payload[0].payload;
                                  return (
                                     <div className="bg-card border border-border p-2.5 rounded-xl shadow-lg text-xs font-bold space-y-1">
-                                       <p className="text-primary">{item.symbol} - {item.instrument}</p>
+                                       <p className="text-tertiary font-normal">{item.name}</p>
                                        <p className={val >= 0 ? 'text-accent-green' : 'text-accent-red'}>
                                           P&L: {val >= 0 ? '+' : ''}{formatCurrency(val, currency, locale)}
                                        </p>
@@ -448,7 +355,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                            }}
                         />
                         <Bar dataKey="pl" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={ANIMATION_DURATION_MS} animationEasing={ANIMATION_EASING}>
-                           {positionPLChartData.map((entry, index) => (
+                           {periodicPLData.map((entry, index) => (
                               <Cell
                                  key={`cell-${index}`}
                                  fill={entry.pl >= 0 ? 'var(--color-accent-green)' : 'var(--color-accent-red)'}
@@ -458,6 +365,123 @@ const RealizedUnrealizedPL: React.FC = () => {
                      </BarChart>
                   </ResponsiveContainer>
                </div>
+            )}
+         </div>
+
+         {/* ROW 3: Charts Row */}
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Donut Chart: Realized vs Unrealized */}
+            <div className={`${cardStyle} flex flex-col justify-between`}>
+               <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.breakdownTitle')}</h3>
+               {distributionData.every(d => d.value === 0) ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+                     <Receipt size={36} className="text-tertiary mb-2 opacity-50" />
+                     <p className="text-secondary text-xs font-semibold">{t('reports:pl.noPnLData')}</p>
+                  </div>
+               ) : (
+                  <>
+                     <div className="relative w-48 h-48 mx-auto my-auto flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <PieChart>
+                              <Pie
+                                 data={distributionData}
+                                 innerRadius={55}
+                                 outerRadius={80}
+                                 paddingAngle={4}
+                                 dataKey="value"
+                                 stroke="none"
+                                 isAnimationActive={true}
+                                 animationDuration={ANIMATION_DURATION_MS}
+                                 animationEasing={ANIMATION_EASING}
+                              >
+                                 {distributionData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                 ))}
+                              </Pie>
+                           </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                           <span className="text-xs font-bold text-tertiary uppercase tracking-wider">{t('reports:pl.totalPL')}</span>
+                           <span className="text-sm font-bold text-primary">
+                              {formatCurrency(totalPL, currency, locale, { maximumFractionDigits: 0 })}
+                           </span>
+                        </div>
+                     </div>
+
+                     <div className="space-y-2 mt-6 pt-4 border-t border-subtle">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                           <span className="flex items-center gap-2 text-secondary">
+                              <span className="w-3 h-3 rounded-full bg-accent-green" />
+                              {t('reports:pl.realizedPL')}
+                           </span>
+                           <span className="text-primary">{formatCurrency(realizedPL, currency, locale)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs font-bold">
+                           <span className="flex items-center gap-2 text-secondary">
+                              <span className="w-3 h-3 rounded-full bg-brand" />
+                              {t('reports:pl.unrealizedPL')}
+                           </span>
+                           <span className="text-primary">{formatCurrency(unrealizedPL, currency, locale)}</span>
+                        </div>
+                     </div>
+                  </>
+               )}
+            </div>
+
+            {/* Position P&L Bar Chart */}
+            <div className={`${cardStyle} lg:col-span-2 flex flex-col justify-between`}>
+               <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.assetBreakdown')}</h3>
+               {positionPLChartData.length === 0 ? (
+                  <div className="h-[280px] w-full flex flex-col items-center justify-center text-center p-6 bg-subtle/30 rounded-xl border border-dashed border-subtle">
+                     <TrendingUp size={36} className="text-tertiary mb-2 opacity-50" />
+                     <p className="text-secondary text-xs font-semibold">{t('reports:pl.noPositions')}</p>
+                  </div>
+               ) : (
+                  <div className="h-[280px] w-full -mx-2">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={positionPLChartData} margin={{ top: 10, right: 20, left: 20, bottom: 25 }}>
+                           <XAxis
+                              dataKey="symbol"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 600 }}
+                              dy={10}
+                           />
+                           <YAxis
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
+                              tickFormatter={(val) => `${val > 0 ? '+' : ''}${val}`}
+                           />
+                           <Tooltip
+                              content={({ active, payload }) => {
+                                 if (active && payload && payload.length) {
+                                    const val = Number(payload[0].value);
+                                    const item = payload[0].payload;
+                                    return (
+                                       <div className="bg-card border border-border p-2.5 rounded-xl shadow-lg text-xs font-bold space-y-1">
+                                          <p className="text-primary">{item.symbol} - {item.instrument}</p>
+                                          <p className={val >= 0 ? 'text-accent-green' : 'text-accent-red'}>
+                                             P&L: {val >= 0 ? '+' : ''}{formatCurrency(val, currency, locale)}
+                                          </p>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                           <Bar dataKey="pl" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={ANIMATION_DURATION_MS} animationEasing={ANIMATION_EASING}>
+                              {positionPLChartData.map((entry, index) => (
+                                 <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.pl >= 0 ? 'var(--color-accent-green)' : 'var(--color-accent-red)'}
+                                 />
+                              ))}
+                           </Bar>
+                        </BarChart>
+                     </ResponsiveContainer>
+                  </div>
+               )}
             </div>
          </div>
 
@@ -469,25 +493,29 @@ const RealizedUnrealizedPL: React.FC = () => {
                   <TrendingUp size={20} className="text-accent-green" />
                   <h3 className="text-lg font-bold text-primary">{t('reports:pl.topGainers')}</h3>
                </div>
-               <div className="space-y-3">
-                  {topGainers.map((pos) => {
-                     const convertedPL = currencyService.convertAmount(pos.unrealizedPL, pos.currency || 'EUR', currency);
-                     return (
-                        <div key={pos.id} className="flex items-center justify-between p-3 rounded-xl bg-accent-green/5 border border-accent-green/10">
-                           <div>
-                              <p className="font-bold text-sm text-primary">{pos.symbol}</p>
-                              <p className="text-tertiary text-xs truncate max-w-[150px]">{pos.instrument}</p>
+               {topGainers.length === 0 ? (
+                  <p className="text-tertiary text-xs py-4 text-center">{t('reports:pl.noPositions')}</p>
+               ) : (
+                  <div className="space-y-3">
+                     {topGainers.map((pos) => {
+                        const convertedPL = currencyService.convertAmount(pos.unrealizedPL, pos.currency || 'EUR', currency);
+                        return (
+                           <div key={pos.id} className="flex items-center justify-between p-3 rounded-xl bg-accent-green/5 border border-accent-green/10">
+                              <div>
+                                 <p className="font-bold text-sm text-primary">{pos.symbol}</p>
+                                 <p className="text-tertiary text-xs truncate max-w-[150px]">{pos.instrument}</p>
+                              </div>
+                              <div className="text-right">
+                                 <p className="font-bold text-sm text-accent-green">+{formatCurrency(convertedPL, currency, locale)}</p>
+                                 <p className="text-xs font-semibold text-accent-green flex items-center justify-end gap-0.5">
+                                    <ArrowUpRight size={14} />+{pos.unrealizedPLPercent.toFixed(2)}%
+                                 </p>
+                              </div>
                            </div>
-                           <div className="text-right">
-                              <p className="font-bold text-sm text-accent-green">+{formatCurrency(convertedPL, currency, locale)}</p>
-                              <p className="text-xs font-semibold text-accent-green flex items-center justify-end gap-0.5">
-                                 <ArrowUpRight size={14} />+{pos.unrealizedPLPercent.toFixed(2)}%
-                              </p>
-                           </div>
-                        </div>
-                     );
-                  })}
-               </div>
+                        );
+                     })}
+                  </div>
+               )}
             </div>
 
             {/* Top Losers */}
@@ -496,25 +524,29 @@ const RealizedUnrealizedPL: React.FC = () => {
                   <TrendingDown size={20} className="text-accent-red" />
                   <h3 className="text-lg font-bold text-primary">{t('reports:pl.topLosers')}</h3>
                </div>
-               <div className="space-y-3">
-                  {topLosers.map((pos) => {
-                     const convertedPL = currencyService.convertAmount(pos.unrealizedPL, pos.currency || 'EUR', currency);
-                     return (
-                        <div key={pos.id} className="flex items-center justify-between p-3 rounded-xl bg-accent-red/5 border border-accent-red/10">
-                           <div>
-                              <p className="font-bold text-sm text-primary">{pos.symbol}</p>
-                              <p className="text-tertiary text-xs truncate max-w-[150px]">{pos.instrument}</p>
+               {topLosers.length === 0 ? (
+                  <p className="text-tertiary text-xs py-4 text-center">{t('reports:pl.noPositions')}</p>
+               ) : (
+                  <div className="space-y-3">
+                     {topLosers.map((pos) => {
+                        const convertedPL = currencyService.convertAmount(pos.unrealizedPL, pos.currency || 'EUR', currency);
+                        return (
+                           <div key={pos.id} className="flex items-center justify-between p-3 rounded-xl bg-accent-red/5 border border-accent-red/10">
+                              <div>
+                                 <p className="font-bold text-sm text-primary">{pos.symbol}</p>
+                                 <p className="text-tertiary text-xs truncate max-w-[150px]">{pos.instrument}</p>
+                              </div>
+                              <div className="text-right">
+                                 <p className="font-bold text-sm text-accent-red">{formatCurrency(convertedPL, currency, locale)}</p>
+                                 <p className="text-xs font-semibold text-accent-red flex items-center justify-end gap-0.5">
+                                    <ArrowDownRight size={14} />{pos.unrealizedPLPercent.toFixed(2)}%
+                                 </p>
+                              </div>
                            </div>
-                           <div className="text-right">
-                              <p className="font-bold text-sm text-accent-red">{formatCurrency(convertedPL, currency, locale)}</p>
-                              <p className="text-xs font-semibold text-accent-red flex items-center justify-end gap-0.5">
-                                 <ArrowDownRight size={14} />{pos.unrealizedPLPercent.toFixed(2)}%
-                              </p>
-                           </div>
-                        </div>
-                     );
-                  })}
-               </div>
+                        );
+                     })}
+                  </div>
+               )}
             </div>
          </div>
       </div>

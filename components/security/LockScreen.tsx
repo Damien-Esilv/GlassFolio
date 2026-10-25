@@ -53,11 +53,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
         setError(null);
         setIsLoading(true);
         try {
-            await passkeyService.authenticate();
+            await passkeyService.unlockVault();
             await refreshData();
             onUnlocked?.();
-        } catch {
-            setError(t('security:lockScreen.invalidCredentials'));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
         } finally {
             setIsLoading(false);
         }
@@ -117,7 +117,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
             }
         } catch (err) {
             console.error('Failed to reset vault', err);
-            setError('Failed to reset vault');
+            setError(t('security:lockScreen.resetFailed'));
         } finally {
             setIsResetting(false);
         }
@@ -201,7 +201,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                             {isLoading ? t('security:lockScreen.unlocking') : t('security:lockScreen.unlockButton')}
                         </Button>
 
-                        {passkeySupported && (
+                        {passkeySupported && vaultService.hasPasskeySlot() && (
                             <button
                                 type="button"
                                 onClick={handleUnlockWithPasskey}

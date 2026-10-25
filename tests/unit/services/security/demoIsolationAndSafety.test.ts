@@ -7,6 +7,7 @@ import { LocalStorageProvider } from '../../../../src/types/storage';
 import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
 import { db } from '../../../../src/services/db';
 import { gamificationService } from '../../../../src/services/gamificationService';
+import { mockRemoteVault } from '../../helpers/remoteVault';
 
 describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
     let memoryStore: Record<string, string>;
@@ -64,7 +65,6 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
         const upsertRecordSpy = vi.spyOn(supabaseClient, 'upsertVaultRecord').mockResolvedValue(undefined as any);
         const upsertHeaderSpy = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue(undefined as any);
         const deleteRecordSpy = vi.spyOn(supabaseClient, 'deleteVaultRecord').mockResolvedValue(undefined as any);
-        const clearRecordsSpy = vi.spyOn(supabaseClient, 'clearAllVaultRecords').mockResolvedValue(undefined as any);
 
         // Ensure session is null in demo mode
         syncedStorage.setSupabaseSession(null);
@@ -81,7 +81,6 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
         expect(upsertRecordSpy).not.toHaveBeenCalled();
         expect(upsertHeaderSpy).not.toHaveBeenCalled();
         expect(deleteRecordSpy).not.toHaveBeenCalled();
-        expect(clearRecordsSpy).not.toHaveBeenCalled();
     });
 
     it('marks demo vault with isDemo=true and real user vault with isDemo=false', async () => {
@@ -91,8 +90,12 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
         expect(vaultService.isInitialized()).toBe(true);
         expect(vaultService.isDemoVault()).toBe(false);
 
-        // Switch to demo mode
-        await localAuth.signIn('demo@glassfolio.com', 'password');
+        // Local mode: the demo never replaces the real vault
+        await expect(localAuth.signIn('demo@glassfolio.com', 'password')).rejects.toThrow(/already exists/i);
+        expect(vaultService.isDemoVault()).toBe(false);
+
+        // Cloud mode: the local vault is a re-pullable cache, so the demo may replace it
+        await sbAuth.signIn('demo@glassfolio.com', 'password');
         expect(vaultService.isInitialized()).toBe(true);
         expect(vaultService.isDemoVault()).toBe(true);
     });
@@ -121,6 +124,7 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
             user_metadata: { full_name: 'Google Investor' },
         };
         vi.spyOn(supabaseClient, 'getUser').mockResolvedValue(mockSbUser);
+        mockRemoteVault();
         window.location.hash = '#access_token=token-google-999&expires_in=3600';
 
         const result = await sbAuth.handleOAuthCallback();
