@@ -26,6 +26,8 @@
     "check:standards": "node scripts/verify-supply-chain-sha.mjs && node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
     "check:mcp": "node --check mcp-server/index.mjs",
     "db:purge-test-accounts": "node scripts/purge-test-accounts.mjs",
+    "deploy:emails": "node scripts/deploy-email-templates.mjs",
+    "deploy:emails:apply": "node scripts/deploy-email-templates.mjs --apply",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",

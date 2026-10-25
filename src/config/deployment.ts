@@ -122,7 +122,7 @@ export interface AppTransitionOptions {
  * Handles both cross-subdomain production (apex -> app subdomain) and same-origin unified dev.
  */
 export const buildAppDestinationUrl = (
-  path: '/' | '/login' | '/signup' = '/',
+  path: '/' | '/login' | '/signup' | string = '/',
   options: AppTransitionOptions = {}
 ): string => {
   const appBase = getAppUrl();

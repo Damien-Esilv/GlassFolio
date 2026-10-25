@@ -90,6 +90,7 @@ export interface SupabaseUserData {
     user_metadata?: {
         name?: string;
         full_name?: string;
+        locale?: string;
         avatar_url?: string;
         picture?: string;
     };
@@ -117,7 +118,7 @@ export const supabaseClient = {
         email: string,
         password: string,
         name?: string,
-        options?: { captchaToken?: string }
+        options?: { captchaToken?: string; locale?: string }
     ): Promise<SupabaseAuthSession> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
@@ -126,7 +127,8 @@ export const supabaseClient = {
         const body: Record<string, unknown> = {
             email,
             password,
-            data: { name },
+            // `locale` selects the language of branded auth emails (supabase/templates).
+            data: { name, locale: options?.locale },
         };
         if (options?.captchaToken) {
             body.gotrue_meta_security = { captcha_token: options.captchaToken };
@@ -298,6 +300,33 @@ export const supabaseClient = {
         const data = await res.json();
         if (!res.ok) {
             throw new Error(data.msg || data.error_description || data.message || 'Invalid or expired verification code.');
+        }
+
+        return {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+            user: data.user,
+        };
+    },
+
+    /** Verifies an email link (`token_hash` from the branded confirmation email). */
+    async verifyTokenHash(
+        tokenHash: string,
+        type: 'signup' | 'email_change' | 'recovery' = 'signup'
+    ): Promise<SupabaseAuthSession> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const res = await fetch(`${config.url}/auth/v1/verify`, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify({ token_hash: tokenHash, type }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.msg || data.error_description || data.message || 'Invalid or expired verification link.');
         }
 
         return {

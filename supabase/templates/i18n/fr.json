@@ -1,0 +1,56 @@
+{
+    "layout": {
+        "brand": "Glassfolio",
+        "footer": "Vous recevez cet email suite à une activité sur votre compte Glassfolio. Si ce n'était pas vous, sécurisez votre compte immédiatement.",
+        "ignoreNotice": "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.",
+        "securityNotice": "Ce n'était pas vous ? Réinitialisez votre mot de passe et vérifiez vos paramètres de sécurité sans attendre.",
+        "linkFallback": "Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :"
+    },
+    "events": {
+        "confirmation": {
+            "subject": "Confirmez votre compte Glassfolio",
+            "heading": "Confirmez votre adresse email",
+            "body": "Bienvenue sur Glassfolio ! Saisissez le code ci-dessous dans l'application, ou utilisez le bouton, pour vérifier votre adresse email.",
+            "codeLabel": "Votre code de vérification",
+            "cta": "Confirmer mon email"
+        },
+        "recovery": {
+            "subject": "Réinitialisez votre mot de passe Glassfolio",
+            "heading": "Réinitialisez votre mot de passe",
+            "body": "Nous avons reçu une demande de réinitialisation de votre mot de passe. Utilisez le bouton ci-dessous pour continuer. Votre clé de récupération d'urgence restera nécessaire pour déchiffrer votre coffre.",
+            "cta": "Réinitialiser mon mot de passe"
+        },
+        "email_change": {
+            "subject": "Confirmez votre nouvelle adresse email Glassfolio",
+            "heading": "Confirmez votre nouvelle adresse email",
+            "body": "Vous avez demandé à remplacer l'adresse email de votre compte Glassfolio par {{ .NewEmail }}. Confirmez ce changement avec le bouton ci-dessous.",
+            "cta": "Confirmer la nouvelle adresse"
+        },
+        "reauthentication": {
+            "subject": "{{ .Token }} est votre code de vérification Glassfolio",
+            "heading": "Confirmez que c'est bien vous",
+            "body": "Saisissez ce code dans Glassfolio pour confirmer une action sensible sur votre compte.",
+            "codeLabel": "Votre code de vérification"
+        },
+        "password_changed": {
+            "subject": "Votre mot de passe Glassfolio a été modifié",
+            "heading": "Votre mot de passe a été modifié",
+            "body": "Le mot de passe de votre compte Glassfolio ({{ .Email }}) vient d'être modifié."
+        },
+        "email_changed": {
+            "subject": "Votre adresse email Glassfolio a été modifiée",
+            "heading": "Votre adresse email a été modifiée",
+            "body": "L'adresse email de votre compte Glassfolio est passée de {{ .OldEmail }} à {{ .Email }}."
+        },
+        "identity_linked": {
+            "subject": "Une nouvelle méthode de connexion a été associée à votre compte Glassfolio",
+            "heading": "Une méthode de connexion a été associée",
+            "body": "Votre identité {{ .Provider }} est maintenant associée à votre compte Glassfolio ({{ .Email }})."
+        },
+        "identity_unlinked": {
+            "subject": "Une méthode de connexion a été supprimée de votre compte Glassfolio",
+            "heading": "Une méthode de connexion a été supprimée",
+            "body": "Votre identité {{ .Provider }} n'est plus associée à votre compte Glassfolio ({{ .Email }})."
+        }
+    }
+}

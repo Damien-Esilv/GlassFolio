@@ -22,6 +22,7 @@ import ImportHistory from './pages/ImportHistory';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { PasswordResetFlow } from './pages/PasswordResetFlow';
+import AuthConfirm from './pages/AuthConfirm';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -129,6 +130,7 @@ const App: React.FC = () => {
 
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/auth/confirm" element={<AuthConfirm />} />
               <Route path="/forgot-password" element={<PasswordResetFlow initialMode="request" />} />
               <Route path="/reset-password" element={<PasswordResetFlow initialMode="recover" />} />
               <Route path="/portfolio" element={<ProtectedRoute><PortfolioHub /></ProtectedRoute>} />

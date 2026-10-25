@@ -6,6 +6,8 @@
  *   - list_vault_secrets (read-only): lists third-party API providers configured (masked).
  *   - lock_vault (mutation, requiresConfirmation: true): locks vault immediately.
  *   - rotate_encryption_key (mutation, requiresConfirmation: true): rotates DEK and re-encrypts state.
+ *   - get_email_verification_status (read-only): email verification state of the account (Epic E25).
+ *   - resend_verification_email (mutation, requiresConfirmation: true): re-sends the verification email (code + link).
  */
 
 import { AIToolDefinition } from '../types';
@@ -15,6 +17,7 @@ import { passkeyService } from '../../security/passkeyService';
 import { secretsService, SafeSecretItem } from '../../security/secretsService';
 import { auditLogService, AuditLogEntry } from '../../security/auditLogService';
 import { userRepository } from '../../repositories';
+import { authService } from '../../security/authService';
 
 export const getSecurityStatusTool: AIToolDefinition<
   { includeAuditHistory?: boolean },
@@ -140,6 +143,67 @@ export const rotateEncryptionKeyTool: AIToolDefinition<
     return {
       success: true,
       message: 'Data Encryption Key rotated and all sensitive records re-encrypted successfully.',
+    };
+  },
+};
+
+/** Masks the local part of an email so the assistant never exposes the full address. */
+const maskEmail = (email: string): string => {
+  const [local = '', domain = ''] = email.split('@');
+  return `${local.slice(0, 1)}***@${domain}`;
+};
+
+export const getEmailVerificationStatusTool: AIToolDefinition<
+  Record<string, never>,
+  { authProvider?: string; maskedEmail?: string; emailVerified: boolean; canResend: boolean }
+> = {
+  name: 'get_email_verification_status',
+  description:
+    'Check whether the email address of the current GlassFolio account is verified (email/password accounts receive a verification code and link by email).',
+  requiresConfirmation: false,
+  parameters: {
+    type: 'object',
+    properties: {},
+  },
+  execute: async () => {
+    const user = await userRepository.getUser();
+    const emailVerified = user?.emailVerified !== false;
+    return {
+      authProvider: user?.authProvider,
+      maskedEmail: user?.email ? maskEmail(user.email) : undefined,
+      emailVerified,
+      canResend: Boolean(user && user.authProvider === 'email' && !emailVerified),
+    };
+  },
+};
+
+export const resendVerificationEmailTool: AIToolDefinition<
+  Record<string, never>,
+  { success: boolean; message: string }
+> = {
+  name: 'resend_verification_email',
+  description:
+    'Send a new verification email (security code + confirmation link) to the current account address. Only for unverified email/password accounts. Requires explicit user confirmation.',
+  requiresConfirmation: true,
+  parameters: {
+    type: 'object',
+    properties: {},
+  },
+  execute: async () => {
+    const user = await userRepository.getUser();
+    if (!user || user.authProvider !== 'email' || user.emailVerified !== false) {
+      return {
+        success: false,
+        message: 'No pending email verification for this account.',
+      };
+    }
+    if (!authService.resendEmailVerification) {
+      return { success: false, message: 'Email verification is not available in this mode.' };
+    }
+    await authService.resendEmailVerification(user.email);
+    return {
+      success: true,
+      message: `Verification email sent to ${maskEmail(user.email)}.`,
     };
   },
 };

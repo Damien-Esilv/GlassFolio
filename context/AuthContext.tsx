@@ -255,6 +255,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             if (updatedUser.preferences.language) {
               appStorage.setItem(PUBLIC_LANG_STORAGE_KEY, updatedUser.preferences.language);
+              if (updatedUser.preferences.language !== user.preferences?.language) {
+                // Keep branded auth emails in the user's language (Epic E25); best effort.
+                authService.syncEmailLocale?.(updatedUser.preferences.language).catch(() => undefined);
+              }
             }
           }
           setUser(updatedUser);
