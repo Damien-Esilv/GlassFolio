@@ -73,6 +73,11 @@ export const isRealUserVaultActive = (): boolean => {
 };
 
 class MockDB {
+    // Cache for accounts
+    private accountsCacheRaw: string | null = null;
+    private accountsCacheParsed: Account[] | null = null;
+    private accountsCacheMap: Map<string, Account> | null = null;
+
     // =========================================================================
     // LEGACY METHODS (Existing Functionality)
     // =========================================================================
@@ -229,27 +234,47 @@ class MockDB {
     // --- Accounts ---
     getAccounts(): Account[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-        if (!stored) return isRealUserVaultActive() ? [] : initialAccounts;
 
-        try {
-            const storedList = JSON.parse(stored) as Account[];
-            const map = new Map<string, Account>();
-            if (!isRealUserVaultActive()) {
-                initialAccounts.forEach(a => map.set(a.id, a));
-            }
-            storedList.forEach(a => map.set(a.id, a));
-            return Array.from(map.values());
-        } catch {
-            return isRealUserVaultActive() ? [] : initialAccounts;
+        if (stored && stored === this.accountsCacheRaw && this.accountsCacheParsed) {
+            return this.accountsCacheParsed;
         }
+
+        let result: Account[];
+        if (!stored) {
+            result = isRealUserVaultActive() ? [] : initialAccounts;
+        } else {
+            try {
+                const storedList = JSON.parse(stored) as Account[];
+                const map = new Map<string, Account>();
+                if (!isRealUserVaultActive()) {
+                    initialAccounts.forEach(a => map.set(a.id, a));
+                }
+                storedList.forEach(a => map.set(a.id, a));
+                result = Array.from(map.values());
+            } catch {
+                result = isRealUserVaultActive() ? [] : initialAccounts;
+            }
+        }
+
+        this.accountsCacheRaw = stored;
+        this.accountsCacheParsed = result;
+        this.accountsCacheMap = new Map(result.map(a => [a.id, a]));
+
+        return result;
     }
 
     saveAccounts(data: Account[]) {
         appStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(data));
+        // Clear cache so it gets rebuilt on next get
+        this.accountsCacheRaw = null;
+        this.accountsCacheParsed = null;
+        this.accountsCacheMap = null;
     }
 
     getAccountById(id: string): Account | undefined {
-        return this.getAccounts().find(a => a.id === id);
+        // Ensure cache is populated and up to date
+        this.getAccounts();
+        return this.accountsCacheMap?.get(id);
     }
 
     getAccountsByInstitute(instituteId: string): Account[] {
