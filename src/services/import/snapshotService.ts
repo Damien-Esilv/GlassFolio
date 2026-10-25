@@ -501,27 +501,32 @@ export async function generateReconciliationTransactions(
     const transactions: UnifiedTransaction[] = [];
     const now = new Date().toISOString();
 
-    for (const diff of diffs) {
-        if (diff.syntheticType === 'NONE') continue;
-        if (!diff.isValid) continue;
-        if (diff.requiresUserInput) continue;
+    // Pre-resolve all instruments to avoid N+1 query issue
+    const validDiffs = diffs.filter(diff =>
+        diff.syntheticType !== 'NONE' && diff.isValid && !diff.requiresUserInput
+    );
 
+    const hints = validDiffs.map(diff => ({
+        symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
+        isin: diff.assetIsin,
+        name: diff.displayName
+    }));
+
+    let instrumentIds: (string | undefined)[] = [];
+    try {
+        const instruments = await instrumentService.findOrCreateInstrumentsBulk(hints);
+        instrumentIds = instruments.map(i => i.id);
+    } catch (e) {
+        // Fallback or ignore
+    }
+
+    for (let i = 0; i < validDiffs.length; i++) {
+        const diff = validDiffs[i];
         const qty = parseFloat(diff.syntheticQty);
         const price = parseFloat(diff.syntheticPrice);
         const total = qty * price;
 
-        // Resolve instrument
-        let instrumentId = '';
-        try {
-            const instrument = await instrumentService.findOrCreateInstrument({
-                symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
-                isin: diff.assetIsin,
-                name: diff.displayName
-            });
-            instrumentId = instrument.id;
-        } catch (e) {
-            // ignore
-        }
+        const instrumentId = instrumentIds[i] || '';
 
         // Compute row hash for this synthetic transaction
         const rowHash = await computeRowHash(
@@ -590,23 +595,28 @@ export async function createPositionTransactions(
     const transactions: UnifiedTransaction[] = [];
     const now = new Date().toISOString();
 
-    for (const pos of positions) {
+    // Pre-resolve all instruments to avoid N+1 query issue
+    const hints = positions.map(pos => ({
+        symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
+        isin: pos.assetIsin,
+        name: pos.displayName
+    }));
+
+    let instrumentIds: (string | undefined)[] = [];
+    try {
+        const instruments = await instrumentService.findOrCreateInstrumentsBulk(hints);
+        instrumentIds = instruments.map(i => i.id);
+    } catch (e) {
+        // Fallback or ignore
+    }
+
+    for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
         const qty = parseFloat(pos.quantity);
         const price = parseFloat(pos.avgPrice);
         const total = qty * price;
 
-        // Resolve instrument
-        let instrumentId = '';
-        try {
-            const instrument = await instrumentService.findOrCreateInstrument({
-                symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
-                isin: pos.assetIsin,
-                name: pos.displayName
-            });
-            instrumentId = instrument.id;
-        } catch (e) {
-            // ignore
-        }
+        const instrumentId = instrumentIds[i] || '';
 
         // Compute row hash
         const rowHash = await computeRowHash(

@@ -217,94 +217,102 @@ export const instrumentService = {
      * No hardcoded lookup — all instruments come from prior imports
      * or are created on the fly.
      */
-    findOrCreateInstrument: async (hint: AssetHint): Promise<Instrument> => {
+    findOrCreateInstrumentsBulk: async (hints: AssetHint[]): Promise<Instrument[]> => {
         await delay(50);
+        const results: Instrument[] = [];
+        let dbInstruments = db.getInstruments();
+        let changed = false;
 
-        const rawSymbol = hint.symbol || hint.isin || 'UNKNOWN';
-        const upperSymbol = rawSymbol.toUpperCase().trim();
-        const upperIsin = hint.isin?.toUpperCase().trim();
-
-        // Try to find existing instrument
-        const existing = db.findInstrumentByMarketId({
-            isin: upperIsin,
-            symbol: upperSymbol,
-            currencyCode: hint.currencyCode?.toUpperCase()
-        });
-
-        if (existing) {
-            // Optionally enrich existing instrument with new data
-            let updated = false;
-            const enriched = { ...existing, marketIdentifier: { ...existing.marketIdentifier } };
-
-            if (upperIsin && !enriched.marketIdentifier.isin) {
-                enriched.marketIdentifier.isin = upperIsin;
-                updated = true;
-            }
-            if (hint.exchange && !enriched.marketIdentifier.exchange) {
-                enriched.marketIdentifier.exchange = hint.exchange;
-                updated = true;
-            }
-            if (hint.network && !enriched.marketIdentifier.network) {
-                enriched.marketIdentifier.network = hint.network;
-                updated = true;
-            }
-            if (hint.contractAddress && !enriched.marketIdentifier.contractAddress) {
-                enriched.marketIdentifier.contractAddress = hint.contractAddress;
-                updated = true;
-            }
-            if (hint.name && !enriched.name) {
-                enriched.name = hint.name;
-                updated = true;
-            }
-
-            if (updated) {
-                // Re-validate market readiness
-                const validation = validateMarketReadiness(enriched.type, enriched.marketIdentifier);
-                enriched.isMarketReady = validation.isMarketReady;
-                enriched.updatedAt = new Date().toISOString();
-
-                // Save enriched version
-                const all = db.getInstruments().map(i => i.id === enriched.id ? enriched : i);
-                db.saveInstruments(all);
-            }
-
-            return existing;
-        }
-
-        // Create new instrument
-        const type = inferInstrumentType(hint);
         const now = new Date().toISOString();
 
-        const marketIdentifier: MarketIdentifier = {
-            symbol: upperSymbol,
-            isin: upperIsin,
-            exchange: hint.exchange,
-            network: hint.network,
-            contractAddress: hint.contractAddress,
-            currencyCode: type === 'cash' ? (hint.currencyCode || upperSymbol) : hint.currencyCode
-        };
+        for (const hint of hints) {
+            const rawSymbol = hint.symbol || hint.isin || 'UNKNOWN';
+            const upperSymbol = rawSymbol.toUpperCase().trim();
+            const upperIsin = hint.isin?.toUpperCase().trim();
 
-        const validation = validateMarketReadiness(type, marketIdentifier);
+            // Try to find existing instrument from local db copy
+            let existing: Instrument | undefined = undefined;
+            if (upperIsin) existing = dbInstruments.find(i => i.marketIdentifier.isin === upperIsin);
+            if (!existing && hint.currencyCode) {
+                const uc = hint.currencyCode.toUpperCase();
+                existing = dbInstruments.find(i => i.type === 'cash' && i.marketIdentifier.currencyCode === uc);
+            }
+            if (!existing) existing = dbInstruments.find(i => i.marketIdentifier.symbol.toUpperCase() === upperSymbol);
 
-        const newInstrument: Instrument = {
-            id: `instr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            ownerId: 'default-user',
-            name: hint.name || upperSymbol,
-            type,
-            marketIdentifier,
-            isMarketReady: validation.isMarketReady,
-            denominationCurrency: hint.denominationCurrency ||
-                (type === 'cash' ? (hint.currencyCode || upperSymbol) : 'USD'),
-            createdAt: now,
-            updatedAt: now
-        };
+            if (existing) {
+                let updated = false;
+                const enriched = { ...existing, marketIdentifier: { ...existing.marketIdentifier } };
 
-        // Save
-        const all = db.getInstruments();
-        db.saveInstruments([...all, newInstrument]);
+                if (upperIsin && !enriched.marketIdentifier.isin) {
+                    enriched.marketIdentifier.isin = upperIsin;
+                    updated = true;
+                }
+                if (hint.exchange && !enriched.marketIdentifier.exchange) {
+                    enriched.marketIdentifier.exchange = hint.exchange;
+                    updated = true;
+                }
+                if (hint.network && !enriched.marketIdentifier.network) {
+                    enriched.marketIdentifier.network = hint.network;
+                    updated = true;
+                }
+                if (hint.contractAddress && !enriched.marketIdentifier.contractAddress) {
+                    enriched.marketIdentifier.contractAddress = hint.contractAddress;
+                    updated = true;
+                }
+                if (hint.name && !enriched.name) {
+                    enriched.name = hint.name;
+                    updated = true;
+                }
 
-        return newInstrument;
+                if (updated) {
+                    const validation = validateMarketReadiness(enriched.type, enriched.marketIdentifier);
+                    enriched.isMarketReady = validation.isMarketReady;
+                    enriched.updatedAt = now;
+                    dbInstruments = dbInstruments.map(i => i.id === enriched.id ? enriched : i);
+                    changed = true;
+                }
+                results.push(updated ? enriched : existing);
+            } else {
+                const type = inferInstrumentType(hint);
+                const marketIdentifier: MarketIdentifier = {
+                    symbol: upperSymbol,
+                    isin: upperIsin,
+                    exchange: hint.exchange,
+                    network: hint.network,
+                    contractAddress: hint.contractAddress,
+                    currencyCode: type === 'cash' ? (hint.currencyCode || upperSymbol) : hint.currencyCode
+                };
+                const validation = validateMarketReadiness(type, marketIdentifier);
+
+                const newInstrument: Instrument = {
+                    id: `instr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    ownerId: 'default-user',
+                    name: hint.name || upperSymbol,
+                    type,
+                    marketIdentifier,
+                    isMarketReady: validation.isMarketReady,
+                    denominationCurrency: hint.denominationCurrency ||
+                        (type === 'cash' ? (hint.currencyCode || upperSymbol) : 'USD'),
+                    createdAt: now,
+                    updatedAt: now
+                };
+                dbInstruments.push(newInstrument);
+                changed = true;
+                results.push(newInstrument);
+            }
+        }
+
+        if (changed) {
+            db.saveInstruments(dbInstruments);
+        }
+        return results;
     },
+
+    findOrCreateInstrument: async (hint: AssetHint): Promise<Instrument> => {
+        const results = await instrumentService.findOrCreateInstrumentsBulk([hint]);
+        return results[0];
+    },
+
 
     /**
      * Validate an instrument's market-readiness
