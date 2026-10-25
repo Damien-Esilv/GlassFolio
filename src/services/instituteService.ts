@@ -7,6 +7,7 @@
 import { db, delay } from './db';
 import { Institute, Account, InstituteType, AccountType } from '../types';
 import { WrapperType } from '../types/types.backend';
+import { authService } from './security/authService';
 
 // ============================================================================
 // INSTITUTE OPERATIONS
@@ -44,7 +45,7 @@ export const instituteService = {
         const now = new Date().toISOString();
         const newInstitute: Institute = {
             id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            ownerId: 'default-user', // TODO: Get from auth context
+            ownerId: (await authService.getCurrentUser())?.id || 'default-user',
             name: data.name,
             type: data.type,
             country: data.country || 'FR',
@@ -150,7 +151,7 @@ export const accountService = {
         const now = new Date().toISOString();
         const newAccount: Account = {
             id: `acc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            ownerId: 'default-user', // TODO: Get from auth context
+            ownerId: (await authService.getCurrentUser())?.id || 'default-user',
             instituteId: data.instituteId,
             name: data.name,
             type: data.type,
