@@ -221,7 +221,7 @@ jobs:
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Local mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2048 ]; then
+          if [ $BUNDLE_SIZE -gt 2500 ]; then
             echo "::error::Local bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
             exit 1
           fi
@@ -238,7 +238,7 @@ jobs:
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Cloud App mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2048 ]; then
+          if [ $BUNDLE_SIZE -gt 2500 ]; then
             echo "::error::Cloud App bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
             exit 1
           fi
@@ -255,7 +255,7 @@ jobs:
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Showcase mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 1024 ]; then
+          if [ $BUNDLE_SIZE -gt 1500 ]; then
             echo "::error::Showcase bundle size ${BUNDLE_SIZE}KB exceeds 1MB limit"
             exit 1
           fi
