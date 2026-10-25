@@ -78,12 +78,27 @@ export const transactionService = {
         const defaultAccount = accounts[0]?.id || 'acc-bourso-cto';
         const now = new Date().toISOString();
 
-        const newUnifiedTxs: UnifiedTransaction[] = await Promise.all(newTxs.map(async (tx) => {
-            // Find or create instrument
+        // 1. Extract unique symbols to batch find/create instruments
+        const uniqueInstrumentsMap = new Map<string, string>(); // symbol -> instrumentName
+        for (const tx of newTxs) {
+            if (!uniqueInstrumentsMap.has(tx.symbol)) {
+                uniqueInstrumentsMap.set(tx.symbol, tx.instrument);
+            }
+        }
+
+        // 2. Find or create instruments in bulk (processing sequentially to avoid race conditions if creating same simultaneously, or Promise.all since they are unique symbols)
+        const instrumentMap = new Map<string, any>();
+        await Promise.all(Array.from(uniqueInstrumentsMap.entries()).map(async ([symbol, name]) => {
             const instrument = await instrumentService.findOrCreateInstrument({
-                symbol: tx.symbol,
-                name: tx.instrument
+                symbol,
+                name
             });
+            instrumentMap.set(symbol, instrument);
+        }));
+
+        const newUnifiedTxs: UnifiedTransaction[] = newTxs.map(tx => {
+            // Find instrument from our pre-populated map
+            const instrument = instrumentMap.get(tx.symbol);
 
             const typeMap: Record<string, TransactionType> = {
                 'Buy': 'BUY',
@@ -95,12 +110,12 @@ export const transactionService = {
             const type: TransactionType = typeMap[tx.type] || 'BUY';
 
             return {
-                id: tx.id || `utx-manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: tx.id || `utx-manual-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
                 ownerId: 'default-user',
                 accountId: defaultAccount,
                 instrumentId: instrument.id,
                 batchId: 'batch-manual',
-                rowHash: `hash-manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                rowHash: `hash-manual-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
                 sourceOrigin: 'MANUAL',
                 isSynthetic: false,
                 isFiscal: true,
@@ -119,7 +134,7 @@ export const transactionService = {
                 updatedAt: now,
                 version: 1
             };
-        }));
+        });
 
         const currentUnified = db.getUnifiedTransactions();
         db.saveUnifiedTransactions([...newUnifiedTxs, ...currentUnified]);
