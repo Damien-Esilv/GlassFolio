@@ -15,7 +15,6 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
 
     const getScoreColor = () => {
         switch (evaluation.score) {
-            case 0:
             case 1:
                 return 'bg-error';
             case 2:
