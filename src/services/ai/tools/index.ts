@@ -14,6 +14,8 @@ import {
   listVaultSecretsTool,
   lockVaultTool,
   rotateEncryptionKeyTool,
+  getEmailVerificationStatusTool,
+  resendVerificationEmailTool,
 } from './securityTools';
 import {
   listNotificationsTool,
@@ -43,6 +45,8 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(listVaultSecretsTool);
   aiToolRegistry.registerTool(lockVaultTool);
   aiToolRegistry.registerTool(rotateEncryptionKeyTool);
+  aiToolRegistry.registerTool(getEmailVerificationStatusTool);
+  aiToolRegistry.registerTool(resendVerificationEmailTool);
   aiToolRegistry.registerTool(listNotificationsTool);
   aiToolRegistry.registerTool(manageNotificationsTool);
   aiToolRegistry.registerTool(listAlertRulesTool);
@@ -69,6 +73,8 @@ export {
   listVaultSecretsTool,
   lockVaultTool,
   rotateEncryptionKeyTool,
+  getEmailVerificationStatusTool,
+  resendVerificationEmailTool,
   listNotificationsTool,
   manageNotificationsTool,
   listAlertRulesTool,

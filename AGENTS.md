@@ -94,9 +94,16 @@ Le coffre s'appelle `brain`. Les notes GlassFolio sont dans le sous-dossier `Gla
 
 L'espace Notion est un reflet contractuel et professionnel de l'état du code source. Tout agent IA intervenant sur le dépôt doit **obligatoirement** respecter les règles suivantes à chaque session ou PR (> 3 fichiers) :
 
-1. **Règle du Zéro Omission sur les colonnes Notion** :
+1. **Moments de Synchronisation Notion (Étape Pré-Commit Obligatoire)** :
+   - **Pendant la phase exploratoire ou itérative** : Ne pas polluer Notion à chaque micro-changement qui pourrait être annulé ou retravaillé en cours de route.
+   - **AVANT de commiter et pusher (Point de Validation Définitif)** :
+     - Dès que l'utilisateur valide le résultat ou demande de commiter/pusher, l'agent IA **doit obligatoirement mettre à jour Notion AVANT de créer le commit Git**.
+     - **Harmonisation et complétude** : Si l'utilisateur a créé manuellement des tâches ou epics avec seulement un titre sommaire et des colonnes vides, l'IA a pour consigne explicite de les **réécrire pour un rendu clair, précis et professionnel**, et de **remplir 100% des colonnes manquantes**.
+     - Si de nouvelles tâches ou sous-tâches ont été réalisées, les insérer dans `Database - Tâches` et les rattacher à l'Epic et au Sprint actif.
+
+2. **Règle du Zéro Omission sur les colonnes Notion** :
    - Toute tâche créée ou mise à jour dans `Database - Tâches` doit **remplir 100% de ses colonnes** :
-     - `Tasks` (Titre clair et standardisé)
+     - `Tasks` (Titre clair, rédigé professionnellement)
      - `ID of tasks` (Code unique formaté `TGLA-xxx`)
      - `Type` (`Fonctionnalité`, `Architecture`, `Sécurité`, `Qualité`, `Test`, `Bug`, `Autre`)
      - `Statut` (`En cours`, `Fait`, `Prêt à commencer`, `Bloqué`)
@@ -106,7 +113,20 @@ L'espace Notion est un reflet contractuel et professionnel de l'état du code so
      - `Admin` (Assignation `Damien`)
    - Le corps Markdown de la fiche de tâche **doit obligatoirement inclure la section `### 🔗 Traçabilité Git & Software Engineering`** (hashes de commits, nom de la branche, et résultat des tests CI).
 
-2. **Gouvernance des Sprints & Epics** :
+3. **Traçabilité Multi-Tâches & Epics dans Git** :
+   - **Lorsqu'un commit ou une PR couvre plusieurs tâches (`TGLA-xxx`) ou un Epic entier** :
+     - Le message de commit / description de PR **doit obligatoirement citer tous les identifiants** (ex: `feat(epic-21): complete settings overhaul (TGLA-083, TGLA-084, TGLA-085)`).
+     - Dans le corps du commit ou de la PR, lister explicitement :
+       ```markdown
+       Closes TGLA-083
+       Closes TGLA-084
+       Closes TGLA-085
+       ```
+     - Le workflow `notion-sync` scannera l'ensemble de ces identifiants et passera automatiquement chaque tâche à `Fait` sur Notion avec le lien du commit/PR.
+   - **Mise à jour en direct pendant le développement** :
+     - Lorsque l'Epic est achevé et mergé sur `main`, la `Phase` de l'Epic parent dans `Database - Epics` doit être basculée sur `Done` / `Version définitive`.
+
+4. **Gouvernance des Sprints & Epics** :
    - **Sprint actif obligatoire** : Tout développement doit être rattaché à un Sprint dont `Sprint actif = true`.
    - **Démarrage d'un nouvel Epic / Gros Chantier** : Si aucun sprint actif ne correspond au chantier, créer un nouveau Sprint dans `Database - Sprints` avec :
      - `Name`, `Monday Groups`, `Objectifs du sprint`, `Date de début`, `Date de fin`, `Échéancier du sprint`, `Terminé ? = false`, `Sprint actif = true`.
@@ -114,9 +134,14 @@ L'espace Notion est un reflet contractuel et professionnel de l'état du code so
    - **Clôture de Sprint** : Dès que l'ensemble des tâches d'un sprint actif sont terminées et validées par la CI (`npm test`, `npm run check:types`, `npm run check:i18n`), marquer le sprint avec `Terminé ? = true` et `Sprint actif = false`.
    - **Échéanciers & Dates sur les Epics** : Renseigner systématiquement `Échéancier planifié` (start / end) sur les Epics, et basculer la `Phase` à `Done` ou `Version définitive` à la livraison. Pour les Epics en étude, maintenir la phase `Phase d'étude` avec dates prévisionnelles et priorités explicites.
 
-3. **Maintenance des Bugs & Retouches UI** :
+5. **Maintenance des Bugs & Retouches UI vs Consolidation Git** :
    - Les micro-ajustements UI (boutons, marges, fixes cosmétiques) vont dans `Database - Bugs` (`Amélioration / Retouche UI`).
-   - Tout bug résolu par un fix ou vérifié conforme en CI doit être immédiatement passé à `Corrigé`.
+   - Tout bug résolu par un fix ou vérifié conforme en CI doit être immédiatement passé à `Corrigé` dans Notion.
+   - **Consolidation Git vs Suivi des Tâches** :
+     - Pendant les itérations sur la branche de feature, des commits de fix peuvent exister (`fix: adjust padding`, `fix: typo`).
+     - Lors du merge ou squash final sur `main`, pour garder un arbre git épuré tout en préservant le suivi :
+       - Le commit consolidé ou la PR conserve dans son message l'identifiant des bugs ou tâches corrigés (ex: `feat(settings): ... (closes TGLA-083, fixes BUG-12)`).
+       - Ainsi, `notion-sync` et l'historique Notion conservent 100% de la traçabilité même si les commits intermédiaires ont été condensés.
 - **Nouvelle feature structurante** : créer/mettre à jour `FEAT-[KEY]-[nom].md` dans `02-Features/`.
 - **Choix architectural** : créer un `ADR-[date]-[titre].md` dans `03-Decisions/`.
 - **Changement API d'un service** : mettre à jour le codemap correspondant dans `06-Summaries/`.

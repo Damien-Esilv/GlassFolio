@@ -125,6 +125,22 @@ const TOOLS = [
     }
   },
   {
+    name: 'get_email_verification_status',
+    description: 'Check whether the email address of the GlassFolio account is verified (email/password accounts receive a verification code and link by email).',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'resend_verification_email',
+    description: 'Send a new verification email (security code + confirmation link) to the account address (requires confirmation).',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
     name: 'list_notifications',
     description: 'List all notifications and alerts with optional category filter (portfolio, fiscal, goals, security, system), read filter, and limit.',
     inputSchema: {
@@ -368,6 +384,16 @@ async function handleToolCall(name, args) {
     case 'rotate_encryption_key': {
       return {
         content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'DEK successfully rotated with fresh IVs' }, null, 2) }]
+      };
+    }
+    case 'get_email_verification_status': {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ authProvider: 'email', maskedEmail: 'd***@example.com', emailVerified: true, canResend: false }, null, 2) }]
+      };
+    }
+    case 'resend_verification_email': {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ success: false, message: 'No pending email verification for this account.' }, null, 2) }]
       };
     }
     case 'list_notifications': {

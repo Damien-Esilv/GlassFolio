@@ -46,7 +46,8 @@ function getCommitInfo() {
 
   try {
     const sha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-    const message = execSync('git log -n 1 --pretty=%B', { encoding: 'utf8' }).trim();
+    // Scan up to 10 recent commits to cover squash-merges, merge commits, or multi-commit batches
+    const message = execSync('git log -n 10 --pretty=%B', { encoding: 'utf8' }).trim();
     return { sha, message };
   } catch (err) {
     console.warn('⚠️ Could not extract git commit info:', err.message);
@@ -54,8 +55,29 @@ function getCommitInfo() {
   }
 }
 
-function extractTaskIds(message) {
-  const matches = message.match(/TGLA-\d+/gi) || [];
+function getPullRequestInfo() {
+  if (process.env.GITHUB_EVENT_PATH && fs.existsSync(process.env.GITHUB_EVENT_PATH)) {
+    try {
+      const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+      const pr = eventData.pull_request;
+      if (pr) {
+        return {
+          title: pr.title || '',
+          body: pr.body || '',
+          branch: pr.head?.ref || '',
+          merged: pr.merged || false,
+        };
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not parse GITHUB_EVENT_PATH:', err.message);
+    }
+  }
+  return null;
+}
+
+function extractTaskIds(texts) {
+  const combined = texts.filter(Boolean).join('\n');
+  const matches = combined.match(/TGLA-\d+/gi) || [];
   return [...new Set(matches.map(id => id.toUpperCase()))];
 }
 
@@ -138,13 +160,27 @@ async function updateNotionTask(pageId, taskId, commitSha) {
 }
 
 async function main() {
-  console.log('🔄 Checking commits for Notion Task Sync...');
+  console.log('🔄 Checking events and commits for Notion Task Sync...');
   const { sha, message } = getCommitInfo();
-  console.log(`📌 Commit: ${sha.slice(0, 7)} — "${message.split('\n')[0]}"`);
+  const prInfo = getPullRequestInfo();
 
-  const taskIds = extractTaskIds(message);
+  console.log(`📌 Commit: ${sha.slice(0, 7)} — "${message.split('\n')[0]}"`);
+  if (prInfo) {
+    console.log(`🔀 Pull Request: #${prInfo.branch} — "${prInfo.title}"`);
+  }
+
+  const branchName = process.env.GITHUB_REF_NAME || '';
+  const searchSources = [
+    message,
+    branchName,
+    prInfo?.title,
+    prInfo?.body,
+    prInfo?.branch,
+  ];
+
+  const taskIds = extractTaskIds(searchSources);
   if (taskIds.length === 0) {
-    console.log('ℹ️ No TGLA-xxx task identifier found in commit message. Skipping sync.');
+    console.log('ℹ️ No TGLA-xxx task identifier found in commit message, PR title/body, or branch name. Skipping sync.');
     process.exit(0);
   }
 

@@ -3,6 +3,9 @@ name: Notion — Task Auto-Sync
 on:
   push:
     branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 concurrency:
   group: notion-sync-${{ github.ref }}

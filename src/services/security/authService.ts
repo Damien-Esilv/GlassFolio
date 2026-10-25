@@ -436,6 +436,14 @@ export class LocalAuthProvider implements IAuthProvider {
         return { user, session: createSessionRecord(user.id) };
     }
 
+    public async verifyEmailTokenHash(_tokenHash: string, _type?: 'signup' | 'email_change'): Promise<AuthResult> {
+        return this.verifyEmailOtp('', '');
+    }
+
+    public async syncEmailLocale(_locale: string): Promise<void> {
+        // Local mode sends no emails: nothing to sync.
+    }
+
     public async signInWithOAuth(provider: 'google' | 'apple'): Promise<never> {
         await delay(400);
         if (provider === 'apple') {
@@ -705,7 +713,10 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
 
         // 2. Register user on Supabase Auth
-        const sbSession = await supabaseClient.signUp(email, password, name, options);
+        const sbSession = await supabaseClient.signUp(email, password, name, {
+            ...options,
+            locale: getInitialAuthPreferences().language,
+        });
         this.persistSession(sbSession);
 
         // 3. Setup client-side encrypted vault (clean slate before setup)
@@ -954,6 +965,23 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
     public override async verifyEmailOtp(email: string, token: string): Promise<AuthResult> {
         const session = await supabaseClient.verifyEmailOtp(email.trim().toLowerCase(), token.trim());
+        return this.finalizeEmailVerification(session, email);
+    }
+
+    public override async verifyEmailTokenHash(
+        tokenHash: string,
+        type: 'signup' | 'email_change' = 'signup'
+    ): Promise<AuthResult> {
+        const session = await supabaseClient.verifyTokenHash(tokenHash.trim(), type);
+        return this.finalizeEmailVerification(session, session.user.email ?? '');
+    }
+
+    public override async syncEmailLocale(locale: string): Promise<void> {
+        if (!this.supabaseSession?.accessToken) return;
+        await supabaseClient.updateUser(this.supabaseSession.accessToken, { data: { locale } });
+    }
+
+    private async finalizeEmailVerification(session: SupabaseAuthSession, email: string): Promise<AuthResult> {
         this.persistSession(session);
 
         let user = await userRepository.getUser();

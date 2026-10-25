@@ -1,0 +1,56 @@
+{
+    "layout": {
+        "brand": "Glassfolio",
+        "footer": "You are receiving this email because of activity on your Glassfolio account. If this was not you, secure your account immediately.",
+        "ignoreNotice": "If you did not request this, you can safely ignore this email.",
+        "securityNotice": "Was this not you? Reset your password and review your security settings right away.",
+        "linkFallback": "Button not working? Copy this link into your browser:"
+    },
+    "events": {
+        "confirmation": {
+            "subject": "Confirm your Glassfolio account",
+            "heading": "Confirm your email address",
+            "body": "Welcome to Glassfolio! Enter the code below in the app, or use the button, to verify your email address.",
+            "codeLabel": "Your verification code",
+            "cta": "Confirm my email"
+        },
+        "recovery": {
+            "subject": "Reset your Glassfolio password",
+            "heading": "Reset your password",
+            "body": "We received a request to reset your password. Use the button below to continue. You will still need your emergency recovery key to decrypt your vault.",
+            "cta": "Reset my password"
+        },
+        "email_change": {
+            "subject": "Confirm your new Glassfolio email address",
+            "heading": "Confirm your new email address",
+            "body": "You asked to change your Glassfolio email address to {{ .NewEmail }}. Confirm this change with the button below.",
+            "cta": "Confirm new email"
+        },
+        "reauthentication": {
+            "subject": "{{ .Token }} is your Glassfolio verification code",
+            "heading": "Confirm it's you",
+            "body": "Enter this code in Glassfolio to confirm a sensitive action on your account.",
+            "codeLabel": "Your verification code"
+        },
+        "password_changed": {
+            "subject": "Your Glassfolio password was changed",
+            "heading": "Your password was changed",
+            "body": "The password of your Glassfolio account ({{ .Email }}) was just changed."
+        },
+        "email_changed": {
+            "subject": "Your Glassfolio email address was changed",
+            "heading": "Your email address was changed",
+            "body": "The email address of your Glassfolio account was changed from {{ .OldEmail }} to {{ .Email }}."
+        },
+        "identity_linked": {
+            "subject": "A new sign-in method was linked to your Glassfolio account",
+            "heading": "A sign-in method was linked",
+            "body": "Your {{ .Provider }} identity is now linked to your Glassfolio account ({{ .Email }})."
+        },
+        "identity_unlinked": {
+            "subject": "A sign-in method was removed from your Glassfolio account",
+            "heading": "A sign-in method was removed",
+            "body": "Your {{ .Provider }} identity is no longer linked to your Glassfolio account ({{ .Email }})."
+        }
+    }
+}

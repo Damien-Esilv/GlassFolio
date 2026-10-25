@@ -17,14 +17,15 @@ const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const targetPath = (location.pathname === '/login' || location.pathname === '/signup')
-      ? location.pathname
+    const isAppRoute = location.pathname === '/login' || location.pathname === '/signup' || location.pathname.startsWith('/auth/');
+    const targetPath = isAppRoute
+      ? `${location.pathname}${location.search}${location.hash}`
       : '/';
     const destination = buildAppDestinationUrl(targetPath);
     if (typeof window !== 'undefined') {
       window.location.assign(destination);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search, location.hash]);
 
   return <LoadingScreen />;
 };
@@ -53,6 +54,7 @@ export const ShowcaseApp: React.FC = () => {
             {/* If redirected or deep-linked to app routes on showcase domain, redirect to app */}
             <Route path="/login" element={<AppRedirectHandler />} />
             <Route path="/signup" element={<AppRedirectHandler />} />
+            <Route path="/auth/confirm" element={<AppRedirectHandler />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

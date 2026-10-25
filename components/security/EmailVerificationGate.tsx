@@ -26,6 +26,19 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
     const [isResending, setIsResending] = useState(false);
 
     useEffect(() => {
+        if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+        const channel = new BroadcastChannel('glassfolio_auth_channel');
+        channel.onmessage = (event) => {
+            if (event.data?.type === 'EMAIL_VERIFIED') {
+                onVerified();
+            }
+        };
+        return () => {
+            channel.close();
+        };
+    }, [onVerified]);
+
+    useEffect(() => {
         if (cooldown <= 0) return;
         const timer = setInterval(() => {
             setCooldown((prev) => Math.max(0, prev - 1));

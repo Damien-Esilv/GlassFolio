@@ -52,5 +52,8 @@ export interface IAuthProvider {
     recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
     resendEmailVerification?(email?: string): Promise<void>;
     verifyEmailOtp?(email: string, token: string): Promise<AuthResult>;
+    verifyEmailTokenHash?(tokenHash: string, type?: 'signup' | 'email_change'): Promise<AuthResult>;
+    /** Syncs the preferred language so branded auth emails are sent in it (Epic E25). */
+    syncEmailLocale?(locale: string): Promise<void>;
     deleteAccountPermanently?(options: { password?: string; confirmationText?: string }): Promise<void>;
 }
