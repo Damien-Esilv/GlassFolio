@@ -369,17 +369,31 @@ class MockDB {
     }
 
     // --- Instruments ---
+    private _instrumentsCache: { raw: string | null, parsed: Instrument[], map: Map<string, Instrument> } | null = null;
+
     getInstruments(): Instrument[] {
         const stored = appStorage.getItem(STORAGE_KEYS.INSTRUMENTS);
-        return stored ? JSON.parse(stored) : initialInstruments;
+        if (this._instrumentsCache && this._instrumentsCache.raw === stored) {
+            return this._instrumentsCache.parsed;
+        }
+
+        const parsed = stored ? JSON.parse(stored) : initialInstruments;
+        const map = new Map<string, Instrument>();
+        parsed.forEach((i: Instrument) => map.set(i.id, i));
+
+        this._instrumentsCache = { raw: stored, parsed, map };
+        return parsed;
     }
 
     saveInstruments(data: Instrument[]) {
         appStorage.setItem(STORAGE_KEYS.INSTRUMENTS, JSON.stringify(data));
+        // Cache will be rebuilt on next getInstruments call since 'stored' will change
     }
 
     getInstrumentById(id: string): Instrument | undefined {
-        return this.getInstruments().find(i => i.id === id);
+        // Ensure cache is populated
+        this.getInstruments();
+        return this._instrumentsCache?.map.get(id);
     }
 
     /**
