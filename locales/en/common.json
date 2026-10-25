@@ -2,6 +2,7 @@
     "buttons": {
         "save": "Save",
         "cancel": "Cancel",
+        "confirm": "Confirm",
         "delete": "Delete",
         "edit": "Edit",
         "create": "Create",
@@ -23,6 +24,8 @@
         "read": "Read"
     },
     "fees": "Fees",
+    "close": "Close",
+    "error": "An error occurred",
     "actions": {
         "seeAll": "See All",
         "viewReport": "View Report",

@@ -30,11 +30,13 @@ export interface AuthResult {
     user: User;
     recoveryKey?: string;
     session: AuthSession;
+    requiresTwoFactor?: boolean;
+    tempUserId?: string;
 }
 
 export interface IAuthProvider {
-    signUp(email: string, password: string, name: string): Promise<AuthResult>;
-    signIn(email: string, password: string): Promise<AuthResult>;
+    signUp(email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<AuthResult>;
+    signIn(email: string, password: string, options?: { captchaToken?: string }): Promise<AuthResult>;
     signInWithOAuth(provider: 'google' | 'apple'): Promise<void | AuthResult>;
     signOut(): Promise<void>;
     getCurrentUser(): Promise<User | null>;
@@ -43,4 +45,12 @@ export interface IAuthProvider {
     handleOAuthCallback?(): Promise<AuthResult | null>;
     setupLocalVault?(name: string, masterPassword: string): Promise<AuthResult>;
     unlockLocalVault?(masterPassword: string): Promise<AuthResult>;
+    verifySecondFactor?(tokenOrCode: string): Promise<AuthResult>;
+    changeEmail?(currentPassword: string, newEmail: string): Promise<void>;
+    changePassword?(oldPassword: string, newPassword: string): Promise<void>;
+    requestPasswordReset?(email: string, redirectTo?: string): Promise<void>;
+    recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
+    resendEmailVerification?(email?: string): Promise<void>;
+    verifyEmailOtp?(email: string, token: string): Promise<AuthResult>;
+    deleteAccountPermanently?(options: { password?: string; confirmationText?: string }): Promise<void>;
 }

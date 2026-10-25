@@ -5,6 +5,7 @@ import {
     mergeBackupData
 } from '../../../../src/services/import/backupRestoreService';
 import { db } from '../../../../src/services/db';
+import { appStorage } from '../../../../src/services/storage/appStorage';
 
 describe('backupRestoreService', () => {
     beforeEach(() => {
@@ -130,6 +131,52 @@ describe('backupRestoreService', () => {
 
             const mergeResult = await mergeBackupData(allEntities);
             expect(mergeResult.importedCount).toBeGreaterThanOrEqual(0);
+        });
+
+        it('restores non-financial account data (user profile, gamification, AI, audit logs)', async () => {
+            appStorage.setItem('glassfolio_user', JSON.stringify({
+                id: 'active-user',
+                email: 'active@example.com',
+                authProvider: 'google',
+                preferences: { theme: 'light', currency: 'USD' }
+            }));
+
+            const fullAccountData = {
+                userProfile: [{
+                    id: 'backup-user',
+                    email: 'backup@example.com',
+                    preferences: { theme: 'night', currency: 'EUR' },
+                    fiscalProfile: { familyStatus: 'married', fiscalShares: 2.5 }
+                }],
+                gamification: [{ xp: 1200, level: 5, streaks: 10 }],
+                aiSettings: [{ model: 'gpt-4o' }],
+                aiConversations: [{ id: 'chat-backup-1', title: 'Fiscalité' }],
+                securityAuditLogs: [{ id: 'audit-1', action: 'login' }],
+                quests: [{ id: 'q1', title: 'Premier trade' } as any],
+                pinnedBadges: ['ac1', 'ac2'] as any
+            };
+
+            await restoreBackupReset(fullAccountData);
+
+            // User profile was merged: active user identity preserved, preferences restored
+            const updatedUser = JSON.parse(appStorage.getItem('glassfolio_user') || '{}');
+            expect(updatedUser.id).toBe('active-user');
+            expect(updatedUser.preferences?.theme).toBe('night');
+            expect(updatedUser.preferences?.currency).toBe('EUR');
+            expect(updatedUser.fiscalProfile?.familyStatus).toBe('married');
+
+            // Gamification, AI, and audit logs restored
+            const gamification = JSON.parse(appStorage.getItem('glassfolio_gamification_v1') || '{}');
+            expect(gamification.xp).toBe(1200);
+
+            const aiSettings = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}');
+            expect(aiSettings.model).toBe('gpt-4o');
+
+            const aiChats = JSON.parse(appStorage.getItem('glassfolio_ai_chats_v1') || '[]');
+            expect(aiChats[0].id).toBe('chat-backup-1');
+
+            const auditLogs = JSON.parse(appStorage.getItem('glassfolio_security_audit_log') || '[]');
+            expect(auditLogs[0].id).toBe('audit-1');
         });
     });
 });

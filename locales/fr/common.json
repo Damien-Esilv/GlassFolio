@@ -2,6 +2,7 @@
     "buttons": {
         "save": "Enregistrer",
         "cancel": "Annuler",
+        "confirm": "Confirmer",
         "delete": "Supprimer",
         "edit": "Modifier",
         "create": "Créer",
@@ -23,6 +24,8 @@
         "read": "Lire"
     },
     "fees": "Frais",
+    "close": "Fermer",
+    "error": "Une erreur est survenue",
     "actions": {
         "seeAll": "Voir tout",
         "viewReport": "Voir le rapport",

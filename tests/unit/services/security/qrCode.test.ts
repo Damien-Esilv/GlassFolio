@@ -25,5 +25,10 @@ describe('qrCode generator', () => {
         expect(svg).toContain('viewBox=');
         expect(svg).toContain('<path');
         expect(svg).toContain('</svg>');
+
+        // Test transparent background and custom color options
+        const transparentSvg = generateQrSvg(text, { bg: 'transparent', color: 'black', margin: 2 });
+        expect(transparentSvg).not.toContain('<rect');
+        expect(transparentSvg).toContain('fill="black"');
     });
 });

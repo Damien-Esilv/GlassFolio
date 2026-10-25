@@ -25,7 +25,7 @@ const getEnvVar = (key: string): string | undefined => {
     ? (import.meta as { env?: Record<string, string | undefined> }).env
     : undefined;
   const procEnv = typeof process !== 'undefined' ? process.env : undefined;
-  return metaEnv?.[key] ?? procEnv?.[key];
+  return procEnv?.[key] ?? metaEnv?.[key];
 };
 
 export const resolveDeploymentMode = (raw: string | undefined): DeploymentMode => {
@@ -39,7 +39,8 @@ export const resolveDeploymentMode = (raw: string | undefined): DeploymentMode =
 };
 
 export const getDeploymentMode = (): DeploymentMode => {
-  return resolveDeploymentMode(getEnvVar('VITE_DEPLOYMENT_MODE'));
+  const mode = getEnvVar('VITE_DEPLOYMENT_MODE')?.trim() || getEnvVar('VITE_STORAGE_MODE')?.trim();
+  return resolveDeploymentMode(mode);
 };
 
 export const resolveAppTarget = (

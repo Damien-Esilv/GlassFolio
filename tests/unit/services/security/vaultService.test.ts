@@ -1,13 +1,22 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { isErr } from '../../../../src/types/result';
 import { appStorage } from '../../../../src/services/storage/appStorage';
 import { vaultService } from '../../../../src/services/security/vaultService';
 import {
     InvalidVaultCredentialsError,
     VaultAlreadyInitializedError,
     VaultLockedError,
+    VaultNotInitializedError,
 } from '../../../../src/services/security/vaultTypes';
 import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
-import { parseEnvelope, randomBytes } from '../../../../src/services/security/crypto';
+import {
+    parseEnvelope,
+    randomBytes,
+    createKdfParams,
+    deriveMasterKeys,
+    generateExtractableDek,
+    wrapDek,
+} from '../../../../src/services/security/crypto';
 
 describe('VaultService Lifecycle, Migration & Key Rotation (TGLA-041)', () => {
     beforeEach(async () => {
@@ -211,6 +220,112 @@ describe('VaultService Lifecycle, Migration & Key Rotation (TGLA-041)', () => {
             expect(statuses).toContain('locked');
 
             unsubscribe();
+        });
+
+        it('rejects recoverPasswordWithRecoveryKey when recovery key is invalid', async () => {
+            await vaultService.setup('CorrectPassword123!');
+            await vaultService.lock();
+
+            const res = await vaultService.recoverPasswordWithRecoveryKey(
+                '0000-0000-0000-0000-0000-0000-0000-0000',
+                'NewStrongPass2026!#'
+            );
+            expect(res.success).toBe(false);
+        });
+
+        it('rejects rotateDek when password is invalid', async () => {
+            await vaultService.setup('CorrectPassword123!');
+            await expect(vaultService.rotateDek('WrongPass123!')).rejects.toThrow(InvalidVaultCredentialsError);
+        });
+    });
+
+    describe('Google OAuth 0-Password Vault Lifecycle & Migration', () => {
+        it('sets up and unlocks OAuth vault transparently', async () => {
+            const oauthSecret = 'test-oauth-secret-google-12345';
+            await vaultService.setupOAuthVault(oauthSecret);
+
+            expect(vaultService.isInitialized()).toBe(true);
+            expect(vaultService.isUnlocked()).toBe(true);
+            expect(vaultService.getVaultHeader()?.authProvider).toBe('google');
+
+            // Setting up again throws VaultAlreadyInitializedError
+            await expect(vaultService.setupOAuthVault(oauthSecret)).rejects.toThrow(VaultAlreadyInitializedError);
+
+            // Set some encrypted data
+            appStorage.setItem('glassfolio_accounts', JSON.stringify([{ id: 'acc-1', name: 'Livret A' }]));
+            await appStorage.getEncrypted()!.flush();
+
+            // Lock and unlock
+            await vaultService.lock();
+            expect(vaultService.isUnlocked()).toBe(false);
+
+            await vaultService.unlockOAuthVault(oauthSecret);
+            expect(vaultService.isUnlocked()).toBe(true);
+            expect(appStorage.getItem('glassfolio_accounts')).toContain('Livret A');
+        });
+
+        it('migrates legacy pre-Epic 20 PBKDF2 OAuth vault to HKDF on unlock', async () => {
+            const oauthSecret = 'legacy-oauth-user-secret-999';
+            // Setup a legacy header where wrappedKey is wrapped with PBKDF2 kek
+            const kdf = createKdfParams(1000);
+            const { kek: legacyKek } = await deriveMasterKeys(oauthSecret, kdf);
+            const dek = await generateExtractableDek();
+            const wrappedKey = await wrapDek(dek, legacyKek);
+
+            const legacyHeader = {
+                version: 1,
+                authProvider: 'google' as const,
+                kdf,
+                dekAlgorithm: 'AES-256-GCM' as const,
+                wrappedKeys: {
+                    password: {
+                        alg: 'AES-KW' as const,
+                        wrapped: wrappedKey,
+                        createdAt: new Date().toISOString(),
+                    },
+                    recovery: null,
+                    passkeys: [],
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                dekCreatedAt: new Date().toISOString(),
+            };
+
+            appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(legacyHeader));
+            expect(vaultService.isInitialized()).toBe(true);
+
+            // unlockOAuthVault should fail the HKDF unwrap, fall back to PBKDF2 legacy unwrap,
+            // auto-upgrade the header with HKDF wrapped key, and unlock!
+            await vaultService.unlockOAuthVault(oauthSecret);
+            expect(vaultService.isUnlocked()).toBe(true);
+
+            // Verify header was upgraded: now unlockable directly with HKDF!
+            await vaultService.lock();
+            await vaultService.unlockOAuthVault(oauthSecret);
+            expect(vaultService.isUnlocked()).toBe(true);
+        });
+
+        it('throws InvalidVaultCredentialsError if unlockOAuthVault credentials fail both HKDF and PBKDF2', async () => {
+            await vaultService.setupOAuthVault('correct-secret');
+            await vaultService.lock();
+
+            await expect(vaultService.unlockOAuthVault('completely-wrong-secret')).rejects.toThrow(InvalidVaultCredentialsError);
+        });
+
+        it('throws VaultNotInitializedError if unlockOAuthVault is called without a vault header', async () => {
+            await expect(vaultService.unlockOAuthVault('any-secret')).rejects.toThrow(VaultNotInitializedError);
+        });
+
+        it('returns error when recovering password on a vault with no recovery slot', async () => {
+            await vaultService.setupOAuthVault('oauth-only-secret');
+            const res = await vaultService.recoverPasswordWithRecoveryKey(
+                '0000-0000-0000-0000-0000-0000-0000-0000',
+                'NewPass123456!'
+            );
+            expect(isErr(res)).toBe(true);
+            if (isErr(res)) {
+                expect(res.error.message).toContain('No recovery key slot configured');
+            }
         });
     });
 });

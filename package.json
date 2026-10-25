@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "VITE_APP_TARGET=unified vite",
+    "dev": "node scripts/dev-server.mjs",
+    "dev:online": "node scripts/dev-server.mjs --online",
+    "dev:cloud": "node scripts/dev-server.mjs --online",
+    "dev:local": "node scripts/dev-server.mjs",
     "dev:app": "VITE_DEPLOYMENT_MODE=local VITE_APP_TARGET=app vite",
     "dev:showcase": "VITE_DEPLOYMENT_MODE=cloud VITE_APP_TARGET=showcase vite",
     "build": "vite build",
@@ -22,6 +25,7 @@
     "check:supply-chain": "node scripts/verify-supply-chain-sha.mjs",
     "check:standards": "node scripts/verify-supply-chain-sha.mjs && node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
     "check:mcp": "node --check mcp-server/index.mjs",
+    "db:purge-test-accounts": "node scripts/purge-test-accounts.mjs",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",
@@ -32,9 +36,11 @@
     "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
     "@vercel/analytics": "^2.0.1",
     "i18next": "^25.8.4",
     "lucide-react": "^0.554.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.5.4",

@@ -53,6 +53,8 @@ interface DataContextType {
   refreshData: () => Promise<void>;
   /** Reset all data to seed/mock data (wipes localStorage). Useful for dev/testing. */
   resetToSeedData: () => Promise<void>;
+  /** Wipes all account financial & gamification data back to zero while keeping the user account active. */
+  resetAccountDataToZero: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -90,6 +92,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const refreshData = useCallback(async () => {
+    if (!user) {
+      setTransactions([]);
+      setPositions([]);
+      setAlerts([]);
+      setAlertRules([]);
+      setGoals([]);
+      setAchievements([]);
+      setAssetGroups([]);
+      setQuests([]);
+      setPinnedBadges([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const baseCurr = user?.preferences?.currency || 'EUR';
@@ -309,6 +325,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshData();
   }, [refreshData]);
 
+  const resetAccountDataToZero = useCallback(async () => {
+    clearPriceCache();
+    db.resetAccountDataToZero();
+    if (user) {
+      await updateProfile({ xp: 0, level: 1 });
+    }
+    await refreshData();
+  }, [user, updateProfile, refreshData]);
+
   return (
     <DataContext.Provider value={{
       transactions,
@@ -347,7 +372,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dismissCelebration,
       triggerCelebration,
       refreshData,
-      resetToSeedData
+      resetToSeedData,
+      resetAccountDataToZero
     }}>
       {children}
       <CelebrationModal 

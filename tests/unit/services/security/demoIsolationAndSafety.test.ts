@@ -5,6 +5,8 @@ import { supabaseClient } from '../../../../src/services/supabase/supabaseClient
 import { SyncedBackingStorageProvider } from '../../../../src/services/storage/SyncedBackingStorageProvider';
 import { LocalStorageProvider } from '../../../../src/types/storage';
 import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
+import { db } from '../../../../src/services/db';
+import { gamificationService } from '../../../../src/services/gamificationService';
 
 describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
     let memoryStore: Record<string, string>;
@@ -125,5 +127,49 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
         expect(result).not.toBeNull();
         expect(result?.user.email).toBe('google.investor@gmail.com');
         expect(vaultService.isDemoVault()).toBe(false);
+    });
+
+    it('initializes newly created real user accounts with 0 transactions, 0 unlocked achievements, 0 completed quests, and 0 XP even after demo data existed in storage', async () => {
+        // 1. Simulate demo data left in localStorage prior to signup
+        db.resetToInitialData();
+        const demoTx = await db.getTransactions();
+        expect(demoTx.length).toBeGreaterThan(0);
+
+        // 2. Register a new real user
+        const realPassword = 'Clean-Account-Secret-Key-2026!#';
+        const res = await localAuth.signUp('fresh@glassfolio.com', realPassword, 'Fresh Investor');
+
+        expect(res.user.xp).toBe(0);
+        expect(res.user.level).toBe(1);
+
+        // 3. Verify all user collections are 100% empty / zeroed
+        const tx = await db.getTransactions();
+        const goals = await db.getGoals();
+        const alerts = await db.getAlerts();
+        const achievements = await db.getAchievements();
+        const pinnedBadges = await db.getPinnedBadges();
+        const quests = await gamificationService.getQuests();
+
+        expect(tx).toEqual([]);
+        expect(goals).toEqual([]);
+        expect(alerts).toEqual([]);
+        expect(pinnedBadges).toEqual([]);
+        expect(achievements.every(a => a.unlocked === false && a.currentLevel === 0)).toBe(true);
+        expect(quests.every(q => q.completed === false && q.claimed === false)).toBe(true);
+    });
+
+    it('resets account data to zero via db.resetAccountDataToZero without restoring demo seed data', async () => {
+        const realPassword = 'Reset-Account-Secret-Key-2026!#';
+        await localAuth.signUp('resetter@glassfolio.com', realPassword, 'Resetter');
+
+        await db.resetAccountDataToZero();
+
+        const tx = await db.getTransactions();
+        const achievements = await db.getAchievements();
+        const quests = await gamificationService.getQuests();
+
+        expect(tx).toEqual([]);
+        expect(achievements.every(a => a.unlocked === false && a.currentLevel === 0)).toBe(true);
+        expect(quests.every(q => q.completed === false && q.claimed === false)).toBe(true);
     });
 });

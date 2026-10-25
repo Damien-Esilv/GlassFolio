@@ -3,18 +3,22 @@ import { supabaseClient } from '../../../../src/services/supabase/supabaseClient
 import { SyncedBackingStorageProvider } from '../../../../src/services/storage/SyncedBackingStorageProvider';
 import { LocalStorageProvider } from '../../../../src/types/storage';
 import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
+import { appStorage } from '../../../../src/services/storage/appStorage';
 
 describe('Supabase Client & Synced Storage Provider (TGLA-060 & TGLA-061)', () => {
     const mockAccessToken = 'mock-sb-access-token-12345';
 
     beforeEach(() => {
         vi.restoreAllMocks();
+        vi.stubEnv('VITE_SUPABASE_URL', 'https://mock-test.supabase.co');
+        vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'mock-anon-key-12345');
         process.env.VITE_SUPABASE_URL = 'https://mock-test.supabase.co';
         process.env.VITE_SUPABASE_ANON_KEY = 'mock-anon-key-12345';
     });
 
     afterEach(() => {
         vi.unstubAllGlobals();
+        vi.unstubAllEnvs();
         delete process.env.VITE_SUPABASE_URL;
         delete process.env.VITE_SUPABASE_ANON_KEY;
     });
@@ -81,6 +85,50 @@ describe('Supabase Client & Synced Storage Provider (TGLA-060 & TGLA-061)', () =
                     }),
                 })
             );
+        });
+    });
+
+    describe('supabaseClient OAuth PKCE', () => {
+        it('prepares PKCE URL with code challenge and stores verifier', async () => {
+            const url = await supabaseClient.prepareOAuthPkceUrl('google', 'http://localhost:3000');
+            expect(url).toContain('/auth/v1/authorize');
+            expect(url).toContain('provider=google');
+            expect(url).toContain('redirect_to=http%3A%2F%2Flocalhost%3A3000');
+            expect(url).toContain('code_challenge=');
+            expect(url).toContain('code_challenge_method=S256');
+
+            const verifier = appStorage.getItem('gf_oauth_pkce_verifier');
+            expect(verifier).toBeTruthy();
+            expect(verifier?.length).toBe(48);
+        });
+
+        it('exchanges PKCE code and consumes stored verifier', async () => {
+            appStorage.setItem('gf_oauth_pkce_verifier', 'my-test-verifier-123456789012345678901234567890');
+            const mockSession = {
+                access_token: 'returned-access-tok',
+                refresh_token: 'returned-refresh-tok',
+                expires_in: 3600,
+                user: { id: 'usr-google', email: 'test@gmail.com' },
+            };
+            const mockFetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => mockSession,
+            });
+            vi.stubGlobal('fetch', mockFetch);
+
+            const session = await supabaseClient.exchangePkceCode('auth-code-xyz');
+            expect(session.accessToken).toBe('returned-access-tok');
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/auth/v1/token?grant_type=pkce'),
+                expect.objectContaining({
+                    method: 'POST',
+                    body: JSON.stringify({
+                        auth_code: 'auth-code-xyz',
+                        code_verifier: 'my-test-verifier-123456789012345678901234567890',
+                    }),
+                })
+            );
+            expect(appStorage.getItem('gf_oauth_pkce_verifier')).toBeNull();
         });
     });
 

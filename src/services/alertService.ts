@@ -310,7 +310,7 @@ export const alertService = {
             date: nowIso,
             read: false,
             dedupKey: `smart-goal-reached-${goal.id}`,
-            actionUrl: '/progress',
+            actionUrl: '/progress?tab=goals',
             actionLabelKey: 'common:actions.review',
           });
         }
@@ -329,7 +329,7 @@ export const alertService = {
           date: nowIso,
           read: false,
           dedupKey: `smart-quest-unclaimed-${quest.id}`,
-          actionUrl: '/progress',
+          actionUrl: '/progress?tab=quests',
           actionLabelKey: 'gamification:quests.claimReward',
         });
       }

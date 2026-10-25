@@ -43,13 +43,26 @@
         "passwordsMismatch": "New passwords do not match",
         "passwordChangedSuccess": "Master password changed successfully. Encryption keys re-wrapped.",
         "submitChange": "Update Master Password",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "managedByGoogle": "Authentication & Vault managed by Google OAuth",
+        "regenerateRecoveryKey": "Regenerate Recovery Key",
+        "regenerateTitle": "Regenerate Emergency Recovery Key",
+        "regenerateSubtitle": "Confirm your master password to derive a fresh 256-bit recovery key.",
+        "masterPasswordConfirm": "Master Password",
+        "confirmRegenerate": "Regenerate"
     },
     "totp": {
         "title": "Two-Factor Authentication (2FA / TOTP)",
         "subtitle": "Protect your account with Google Authenticator, 1Password, or Authy",
+        "challengeTitle": "Two-Factor Authentication",
+        "challengeSubtitle": "Enter the 6-digit code from your authenticator app or an emergency backup code.",
+        "inputLabel": "Security Code or Backup Code",
+        "inputPlaceholder": "000000 or XXXX-XXXX",
+        "cancelButton": "Cancel",
         "enableButton": "Enable 2FA",
         "disableButton": "Disable 2FA",
+        "managedByGoogle": "2FA is managed directly by your Google Account",
+        "statusGoogle": "Managed by Google",
         "statusEnabled": "2FA is active and protecting your account",
         "statusDisabled": "2FA is not active",
         "scanQrTitle": "1. Scan QR Code",
@@ -78,6 +91,7 @@
         "title": "WebAuthn Passkeys",
         "subtitle": "Log in and unlock your vault securely using Touch ID, Face ID, or a FIDO2 security key",
         "addPasskeyButton": "Add Passkey (Biometrics / FIDO2)",
+        "authWithPasskey": "Authenticate with Passkey",
         "notSupported": "WebAuthn / Passkeys are not supported on this device or browser",
         "noPasskeys": "No passkeys registered yet",
         "createdOn": "Created on {{date}}",
@@ -85,7 +99,10 @@
         "deleteConfirm": "Are you sure you want to delete this passkey?",
         "promptLabel": "Passkey label (e.g. MacBook Touch ID)",
         "registerError": "Failed to register passkey",
-        "authError": "Passkey authentication failed"
+        "authError": "Passkey authentication failed",
+        "managedByGoogleBadge": "Managed by Google Account",
+        "managedByGoogleTitle": "Biometric passkeys managed by Google",
+        "managedByGoogleDesc": "Your biometric passkeys (Touch ID, Face ID, Windows Hello) and trusted devices are managed and protected directly by your Google account."
     },
     "totpVerifyModal": {
         "title": "Two-Factor Verification Required",

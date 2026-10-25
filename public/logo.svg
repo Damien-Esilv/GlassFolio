@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Solid white background -->
-  <rect width="512" height="512" fill="#ffffff"/>
+  <!-- Solid white background with rounded squircle corners -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#ffffff"/>
   
   <!-- Centered Diamond: 290x290 with rx=76, rotated 45deg -->
   <g transform="translate(256, 256)">

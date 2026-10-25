@@ -211,7 +211,7 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
   });
 
   it('hides the demo button on /login in cloud mode and shows it in local mode', () => {
-    // 1. Cloud mode: Demo button is hidden on /login
+    // 1. Cloud mode: Demo button is hidden on /login, Google button is visible
     vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
     const { rerender } = render(
       <MemoryRouter initialEntries={['/login']}>
@@ -222,8 +222,9 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     );
 
     expect(screen.queryByRole('button', { name: /Explore Demo Account/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Google/i })).toBeTruthy();
 
-    // 2. Local mode: Demo button is displayed on /login
+    // 2. Local mode: Demo button is displayed on /login, Google button is hidden
     vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('local');
     rerender(
       <MemoryRouter initialEntries={['/login']}>
@@ -234,6 +235,30 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     );
 
     expect(screen.getByRole('button', { name: /Explore Demo Account/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Google/i })).toBeNull();
+  });
+
+  it('shows Google signup button in cloud mode and hides it in local mode', () => {
+    vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/signup']}>
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: /Google/i })).toBeTruthy();
+    unmount();
+
+    vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('local');
+    render(
+      <MemoryRouter initialEntries={['/signup']}>
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('button', { name: /Google/i })).toBeNull();
   });
 
   it('opens extensible language and theme dropdowns and allows selecting preferences', () => {

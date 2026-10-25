@@ -331,6 +331,7 @@ describe('alertService', () => {
       const questAlert = res.newAlerts.find((a) => a.dedupKey === 'smart-quest-unclaimed-q1');
       expect(Boolean(questAlert)).toBe(true);
       expect(questAlert?.actionLabelKey).toBe('gamification:quests.claimReward');
+      expect(questAlert?.actionUrl).toBe('/progress?tab=quests');
     });
 
     it('deduplicates alerts and avoids inserting existing dedupKey', async () => {

@@ -15,6 +15,8 @@ export interface WrappedKeyEntry {
     /** Base64 AES-KW-wrapped DEK. */
     wrapped: string;
     createdAt: string;
+    /** Dedicated 16-byte random salt (Base64) to preserve slot independence across password changes. */
+    salt?: string;
 }
 
 /** Reserved for TGLA-042 (WebAuthn PRF unlock). */
@@ -33,11 +35,18 @@ export interface VaultHeader {
         recovery: WrappedKeyEntry | null;
         passkeys: PasskeyWrappedKeyEntry[];
     };
+    /** Aliases maintained in sync for multi-slot clarity */
+    passwordSlot?: WrappedKeyEntry;
+    recoverySlot?: WrappedKeyEntry | null;
     createdAt: string;
     updatedAt: string;
     dekCreatedAt: string;
     /** Distinguishes demo/test vaults from real personal/cloud user vaults */
     isDemo?: boolean;
+    /** Tracks whether vault was initialized via local, email, or Google OAuth */
+    authProvider?: 'local' | 'email' | 'google' | 'demo';
+    /** Tracks whether two-factor authentication is active on this vault */
+    totpEnabled?: boolean;
 }
 
 /** On-disk format of every encrypted record. */

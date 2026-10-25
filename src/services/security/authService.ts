@@ -1,19 +1,24 @@
 /**
- * Unified Authentication Service (TGLA-047, TGLA-059 & TGLA-060).
+ * Unified Authentication Service (TGLA-047, TGLA-059, TGLA-060 & Epic 20).
  *
  * Implements:
  *   - LocalAuthProvider (E2EE local mode, single-vault direct unlock, PBKDF2/HKDF dual-key unlock, lockout protection).
- *   - SupabaseAuthProvider (E2EE cloud mode, GoTrue Auth, Google/Apple OAuth, automated encrypted vault sync).
- *   - Factory keyed on VITE_DEPLOYMENT_MODE & Supabase configuration.
+ *   - SupabaseAuthProvider (E2EE cloud mode, GoTrue Auth, Google OAuth PKCE 0-password, automated encrypted vault sync).
+ *   - Multi-slot KEK/DEK lifecycle with 256-bit emergency recovery key.
+ *   - 2FA/TOTP step-up verification and anti-bot hardening.
+ *   - Factory keyed strictly on VITE_DEPLOYMENT_MODE & Supabase configuration.
  */
 
 import { getDeploymentMode } from '../../config/deployment';
 import { User } from '../../types/domain';
-import { delay } from '../db';
+import { isErr } from '../../types/result';
+import { db, delay } from '../db';
 import { userRepository } from '../repositories';
 import { AuthResult, AuthSession, IAuthProvider } from './authTypes';
 import { evaluatePassword } from './passwordValidator';
 import { vaultService } from './vaultService';
+import { totpService } from './totpService';
+import { auditLogService } from './auditLogService';
 import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../storage/storageKeys';
 import { getSyncedStorageProvider } from '../storage/storageFactory';
@@ -47,7 +52,6 @@ function getInitialAuthPreferences(): User['preferences'] {
     };
 }
 
-const MAX_UNLOCKED_ATTEMPTS = 5;
 const BASE_LOCKOUT_SECONDS = 30;
 
 // Helper to create in-memory session record
@@ -65,9 +69,14 @@ function createSessionRecord(userId: string): AuthSession {
 // ── LOCAL AUTH PROVIDER (Offline-first & Docker single-vault) ─────────────────
 
 export class LocalAuthProvider implements IAuthProvider {
+    protected maxAttempts: number;
     private failedAttempts = 0;
     private lockoutUntil: number | null = null;
-    private currentSession: AuthSession | null = null;
+    protected currentSession: AuthSession | null = null;
+
+    constructor(maxAttempts = 5) {
+        this.maxAttempts = maxAttempts;
+    }
 
     public getFailedAttemptsCount(): number {
         return this.failedAttempts;
@@ -92,8 +101,8 @@ export class LocalAuthProvider implements IAuthProvider {
 
     protected registerFailure(): void {
         this.failedAttempts++;
-        if (this.failedAttempts >= MAX_UNLOCKED_ATTEMPTS) {
-            const multiplier = Math.pow(2, this.failedAttempts - MAX_UNLOCKED_ATTEMPTS);
+        if (this.failedAttempts >= this.maxAttempts) {
+            const multiplier = Math.pow(2, this.failedAttempts - this.maxAttempts);
             const lockoutDurationSec = BASE_LOCKOUT_SECONDS * multiplier;
             this.lockoutUntil = Date.now() + lockoutDurationSec * 1000;
         }
@@ -112,9 +121,7 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        await vaultService.resetVault();
         const setupRes = await vaultService.setup(masterPassword);
         const recoveryKey = setupRes.recoveryKey;
 
@@ -127,12 +134,16 @@ export class LocalAuthProvider implements IAuthProvider {
             preferences: getInitialAuthPreferences(),
             xp: 0,
             level: 1,
+            authProvider: 'local',
+            emailVerified: true,
         };
 
         await userRepository.saveUser(localUser);
         this.resetFailures();
         const session = createSessionRecord(localUser.id);
         this.currentSession = session;
+
+        await auditLogService.record('auth_login', 'Local master vault initialized successfully');
 
         return { user: localUser, recoveryKey, session };
     }
@@ -155,12 +166,16 @@ export class LocalAuthProvider implements IAuthProvider {
                     preferences: getInitialAuthPreferences(),
                     xp: 0,
                     level: 1,
+                    authProvider: 'local',
+                    emailVerified: true,
                 };
                 await userRepository.saveUser(user);
             }
             this.resetFailures();
             const session = createSessionRecord(user.id);
             this.currentSession = session;
+
+            await auditLogService.record('auth_login', 'Local vault unlocked');
             return { user, session };
         } catch {
             this.registerFailure();
@@ -177,11 +192,8 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        // If a vault is already initialized (e.g. from a previous demo session or locked state),
-        // reset it so the new account gets a clean, unlocked E2EE vault
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        // Reset any previous vault or unencrypted demo remnants so the new account gets a clean, unlocked E2EE vault
+        await vaultService.resetVault();
 
         // Initialize encrypted vault
         const setupRes = await vaultService.setup(password);
@@ -196,12 +208,16 @@ export class LocalAuthProvider implements IAuthProvider {
             preferences: getInitialAuthPreferences(),
             xp: 0,
             level: 1,
+            authProvider: 'local',
+            emailVerified: true,
         };
 
         await userRepository.saveUser(newUser);
         this.resetFailures();
         const session = createSessionRecord(newUser.id);
         this.currentSession = session;
+
+        await auditLogService.record('auth_login', `Account created for ${newUser.email}`);
 
         return {
             user: newUser,
@@ -269,8 +285,10 @@ export class LocalAuthProvider implements IAuthProvider {
                         ...(existingDemo?.preferences?.fiscalProfile || {}),
                     },
                 },
-                xp: existingDemo?.xp ?? 2200,
+                xp: existingDemo?.xp ?? 2150,
                 level: existingDemo?.level ?? 5,
+                authProvider: 'local',
+                emailVerified: true,
             };
 
             await userRepository.saveUser(demoUser);
@@ -287,9 +305,21 @@ export class LocalAuthProvider implements IAuthProvider {
             }
             const storedUser = await userRepository.getUser();
             if (storedUser && storedUser.email.toLowerCase() === cleanEmail) {
+                // Check if Two-Factor Authentication is enabled
+                const hasTotp = await totpService.isEnabled();
+                if (hasTotp) {
+                    return {
+                        user: storedUser,
+                        session: createSessionRecord(storedUser.id),
+                        requiresTwoFactor: true,
+                        tempUserId: storedUser.id,
+                    };
+                }
+
                 this.resetFailures();
                 const session = createSessionRecord(storedUser.id);
                 this.currentSession = session;
+                await auditLogService.record('auth_login', `Login successful for ${storedUser.email}`);
                 return { user: storedUser, session };
             }
         } catch {
@@ -298,6 +328,112 @@ export class LocalAuthProvider implements IAuthProvider {
 
         this.registerFailure();
         throw new Error('Invalid email or password.');
+    }
+
+    public async verifySecondFactor(tokenOrCode: string): Promise<AuthResult> {
+        this.checkLockout();
+
+        const isValid = await totpService.verify(tokenOrCode);
+        if (!isValid) {
+            this.registerFailure();
+            throw new Error('Invalid two-factor authentication code or backup code.');
+        }
+
+        const user = await userRepository.getUser();
+        if (!user) {
+            throw new Error('User session not found.');
+        }
+
+        this.resetFailures();
+        const session = createSessionRecord(user.id);
+        this.currentSession = session;
+        await auditLogService.record('totp_verified', 'Two-factor authentication challenge passed');
+
+        return { user, session };
+    }
+
+    public async changeEmail(currentPassword: string, newEmail: string): Promise<void> {
+        this.checkLockout();
+
+        const cleanNewEmail = newEmail.trim().toLowerCase();
+        if (!cleanNewEmail.includes('@') || !cleanNewEmail.includes('.')) {
+            throw new Error('Please enter a valid email address.');
+        }
+
+        const user = await userRepository.getUser();
+        if (user?.authProvider === 'google') {
+            throw new Error('Email change is disabled for Google OAuth accounts.');
+        }
+
+        const isPasswordValid = await vaultService.verifyPassword(currentPassword);
+        if (!isPasswordValid) {
+            this.registerFailure();
+            throw new Error('Invalid current password.');
+        }
+
+        if (user) {
+            const cleanNewEmail = newEmail.trim().toLowerCase();
+            user.email = cleanNewEmail;
+            user.pendingEmail = undefined;
+            await userRepository.saveUser(user);
+            await auditLogService.record('email_change_completed', `Email changed to ${cleanNewEmail}`);
+        }
+    }
+
+    public async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+        this.checkLockout();
+
+        const user = await userRepository.getUser();
+        if (user?.authProvider === 'google') {
+            throw new Error('Password change is disabled for Google OAuth accounts.');
+        }
+
+        const validation = evaluatePassword(newPassword);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        await vaultService.changePassword(oldPassword, newPassword);
+        this.resetFailures();
+        await auditLogService.record('recovery_key_rotated', 'Master password changed and DEK re-wrapped');
+    }
+
+    public async recoverPassword(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }> {
+        this.checkLockout();
+
+        const validation = evaluatePassword(newPassword);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        const res = await vaultService.recoverPasswordWithRecoveryKey(recoveryKey, newPassword);
+        if (isErr(res)) {
+            throw new Error(res.error.message);
+        }
+        this.resetFailures();
+
+        await auditLogService.record('recovery_key_used', 'Emergency recovery key used to unlock vault', 'warning');
+        await auditLogService.record('recovery_key_rotated', 'Emergency recovery key rotated automatically', 'info');
+
+        return { newRecoveryKey: res.value.newRecoveryKey };
+    }
+
+    public async requestPasswordReset(email: string): Promise<void> {
+        await delay(200);
+        // Generic response to prevent account enumeration
+        await auditLogService.record('password_reset_requested', `Password reset requested for ${email}`);
+    }
+
+    public async resendEmailVerification(_email?: string): Promise<void> {
+        await delay(200);
+    }
+
+    public async verifyEmailOtp(_email: string, _token: string): Promise<AuthResult> {
+        const user = await userRepository.getUser();
+        if (!user) throw new Error('User not found.');
+        user.emailVerified = true;
+        await userRepository.saveUser(user);
+        return { user, session: createSessionRecord(user.id) };
     }
 
     public async signInWithOAuth(provider: 'google' | 'apple'): Promise<never> {
@@ -317,6 +453,20 @@ export class LocalAuthProvider implements IAuthProvider {
     public async getCurrentUser(): Promise<User | null> {
         return userRepository.getUser();
     }
+
+    public async deleteAccountPermanently(options?: { password?: string; confirmationText?: string }): Promise<void> {
+        if (options?.password && vaultService.isInitialized()) {
+            const isValid = await vaultService.verifyPassword(options.password);
+            if (!isValid) {
+                throw new Error('Invalid master password.');
+            }
+        }
+
+        await vaultService.resetVault();
+        await userRepository.clearUser();
+        db.resetToInitialData();
+        await this.signOut();
+    }
 }
 
 // ── SUPABASE AUTH PROVIDER (Cloud E2EE Sync) ──────────────────────────────────
@@ -325,7 +475,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     private supabaseSession: SupabaseAuthSession | null = null;
 
     constructor() {
-        super();
+        super(3); // Enforce 3-attempt lockout for cloud auth
         this.restoreSessionFromStorage();
     }
 
@@ -360,19 +510,68 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
     public async handleOAuthCallback(): Promise<AuthResult | null> {
         if (typeof window === 'undefined') return null;
-        const hash = consumeInitialOAuthHash() || window.location.hash;
-        if (!hash || !hash.includes('access_token=')) return null;
 
-        const cleanFragment = hash.replace(/^[#/?]+/, '');
-        const params = new URLSearchParams(cleanFragment);
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        const expiresIn = params.get('expires_in');
+        let accessToken: string | null = null;
+        let refreshToken: string | null = null;
+        let expiresIn: string | null = null;
+
+        // Check 1: PKCE code query parameter (?code=...) in window.location.search or window.location.hash
+        const urlParams = new URLSearchParams(window.location.search);
+        let code = urlParams.get('code');
+        let codeInHash = false;
+
+        if (!code && window.location.hash) {
+            const hash = window.location.hash;
+            const qIndex = hash.indexOf('?');
+            if (qIndex !== -1) {
+                const hashParams = new URLSearchParams(hash.slice(qIndex + 1));
+                code = hashParams.get('code');
+                codeInHash = true;
+            } else if (hash.includes('code=')) {
+                const cleanHash = hash.replace(/^[#/?]+/, '');
+                const hashParams = new URLSearchParams(cleanHash);
+                code = hashParams.get('code');
+                codeInHash = true;
+            }
+        }
+
+        if (code) {
+            try {
+                const pkceSession = await supabaseClient.exchangePkceCode(code);
+                accessToken = pkceSession.accessToken;
+                refreshToken = pkceSession.refreshToken;
+                expiresIn = String(Math.floor((pkceSession.expiresAt - Date.now()) / 1000));
+
+                // Clean URL search query without page reload
+                if (window.location.search.includes('code=')) {
+                    urlParams.delete('code');
+                    const newSearch = urlParams.toString() ? `?${urlParams.toString()}` : '';
+                    window.history.replaceState(null, '', window.location.pathname + newSearch + window.location.hash);
+                }
+                if (codeInHash && window.location.hash.includes('code=')) {
+                    const cleanHash = window.location.hash.replace(/[?&]code=[^&#]+/, '').replace(/\?$/, '');
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+                }
+            } catch (pkceErr) {
+                console.error('[authService] PKCE exchange error', pkceErr);
+            }
+        }
+
+        // Check 2: Hash fragment (#access_token=...)
+        if (!accessToken) {
+            const hash = consumeInitialOAuthHash() || window.location.hash;
+            if (hash && hash.includes('access_token=')) {
+                const cleanFragment = hash.replace(/^[#/?]+/, '');
+                const hashParams = new URLSearchParams(cleanFragment);
+                accessToken = hashParams.get('access_token');
+                refreshToken = hashParams.get('refresh_token');
+                expiresIn = hashParams.get('expires_in');
+                // Clean URL hash without reload
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+        }
 
         if (!accessToken) return null;
-
-        // Clean URL hash without reload
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
         // 1. Fetch verified user profile from Supabase Auth
         let sbUser: SupabaseUserData;
@@ -407,29 +606,44 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             await synced.pullFromRemote();
         }
 
-        // 4. Derive seamless E2EE vault secret and initialize or unlock vault
+        // 4. Zero-Password Seamless Vault Initialization or Unlock (Option A)
+        // With account conflict protection: check if vault exists with password slot only
         const oauthEmail = (sbUser.email || '').trim().toLowerCase();
         const oauthVaultSecret = `gf-oauth-e2ee-v1:${sbUser.id}:${oauthEmail}`;
 
-        try {
-            if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
-                if (!vaultService.isUnlocked()) {
-                    await vaultService.unlock(oauthVaultSecret);
-                }
-            } else {
-                if (vaultService.isInitialized()) {
-                    await vaultService.resetVault();
-                }
-                await vaultService.setup(oauthVaultSecret, { isDemo: false });
+        if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
+            const header = vaultService.getVaultHeader();
+            if (header && header.authProvider === 'email') {
+                await auditLogService.record('account_conflict_blocked', `Account conflict for ${oauthEmail}: user already has password vault`, 'warning');
+                throw new Error('An account already exists with this email address using password authentication. Please log in with your master password.');
             }
-        } catch (err) {
-            console.error('[authService] E2EE vault auto-unlock error on OAuth callback', err);
+
+            try {
+                if (!vaultService.isUnlocked()) {
+                    await vaultService.unlockOAuthVault(oauthVaultSecret);
+                }
+            } catch (err) {
+                console.error('[authService] E2EE vault OAuth unlock error, recreating clean OAuth vault', err);
+                if (!header || header.authProvider === 'google' || !header.authProvider) {
+                    await vaultService.resetVault();
+                    await vaultService.setupOAuthVault(oauthVaultSecret);
+                } else {
+                    throw new Error('Failed to unlock vault with OAuth credentials.');
+                }
+            }
+        } else {
+            await vaultService.resetVault();
+            await vaultService.setupOAuthVault(oauthVaultSecret);
         }
 
         // 5. Construct or retrieve user profile
         let user = await userRepository.getUser();
         const googleName = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || oauthEmail.split('@')[0] || 'Investor';
         const googleAvatar = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || `https://i.pravatar.cc/150?u=${encodeURIComponent(sbUser.id)}`;
+
+        if (user && (user.id === 'u1' || user.email.toLowerCase() === 'demo@glassfolio.com' || (user.id !== sbUser.id && user.email.toLowerCase() !== oauthEmail))) {
+            user = null;
+        }
 
         if (!user) {
             user = {
@@ -440,10 +654,20 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 preferences: getInitialAuthPreferences(),
                 xp: 0,
                 level: 1,
+                authProvider: 'google',
+                emailVerified: true,
             };
             await userRepository.saveUser(user);
         } else {
             let updated = false;
+            if (user.authProvider !== 'google') {
+                user.authProvider = 'google';
+                updated = true;
+            }
+            if (!user.emailVerified) {
+                user.emailVerified = true;
+                updated = true;
+            }
             if (googleName && user.name !== googleName) {
                 user.name = googleName;
                 updated = true;
@@ -458,13 +682,20 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
 
         this.resetFailures();
+        await auditLogService.record('oauth_google_login', `Google OAuth login succeeded for ${oauthEmail}`);
+
         return {
             user,
             session: createSessionRecord(user.id),
         };
     }
 
-    public override async signUp(email: string, password: string, name: string): Promise<AuthResult> {
+    public override async signUp(
+        email: string,
+        password: string,
+        name: string,
+        options?: { captchaToken?: string }
+    ): Promise<AuthResult> {
         this.checkLockout();
 
         // 1. NIST evaluation
@@ -474,16 +705,15 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
 
         // 2. Register user on Supabase Auth
-        const sbSession = await supabaseClient.signUp(email, password, name);
+        const sbSession = await supabaseClient.signUp(email, password, name, options);
         this.persistSession(sbSession);
 
-        // 3. Setup client-side encrypted vault
-        if (vaultService.isInitialized()) {
-            await vaultService.resetVault();
-        }
+        // 3. Setup client-side encrypted vault (clean slate before setup)
+        await vaultService.resetVault();
         const setupRes = await vaultService.setup(password);
 
-        // 4. Save User record
+        // 4. Save User record with email provider
+        const isEmailConfirmed = Boolean(sbSession.user.email_confirmed_at);
         const newUser: User = {
             id: sbSession.user.id,
             name: name.trim() || sbSession.user.user_metadata?.name || 'Investor',
@@ -492,6 +722,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             preferences: getInitialAuthPreferences(),
             xp: 0,
             level: 1,
+            authProvider: 'email',
+            emailVerified: isEmailConfirmed,
         };
 
         await userRepository.saveUser(newUser);
@@ -503,6 +735,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
 
         this.resetFailures();
+        await auditLogService.record('auth_login', `Supabase signup for ${newUser.email} (confirmed: ${isEmailConfirmed})`);
+
         return {
             user: newUser,
             recoveryKey: setupRes.recoveryKey,
@@ -510,7 +744,11 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         };
     }
 
-    public override async signIn(email: string, password: string): Promise<AuthResult> {
+    public override async signIn(
+        email: string,
+        password: string,
+        options?: { captchaToken?: string }
+    ): Promise<AuthResult> {
         this.checkLockout();
 
         const cleanEmail = email.trim().toLowerCase();
@@ -520,7 +758,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
         try {
             // 1. Authenticate against Supabase Auth
-            const sbSession = await supabaseClient.signInWithPassword(cleanEmail, password);
+            const sbSession = await supabaseClient.signInWithPassword(cleanEmail, password, options);
             this.persistSession(sbSession);
 
             // 2. Pull remote encrypted vault from Supabase PostgREST
@@ -529,13 +767,39 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 await synced.pullFromRemote();
             }
 
-            // 3. Unlock encrypted vault
+            // 3. Check Two-Factor Authentication requirement
+            const isTotpActive = await totpService.isEnabled();
+            if (isTotpActive) {
+                const user = await userRepository.getUser();
+                return {
+                    user: user || {
+                        id: sbSession.user.id,
+                        name: sbSession.user.user_metadata?.name || cleanEmail.split('@')[0],
+                        email: cleanEmail,
+                        avatar: sbSession.user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${encodeURIComponent(cleanEmail)}`,
+                        preferences: getInitialAuthPreferences(),
+                        xp: 0,
+                        level: 1,
+                        authProvider: 'email',
+                        emailVerified: Boolean(sbSession.user.email_confirmed_at),
+                    },
+                    session: createSessionRecord(sbSession.user.id),
+                    requiresTwoFactor: true,
+                    tempUserId: sbSession.user.id,
+                };
+            }
+
+            // 4. Unlock encrypted vault
             if (vaultService.isInitialized() && !vaultService.isUnlocked()) {
                 await vaultService.unlock(password);
             }
 
-            // 4. Retrieve or reconstruct user profile
+            // 5. Retrieve or reconstruct user profile
+            const isEmailConfirmed = Boolean(sbSession.user.email_confirmed_at);
             let user = await userRepository.getUser();
+            if (user && (user.id === 'u1' || user.email.toLowerCase() === 'demo@glassfolio.com' || (user.id !== sbSession.user.id && user.email.toLowerCase() !== cleanEmail))) {
+                user = null;
+            }
             if (!user) {
                 user = {
                     id: sbSession.user.id,
@@ -545,11 +809,28 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                     preferences: getInitialAuthPreferences(),
                     xp: 0,
                     level: 1,
+                    authProvider: 'email',
+                    emailVerified: isEmailConfirmed,
                 };
                 await userRepository.saveUser(user);
+            } else {
+                let updated = false;
+                if (user.authProvider !== 'email') {
+                    user.authProvider = 'email';
+                    updated = true;
+                }
+                if (user.emailVerified !== isEmailConfirmed) {
+                    user.emailVerified = isEmailConfirmed;
+                    updated = true;
+                }
+                if (updated) {
+                    await userRepository.saveUser(user);
+                }
             }
 
             this.resetFailures();
+            await auditLogService.record('auth_login', `Supabase signin for ${user.email}`);
+
             return {
                 user,
                 session: createSessionRecord(user.id),
@@ -559,6 +840,147 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             const msg = err instanceof Error ? err.message : 'Invalid credentials.';
             throw new Error(msg);
         }
+    }
+
+    public override async changeEmail(currentPassword: string, newEmail: string): Promise<void> {
+        this.checkLockout();
+
+        const cleanNewEmail = newEmail.trim().toLowerCase();
+        if (!cleanNewEmail.includes('@') || !cleanNewEmail.includes('.')) {
+            throw new Error('Please enter a valid email address.');
+        }
+
+        const user = await userRepository.getUser();
+        if (user?.authProvider === 'google') {
+            throw new Error('Email change is disabled for Google OAuth accounts.');
+        }
+
+        // Step 1: Re-authenticate locally
+        const isPasswordValid = await vaultService.verifyPassword(currentPassword);
+        if (!isPasswordValid) {
+            this.registerFailure();
+            throw new Error('Invalid current password.');
+        }
+
+        if (!this.supabaseSession?.accessToken) {
+            throw new Error('Active session required for email update.');
+        }
+
+        // Step 2: Request Secure Email Change on Supabase
+        await supabaseClient.updateUser(this.supabaseSession.accessToken, { email: cleanNewEmail });
+
+        // Step 3: Record pending email state
+        if (user) {
+            user.pendingEmail = cleanNewEmail;
+            await userRepository.saveUser(user);
+        }
+
+        this.resetFailures();
+        await auditLogService.record('email_change_requested', `Confirmation emails sent to verify change to ${cleanNewEmail}`);
+    }
+
+    public override async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+        this.checkLockout();
+
+        const user = await userRepository.getUser();
+        if (user?.authProvider === 'google') {
+            throw new Error('Password change is disabled for Google OAuth accounts.');
+        }
+
+        const validation = evaluatePassword(newPassword);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        // Re-wrap DEK in client vault with fresh salt
+        await vaultService.changePassword(oldPassword, newPassword);
+
+        // Update password on Supabase Auth if session exists
+        if (this.supabaseSession?.accessToken) {
+            await supabaseClient.updateUser(this.supabaseSession.accessToken, { password: newPassword });
+        }
+
+        this.resetFailures();
+        await auditLogService.record('recovery_key_rotated', 'Master password changed and DEK re-wrapped');
+    }
+
+    public override async requestPasswordReset(email: string, redirectTo?: string): Promise<void> {
+        await delay(200);
+        try {
+            await supabaseClient.resetPasswordForEmail(email.trim().toLowerCase(), redirectTo);
+        } catch {
+            // Anti-enumeration: do not leak whether user exists
+        }
+        await auditLogService.record('password_reset_requested', `Password reset requested for ${email}`);
+    }
+
+    public override async recoverPassword(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }> {
+        this.checkLockout();
+
+        const validation = evaluatePassword(newPassword);
+        if (!validation.isValid) {
+            throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        // Recover DEK and rotate Recovery Key in client vault
+        const res = await vaultService.recoverPasswordWithRecoveryKey(recoveryKey, newPassword);
+        if (isErr(res)) {
+            throw new Error(res.error.message);
+        }
+
+        // If active session, update password on Supabase
+        if (this.supabaseSession?.accessToken) {
+            try {
+                await supabaseClient.updateUser(this.supabaseSession.accessToken, { password: newPassword });
+            } catch {
+                // If token expired, user will log in with new password
+            }
+        }
+
+        this.resetFailures();
+        await auditLogService.record('recovery_key_used', 'Emergency recovery key used to unlock vault', 'warning');
+        await auditLogService.record('recovery_key_rotated', 'Recovery key rotated following emergency reset', 'info');
+
+        return { newRecoveryKey: res.value.newRecoveryKey };
+    }
+
+    public override async resendEmailVerification(email?: string): Promise<void> {
+        const targetEmail = email || this.supabaseSession?.user.email;
+        if (!targetEmail) {
+            throw new Error('Email address required to resend verification.');
+        }
+        await supabaseClient.resendVerificationEmail(targetEmail);
+    }
+
+    public override async verifyEmailOtp(email: string, token: string): Promise<AuthResult> {
+        const session = await supabaseClient.verifyEmailOtp(email.trim().toLowerCase(), token.trim());
+        this.persistSession(session);
+
+        let user = await userRepository.getUser();
+        if (user) {
+            user.emailVerified = true;
+            await userRepository.saveUser(user);
+        } else {
+            user = {
+                id: session.user.id,
+                name: session.user.user_metadata?.name || email.split('@')[0],
+                email: email.trim().toLowerCase(),
+                avatar: session.user.user_metadata?.avatar_url || `https://i.pravatar.cc/150?u=${encodeURIComponent(email)}`,
+                preferences: getInitialAuthPreferences(),
+                xp: 0,
+                level: 1,
+                authProvider: 'email',
+                emailVerified: true,
+            };
+            await userRepository.saveUser(user);
+        }
+
+        await auditLogService.record('email_verified', `Email verified for ${email}`);
+
+        return {
+            user,
+            session: createSessionRecord(user.id),
+        };
     }
 
     protected redirectToUrl(url: string): void {
@@ -574,7 +996,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         if (!isSupabaseConfigured() || typeof window === 'undefined') {
             return super.signInWithOAuth(provider);
         }
-        const redirectUrl = supabaseClient.getOAuthUrl(provider);
+
+        const redirectUrl = await supabaseClient.prepareOAuthPkceUrl(provider);
         this.redirectToUrl(redirectUrl);
         // Returns promise that never resolves as browser is redirecting
         return new Promise(() => {});
@@ -586,6 +1009,35 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
         this.persistSession(null);
         await super.signOut();
+    }
+
+    public override async deleteAccountPermanently(options?: { password?: string; confirmationText?: string }): Promise<void> {
+        const user = await userRepository.getUser();
+        if (user?.authProvider === 'email' || !user?.authProvider) {
+            if (!options?.password) {
+                throw new Error('Password is required to delete an email-based account.');
+            }
+            if (vaultService.isInitialized()) {
+                const isValid = await vaultService.verifyPassword(options.password);
+                if (!isValid) {
+                    throw new Error('Invalid master password.');
+                }
+            }
+        } else if (user?.authProvider === 'google') {
+            const confirm = (options?.confirmationText || '').trim().toUpperCase();
+            if (confirm !== 'DELETE' && confirm !== 'SUPPRIMER') {
+                throw new Error('Confirmation text must match DELETE or SUPPRIMER.');
+            }
+        }
+
+        if (this.supabaseSession?.accessToken) {
+            await supabaseClient.deleteOwnAccount(this.supabaseSession.accessToken);
+        }
+
+        await vaultService.resetVault();
+        await userRepository.clearUser();
+        db.resetToInitialData();
+        await this.signOut();
     }
 }
 
@@ -600,9 +1052,6 @@ export const createAuthProvider = (mode: string): IAuthProvider => {
             return new LocalAuthProvider();
         case 'local':
         default:
-            if (isSupabaseConfigured()) {
-                return new SupabaseAuthProvider();
-            }
             return new LocalAuthProvider();
     }
 };

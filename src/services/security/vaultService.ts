@@ -17,6 +17,7 @@ import { isGlassFolioKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import {
     createKdfParams,
     deriveMasterKeys,
+    deriveOAuthKek,
     derivePasskeyKek,
     deriveRecoveryKek,
     formatRecoveryKey,
@@ -24,10 +25,14 @@ import {
     parseRecoveryKey,
     randomBytes,
     RECOVERY_KEY_BYTES,
+    RECOVERY_KEY_256_BYTES,
+    SALT_BYTES,
     unwrapDek,
     wipe,
     wrapDek,
 } from './crypto';
+import { toBase64 } from './encoding';
+import { Result, ok, err, ValidationError } from '../../types/result';
 import {
     InvalidVaultCredentialsError,
     VaultAlreadyInitializedError,
@@ -128,9 +133,12 @@ export class VaultService {
 
     /**
      * Sets up a new E2EE encrypted vault with a master password.
-     * Generates a 160-bit recovery key and returns it (shown ONCE to the user).
+     * Generates a high-entropy recovery key and returns it (shown ONCE to the user).
      */
-    public async setup(password: string, options?: { isDemo?: boolean }): Promise<VaultSetupResult> {
+    public async setup(
+        password: string,
+        options?: { isDemo?: boolean; authProvider?: 'local' | 'email' | 'google' | 'demo'; recoveryKeyBits?: 160 | 256 }
+    ): Promise<VaultSetupResult> {
         await delay(300);
 
         if (this.isInitialized()) {
@@ -144,9 +152,11 @@ export class VaultService {
         const kdf = createKdfParams();
         const { kek: passwordKek, authKey } = await deriveMasterKeys(password, kdf);
 
-        // 3. Generate high-entropy Recovery Key (160 bits)
-        const recoveryBytes = randomBytes(RECOVERY_KEY_BYTES);
-        const recoveryKek = await deriveRecoveryKek(recoveryBytes, kdf.salt);
+        // 3. Generate high-entropy Recovery Key (256 bits by default, or 160 bits if specified)
+        const keyLength = options?.recoveryKeyBits === 160 ? RECOVERY_KEY_BYTES : RECOVERY_KEY_256_BYTES;
+        const recoveryBytes = randomBytes(keyLength);
+        const recoverySalt = toBase64(randomBytes(SALT_BYTES));
+        const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
 
         // 4. Wrap DEK with both KEKs
         const wrappedPasswordDek = await wrapDek(dek, passwordKek);
@@ -154,27 +164,36 @@ export class VaultService {
 
         // 5. Build and save consolidated VaultHeader
         const nowIso = new Date().toISOString();
+        const passwordEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: wrappedPasswordDek,
+            createdAt: nowIso,
+            salt: kdf.salt,
+        };
+        const recoveryEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: wrappedRecoveryDek,
+            createdAt: nowIso,
+            salt: recoverySalt,
+        };
+
         const header: VaultHeader = {
             version: 1,
             kdf,
             dekAlgorithm: 'AES-256-GCM',
             wrappedKeys: {
-                password: {
-                    alg: 'AES-KW',
-                    wrapped: wrappedPasswordDek,
-                    createdAt: nowIso,
-                },
-                recovery: {
-                    alg: 'AES-KW',
-                    wrapped: wrappedRecoveryDek,
-                    createdAt: nowIso,
-                },
+                password: passwordEntry,
+                recovery: recoveryEntry,
                 passkeys: [],
             },
+            passwordSlot: passwordEntry,
+            recoverySlot: recoveryEntry,
             createdAt: nowIso,
             updatedAt: nowIso,
             dekCreatedAt: nowIso,
             isDemo: Boolean(options?.isDemo),
+            authProvider: options?.authProvider || (options?.isDemo ? 'demo' : 'local'),
+            totpEnabled: false,
         };
 
         appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
@@ -186,6 +205,29 @@ export class VaultService {
         const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
         await encrypted.flush();
         appStorage.attachEncrypted(encrypted);
+
+        if (!options?.isDemo) {
+            const EMPTY_KEYS = [
+                'glassfolio_transactions',
+                'glassfolio_positions',
+                'glassfolio_alerts',
+                'glassfolio_alert_rules',
+                'glassfolio_goals',
+                'glassfolio_accounts',
+                'glassfolio_unified_transactions',
+                'glassfolio_import_batches',
+                'glassfolio_asset_positions',
+                'glassfolio_achievements',
+                'glassfolio_quests',
+                'glassfolio_pinned_badges',
+                'glassfolio_asset_groups',
+            ];
+            for (const k of EMPTY_KEYS) {
+                if (appStorage.getItem(k) === null) {
+                    appStorage.setItem(k, '[]');
+                }
+            }
+        }
 
         // Wipe sensitive raw buffers
         const recoveryKeyFormatted = formatRecoveryKey(recoveryBytes);
@@ -252,7 +294,8 @@ export class VaultService {
         }
 
         try {
-            const recoveryKek = await deriveRecoveryKek(recoveryBytes, header.kdf.salt);
+            const recoverySalt = header.wrappedKeys.recovery.salt || header.recoverySlot?.salt || header.kdf.salt;
+            const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
             wipe(recoveryBytes);
 
             const runtimeDek = await unwrapDek(header.wrappedKeys.recovery.wrapped, recoveryKek, false);
@@ -307,6 +350,7 @@ export class VaultService {
                 credentialId,
                 label,
                 createdAt: new Date().toISOString(),
+                salt: header.kdf.salt,
             },
         ];
 
@@ -339,7 +383,8 @@ export class VaultService {
         if (!entry) throw new InvalidVaultCredentialsError();
 
         try {
-            const passkeyKek = await derivePasskeyKek(prfSecret, header.kdf.salt);
+            const passkeySalt = entry.salt || header.kdf.salt;
+            const passkeyKek = await derivePasskeyKek(prfSecret, passkeySalt);
             const runtimeDek = await unwrapDek(entry.wrapped, passkeyKek, false);
             const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
             await encrypted.flush();
@@ -393,27 +438,301 @@ export class VaultService {
         // 3. Wrap DEK with new KEK
         const newWrappedPassword = await wrapDek(extractableDek, newDerived.kek);
 
-        // 4. Update recovery wrapper with new salt if recovery is active
-        const newWrappedRecovery = header.wrappedKeys.recovery;
-        // Keep existing recovery wrapper if possible, or leave as is if recovery key wasn't provided.
-        // If recovery key re-wrap is needed, a separate endpoint exists.
+        // 4. Update recovery and passkeys slots while preserving their existing derivation salts
+        const recoveryEntry = header.wrappedKeys.recovery ? {
+            ...header.wrappedKeys.recovery,
+            salt: header.wrappedKeys.recovery.salt || header.kdf.salt,
+        } : null;
+
+        const passkeysEntries = (header.wrappedKeys.passkeys || []).map(p => ({
+            ...p,
+            salt: p.salt || header.kdf.salt,
+        }));
+
+        const passwordEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: newWrappedPassword,
+            createdAt: new Date().toISOString(),
+            salt: newKdf.salt,
+        };
 
         const updatedHeader: VaultHeader = {
             ...header,
             kdf: newKdf,
             wrappedKeys: {
                 ...header.wrappedKeys,
-                password: {
-                    alg: 'AES-KW',
-                    wrapped: newWrappedPassword,
-                    createdAt: new Date().toISOString(),
-                },
-                recovery: newWrappedRecovery,
+                password: passwordEntry,
+                recovery: recoveryEntry,
+                passkeys: passkeysEntries,
             },
+            passwordSlot: passwordEntry,
+            recoverySlot: recoveryEntry,
             updatedAt: new Date().toISOString(),
         };
 
         appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+    }
+
+    /**
+     * Verifies whether a given password correctly unwraps the vault without altering state.
+     */
+    public async verifyPassword(password: string): Promise<boolean> {
+        const header = this.getVaultHeader();
+        if (!header) return false;
+        try {
+            const derived = await deriveMasterKeys(password, header.kdf);
+            await unwrapDek(header.wrappedKeys.password.wrapped, derived.kek, false);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Initializes a seamless E2EE vault for Google OAuth users (0-Password flow).
+     */
+    public async setupOAuthVault(oauthSecret: string): Promise<void> {
+        await delay(250);
+        if (this.isInitialized()) {
+            throw new VaultAlreadyInitializedError();
+        }
+
+        const dek = await generateExtractableDek();
+        const kdf = createKdfParams();
+        const oauthKek = await deriveOAuthKek(oauthSecret, kdf.salt);
+        const wrappedDek = await wrapDek(dek, oauthKek);
+
+        const nowIso = new Date().toISOString();
+        const oauthEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: wrappedDek,
+            createdAt: nowIso,
+            salt: kdf.salt,
+        };
+
+        const header: VaultHeader = {
+            version: 1,
+            kdf,
+            dekAlgorithm: 'AES-256-GCM',
+            wrappedKeys: {
+                password: oauthEntry,
+                recovery: null,
+                passkeys: [],
+            },
+            passwordSlot: oauthEntry,
+            recoverySlot: null,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            dekCreatedAt: nowIso,
+            isDemo: false,
+            authProvider: 'google',
+            totpEnabled: false,
+        };
+
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
+
+        const runtimeDek = await unwrapDek(wrappedDek, oauthKek, false);
+        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+        await encrypted.flush();
+        appStorage.attachEncrypted(encrypted);
+
+        const EMPTY_KEYS = [
+            'glassfolio_transactions',
+            'glassfolio_positions',
+            'glassfolio_alerts',
+            'glassfolio_alert_rules',
+            'glassfolio_goals',
+            'glassfolio_accounts',
+            'glassfolio_unified_transactions',
+            'glassfolio_import_batches',
+            'glassfolio_asset_positions',
+            'glassfolio_achievements',
+            'glassfolio_quests',
+            'glassfolio_pinned_badges',
+            'glassfolio_asset_groups',
+        ];
+        for (const k of EMPTY_KEYS) {
+            if (appStorage.getItem(k) === null) {
+                appStorage.setItem(k, '[]');
+            }
+        }
+
+        this.setStatus('unlocked');
+        this.resetAutoLockTimer();
+    }
+
+    /**
+     * Unlocks a Google OAuth 0-Password vault automatically.
+     */
+    public async unlockOAuthVault(oauthSecret: string): Promise<void> {
+        await delay(200);
+        const header = this.getVaultHeader();
+        if (!header) throw new VaultNotInitializedError();
+
+        try {
+            const oauthKek = await deriveOAuthKek(oauthSecret, header.kdf.salt);
+            const runtimeDek = await unwrapDek(header.wrappedKeys.password.wrapped, oauthKek, false);
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            await encrypted.flush();
+            appStorage.attachEncrypted(encrypted);
+
+            this.setStatus('unlocked');
+            this.resetAutoLockTimer();
+        } catch {
+            // Backward-compatibility fallback for pre-Epic 20 OAuth vaults (PBKDF2)
+            try {
+                const { kek: legacyKek } = await deriveMasterKeys(oauthSecret, header.kdf);
+                const runtimeDek = await unwrapDek(header.wrappedKeys.password.wrapped, legacyKek, true);
+                const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+                await encrypted.flush();
+                appStorage.attachEncrypted(encrypted);
+
+                // Auto-upgrade wrapped key to HKDF oauthKek
+                const newOauthKek = await deriveOAuthKek(oauthSecret, header.kdf.salt);
+                const newWrapped = await wrapDek(runtimeDek, newOauthKek);
+                header.wrappedKeys.password.wrapped = newWrapped;
+                if (header.passwordSlot) {
+                    header.passwordSlot.wrapped = newWrapped;
+                }
+                header.authProvider = 'google';
+                appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
+
+                this.setStatus('unlocked');
+                this.resetAutoLockTimer();
+            } catch {
+                throw new InvalidVaultCredentialsError();
+            }
+        }
+    }
+
+    /**
+     * Voluntarily regenerates the Emergency Recovery Key (e.g. from Settings security tab).
+     */
+    public async regenerateRecoveryKey(password: string): Promise<Result<{ recoveryKey: string }, ValidationError>> {
+        await delay(350);
+        const header = this.getVaultHeader();
+        if (!header) return err(new ValidationError('Vault is not initialized.'));
+
+        try {
+            const derived = await deriveMasterKeys(password, header.kdf);
+            const extractableDek = await unwrapDek(header.wrappedKeys.password.wrapped, derived.kek, true);
+
+            // Generate fresh 256-bit recovery key and fresh salt
+            const newRecoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+            const newRecoverySalt = toBase64(randomBytes(SALT_BYTES));
+            const newRecoveryKek = await deriveRecoveryKek(newRecoveryBytes, newRecoverySalt);
+            const newWrappedRecovery = await wrapDek(extractableDek, newRecoveryKek);
+
+            const recoveryEntry = {
+                alg: 'AES-KW' as const,
+                wrapped: newWrappedRecovery,
+                createdAt: new Date().toISOString(),
+                salt: newRecoverySalt,
+            };
+
+            const updatedHeader: VaultHeader = {
+                ...header,
+                wrappedKeys: {
+                    ...header.wrappedKeys,
+                    recovery: recoveryEntry,
+                },
+                recoverySlot: recoveryEntry,
+                updatedAt: new Date().toISOString(),
+            };
+
+            appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+
+            const formattedKey = formatRecoveryKey(newRecoveryBytes);
+            wipe(newRecoveryBytes);
+            return ok({ recoveryKey: formattedKey });
+        } catch {
+            return err(new ValidationError('Invalid master password.'));
+        }
+    }
+
+    /**
+     * Recovers access using the Emergency Recovery Key when password is forgotten,
+     * re-wraps the DEK under the new password, and MANDATORILY ROTATES the Recovery Key.
+     */
+    public async recoverPasswordWithRecoveryKey(
+        recoveryKeyInput: string,
+        newPassword: string
+    ): Promise<Result<{ newRecoveryKey: string }, ValidationError>> {
+        await delay(400);
+        const header = this.getVaultHeader();
+        if (!header) return err(new ValidationError('Vault is not initialized.'));
+        if (!header.wrappedKeys.recovery && !header.recoverySlot) {
+            return err(new ValidationError('No recovery key slot configured on this vault.'));
+        }
+
+        const recoveryBytes = parseRecoveryKey(recoveryKeyInput);
+        if (!recoveryBytes) {
+            return err(new ValidationError('Invalid recovery key format.'));
+        }
+
+        try {
+            const recoveryEntry = header.wrappedKeys.recovery || header.recoverySlot!;
+            const recoverySalt = recoveryEntry.salt || header.kdf.salt;
+            const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
+            wipe(recoveryBytes);
+
+            // 1. Unwrap DEK as extractable
+            const extractableDek = await unwrapDek(recoveryEntry.wrapped, recoveryKek, true);
+
+            // 2. Derive new password KEK
+            const newKdf = createKdfParams(header.kdf.iterations);
+            const newDerived = await deriveMasterKeys(newPassword, newKdf);
+            const newWrappedPassword = await wrapDek(extractableDek, newDerived.kek);
+
+            // 3. Mandatory rotation of the Recovery Key (256-bit)
+            const freshRecoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+            const freshRecoverySalt = toBase64(randomBytes(SALT_BYTES));
+            const freshRecoveryKek = await deriveRecoveryKek(freshRecoveryBytes, freshRecoverySalt);
+            const freshWrappedRecovery = await wrapDek(extractableDek, freshRecoveryKek);
+
+            const passwordSlot = {
+                alg: 'AES-KW' as const,
+                wrapped: newWrappedPassword,
+                createdAt: new Date().toISOString(),
+                salt: newKdf.salt,
+            };
+            const recoverySlot = {
+                alg: 'AES-KW' as const,
+                wrapped: freshWrappedRecovery,
+                createdAt: new Date().toISOString(),
+                salt: freshRecoverySalt,
+            };
+
+            const updatedHeader: VaultHeader = {
+                ...header,
+                kdf: newKdf,
+                wrappedKeys: {
+                    ...header.wrappedKeys,
+                    password: passwordSlot,
+                    recovery: recoverySlot,
+                },
+                passwordSlot,
+                recoverySlot,
+                updatedAt: new Date().toISOString(),
+            };
+
+            appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+
+            // 4. Attach runtime EncryptedStorageProvider
+            const runtimeDek = await unwrapDek(newWrappedPassword, newDerived.kek, false);
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            await encrypted.flush();
+            appStorage.attachEncrypted(encrypted);
+
+            this.setStatus('unlocked');
+            this.resetAutoLockTimer();
+
+            const formattedNewKey = formatRecoveryKey(freshRecoveryBytes);
+            wipe(freshRecoveryBytes);
+            return ok({ newRecoveryKey: formattedNewKey });
+        } catch {
+            return err(new ValidationError('Failed to decrypt vault with the provided recovery key.'));
+        }
     }
 
     /**

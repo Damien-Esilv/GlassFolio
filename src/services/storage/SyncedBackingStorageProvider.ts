@@ -146,9 +146,15 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         if (!isSensitiveKey(key) && key !== VAULT_HEADER_KEY) return;
 
         if (this.mode === 'cloud' && this.session && isSupabaseConfigured()) {
-            supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
-                this.lastSyncError = err;
-            });
+            if (key === VAULT_HEADER_KEY) {
+                supabaseClient.clearAllVaultRecords(this.session.accessToken).catch((err) => {
+                    this.lastSyncError = err;
+                });
+            } else {
+                supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
+                    this.lastSyncError = err;
+                });
+            }
         } else if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
             fetch('/api/local-vault', {
                 method: 'DELETE',

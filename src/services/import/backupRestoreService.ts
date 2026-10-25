@@ -1,4 +1,5 @@
 import { db, delay } from '../db';
+import { appStorage } from '../storage/appStorage';
 
 /**
  * Backup Import & Restore Service (JSON)
@@ -105,6 +106,42 @@ export async function restoreBackupReset(data: Record<string, any[]>): Promise<v
     if (data.mappingTemplates) db.saveMappingTemplates(data.mappingTemplates);
     if (data.assetPositions) db.saveAssetPositions(data.assetPositions);
     if (data.instruments) db.saveInstruments(data.instruments);
+    if (data.quests && typeof (db as any).saveQuests === 'function') {
+        (db as any).saveQuests(data.quests);
+    }
+    if (data.pinnedBadges && typeof (db as any).savePinnedBadges === 'function') {
+        const ids = data.pinnedBadges.map((b: any) => typeof b === 'string' ? b : b?.id).filter(Boolean);
+        (db as any).savePinnedBadges(ids);
+    }
+    if (data.userProfile && data.userProfile.length > 0) {
+        const incomingUser = data.userProfile[0];
+        const storedCurrentUser = appStorage.getItem('glassfolio_user');
+        if (storedCurrentUser) {
+            try {
+                const currentUser = JSON.parse(storedCurrentUser);
+                const mergedUser = {
+                    ...currentUser,
+                    preferences: incomingUser.preferences || currentUser.preferences,
+                    fiscalProfile: incomingUser.fiscalProfile || currentUser.fiscalProfile,
+                };
+                appStorage.setItem('glassfolio_user', JSON.stringify(mergedUser));
+            } catch {
+                // Ignore parse errors
+            }
+        }
+    }
+    if (data.gamification && data.gamification.length > 0) {
+        appStorage.setItem('glassfolio_gamification_v1', JSON.stringify(data.gamification[0]));
+    }
+    if (data.aiSettings && data.aiSettings.length > 0) {
+        appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify(data.aiSettings[0]));
+    }
+    if (data.aiConversations && data.aiConversations.length > 0) {
+        appStorage.setItem('glassfolio_ai_chats_v1', JSON.stringify(data.aiConversations));
+    }
+    if (data.securityAuditLogs && data.securityAuditLogs.length > 0) {
+        appStorage.setItem('glassfolio_security_audit_log', JSON.stringify(data.securityAuditLogs));
+    }
 }
 
 export async function mergeBackupData(data: Record<string, any[]>): Promise<{ importedCount: number }> {
@@ -139,6 +176,27 @@ export async function mergeBackupData(data: Record<string, any[]>): Promise<{ im
     if (data.mappingTemplates) db.saveMappingTemplates(mergeEntityList(db.getMappingTemplates(), data.mappingTemplates));
     if (data.assetPositions) db.saveAssetPositions(mergeEntityList(db.getAssetPositions(), data.assetPositions));
     if (data.instruments) db.saveInstruments(mergeEntityList(db.getInstruments(), data.instruments));
+    if (data.quests && typeof (db as any).saveQuests === 'function' && typeof (db as any).getQuests === 'function') {
+        (db as any).saveQuests(mergeEntityList((db as any).getQuests(), data.quests));
+    }
+    if (data.gamification && data.gamification.length > 0) {
+        const currentGamificationStr = appStorage.getItem('glassfolio_gamification_v1');
+        if (!currentGamificationStr) {
+            appStorage.setItem('glassfolio_gamification_v1', JSON.stringify(data.gamification[0]));
+            importedCount++;
+        }
+    }
+    if (data.aiConversations && data.aiConversations.length > 0) {
+        const currentChatsStr = appStorage.getItem('glassfolio_ai_chats_v1');
+        let currentChats: any[] = [];
+        try {
+            currentChats = currentChatsStr ? JSON.parse(currentChatsStr) : [];
+        } catch {
+            currentChats = [];
+        }
+        const mergedChats = mergeEntityList(currentChats, data.aiConversations);
+        appStorage.setItem('glassfolio_ai_chats_v1', JSON.stringify(mergedChats));
+    }
 
     return { importedCount };
 }

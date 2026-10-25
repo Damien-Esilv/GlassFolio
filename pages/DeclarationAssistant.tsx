@@ -125,7 +125,7 @@ const DeclarationAssistant: React.FC = () => {
     useEffect(() => { loadSummary(); }, [loadSummary]);
 
     return (
-        <div className="space-y-6 w-full">
+        <div className="space-y-6 w-full animate-fade-in">
             {/* Header */}
             <div>
                 <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
