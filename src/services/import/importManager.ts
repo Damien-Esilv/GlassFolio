@@ -644,9 +644,14 @@ import {
 
 export {
     type BackupValidationResult,
+    type BackupErrorCode,
     validateBackupContent,
+    validateBackup,
     restoreBackupReset,
-    mergeBackupData
+    mergeBackupData,
+    mergeTransactionsOnly,
+    pickTransactionEntities,
+    TRANSACTION_ENTITY_KEYS
 } from './backupRestoreService';
 import {
     validateBackupContent,

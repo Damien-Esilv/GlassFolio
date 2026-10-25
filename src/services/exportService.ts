@@ -9,6 +9,11 @@
 import i18n from 'i18next';
 import { db, isRealUserVaultActive } from './db';
 import { getConsent } from './consentService';
+import { computeBackupChecksum } from './import/backupIntegrity';
+import { crc32 } from './import/zipReader';
+import { convertToLegacyTransaction } from './transformers';
+import type { Account, Institute, Instrument, UnifiedTransaction } from '../types';
+import type { Transaction } from '../types/domain';
 import { totpService } from './security/totpService';
 import { passkeyService } from './security/passkeyService';
 
@@ -37,6 +42,8 @@ export interface BackupPayload {
     exportedAt: string;
     exportedBy: string;
     schema: 'transfer';
+    /** SHA-256 of `JSON.stringify(data)`, verified before a restore (see backupIntegrity). */
+    checksum?: string;
     data: Record<string, unknown>;
 }
 
@@ -86,17 +93,6 @@ export function createSimpleZip(files: Record<string, string>): Blob {
     const parts: Uint8Array[] = [];
     const cdEntries: Uint8Array[] = [];
     let offset = 0;
-
-    const crc32 = (buf: Uint8Array): number => {
-        let crc = 0xFFFFFFFF;
-        for (let i = 0; i < buf.length; i++) {
-            crc ^= buf[i];
-            for (let j = 0; j < 8; j++) {
-                crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-            }
-        }
-        return (crc ^ 0xFFFFFFFF) >>> 0;
-    };
 
     const entries = Object.entries(files);
 
@@ -203,13 +199,100 @@ export function generateBackupData(options?: { persistedOnly?: boolean }): Backu
     };
 }
 
+/** UTF-8 byte order mark: lets Excel display accented characters correctly. */
+export const CSV_BOM = '\uFEFF';
+
+/** One line of the transactions CSV: the legacy columns plus the exact operation type. */
+export interface TransactionExportRow {
+    id: string;
+    date: string;
+    type: string;
+    /** Exact unified operation (BUY, SELL, INCOME, SWAP…), read first by the "GlassFolio" import preset. */
+    operation: string;
+    instrument: string;
+    symbol: string;
+    amount: number;
+    price: number;
+    total: number;
+    currency: string;
+    source: string;
+    fees: number;
+    status: string;
+    accountName: string;
+    bankName: string;
+}
+
+const LEGACY_OPERATION: Record<string, string> = {
+    Buy: 'BUY',
+    Sell: 'SELL',
+    Deposit: 'DEPOSIT',
+    Withdrawal: 'WITHDRAW',
+};
+
+/**
+ * Transactions exactly as the Transactions page shows them: the unified ledger first, the legacy
+ * store only when the ledger is empty. Never reads demo seed data (callers check `assertExportable`).
+ */
+export function buildTransactionExportRows(
+    source: Record<string, unknown> = db.exportAll({ persistedOnly: true })
+): TransactionExportRow[] {
+    const list = <T,>(key: string): T[] => (Array.isArray(source[key]) ? (source[key] as T[]) : []);
+    const unified = list<UnifiedTransaction>('unifiedTransactions');
+    if (unified.length > 0) {
+        const accounts = new Map(list<Account>('accounts').map(account => [account.id, account]));
+        const institutes = new Map(list<Institute>('institutes').map(institute => [institute.id, institute]));
+        const instruments = new Map(list<Instrument>('instruments').map(instrument => [instrument.id, instrument]));
+        return unified.map(tx => {
+            const legacy = convertToLegacyTransaction(tx, accounts, institutes, instruments);
+            return {
+                id: legacy.id,
+                date: legacy.date,
+                type: legacy.type,
+                operation: tx.type,
+                instrument: legacy.instrument,
+                symbol: legacy.symbol,
+                amount: legacy.amount,
+                price: legacy.price,
+                total: legacy.total,
+                currency: legacy.currency,
+                source: legacy.source,
+                fees: legacy.fees,
+                status: legacy.status,
+                accountName: legacy.accountName ?? '',
+                bankName: legacy.bankName ?? '',
+            };
+        });
+    }
+    return list<Transaction>('transactions').map(tx => ({
+        id: tx.id,
+        date: tx.date,
+        type: tx.type,
+        operation: LEGACY_OPERATION[tx.type] ?? 'BUY',
+        instrument: tx.instrument,
+        symbol: tx.symbol,
+        amount: tx.amount,
+        price: tx.price,
+        total: tx.total,
+        currency: tx.currency,
+        source: tx.source,
+        fees: tx.fees,
+        status: tx.status,
+        accountName: tx.accountName ?? '',
+        bankName: tx.bankName ?? '',
+    }));
+}
+
+/** Transactions CSV content (without BOM), ready for the import wizard's "GlassFolio" preset. */
+export function buildTransactionsCSV(source?: Record<string, unknown>): string {
+    return objectsToCSV(buildTransactionExportRows(source) as unknown as Record<string, unknown>[]);
+}
+
 /**
  * Trigger transactions only CSV download
  */
 export async function exportTransactionsCSV(): Promise<void> {
     assertExportable();
-    const transactions = db.getTransactions();
-    const csvContent = objectsToCSV(transactions as unknown as Record<string, unknown>[]);
+    const csvContent = CSV_BOM + buildTransactionsCSV();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const today = new Date().toISOString().split('T')[0];
     downloadFile(blob, `glassfolio-transactions-${today}.csv`);
@@ -220,7 +303,7 @@ export async function exportTransactionsCSV(): Promise<void> {
  */
 export async function exportTransactionsJSON(): Promise<void> {
     assertExportable();
-    const transactions = db.getTransactions();
+    const transactions = buildTransactionExportRows();
     const jsonContent = JSON.stringify({ transactions }, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json' });
     const today = new Date().toISOString().split('T')[0];
@@ -233,6 +316,7 @@ export async function exportTransactionsJSON(): Promise<void> {
 export async function exportBackupJSON(): Promise<void> {
     assertExportable();
     const payload = generateBackupData();
+    payload.checksum = await computeBackupChecksum(payload.data);
     const jsonString = JSON.stringify(payload, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const today = new Date().toISOString().split('T')[0];
@@ -265,6 +349,7 @@ export async function buildRGPDArchiveFiles(): Promise<Record<string, string>> {
     const exportedAt = new Date().toISOString();
     const today = exportedAt.split('T')[0];
     const payload = generateBackupData({ persistedOnly: true });
+    payload.checksum = await computeBackupChecksum(payload.data);
     const data = (payload.data ?? {}) as Record<string, unknown>;
     const profile = Array.isArray(data.userProfile) ? data.userProfile[0] ?? null : null;
 
@@ -275,9 +360,15 @@ export async function buildRGPDArchiveFiles(): Promise<Record<string, string>> {
     Object.entries(data).forEach(([entityName, entityData]) => {
         if (Array.isArray(entityData) && entityData.length > 0) {
             collections[entityName] = entityData.length;
-            files[`data/csv/${entityName}.csv`] = objectsToCSV(entityData as Record<string, unknown>[]);
+            files[`data/csv/${entityName}.csv`] = CSV_BOM + objectsToCSV(entityData as Record<string, unknown>[]);
         }
     });
+    // The readable transactions file is what the user sees in the app (unified ledger), re-importable as is.
+    const transactionRows = buildTransactionExportRows(data);
+    if (transactionRows.length > 0) {
+        collections.transactions = transactionRows.length;
+        files['data/csv/transactions.csv'] = CSV_BOM + buildTransactionsCSV(data);
+    }
 
     files['profile.json'] = JSON.stringify(profile, null, 2);
     files['consent.json'] = JSON.stringify(getConsent(), null, 2);

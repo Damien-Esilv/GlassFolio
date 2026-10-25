@@ -33,13 +33,13 @@ describe('backupRestoreService', () => {
         it('should reject invalid JSON string', () => {
             const result = validateBackupContent('{ invalid json');
             expect(result.valid).toBe(false);
-            expect(result.error).toContain('Impossible de lire le fichier JSON');
+            expect(result.error).toBe('unreadable');
         });
 
         it('should reject JSON that is not an object (e.g. primitive number)', () => {
             const result = validateBackupContent('42');
             expect(result.valid).toBe(false);
-            expect(result.error).toContain('Fichier JSON invalide');
+            expect(result.error).toBe('not_an_object');
         });
 
         it('should reject JSON missing data property', () => {
@@ -50,7 +50,7 @@ describe('backupRestoreService', () => {
 
             const result = validateBackupContent(missingData);
             expect(result.valid).toBe(false);
-            expect(result.error).toContain('Structure de sauvegarde non reconnue');
+            expect(result.error).toBe('missing_data');
         });
 
         it('should reject JSON where data is not an object', () => {
@@ -60,7 +60,7 @@ describe('backupRestoreService', () => {
 
             const result = validateBackupContent(invalidData);
             expect(result.valid).toBe(false);
-            expect(result.error).toContain('Structure de sauvegarde non reconnue');
+            expect(result.error).toBe('missing_data');
         });
     });
 

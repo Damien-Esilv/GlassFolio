@@ -89,7 +89,7 @@
     "backupWizard": {
         "title": "Import & Restore a JSON Backup",
         "subtitle": "Select your glassfolio-backup.json file",
-        "uploadHint": "Click to load backup file (.json)",
+        "uploadHint": "Click to load a backup (.json) or a GDPR archive (.zip)",
         "uploadSubhint": "Accepts GlassFolio format backups",
         "entitiesReady": "entities ready to import",
         "changeFile": "Change file",
@@ -103,7 +103,21 @@
         "executeReset": "Execute Full Restore",
         "restoreSuccess": "Full restoration completed successfully!",
         "mergeSuccess": "Merge completed: {{count}} items imported or updated!",
-        "importError": "Error during importation"
+        "importError": "Error during importation",
+        "transactionsOnly": "Import transactions only",
+        "transactionsOnlyDesc": "Selects the transactions and the accounts, institutes, instruments and import batches they reference; the rest of your account is left untouched.",
+        "errors": {
+            "unreadable": "Unable to read the JSON file.",
+            "not_an_object": "Invalid JSON file.",
+            "missing_data": "Unrecognized backup structure (missing or invalid data field).",
+            "prototype_pollution": "Data rejected: prototype pollution attempt detected.",
+            "invalid_collection": "Invalid collection format for \"{{collection}}\": an array is expected.",
+            "checksum_mismatch": "File altered or incomplete: the checksum does not match the data.",
+            "invalid_zip": "The ZIP archive is unreadable or corrupted.",
+            "unsupported_compression": "ZIP compression not supported.",
+            "crc_mismatch": "Corrupted ZIP archive: a file fails its integrity check.",
+            "zip_no_backup": "This archive holds no GlassFolio backup (data/glassfolio-backup-….json)."
+        }
     },
     "legal": {
         "title": "Legal & privacy",

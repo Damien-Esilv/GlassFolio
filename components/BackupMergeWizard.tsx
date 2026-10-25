@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Upload, AlertTriangle, CheckCircle, RefreshCw, Layers, Trash2, X } from 'lucide-react';
 import Button from './Button';
-import { validateBackupContent, restoreBackupReset, mergeBackupData } from '../src/services/import/importManager';
+import { validateBackup, restoreBackupReset, mergeBackupData, TRANSACTION_ENTITY_KEYS } from '../src/services/import/importManager';
+import type { BackupValidationResult } from '../src/services/import/importManager';
+import { findBackupEntry, readZipTextEntries, ZipError } from '../src/services/import/zipReader';
 import { useData } from '../context/DataContext';
 import { useTranslation } from 'react-i18next';
 
@@ -31,35 +33,67 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
 
     if (!isOpen) return null;
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const describeValidationError = (res: BackupValidationResult): string =>
+        res.error ? t(`settings:backupWizard.errors.${res.error}`, res.errorParams) : t('settings:backupWizard.invalidJson');
+
+    const loadBackupText = async (file: File): Promise<string> => {
+        if (!file.name.toLowerCase().endsWith('.zip')) return file.text();
+        try {
+            const entries = await readZipTextEntries(await file.arrayBuffer());
+            const backupEntry = findBackupEntry(entries);
+            if (!backupEntry) throw new Error(t('settings:backupWizard.errors.zip_no_backup'));
+            return entries[backupEntry];
+        } catch (err) {
+            if (err instanceof ZipError) throw new Error(t(`settings:backupWizard.errors.${err.code}`));
+            throw err;
+        }
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setFileName(file.name);
         setValidationError(null);
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target?.result as string;
+        try {
+            const content = await loadBackupText(file);
             setFileText(content);
 
-            const res = validateBackupContent(content);
+            const res = await validateBackup(content);
             if (!res.valid || !res.payload) {
-                setValidationError(res.error || t('settings:backupWizard.invalidJson'));
+                setValidationError(describeValidationError(res));
                 setBackupData(null);
-            } else {
-                setBackupData(res.payload.data);
-                // Initialize editable copy of entities
-                const copy: Record<string, any[]> = {};
-                Object.entries(res.payload.data).forEach(([key, val]) => {
-                    if (Array.isArray(val)) {
-                        copy[key] = val.map(item => ({ ...item, _selected: true }));
-                    }
-                });
-                setStagedEntities(copy);
+                return;
             }
-        };
-        reader.readAsText(file);
+            setBackupData(res.payload.data);
+            // Initialize editable copy of entities
+            const copy: Record<string, any[]> = {};
+            Object.entries(res.payload.data).forEach(([key, val]) => {
+                if (Array.isArray(val)) {
+                    copy[key] = val.map(item => ({ ...item, _selected: true }));
+                }
+            });
+            setStagedEntities(copy);
+        } catch (err) {
+            setValidationError(err instanceof Error ? err.message : t('settings:backupWizard.invalidJson'));
+            setBackupData(null);
+        }
+    };
+
+    // Preset: keep only the transactions and what their rows reference (accounts, institutes, instruments, batches).
+    const handleSelectTransactionsOnly = () => {
+        setMode('merge');
+        setStagedEntities(prev => {
+            const next: Record<string, any[]> = {};
+            Object.entries(prev).forEach(([key, list]) => {
+                const keep = (TRANSACTION_ENTITY_KEYS as readonly string[]).includes(key);
+                const rows: any[] = Array.isArray(list) ? list : [];
+                next[key] = rows.map(item => ({ ...item, _selected: keep }));
+            });
+            return next;
+        });
+        setActiveEntityTab(stagedEntities.unifiedTransactions?.length ? 'unifiedTransactions' : 'transactions');
     };
 
     const handleToggleRowSelect = (entityKey: string, index: number) => {
@@ -149,7 +183,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
-                                accept=".json" 
+                                accept=".json,.zip" 
                                 onChange={handleFileSelect} 
                                 className="hidden" 
                             />
@@ -218,6 +252,11 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                                     </div>
                                 </button>
                             </div>
+
+                            <Button size="sm" variant="secondary" onClick={handleSelectTransactionsOnly}>
+                                {t('settings:backupWizard.transactionsOnly')}
+                            </Button>
+                            <p className="text-xs text-tertiary -mt-2">{t('settings:backupWizard.transactionsOnlyDesc')}</p>
 
                             {/* Merge Line-by-Line Editor Tabs */}
                             {mode === 'merge' && availableEntityKeys.length > 0 && (

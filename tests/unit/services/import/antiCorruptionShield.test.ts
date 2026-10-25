@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateBackupContent,
+  validateBackup,
   sanitizeObject,
 } from '../../../../src/services/import/backupRestoreService';
+import { computeBackupChecksum } from '../../../../src/services/import/backupIntegrity';
 
 describe('Anti-Corruption & Prototype Pollution Shield', () => {
   it('strips dangerous prototype pollution keys (__proto__, constructor, prototype)', () => {
@@ -36,14 +38,15 @@ describe('Anti-Corruption & Prototype Pollution Shield', () => {
 
     const result = validateBackupContent(invalidPayload);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain("Format de collection invalide pour 'transactions'");
+    expect(result.error).toBe('invalid_collection');
+    expect(result.errorParams?.collection).toBe('transactions');
   });
 
   it('detects prototype pollution attempt in root data keys', () => {
     const payloadWithProtoKey = '{"version":"1.0.0","data":{"__proto__":[]}}';
     const result = validateBackupContent(payloadWithProtoKey);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('Tentative de pollution de prototype détectée');
+    expect(result.error).toBe('prototype_pollution');
   });
 
   it('accepts valid backup files without requiring a SHA checksum (non-blocking for personal backups)', () => {
@@ -64,17 +67,35 @@ describe('Anti-Corruption & Prototype Pollution Shield', () => {
     expect(result.payload?.data.positions).toHaveLength(1);
   });
 
-  it('marks checksumVerified true when a checksum is supplied', () => {
-    const signedBackup = JSON.stringify({
-      version: '1.0.0',
-      checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-      data: {
-        transactions: [],
-      },
-    });
-
-    const result = validateBackupContent(signedBackup);
+  it('does not claim verification from the mere presence of a checksum', () => {
+    const result = validateBackupContent(JSON.stringify({ checksum: 'e3b0c442', data: { transactions: [] } }));
     expect(result.valid).toBe(true);
-    expect(result.checksumVerified).toBe(true);
+    expect(result.checksumVerified).toBe(false);
+  });
+
+  it('verifies a real SHA-256 checksum and survives re-indentation of the file', async () => {
+    const data = { transactions: [{ id: 'tx-1', symbol: 'CW8.PA', amount: 5 }], goals: [] };
+    const checksum = await computeBackupChecksum(data);
+    const compact = JSON.stringify({ version: '1.0', checksum, data });
+    const indented = JSON.stringify({ version: '1.0', checksum, data }, null, 4);
+
+    expect((await validateBackup(compact)).checksumVerified).toBe(true);
+    expect((await validateBackup(indented)).checksumVerified).toBe(true);
+  });
+
+  it('rejects a backup whose data was altered after export', async () => {
+    const data = { transactions: [{ id: 'tx-1', amount: 5 }] };
+    const checksum = await computeBackupChecksum(data);
+    const tampered = JSON.stringify({ checksum, data: { transactions: [{ id: 'tx-1', amount: 5000 }] } });
+
+    const result = await validateBackup(tampered);
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('checksum_mismatch');
+  });
+
+  it('accepts older backups without checksum but does not mark them verified', async () => {
+    const result = await validateBackup(JSON.stringify({ data: { transactions: [] } }));
+    expect(result.valid).toBe(true);
+    expect(result.checksumVerified).toBe(false);
   });
 });
