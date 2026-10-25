@@ -409,6 +409,12 @@
         "category": "Strictement Nécessaire (Préférences)",
         "purpose": "État du menu latéral et historique des prix que vous saisissez manuellement.",
         "lifespan": "Persistant jusqu'à la suppression du compte ou l'effacement du cache"
+      },
+      "passkeyRpId": {
+        "key": "gf_passkey_rp_id",
+        "category": "Strictement Nécessaire (Sécurité)",
+        "purpose": "Mémorise le domaine (RP ID) auquel vos passkeys sont liées afin de déverrouiller le coffre quand il est verrouillé. Métadonnée publique de déploiement, aucune donnée personnelle.",
+        "lifespan": "Jusqu'à la suppression du compte ou l'effacement du cache"
       }
     },
     "managerTitle": "Gestionnaire Interactif du Consentement",

@@ -6,6 +6,7 @@
  */
 
 import { FieldMappings } from './types';
+import { matchHistoryColumns } from './columnMatcher';
 
 export const PRESET_PATTERNS: Record<string, string[]> = {
     'Binance': ['UTC_Time', 'Account', 'Operation', 'Coin', 'Change', 'Remark'],
@@ -19,49 +20,113 @@ export const PRESET_PATTERNS: Record<string, string[]> = {
 };
 
 /**
- * Get field mappings for a recognized preset
+ * Explicit per-broker overrides. Each entry lists candidate header names in
+ * priority order; anything not listed is filled by the generic column matcher.
+ */
+const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, string[]>>> = {
+    // Binance statement: "Change" is a signed coin quantity, there is no price column
+    'Binance': {
+        transactionDate: ['UTC_Time'],
+        type: ['Operation'],
+        assetSymbol: ['Coin'],
+        quantity: ['Change'],
+        amountPrimary: ['Change'],
+        rawLabel: ['Remark']
+    },
+    'Binance-Spot': {
+        transactionDate: ['Date(UTC)'],
+        type: ['Side'],
+        assetSymbol: ['Pair'],
+        priceUnit: ['Price'],
+        quantity: ['Executed'],
+        amountPrimary: ['Amount'],
+        feeAmount: ['Fee']
+    },
+    'Bitget': {
+        transactionDate: ['Time'],
+        type: ['Side'],
+        assetSymbol: ['Symbol'],
+        priceUnit: ['Price'],
+        quantity: ['Filled', 'Qty'],
+        amountPrimary: ['Total'],
+        feeAmount: ['Fee']
+    },
+    'Bourso': {
+        transactionDate: ['dateOp'],
+        valueDate: ['dateVal'],
+        rawLabel: ['label'],
+        amountPrimary: ['amount'],
+        balanceAfter: ['accountBalance'],
+        assetSymbol: ['devise', 'currency']
+    },
+    'BoursoBank-Alt': {
+        transactionDate: ['Date opération'],
+        valueDate: ['Date valeur'],
+        rawLabel: ['Libellé'],
+        amountPrimary: ['Montant'],
+        balanceAfter: ['Solde'],
+        assetSymbol: ['Devise']
+    },
+    'TradeRepublic': {
+        transactionDate: ['Date'],
+        type: ['Type'],
+        assetIsin: ['ISIN'],
+        assetName: ['Name'],
+        quantity: ['Shares'],
+        priceUnit: ['Price'],
+        amountPrimary: ['Amount'],
+        feeAmount: ['Fee'],
+        taxAmount: ['Tax']
+    },
+    'Coinbase': {
+        transactionDate: ['Timestamp'],
+        type: ['Transaction Type'],
+        assetSymbol: ['Asset'],
+        quantity: ['Quantity Transacted'],
+        priceUnit: ['Spot Price at Transaction', 'Price at Transaction'],
+        amountPrimary: ['Subtotal'],
+        feeAmount: ['Fees and/or Spread', 'Fees']
+    },
+    'Kraken': {
+        externalId: ['txid'],
+        transactionDate: ['time'],
+        type: ['type'],
+        assetSymbol: ['pair'],
+        priceUnit: ['price'],
+        quantity: ['vol'],
+        amountPrimary: ['cost'],
+        feeAmount: ['fee']
+    }
+};
+
+/**
+ * Get field mappings for a recognized preset.
+ * Broker-specific overrides first, then the generic column matcher fills gaps
+ * (quantity, ISIN, tax...) so no preset silently drops a field.
  */
 export function getPresetMappings(presetName: string, headers: string[]): FieldMappings {
-    const findHeader = (patterns: string[]): string => {
-        for (const pattern of patterns) {
-            const found = headers.find(h => h.toLowerCase().includes(pattern.toLowerCase()));
+    const findExact = (candidates: string[]): string | undefined => {
+        for (const candidate of candidates) {
+            const found = headers.find(h => h.trim().toLowerCase() === candidate.toLowerCase());
             if (found) return found;
         }
-        return '';
+        return undefined;
     };
 
-    switch (presetName) {
-        case 'Binance':
-            return {
-                transactionDate: findHeader(['UTC_Time', 'time']),
-                type: findHeader(['Operation', 'type']),
-                rawType: findHeader(['Operation', 'type']),
-                assetSymbol: findHeader(['Coin', 'asset']),
-                amountPrimary: findHeader(['Change', 'amount']),
-                rawLabel: findHeader(['Remark', 'note'])
-            };
+    const matched = matchHistoryColumns(headers);
+    const overrides = PRESET_OVERRIDES[presetName] || {};
+    const result: Partial<FieldMappings> = { ...matched };
 
-        case 'Bourso':
-        case 'BoursoBank-Alt':
-            return {
-                transactionDate: findHeader(['dateOp', 'Date opération']),
-                valueDate: findHeader(['dateVal', 'Date valeur']),
-                rawLabel: findHeader(['label', 'Libellé']),
-                amountPrimary: findHeader(['amount', 'Montant']),
-                balanceAfter: findHeader(['accountBalance', 'Solde']),
-                assetSymbol: 'EUR'
-            };
+    (Object.keys(overrides) as (keyof FieldMappings)[]).forEach(field => {
+        const header = findExact(overrides[field] || []);
+        if (header) result[field] = header;
+    });
 
-        default:
-            return {
-                transactionDate: findHeader(['date', 'time', 'timestamp']),
-                type: findHeader(['type', 'side', 'operation', 'action']),
-                assetSymbol: findHeader(['symbol', 'asset', 'coin', 'ticker']),
-                amountPrimary: findHeader(['amount', 'change', 'quantity', 'total']),
-                priceUnit: findHeader(['price', 'prix']),
-                feeAmount: findHeader(['fee', 'frais', 'commission'])
-            };
-    }
+    return {
+        ...result,
+        transactionDate: result.transactionDate ?? '',
+        amountPrimary: result.amountPrimary ?? ''
+    } as FieldMappings;
 }
 
 /**

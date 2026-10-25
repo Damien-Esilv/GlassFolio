@@ -20,12 +20,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { db } from '../src/services/db';
-import { computeRowHash } from '../src/services/core/transactionManager';
-import { instrumentService } from '../src/services/instrumentService';
-import { portfolioService } from '../src/services/portfolioService';
-import { parseCSVText, parseDate, parseDecimal } from '../src/services/import/importManager';
-import { UnifiedTransaction, SourceOrigin, TransactionType } from '../src/types';
+import { parseCSVText, readCsvFile } from '../src/services/import/csvParser';
+import { parseDecimal } from '../src/services/import/typeNormalizer';
+import { recordCashBalances, extractCashStatements } from '../src/services/import/cashBalanceService';
 
 interface CashImportWizardProps {
   accountId: string;
@@ -66,7 +63,8 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
 
   // 1. Direct manual save
   const handleSaveManual = async () => {
-    if (!manualAmount || isNaN(parseFloat(manualAmount))) {
+    const amountVal = parseDecimal(manualAmount);
+    if (amountVal === null) {
       setError(t('importWizard.errors.amountRequired'));
       return;
     }
@@ -74,99 +72,40 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const now = new Date().toISOString();
-      const amountVal = parseDecimal(manualAmount) || '0';
-
-      // Find or create instrument for this currency
-      const instrument = await instrumentService.findOrCreateInstrument({
-        symbol: defaultCurrency,
-        name: defaultCurrency === 'EUR' ? 'Euro' : defaultCurrency === 'USD' ? 'US Dollar' : defaultCurrency,
+      const result = await recordCashBalances({
+        accountId,
+        currency: defaultCurrency,
+        statements: [{ date: `${manualDate}T12:00:00.000Z`, balance: amountVal }],
+        userId: user?.id || 'default-user',
+        source: 'MANUAL',
+        fileName: 'manual_entry'
       });
-
-      const batchId = `batch-cash-${Date.now()}`;
-      const rowHash = await computeRowHash(
-        manualDate + 'T12:00:00Z',
-        amountVal,
-        defaultCurrency,
-        'BALANCE_ADJUSTMENT',
-        '0'
-      );
-
-      const tx: UnifiedTransaction = {
-        id: `utx-cash-${Date.now()}`,
-        ownerId: user?.id || 'default-user',
-        batchId,
-        accountId,
-        instrumentId: instrument.id,
-        rowHash,
-        sourceOrigin: 'MANUAL' as SourceOrigin,
-        isSynthetic: true,
-        isFiscal: false,
-        sourceMode: 'snapshot',
-        transactionDate: manualDate + 'T12:00:00Z',
-        type: 'BALANCE_ADJUSTMENT' as TransactionType,
-        rawType: 'Manual Cash Statement',
-        label: `Balance Update: ${amountVal} ${defaultCurrency}`,
-        rawLabel: 'Manual Balance Saisie',
-        amountPrimary: amountVal,
-        assetSymbol: defaultCurrency,
-        priceUnit: amountVal,
-        quantity: '1',
-        createdAt: now,
-        updatedAt: now,
-        version: 1
-      };
-
-      // Atomic save
-      const allTxs = db.getUnifiedTransactions();
-      const allBatches = db.getImportBatches();
-      
-      const newBatch = {
-        id: batchId,
-        ownerId: user?.id || 'default-user',
-        accountId,
-        importMode: 'snapshot' as const,
-        fileName: 'manual_entry',
-        fileHash: `hash-${Date.now()}`,
-        transactionCount: 1,
-        skippedCount: 0,
-        importedAt: now,
-        importedBy: user?.id || 'default-user',
-        status: 'completed' as const,
-        engineVersion: '3.0.0'
-      };
-
-      db.saveUnifiedTransactions([...allTxs, tx]);
-      db.saveImportBatches([...allBatches, newBatch]);
-      
-      // Recalculate cache
-      await portfolioService.recalculatePositions();
-      setCompletedTxCount(1);
+      if (!result.success) {
+        setError(t('importWizard.errors.importFailed'));
+        return;
+      }
+      setCompletedTxCount(result.transactionCount);
       setStep('success');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+    } catch {
+      setError(t('importWizard.errors.importFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 2. CSV parsing and preview loading
-  const handleCSVUpload = (file: File) => {
+  // 2. CSV parsing and preview loading (encoding-aware)
+  const handleCSVUpload = async (file: File) => {
     setCsvFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
+    try {
+      const { text } = await readCsvFile(file);
       setRawCSVText(text);
-      try {
-        const parsed = parseCSVText(text);
-        setHeaders(parsed.headers);
-        setPreviewRows(parsed.rows.slice(0, 5));
-        setStep('csv_mapping');
-      } catch (err) {
-        setError(t('importWizard.errors.failedToParseFile'));
-      }
-    };
-    reader.readAsText(file);
+      const parsed = parseCSVText(text);
+      setHeaders(parsed.headers);
+      setPreviewRows(parsed.rows.slice(0, 5));
+      setStep('csv_mapping');
+    } catch {
+      setError(t('importWizard.errors.failedToParseFile'));
+    }
   };
 
   const handleSaveCSV = async () => {
@@ -178,88 +117,24 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const parsed = parseCSVText(rawCSVText);
-      const instrument = await instrumentService.findOrCreateInstrument({
-        symbol: defaultCurrency,
-        name: defaultCurrency,
-      });
-
-      const batchId = `batch-cash-${Date.now()}`;
-      const now = new Date().toISOString();
-      const unifiedTxs: UnifiedTransaction[] = [];
-
-      for (let i = 0; i < parsed.rows.length; i++) {
-        const row = parsed.rows[i];
-        const dateIdx = headers.indexOf(dateMapping);
-        const amountIdx = headers.indexOf(amountMapping);
-
-        const rawDate = row[dateIdx] || '';
-        const rawAmount = row[amountIdx] || '';
-
-        const transactionDate = parseDate(rawDate) || now;
-        const amountVal = parseDecimal(rawAmount) || '0';
-
-        const rowHash = await computeRowHash(
-          transactionDate,
-          amountVal,
-          defaultCurrency,
-          'BALANCE_ADJUSTMENT',
-          '0'
-        );
-
-        unifiedTxs.push({
-          id: `utx-cash-${Date.now()}-${i}`,
-          ownerId: user?.id || 'default-user',
-          batchId,
-          accountId,
-          instrumentId: instrument.id,
-          rowHash,
-          sourceOrigin: 'FILE' as SourceOrigin,
-          isSynthetic: true,
-          isFiscal: false,
-          sourceMode: 'snapshot',
-          transactionDate,
-          type: 'BALANCE_ADJUSTMENT' as TransactionType,
-          rawType: 'CSV Cash Statement',
-          label: `Balance Update: ${amountVal} ${defaultCurrency}`,
-          rawLabel: 'CSV Balance Saisie',
-          amountPrimary: amountVal,
-          assetSymbol: defaultCurrency,
-          priceUnit: amountVal,
-          quantity: '1',
-          createdAt: now,
-          updatedAt: now,
-          version: 1
-        });
-      }
-
-      // Save
-      const allTxs = db.getUnifiedTransactions();
-      const allBatches = db.getImportBatches();
-
-      const newBatch = {
-        id: batchId,
-        ownerId: user?.id || 'default-user',
+      const { statements } = extractCashStatements(rawCSVText, dateMapping, amountMapping);
+      const result = await recordCashBalances({
         accountId,
-        importMode: 'snapshot' as const,
+        currency: defaultCurrency,
+        statements,
+        userId: user?.id || 'default-user',
+        source: 'FILE',
         fileName: csvFile?.name || 'cash_import.csv',
-        fileHash: `hash-${Date.now()}`,
-        transactionCount: unifiedTxs.length,
-        skippedCount: 0,
-        importedAt: now,
-        importedBy: user?.id || 'default-user',
-        status: 'completed' as const,
-        engineVersion: '3.0.0'
-      };
-
-      db.saveUnifiedTransactions([...allTxs, ...unifiedTxs]);
-      db.saveImportBatches([...allBatches, newBatch]);
-
-      await portfolioService.recalculatePositions();
-      setCompletedTxCount(unifiedTxs.length);
+        rawContent: rawCSVText
+      });
+      if (!result.success) {
+        setError(t('importWizard.errors.importFailed'));
+        return;
+      }
+      setCompletedTxCount(result.transactionCount);
       setStep('success');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'CSV save failed');
+    } catch {
+      setError(t('importWizard.errors.importFailed'));
     } finally {
       setIsLoading(false);
     }

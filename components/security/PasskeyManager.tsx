@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info, Unlock } from 'lucide-react';
 import Button from '../Button';
@@ -6,6 +6,7 @@ import { passkeyService } from '../../src/services/security/passkeyService';
 import { passkeyAccountService, AccountPasskey } from '../../src/services/security/passkeyAccountService';
 import { StepUpAuthModal } from './StepUpAuthModal';
 import { useAuth } from '../../context/AuthContext';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 export const PasskeyManager: React.FC = () => {
     const { t } = useTranslation();
@@ -18,12 +19,16 @@ export const PasskeyManager: React.FC = () => {
     const [notice, setNotice] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [passkeyToDelete, setPasskeyToDelete] = useState<AccountPasskey | null>(null);
+    // Safari refuses a second WebAuthn prompt in the same click: the vault slot is then added by a
+    // follow-up click. The master password stays in memory only until that click or a reload.
+    const [pendingUnlock, setPendingUnlock] = useState<{ credentialId: string; label: string; rpId: string; transports?: string[] } | null>(null);
+    const pendingPasswordRef = useRef<string>('');
 
     const loadPasskeys = async () => {
         try {
             setPasskeys(await passkeyAccountService.list());
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('security:passkeys.registerError'));
+            setError(mapAuthErrorMessage(err, t, 'security:passkeys.registerError'));
         }
     };
 
@@ -45,16 +50,36 @@ export const PasskeyManager: React.FC = () => {
         setNotice('');
         const label = `${typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? 'Mac' : 'Device'} Passkey`;
         try {
-            const { unlocksVault } = await passkeyAccountService.register({
+            const { unlocksVault, pendingVaultUnlock } = await passkeyAccountService.register({
                 user: { id: user.id, email: user.email, name: user.name },
                 label,
                 masterPassword: password,
             });
-            if (!unlocksVault) setNotice(t('security:passkeys.registeredWithoutPrf'));
+            if (pendingVaultUnlock) {
+                pendingPasswordRef.current = password;
+                setPendingUnlock(pendingVaultUnlock);
+            } else if (!unlocksVault) {
+                setNotice(t('security:passkeys.registeredWithoutPrf'));
+            }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('security:passkeys.registerError'));
+            setError(mapAuthErrorMessage(err, t, 'security:passkeys.registerError'));
         }
         await loadPasskeys();
+    };
+
+    const handleEnableVaultUnlock = async () => {
+        if (!pendingUnlock) return;
+        setError('');
+        try {
+            const enabled = await passkeyAccountService.enableVaultUnlock({ ...pendingUnlock, masterPassword: pendingPasswordRef.current });
+            if (!enabled) setNotice(t('security:passkeys.registeredWithoutPrf'));
+        } catch (err: unknown) {
+            setError(mapAuthErrorMessage(err, t, 'security:passkeys.registerError'));
+        } finally {
+            pendingPasswordRef.current = '';
+            setPendingUnlock(null);
+            await loadPasskeys();
+        }
     };
 
     const handleDeleteVerified = async () => {
@@ -103,6 +128,18 @@ export const PasskeyManager: React.FC = () => {
                 <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
                     <AlertCircle size={16} className="shrink-0" />
                     <span>{error}</span>
+                </div>
+            )}
+
+            {pendingUnlock && (
+                <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-primary">
+                    <span className="flex items-center gap-2 flex-1">
+                        <Unlock size={16} className="shrink-0 text-brand" />
+                        {t('security:passkeys.enableVaultUnlockPrompt')}
+                    </span>
+                    <Button size="sm" onClick={handleEnableVaultUnlock}>
+                        {t('security:passkeys.enableVaultUnlockButton')}
+                    </Button>
                 </div>
             )}
 

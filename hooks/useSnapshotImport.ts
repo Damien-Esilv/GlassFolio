@@ -5,8 +5,8 @@
  * Handles parsing, reconciliation preview, and commit.
  */
 
-import { useState, useCallback, useMemo } from 'react';
-import { ImportBatch, ENGINE_VERSION } from '../src/types';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { ImportBatch, ENGINE_VERSION, MappingTemplate } from '../src/types';
 import { db, delay } from '../src/services/db';
 import {
     SnapshotFieldMappings,
@@ -20,11 +20,17 @@ import {
     parseSnapshotFile,
     getExistingPositions,
     calculateReconciliation,
-    generateReconciliationTransactions,
-    createPositionTransactions
+    commitSnapshotImport
 } from '../src/services/import/snapshotService';
-import { transactionManager, computeFileHash } from '../src/services/core/transactionManager';
-import { portfolioService } from '../src/services/portfolioService';
+import { computeFileHash, isFileAlreadyImported } from '../src/services/core/transactionManager';
+import { matchSnapshotColumns } from '../src/services/import/columnMatcher';
+import {
+    getMappingTemplates,
+    saveMappingTemplate,
+    deleteMappingTemplate,
+    renameMappingTemplate,
+    findTemplateForHeaders
+} from '../src/services/import/mappingTemplateService';
 import i18n from '../src/i18n';
 
 // ============================================================================
@@ -46,9 +52,17 @@ export interface SnapshotImportState {
 
     // Mappings
     mappings: Partial<SnapshotFieldMappings>;
+    mappingTemplates: MappingTemplate[];
+    selectedTemplateId: string | null;
+    /** Saved snapshot profile whose columns fit the file (suggested, never auto-applied) */
+    suggestedTemplateId: string | null;
 
     // Options (after mapping)
     generateSyntheticTransactionsOption: boolean;
+    /** Close assets held on the account that are absent from the file */
+    closeMissingAssets: boolean;
+    /** Completed batch that already contains this exact file, if any */
+    existingBatch: ImportBatch | null;
 
     // Parsed positions
     parsedPositions: StagedSnapshotPosition[];
@@ -71,8 +85,13 @@ const initialState: SnapshotImportState = {
     previewRows: [],
 
     mappings: {},
+    mappingTemplates: [],
+    selectedTemplateId: null,
+    suggestedTemplateId: null,
 
     generateSyntheticTransactionsOption: false,
+    closeMissingAssets: true,
+    existingBatch: null,
 
     parsedPositions: [],
     parseStats: { total: 0, valid: 0, errors: 0 },
@@ -86,23 +105,84 @@ const initialState: SnapshotImportState = {
 // HOOK
 // ============================================================================
 
-export const useSnapshotImport = (accountId: string, rawCSVText: string, headers: string[], previewRows: string[][]) => {
+export const useSnapshotImport = (
+    accountId: string,
+    rawCSVText: string,
+    headers: string[],
+    previewRows: string[][],
+    userId: string = 'default-user',
+    fileName: string = 'snapshot_import.csv'
+) => {
     const [state, setState] = useState<SnapshotImportState>({
         ...initialState,
         rawCSVText,
         headers,
         previewRows,
         // Auto-detect mappings on init
-        mappings: autoDetectSnapshotMappings(headers)
+        mappings: matchSnapshotColumns(headers)
     });
 
     const updateState = useCallback((updates: Partial<SnapshotImportState>) => {
         setState(prev => ({ ...prev, ...updates }));
     }, []);
 
+    // Load snapshot profiles and suggest the one that fits this file
+    useEffect(() => {
+        let cancelled = false;
+        getMappingTemplates({ mode: 'snapshot' }).then(templates => {
+            if (cancelled) return;
+            setState(prev => ({
+                ...prev,
+                mappingTemplates: templates,
+                suggestedTemplateId: findTemplateForHeaders(templates, prev.headers)?.id ?? null
+            }));
+        }).catch(() => undefined);
+        return () => { cancelled = true; };
+    }, []);
+
     // =========================================================================
     // STEP 1: MAPPING
     // =========================================================================
+
+    const applyTemplate = useCallback((templateId: string) => {
+        setState(prev => {
+            const template = prev.mappingTemplates.find(t => t.id === templateId);
+            if (!template) return prev;
+            return { ...prev, mappings: template.mappings as Partial<SnapshotFieldMappings>, selectedTemplateId: templateId };
+        });
+    }, []);
+
+    const saveAsTemplate = useCallback(async (name: string) => {
+        try {
+            const template = await saveMappingTemplate(name, state.mappings, {
+                userId,
+                mode: 'snapshot',
+                headers: state.headers
+            });
+            const templates = await getMappingTemplates({ mode: 'snapshot' });
+            updateState({ mappingTemplates: templates, selectedTemplateId: template.id });
+            return template;
+        } catch {
+            updateState({ error: i18n.t('transactions:importWizard.errors.failedToSaveTemplate') });
+            return null;
+        }
+    }, [state.mappings, state.headers, userId, updateState]);
+
+    const deleteTemplate = useCallback(async (templateId: string) => {
+        await deleteMappingTemplate(templateId);
+        const templates = await getMappingTemplates({ mode: 'snapshot' });
+        setState(prev => ({
+            ...prev,
+            mappingTemplates: templates,
+            selectedTemplateId: prev.selectedTemplateId === templateId ? null : prev.selectedTemplateId,
+            suggestedTemplateId: prev.suggestedTemplateId === templateId ? null : prev.suggestedTemplateId
+        }));
+    }, []);
+
+    const renameTemplate = useCallback(async (templateId: string, name: string) => {
+        await renameMappingTemplate(templateId, name);
+        updateState({ mappingTemplates: await getMappingTemplates({ mode: 'snapshot' }) });
+    }, [updateState]);
 
     const setMapping = useCallback((field: keyof SnapshotFieldMappings, value: string | number | undefined) => {
         setState(prev => ({
@@ -133,6 +213,10 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         updateState({ generateSyntheticTransactionsOption: value });
     }, [updateState]);
 
+    const setCloseMissingAssets = useCallback((value: boolean) => {
+        updateState({ closeMissingAssets: value });
+    }, [updateState]);
+
     const analyzeAndPreview = useCallback(async () => {
         updateState({ isLoading: true, error: null });
 
@@ -145,35 +229,30 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
 
             const validPositions = parseResult.positions.filter(p => p.status === 'valid');
 
-            if (state.generateSyntheticTransactionsOption) {
-                // Get existing positions and calculate reconciliation
-                const existingPos = await getExistingPositions(accountId);
-                const reconciliation = await calculateReconciliation(
-                    validPositions.map(p => p.position),
-                    existingPos
-                );
+            // Both modes reconcile against the account so the preview shows the real
+            // outcome (and snapshot-only never duplicates positions on re-import)
+            const [existingPos, existingBatch] = await Promise.all([
+                getExistingPositions(accountId),
+                computeFileHash(state.rawCSVText).then(isFileAlreadyImported)
+            ]);
+            const reconciliation = await calculateReconciliation(
+                validPositions.map(p => p.position),
+                existingPos,
+                { closeMissing: state.closeMissingAssets }
+            );
 
-                updateState({
-                    parsedPositions: parseResult.positions,
-                    parseStats: parseResult.stats,
-                    reconciliationResult: reconciliation,
-                    step: 'preview',
-                    isLoading: false
-                });
-            } else {
-                // Snapshot only mode - just show positions
-                updateState({
-                    parsedPositions: parseResult.positions,
-                    parseStats: parseResult.stats,
-                    reconciliationResult: null,
-                    step: 'preview',
-                    isLoading: false
-                });
-            }
+            updateState({
+                parsedPositions: parseResult.positions,
+                parseStats: parseResult.stats,
+                reconciliationResult: reconciliation,
+                existingBatch,
+                step: 'preview',
+                isLoading: false
+            });
         } catch (err) {
             updateState({ error: i18n.t('transactions:snapshotWizard.errors.failedToAnalyzeData'), isLoading: false });
         }
-    }, [state.rawCSVText, state.mappings, state.generateSyntheticTransactionsOption, accountId, updateState]);
+    }, [state.rawCSVText, state.mappings, state.closeMissingAssets, accountId, updateState]);
 
     // =========================================================================
     // STEP 3: PREVIEW / RECONCILIATION
@@ -222,14 +301,11 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
     }, [state.reconciliationResult]);
 
     const canCommit = useMemo(() => {
-        if (state.generateSyntheticTransactionsOption && state.reconciliationResult) {
-            // All diffs must be valid and no inputs required
-            return state.reconciliationResult.stats.requiresInput === 0 &&
-                state.reconciliationResult.stats.hasErrors === 0;
-        }
-        // Snapshot only: just need valid positions
-        return state.parseStats.valid > 0;
-    }, [state.generateSyntheticTransactionsOption, state.reconciliationResult, state.parseStats]);
+        if (state.parseStats.valid === 0) return false;
+        if (!state.reconciliationResult) return true;
+        return state.reconciliationResult.stats.requiresInput === 0 &&
+            state.reconciliationResult.stats.hasErrors === 0;
+    }, [state.reconciliationResult, state.parseStats]);
 
     // =========================================================================
     // STEP 4: COMMIT
@@ -239,70 +315,27 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         updateState({ isLoading: true, error: null });
 
         try {
-            const batchId = `batch-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const now = new Date().toISOString();
-            const fileHash = await computeFileHash(state.rawCSVText);
+            const validPositions = state.parsedPositions
+                .filter(p => p.status === 'valid')
+                .map(p => p.position);
 
-            // Begin atomic transaction
-            transactionManager.begin();
-
-            let transactions;
-
-            if (state.generateSyntheticTransactionsOption && state.reconciliationResult) {
-                // Generate synthetic transactions from reconciliation
-                transactions = await generateReconciliationTransactions(
-                    state.reconciliationResult.diffs,
-                    batchId,
-                    accountId,
-                    now,
-                    'default-user'
-                );
-            } else {
-                // Snapshot only: create position transactions
-                const validPositions = state.parsedPositions
-                    .filter(p => p.status === 'valid')
-                    .map(p => p.position);
-
-                transactions = await createPositionTransactions(
-                    validPositions,
-                    batchId,
-                    accountId,
-                    now,
-                    'default-user'
-                );
-            }
-
-            // Create batch record
-            const batch: ImportBatch = {
-                id: batchId,
-                ownerId: 'default-user',
+            const result = await commitSnapshotImport({
+                mode: state.generateSyntheticTransactionsOption ? 'synthetic' : 'replace',
+                positions: validPositions,
+                diffs: state.reconciliationResult?.diffs,
                 accountId,
-                importMode: 'snapshot',
-                fileName: 'snapshot_import.csv',
-                fileHash,
-                transactionCount: transactions.length,
-                skippedCount: state.parseStats.total - state.parseStats.valid,
-                importedAt: now,
-                importedBy: 'default-user',
-                status: 'completed',
-                engineVersion: ENGINE_VERSION,
-                metadata: { totalRows: state.parseStats.total }
-            };
+                userId,
+                closeMissing: state.closeMissingAssets,
+                rawContent: state.rawCSVText,
+                fileName,
+                totalRows: state.parseStats.total
+            });
 
-            // Add to transaction context
-            transactionManager.addTransactions(transactions);
-            transactionManager.addBatch(batch);
-
-            // Commit atomically
-            const result = transactionManager.commit();
-
-            if (!result.success) {
+            if (!result.success || !result.batch) {
                 updateState({ error: result.error || i18n.t('transactions:snapshotWizard.errors.commitFailed'), isLoading: false });
                 return;
             }
-
-            // Recalculate derived positions so they immediately reflect the newly committed snapshot transactions
-            await portfolioService.recalculatePositions();
+            const batch = result.batch;
 
             updateState({
                 completedBatch: batch,
@@ -310,13 +343,15 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
                 isLoading: false
             });
         } catch (err) {
-            transactionManager.rollback();
             updateState({ error: i18n.t('transactions:snapshotWizard.errors.failedToCommitImport'), isLoading: false });
         }
     }, [
         accountId,
+        userId,
+        fileName,
         state.rawCSVText,
         state.generateSyntheticTransactionsOption,
+        state.closeMissingAssets,
         state.reconciliationResult,
         state.parsedPositions,
         state.parseStats,
@@ -343,7 +378,7 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
             rawCSVText: state.rawCSVText,
             headers: state.headers,
             previewRows: state.previewRows,
-            mappings: autoDetectSnapshotMappings(state.headers)
+            mappings: matchSnapshotColumns(state.headers)
         });
     }, [state.rawCSVText, state.headers, state.previewRows]);
 
@@ -367,6 +402,11 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         setMapping,
         proceedToOptions,
         setGenerateSyntheticTransactions,
+        setCloseMissingAssets,
+        applyTemplate,
+        saveAsTemplate,
+        deleteTemplate,
+        renameTemplate,
         analyzeAndPreview,
         updateSellPrice,
         commitImport,
@@ -374,48 +414,5 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
         reset
     };
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Auto-detect snapshot mappings from headers
- */
-function autoDetectSnapshotMappings(headers: string[]): Partial<SnapshotFieldMappings> {
-    const mappings: Partial<SnapshotFieldMappings> = {};
-    const lowerHeaders = headers.map(h => h.toLowerCase());
-
-    // Symbol
-    const symbolPatterns = ['symbol', 'ticker', 'asset', 'coin'];
-    const symbolIdx = lowerHeaders.findIndex(h => symbolPatterns.some(p => h.includes(p)));
-    if (symbolIdx >= 0) mappings.assetSymbol = headers[symbolIdx];
-
-    // ISIN
-    const isinIdx = lowerHeaders.findIndex(h => h.includes('isin'));
-    if (isinIdx >= 0) mappings.assetIsin = headers[isinIdx];
-
-    // Name
-    const namePatterns = ['name', 'titre', 'libellé', 'label'];
-    const nameIdx = lowerHeaders.findIndex(h => namePatterns.some(p => h.includes(p)));
-    if (nameIdx >= 0) mappings.assetName = headers[nameIdx];
-
-    // Quantity
-    const qtyPatterns = ['quantity', 'qty', 'quantité', 'nombre', 'shares', 'units'];
-    const qtyIdx = lowerHeaders.findIndex(h => qtyPatterns.some(p => h.includes(p)));
-    if (qtyIdx >= 0) mappings.quantity = headers[qtyIdx];
-
-    // Average Price
-    const pricePatterns = ['avg', 'average', 'prix', 'price', 'pru', 'cost'];
-    const priceIdx = lowerHeaders.findIndex(h => pricePatterns.some(p => h.includes(p)));
-    if (priceIdx >= 0) mappings.avgPrice = headers[priceIdx];
-
-    // Date
-    const datePatterns = ['date', 'purchase', 'achat'];
-    const dateIdx = lowerHeaders.findIndex(h => datePatterns.some(p => h.includes(p)));
-    if (dateIdx >= 0) mappings.purchaseDate = headers[dateIdx];
-
-    return mappings;
-}
 
 export { SNAPSHOT_MAPPABLE_FIELDS };

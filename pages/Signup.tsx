@@ -178,7 +178,7 @@ const Signup: React.FC = () => {
             if (antiBotRef.current) {
                const botRes = await antiBotRef.current.validate();
                if (!botRes.success) {
-                  setError(botRes.error.message);
+                  setError(mapAuthErrorMessage(botRes.error, t, 'common:errors.auth.antiBot'));
                   setIsLoading(false);
                   return;
                }

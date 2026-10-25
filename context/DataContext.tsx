@@ -161,23 +161,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
         updateProfile({ xp: newXp, level: newLevel });
 
-        if (newLevel > oldLevel) {
-          setActiveCelebration({
-            type: 'level_up',
-            title: `Level Up!`,
-            level: newLevel,
-            xpGained: achData.xpGained
-          });
-        } else if (achData.unlockedEvents && achData.unlockedEvents.length > 0) {
-          const topEvent = achData.unlockedEvents[0];
-          setActiveCelebration({
-            type: 'achievement',
-            title: topEvent.title,
-            level: topEvent.level,
-            xpGained: topEvent.xpReward,
-            iconType: topEvent.iconType,
-            color: topEvent.color
-          });
+        const isDemo = currentUser.email?.toLowerCase() === 'demo@glassfolio.com' || currentUser.id === 'demo-123';
+
+        // Do not trigger celebration popup in demo mode upon login/data refresh
+        if (!isDemo) {
+          if (newLevel > oldLevel) {
+            setActiveCelebration({
+              type: 'level_up',
+              title: `Level Up!`,
+              level: newLevel,
+              xpGained: achData.xpGained
+            });
+          } else if (achData.unlockedEvents && achData.unlockedEvents.length > 0) {
+            const topEvent = achData.unlockedEvents[0];
+            setActiveCelebration({
+              type: 'achievement',
+              title: topEvent.title,
+              level: topEvent.level,
+              xpGained: topEvent.xpReward,
+              iconType: topEvent.iconType,
+              color: topEvent.color
+            });
+          }
         }
       }
 

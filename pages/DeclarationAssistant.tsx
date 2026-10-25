@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import { taxService } from '../src/services/fiscal';
 import { DEFAULT_FISCAL_YEAR } from '../src/constants/fiscalConstants';
 import { TaxSummaryResult, FiscalProfile, TaxableEvent, FiscalConfidence } from '../src/types/types.backend';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../src/constants/animations';
 
 // ── Confidence badge ────────────────────────────────────────────────────────
 const ConfidenceBadge: React.FC<{ confidence: FiscalConfidence }> = ({ confidence }) => {
@@ -81,8 +82,11 @@ const EventRow: React.FC<{ event: TaxableEvent }> = ({ event }) => {
 };
 
 // ── Stat card ───────────────────────────────────────────────────────────────
-const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; highlight?: boolean }> = ({ label, value, isNegative, highlight }) => (
-    <div className={`rounded-xl p-4 border ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}>
+const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; highlight?: boolean; index?: number }> = ({ label, value, isNegative, highlight, index = 0 }) => (
+    <div 
+        className={`rounded-xl p-4 border transition-all animate-fade-in-up ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
+        style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
+    >
         <p className="text-xs text-secondary mb-1">{label}</p>
         <p className={`text-lg font-bold ${isNegative ? 'text-error' : highlight ? 'text-brand' : 'text-primary'}`}>{formatEur(value)}</p>
     </div>
@@ -187,12 +191,12 @@ const DeclarationAssistant: React.FC = () => {
                         <p className="text-xs text-secondary">{t('tax:declaration.cto.subtitle')}</p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <StatCard label={t('tax:declaration.cto.totalGains')} value={summary.cto.totalGains} />
-                        <StatCard label={t('tax:declaration.cto.totalLosses')} value={summary.cto.totalLosses} isNegative />
-                        <StatCard label={t('tax:declaration.cto.netResult')} value={summary.cto.netResult} highlight isNegative={summary.cto.netResult < 0} />
-                        {summary.cto.lossCarryforward > 0 && <StatCard label={t('tax:declaration.cto.lossCarryforward')} value={summary.cto.lossCarryforward} />}
-                        {summary.cto.lossesApplied > 0 && <StatCard label={t('tax:declaration.cto.lossesApplied')} value={summary.cto.lossesApplied} />}
-                        {summary.cto.remainingCarryforward > 0 && <StatCard label={t('tax:declaration.cto.remainingCarryforward')} value={summary.cto.remainingCarryforward} />}
+                        <StatCard label={t('tax:declaration.cto.totalGains')} value={summary.cto.totalGains} index={0} />
+                        <StatCard label={t('tax:declaration.cto.totalLosses')} value={summary.cto.totalLosses} isNegative index={1} />
+                        <StatCard label={t('tax:declaration.cto.netResult')} value={summary.cto.netResult} highlight isNegative={summary.cto.netResult < 0} index={2} />
+                        {summary.cto.lossCarryforward > 0 && <StatCard label={t('tax:declaration.cto.lossCarryforward')} value={summary.cto.lossCarryforward} index={3} />}
+                        {summary.cto.lossesApplied > 0 && <StatCard label={t('tax:declaration.cto.lossesApplied')} value={summary.cto.lossesApplied} index={4} />}
+                        {summary.cto.remainingCarryforward > 0 && <StatCard label={t('tax:declaration.cto.remainingCarryforward')} value={summary.cto.remainingCarryforward} index={5} />}
                     </div>
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-3">{t('tax:declaration.cto.eventTable')}</h3>
@@ -213,9 +217,9 @@ const DeclarationAssistant: React.FC = () => {
                         <p className="text-xs text-secondary">{t('tax:declaration.dividends.subtitle')}</p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <StatCard label={t('tax:declaration.dividends.totalDividends')} value={summary.income.totalDividends} />
-                        <StatCard label={t('tax:declaration.dividends.totalInterest')} value={summary.income.totalInterest} />
-                        <StatCard label={t('tax:declaration.dividends.totalCoupons')} value={summary.income.totalCoupons} />
+                        <StatCard label={t('tax:declaration.dividends.totalDividends')} value={summary.income.totalDividends} index={0} />
+                        <StatCard label={t('tax:declaration.dividends.totalInterest')} value={summary.income.totalInterest} index={1} />
+                        <StatCard label={t('tax:declaration.dividends.totalCoupons')} value={summary.income.totalCoupons} index={2} />
                     </div>
                     {summary.income.events.length === 0 ? (
                         <p className="text-secondary text-sm text-center py-8">{t('tax:declaration.dividends.noEvents')}</p>

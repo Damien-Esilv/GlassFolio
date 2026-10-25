@@ -247,7 +247,7 @@ export class LocalAuthProvider implements IAuthProvider {
         if (records.length === 0) {
             throw new Error('No passkey is registered for this account.');
         }
-        await passkeyService.authenticate({ allowCredentialIds: records.map(record => record.id) });
+        await passkeyService.authenticate({ allowCredentials: records.map(record => ({ id: record.id, transports: record.transports })) });
         await auditLogService.record('passkey_authenticated', 'Passkey second factor verified');
         return this.completeLocalSignIn(user, `Login successful for ${user.email}`);
     }
@@ -762,14 +762,16 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     /** Supabase passkey sign-in: the same gesture yields the PRF secret that unlocks the vault. */
     public override async signInWithPasskey(): Promise<AuthResult> {
         const ceremony = await supabaseClient.startPasskeyAuthentication();
+        const rpId = typeof ceremony.options.rpId === 'string' ? ceremony.options.rpId : undefined;
+        passkeyService.rememberServerRpId(rpId);
         const assertion = await passkeyService.authenticate({ serverOptions: ceremony.options, withPrf: true });
         const session = await supabaseClient.verifyPasskeyAuthentication(ceremony.challenge_id, assertion.credentialJson);
-        return this.continueAfterPrimaryAuth(session, 'email', (verified) => this.finishPasskeySignIn(verified, assertion));
+        return this.continueAfterPrimaryAuth(session, 'email', (verified) => this.finishPasskeySignIn(verified, { ...assertion, rpId }));
     }
 
     private async finishPasskeySignIn(
         session: SupabaseAuthSession,
-        assertion: { credentialId: string; prfSecret?: Uint8Array }
+        assertion: { credentialId: string; prfSecret?: Uint8Array; rpId?: string }
     ): Promise<AuthResult> {
         this.persistSession(session);
         const synced = getSyncedStorageProvider();
@@ -784,6 +786,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
         if (vaultService.isUnlocked()) await vaultService.lock();
         await vaultService.unlockWithPasskeyPrf(assertion.credentialId, assertion.prfSecret);
+        // Self-heal slots enrolled before the RP ID was stored, so the lock screen finds them
+        if (assertion.rpId) vaultService.updatePasskeySlotMeta(assertion.credentialId, { rpId: assertion.rpId });
 
         const user = await this.resolveEmailUser(session, (session.user.email || '').toLowerCase());
         getSyncedStorageProvider()?.enableReplication(session.user.id);

@@ -17,8 +17,6 @@ import TaxGuide from './pages/TaxGuide';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Progress from './pages/Progress';
-import ImportWizard from './pages/ImportWizard';
-import ImportHistory from './pages/ImportHistory';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { PasswordResetFlow } from './pages/PasswordResetFlow';
@@ -40,6 +38,10 @@ import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 // Lazy-loaded showcase & legal pages to preserve core bundle budget
 // @ts-expect-error import.meta.env is injected by Vite at compile time
 const isShowcaseExcluded = import.meta.env.VITE_APP_TARGET === 'app';
+// Import tooling is only needed on /import: keep it out of the main bundle
+const ImportWizard = React.lazy(() => import('./pages/ImportWizard'));
+const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
+
 const Landing = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Landing'));
 const LegalCenter = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/LegalCenter'));
 
@@ -165,8 +167,8 @@ const App: React.FC = () => {
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-              <Route path="/import" element={<ProtectedRoute><ImportWizard /></ProtectedRoute>} />
-              <Route path="/import-history" element={<ProtectedRoute><ImportHistory /></ProtectedRoute>} />
+              <Route path="/import" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><ImportWizard /></React.Suspense></ProtectedRoute>} />
+              <Route path="/import-history" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><ImportHistory /></React.Suspense></ProtectedRoute>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

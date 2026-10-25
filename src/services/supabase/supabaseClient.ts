@@ -170,6 +170,26 @@ const createHeaders = (config: SupabaseConfig, accessToken?: string): Record<str
     return headers;
 };
 
+/**
+ * Error raised by a Supabase Auth call. Keeps the stable `error_code` (otp_expired,
+ * invalid_credentials, mfa_verification_failed, over_email_send_rate_limit...) and the HTTP
+ * status so the UI can translate it; the message is the server text (logs only).
+ */
+export class SupabaseRequestError extends Error {
+    constructor(message: string, public readonly status: number, public readonly code?: string) {
+        super(message);
+        this.name = 'SupabaseRequestError';
+    }
+}
+
+type SupabaseErrorBody = { msg?: string; message?: string; error_description?: string; error_code?: string; error?: string };
+
+const toSupabaseError = (data: unknown, status: number, fallback: string): SupabaseRequestError => {
+    const body = (data && typeof data === 'object' ? data : {}) as SupabaseErrorBody;
+    const code = body.error_code || (typeof body.error === 'string' && /^[a-z_]+$/.test(body.error) ? body.error : undefined);
+    return new SupabaseRequestError(body.msg || body.error_description || body.message || fallback, status, code);
+};
+
 const passkeyRequest = async <T>(path: string, init: RequestInit, accessToken?: string): Promise<T> => {
     const config = getSupabaseConfig();
     if (!config) throw new Error('Supabase is not configured.');
@@ -178,7 +198,7 @@ const passkeyRequest = async <T>(path: string, init: RequestInit, accessToken?: 
     const data = text ? JSON.parse(text) : {};
     if (!res.ok) {
         const code = (data as { error_code?: string }).error_code;
-        throw new Error(code || (data as { msg?: string; message?: string }).msg || (data as { message?: string }).message || `Passkey request failed (HTTP ${res.status}).`);
+        throw new SupabaseRequestError(code || (data as { msg?: string; message?: string }).msg || (data as { message?: string }).message || `Passkey request failed (HTTP ${res.status}).`, res.status, code);
     }
     return data as T;
 };
@@ -221,7 +241,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Supabase signup failed.');
+            throw toSupabaseError(data, res.status, 'Supabase signup failed.');
         }
 
         // If email confirmation is enabled, access_token might be null
@@ -259,7 +279,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Invalid email or password.');
+            throw toSupabaseError(data, res.status, 'Invalid email or password.');
         }
 
         return {
@@ -350,7 +370,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Failed to exchange PKCE code.');
+            throw toSupabaseError(data, res.status, 'Failed to exchange PKCE code.');
         }
 
         return {
@@ -378,7 +398,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Invalid or expired verification code.');
+            throw toSupabaseError(data, res.status, 'Invalid or expired verification code.');
         }
 
         return {
@@ -405,7 +425,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Invalid or expired verification link.');
+            throw toSupabaseError(data, res.status, 'Invalid or expired verification link.');
         }
 
         return {
@@ -437,7 +457,7 @@ export const supabaseClient = {
 
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.msg || data.error_description || data.message || 'Failed to resend confirmation email.');
+            throw toSupabaseError(data, res.status, 'Failed to resend confirmation email.');
         }
     },
 
@@ -457,7 +477,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Failed to update user profile.');
+            throw toSupabaseError(data, res.status, 'Failed to update user profile.');
         }
 
         return data as SupabaseUserData;
@@ -489,7 +509,7 @@ export const supabaseClient = {
             const data = await res.json().catch(() => ({}));
             // Only throw if rate-limited or fatal
             if (res.status === 429) {
-                throw new Error(data.msg || 'Too many requests. Please wait.');
+                throw toSupabaseError(data, res.status, 'Too many requests. Please wait.');
             }
         }
     },
@@ -528,7 +548,7 @@ export const supabaseClient = {
 
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.msg || data.error_description || data.message || 'Failed to fetch Supabase user.');
+            throw toSupabaseError(data, res.status, 'Failed to fetch Supabase user.');
         }
 
         return data as SupabaseUserData;
@@ -562,7 +582,7 @@ export const supabaseClient = {
         if (!config) throw new Error('Supabase is not configured.');
         const res = await fetch(`${config.url}/auth/v1/factors`, { method: 'POST', headers: createHeaders(config, accessToken), body: JSON.stringify({ factor_type: factorType, friendly_name: friendlyName }) });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.msg || data.message || 'Unable to enroll MFA factor.');
+        if (!res.ok) throw toSupabaseError(data, res.status, 'Unable to enroll MFA factor.');
         return data as Record<string, unknown>;
     },
 
@@ -571,7 +591,7 @@ export const supabaseClient = {
         if (!config) throw new Error('Supabase is not configured.');
         const res = await fetch(`${config.url}/auth/v1/factors/${encodeURIComponent(factorId)}/challenge`, { method: 'POST', headers: createHeaders(config, accessToken), body: '{}' });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.msg || data.message || 'Unable to challenge MFA factor.');
+        if (!res.ok) throw toSupabaseError(data, res.status, 'Unable to challenge MFA factor.');
         return data as SupabaseMfaChallenge;
     },
 
@@ -580,7 +600,7 @@ export const supabaseClient = {
         if (!config) throw new Error('Supabase is not configured.');
         const res = await fetch(`${config.url}/auth/v1/factors/${encodeURIComponent(factorId)}/verify`, { method: 'POST', headers: createHeaders(config, accessToken), body: JSON.stringify({ challenge_id: challengeId, code }) });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.msg || data.message || 'MFA verification failed.');
+        if (!res.ok) throw toSupabaseError(data, res.status, 'MFA verification failed.');
         return { accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + (data.expires_in || 3600) * 1000, user: data.user };
     },
 

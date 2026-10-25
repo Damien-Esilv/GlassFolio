@@ -43,13 +43,14 @@ describe('Modular Import Subsystems (Pilier 2)', () => {
     });
 
     it('returns fallback mappings for custom preset names', () => {
-      // Use header names that match the default patterns (amount/change/quantity/total)
+      // E28: "Quantity" is a quantity, never the cash amount (amount is derived from qty × price)
       const headers = ['Date', 'Side', 'Ticker', 'Quantity', 'Price', 'Fee'];
       const mappings = getPresetMappings('CustomUnknown', headers);
       expect(mappings.transactionDate).toBe('Date');
       expect(mappings.type).toBe('Side');
       expect(mappings.assetSymbol).toBe('Ticker');
-      expect(mappings.amountPrimary).toBe('Quantity');
+      expect(mappings.quantity).toBe('Quantity');
+      expect(mappings.amountPrimary).toBe('');
       expect(mappings.priceUnit).toBe('Price');
       expect(mappings.feeAmount).toBe('Fee');
     });

@@ -3,7 +3,7 @@ import { ShieldCheck, HardHat, Sparkles, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
-import { STAGGER_DELAY_MS } from '../src/constants/animations';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../src/constants/animations';
 
 const TaxSummary: React.FC = () => {
     const { t } = useTranslation();

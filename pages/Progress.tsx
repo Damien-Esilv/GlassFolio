@@ -320,7 +320,7 @@ const Progress: React.FC = () => {
                         </Button>
                     </div>
                     {sortedGoals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-12 text-center bg-card rounded-2xl border border-dashed border-subtle">
+                        <div className="flex flex-col items-center justify-center p-12 text-center bg-card rounded-2xl border border-subtle">
                             <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mb-4">
                                 <Target size={32} />
                             </div>

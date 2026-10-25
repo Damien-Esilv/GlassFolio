@@ -5,13 +5,13 @@ import Button from '../components/Button';
 import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert, ArrowLeft, KeyRound, Fingerprint, Key } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../src/services/security/authService';
-import { vaultService } from '../src/services/security/vaultService';
-import { isPasskeySupported } from '../src/services/security/passkeyService';
+import { isPasskeySupported, passkeyService } from '../src/services/security/passkeyService';
 import { getDeploymentMode, isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl } from '../src/config/deployment';
 import { useDemoAccess } from '../src/hooks/useDemoAccess';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
+import { mapAuthErrorMessage } from '../src/services/security/authErrorMapper';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
@@ -94,7 +94,7 @@ const Login: React.FC = () => {
             if (antiBotRef.current) {
                const botRes = await antiBotRef.current.validate();
                if (!botRes.success) {
-                  setError(botRes.error.message);
+                  setError(mapAuthErrorMessage(botRes.error, t, 'common:errors.auth.antiBot'));
                   setIsLoading(false);
                   return;
                }
@@ -112,8 +112,7 @@ const Login: React.FC = () => {
             setLockoutSeconds(currentLockout);
             setError(t('auth:login.accountLocked', { seconds: currentLockout }));
          } else {
-            const message = err instanceof Error ? err.message : t('auth:login.failedToLogin');
-            setError(message);
+            setError(mapAuthErrorMessage(err, t, 'auth:login.failedToLogin'));
          }
       } finally {
          setIsLoading(false);
@@ -127,7 +126,7 @@ const Login: React.FC = () => {
       try {
          await signInWithPasskey();
       } catch (err: unknown) {
-         setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
+         setError(mapAuthErrorMessage(err, t, 'common:errors.passkey.FAILED'));
       } finally {
          setIsLoading(false);
       }
@@ -323,7 +322,7 @@ const Login: React.FC = () => {
             )}
 
             <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
-               {passkeySupported && (!isLocal || vaultService.hasPasskeySlot()) && (
+               {passkeySupported && (!isLocal || passkeyService.canUnlockVaultHere()) && (
                   <button
                      type="button"
                      onClick={handlePasskeySignIn}

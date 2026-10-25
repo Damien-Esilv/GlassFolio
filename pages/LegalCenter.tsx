@@ -52,6 +52,7 @@ const COOKIE_ROW_KEYS = [
   'oauthVerifier',
   'marketCaches',
   'uiState',
+  'passkeyRpId',
 ] as const;
 
 type LegalDocKey = 'legalNotice' | 'privacy' | 'terms';

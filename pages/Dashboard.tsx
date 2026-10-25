@@ -10,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { portfolioService } from '../src/services/portfolioService';
 import { currencyService } from '../src/services/currencyService';
 import { fetchRealPriceHistory, generateHighPrecisionHistory, HistoricalPricePoint } from '../src/services/priceService';
+import ChartModeToggle from '../components/ui/ChartModeToggle';
+import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
@@ -17,6 +19,8 @@ import { ANIMATION_DURATION_MS, ANIMATION_EASING, STAGGER_DELAY_MS } from '../sr
 import AnimatedCounter from '../components/AnimatedCounter';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../src/constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
+import { getISOWeekNumber, getStartOfCurrentWeek } from '../utils/date';
+import { calculateWeeklyTrackingStreak } from '../src/services/achievementService';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -27,6 +31,7 @@ const Dashboard: React.FC = () => {
   const currency = user?.preferences?.currency || 'USD';
   const { transactions, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
+  const [chartMode, setChartMode] = useChartPriceMode();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [animActive, setAnimActive] = useState(false);
@@ -50,7 +55,7 @@ const Dashboard: React.FC = () => {
     const fetchSummary = async () => {
       try {
         setIsLoadingSummary(true);
-        const data = await portfolioService.getDashboardSummary(timeRange, currency, locale, dateFormat);
+        const data = await portfolioService.getDashboardSummary(timeRange, currency, locale, dateFormat, { chartMode });
         setSummary(data);
       } catch (e) {
         console.error(e);
@@ -60,7 +65,34 @@ const Dashboard: React.FC = () => {
     };
 
     fetchSummary();
-  }, [transactions, positions, timeRange, currency, locale, dateFormat]);
+  }, [transactions, positions, timeRange, currency, locale, dateFormat, chartMode]);
+
+  // Dynamic Weekly Progress values
+  const currentWeekNumber = useMemo(() => getISOWeekNumber(new Date()), []);
+  const weeklyStats = useMemo(() => {
+    const startOfWeek = getStartOfCurrentWeek();
+    const weeklyTxs = transactions.filter(tx => {
+      const txTime = new Date(tx.date).getTime();
+      return !isNaN(txTime) && txTime >= startOfWeek.getTime();
+    }).length;
+
+    const streak = calculateWeeklyTrackingStreak(transactions);
+    const xp = user?.xp || 0;
+
+    // Relative progress percentage for progress bars (0 if empty/no data)
+    const txPercent = Math.min(100, Math.round((weeklyTxs / 5) * 100));
+    const streakPercent = Math.min(100, Math.round((streak / 10) * 100));
+    const xpPercent = Math.min(100, Math.round((Math.min(xp, 1000) / 1000) * 100));
+
+    return {
+      weeklyTxs,
+      streak,
+      xp,
+      txPercent,
+      streakPercent,
+      xpPercent
+    };
+  }, [transactions, user?.xp]);
 
   // Dynamic Asset Allocation Breakdown for Donut Chart
   const assetAllocation = useMemo(() => {
@@ -311,6 +343,8 @@ const Dashboard: React.FC = () => {
               <p className="text-tertiary text-[10px] mt-1">{t('dashboard:realTimeEstimate')}</p>
             </div>
 
+            <div className="flex flex-wrap gap-2">
+            <ChartModeToggle mode={chartMode} onChange={mode => void setChartMode(mode)} />
             {/* Time Range Selector */}
             <div className="flex gap-1 p-1 bg-subtle rounded-lg">
               {['1D', '1W', '1M', '1Y', 'ALL'].map(range => (
@@ -322,6 +356,7 @@ const Dashboard: React.FC = () => {
                   {range}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 
@@ -385,13 +420,7 @@ const Dashboard: React.FC = () => {
         <div className={`${cardStyle} flex flex-col justify-between`}>
           <h3 className="text-secondary text-sm font-medium mb-2">{t('dashboard:assetAllocation')}</h3>
           {assetAllocation.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-6 px-4 my-auto bg-subtle/30 rounded-2xl border-2 border-dashed border-border/60">
-              <div className="w-10 h-10 rounded-full bg-subtle flex items-center justify-center mb-2 text-tertiary">
-                <PieChartIcon size={20} />
-              </div>
-              <p className="text-xs font-semibold text-secondary mb-1">{t('dashboard:noAssetsAllocation')}</p>
-              <p className="text-[11px] text-tertiary max-w-[200px]">{t('dashboard:noAssetsAllocationHint')}</p>
-            </div>
+            <p className="text-tertiary text-xs my-auto text-center">{t('dashboard:noAssetsAllocation')}</p>
           ) : (
             <div className="flex flex-col sm:flex-row items-center gap-4 my-auto">
               {/* Donut Chart with Total in Center */}
@@ -481,7 +510,7 @@ const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visibleGoals.length === 0 && (
-            <p className="col-span-full text-sm text-tertiary text-center py-12 bg-subtle/30 rounded-2xl border-2 border-dashed border-border">{t('dashboard:noGoalsYet')}</p>
+            <p className="col-span-full text-xs text-tertiary text-center py-8">{t('dashboard:noGoalsYet')}</p>
           )}
 
           {visibleGoals.map((goal, idx) => (
@@ -564,18 +593,20 @@ const Dashboard: React.FC = () => {
         <div className={`${cardStyle} flex flex-col justify-between`}>
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-primary">{t('dashboard:weeklyProgress')}</h3>
-            <span className="text-xs font-bold text-tertiary px-3 py-1 bg-subtle rounded-full">{t('common:common.week')} 24</span>
+            <span className="text-xs font-bold text-tertiary px-3 py-1 bg-subtle rounded-full">
+              {t('common:common.week')} {currentWeekNumber}
+            </span>
           </div>
 
           <div className="flex justify-around items-end text-center flex-1 pb-4">
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <p className="text-4xl font-black text-primary tracking-tighter">{transactions.length}</p>
+                <p className="text-4xl font-black text-primary tracking-tighter">{weeklyStats.weeklyTxs}</p>
                 <div className="h-1.5 w-12 bg-primary/20 mt-2 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full shadow-sm transition-all"
                     style={{
-                      width: animActive ? '80%' : '0%',
+                      width: animActive ? `${weeklyStats.txPercent}%` : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
                       transitionTimingFunction: ANIMATION_EASING
                     }}
@@ -587,12 +618,12 @@ const Dashboard: React.FC = () => {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <p className="text-4xl font-black text-negative tracking-tighter">5</p>
-                <div className="h-1.5 w-12 bg-negative/20 mt-2 rounded-full overflow-hidden">
+                <p className="text-4xl font-black text-warning tracking-tighter">{weeklyStats.streak}</p>
+                <div className="h-1.5 w-12 bg-warning/20 mt-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-negative rounded-full shadow-sm transition-all"
+                    className="h-full bg-warning rounded-full shadow-sm transition-all"
                     style={{
-                      width: animActive ? '20%' : '0%',
+                      width: animActive ? `${weeklyStats.streakPercent}%` : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
                       transitionTimingFunction: ANIMATION_EASING
                     }}
@@ -604,12 +635,12 @@ const Dashboard: React.FC = () => {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <p className="text-4xl font-black text-positive tracking-tighter">500</p>
+                <p className="text-4xl font-black text-positive tracking-tighter">{weeklyStats.xp}</p>
                 <div className="h-1.5 w-12 bg-positive/20 mt-2 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-positive rounded-full shadow-sm transition-all"
                     style={{
-                      width: animActive ? '50%' : '0%',
+                      width: animActive ? `${weeklyStats.xpPercent}%` : '0%',
                       transitionDuration: `${ANIMATION_DURATION_MS}ms`,
                       transitionTimingFunction: ANIMATION_EASING
                     }}

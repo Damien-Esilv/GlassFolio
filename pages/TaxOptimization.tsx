@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import { taxService, OptimizationSuggestion } from '../src/services/fiscal';
 import { DEFAULT_FISCAL_YEAR } from '../src/constants/fiscalConstants';
 import { FiscalProfile, FiscalConfidence } from '../src/types/types.backend';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../src/constants/animations';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const formatEur = (v: number) =>
@@ -31,7 +32,7 @@ const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }
     const isBaremeBetter = data.recommendation === 'BAREME';
 
     return (
-        <div className="bg-card border border-subtle rounded-2xl p-6 space-y-5">
+        <div className="bg-card border border-subtle rounded-2xl p-6 space-y-5 animate-fade-in-up">
             <div>
                 <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.pfuVsBareme.title')}</h3>
                 <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle')}</p>
@@ -80,7 +81,7 @@ const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }
 };
 
 // ── Suggestion card ──────────────────────────────────────────────────────────
-const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion }> = ({ suggestion }) => {
+const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: number }> = ({ suggestion, index = 0 }) => {
     const { t } = useTranslation();
     const categoryColors: Record<OptimizationSuggestion['category'], string> = {
         regime: 'text-brand bg-brand/10',
@@ -98,7 +99,10 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion }> = ({ sugg
     };
 
     return (
-        <div className="bg-card border border-subtle rounded-xl p-5 flex gap-4 hover:border-strong transition-all">
+        <div 
+            className="bg-card border border-subtle rounded-xl p-5 flex gap-4 hover:border-strong transition-all animate-fade-in-up"
+            style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
+        >
             <div className={`p-2 rounded-lg shrink-0 h-fit ${categoryColors[suggestion.category]}`}>
                 {categoryIcons[suggestion.category]}
             </div>
@@ -258,7 +262,7 @@ const TaxOptimization: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {suggestions.map(s => <SuggestionCard key={s.id} suggestion={s} />)}
+                        {suggestions.map((s, idx) => <SuggestionCard key={s.id} suggestion={s} index={idx} />)}
                     </div>
                 )}
             </div>

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 import { ArrowLeft, Percent, ShieldAlert, Award, ArrowUpRight, ArrowDownRight, Search, Plus, Loader2, BookOpen, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ChartModeToggle from '../components/ui/ChartModeToggle';
+import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { portfolioService } from '../src/services/portfolioService';
 import { searchLiveAssets, fetchAssetHistory, CURATED_CATALOG, SearchResultItem } from '../src/services/assetSearchService';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +28,7 @@ const PortfolioPerformance: React.FC = () => {
    const currency = user?.preferences?.currency || 'EUR';
 
    const [timeRange, setTimeRange] = useState<'1M' | '3M' | 'YTD' | '1Y' | 'ALL'>('1Y');
+   const [chartMode, setChartMode] = useChartPriceMode();
    const [benchmarkRate, setBenchmarkRate] = useState<number>(3.0); // Default 3.0% risk-free rate
    const [summary, setSummary] = useState<DashboardSummary | null>(null);
    const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -76,7 +79,7 @@ const PortfolioPerformance: React.FC = () => {
       const fetchData = async () => {
          try {
             setIsLoading(true);
-            const data = await portfolioService.getDashboardSummary(timeRange, currency, locale, dateFormat);
+            const data = await portfolioService.getDashboardSummary(timeRange, currency, locale, dateFormat, { chartMode });
             setSummary(data);
          } catch (e) {
             console.error(e);
@@ -86,7 +89,7 @@ const PortfolioPerformance: React.FC = () => {
       };
 
       fetchData();
-   }, [timeRange, currency, transactions, positions, locale, dateFormat]);
+   }, [timeRange, currency, transactions, positions, locale, dateFormat, chartMode]);
 
    // Calculate period fraction in years for compound benchmark return
    const periodYears = useMemo(() => {
@@ -100,18 +103,43 @@ const PortfolioPerformance: React.FC = () => {
       }
    }, [timeRange]);
 
-   // Combine Portfolio Chart Data with Benchmark Curve
+   // Combine Portfolio Chart Data with Benchmark Curve (Livret A cashflow-adjusted compounding)
    const combinedChartData = useMemo(() => {
       if (!summary || !summary.chartData || summary.chartData.length === 0) return [];
 
-      const initialValue = summary.chartData[0].value || summary.totalCost || 1000;
       const totalPoints = summary.chartData.length;
+      const stepYears = totalPoints > 1 ? periodYears / (totalPoints - 1) : 0;
+      const compoundStepFactor = Math.pow(1 + benchmarkRate / 100, stepYears);
+
+      let runningBenchmark = 0;
+      let prevInvested = 0;
 
       return summary.chartData.map((pt, idx) => {
-         const progressRatio = totalPoints > 1 ? idx / (totalPoints - 1) : 0;
-         const currentYears = periodYears * progressRatio;
-         const benchmarkFactor = Math.pow(1 + benchmarkRate / 100, currentYears);
-         const benchmarkValue = Math.round(initialValue * benchmarkFactor * 100) / 100;
+         // Capital invested at this point in time (from transactions / cost basis)
+         const currentInvested = typeof pt.invested === 'number'
+            ? pt.invested
+            : (pt.value > 0 ? (summary.totalCost > 0 ? Math.min(pt.value, summary.totalCost) : pt.value) : 0);
+
+         if (idx === 0) {
+            // Benchmark starts at exact capital invested at point 0 (0 if no investments)
+            runningBenchmark = currentInvested;
+            prevInvested = currentInvested;
+         } else {
+            // 1. Compound existing balance over the step
+            runningBenchmark = runningBenchmark * compoundStepFactor;
+
+            // 2. Add net new capital invested (deposits / purchases, like adding money to Livret A)
+            if (currentInvested > prevInvested) {
+               runningBenchmark += (currentInvested - prevInvested);
+            } else if (currentInvested < prevInvested && prevInvested > 0) {
+               // Proportional withdrawal / sale if capital decreased
+               const ratio = (prevInvested - currentInvested) / prevInvested;
+               runningBenchmark = Math.max(0, runningBenchmark * (1 - ratio));
+            }
+            prevInvested = currentInvested;
+         }
+
+         const benchmarkValue = Math.round(runningBenchmark * 100) / 100;
 
          return {
             ...pt,
@@ -125,8 +153,10 @@ const PortfolioPerformance: React.FC = () => {
    const lastPointVal = combinedChartData[combinedChartData.length - 1]?.portfolioValue || 0;
    const lastBenchmarkVal = combinedChartData[combinedChartData.length - 1]?.benchmarkValue || 0;
 
-   const portfolioReturnPct = firstPointVal > 0 ? ((lastPointVal - firstPointVal) / firstPointVal) * 100 : summary?.plPercent || 0;
-   const benchmarkReturnPct = firstPointVal > 0 ? ((lastBenchmarkVal - firstPointVal) / firstPointVal) * 100 : benchmarkRate * periodYears;
+   const portfolioReturnPct = summary?.plPercent || (firstPointVal > 0 ? ((lastPointVal - firstPointVal) / firstPointVal) * 100 : 0);
+   const totalCostBasis = summary?.totalCost || 0;
+   const benchmarkProfit = lastBenchmarkVal - totalCostBasis;
+   const benchmarkReturnPct = totalCostBasis > 0 ? (benchmarkProfit / totalCostBasis) * 100 : (benchmarkRate * periodYears);
    const outperformancePct = portfolioReturnPct - benchmarkReturnPct;
    const isOutperforming = outperformancePct >= 0;
 
@@ -432,8 +462,10 @@ const PortfolioPerformance: React.FC = () => {
                </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <ChartModeToggle mode={chartMode} onChange={mode => void setChartMode(mode)} />
             {/* Time Period Selector */}
-            <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle">
                {(['1M', '3M', 'YTD', '1Y', 'ALL'] as const).map((range) => (
                   <button
                      key={range}
@@ -448,10 +480,11 @@ const PortfolioPerformance: React.FC = () => {
                   </button>
                ))}
             </div>
+            </div>
          </div>
 
          {/* Metric Cards Row */}
-         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* 1. Total Value */}
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.totalValue')}</span>
@@ -461,30 +494,39 @@ const PortfolioPerformance: React.FC = () => {
                <p className="text-tertiary text-[10px] mt-1">{t('dashboard:realTimeEstimate')}</p>
             </div>
 
-            {/* 2. Portfolio Return */}
+            {/* 2. Total Invested */}
+            <div className={cardStyle}>
+               <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.totalInvested')}</span>
+               <div className="mt-2 text-2xl font-extrabold text-primary">
+                  <AnimatedCounter value={summary.totalCost} currency={currency} locale={locale} />
+               </div>
+               <p className="text-tertiary text-[10px] mt-1">{t('reports:performance.costBasisDisclaimer')}</p>
+            </div>
+
+            {/* 3. Portfolio Return */}
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.totalReturn')} ({timeRange})</span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className={`text-2xl font-extrabold ${portfolioReturnPct >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                  <span className={`text-2xl font-extrabold ${portfolioReturnPct >= 0 ? 'text-positive' : 'text-negative'}`}>
                      {portfolioReturnPct >= 0 ? '+' : ''}{portfolioReturnPct.toFixed(2)}%
                   </span>
-                  {portfolioReturnPct >= 0 ? <ArrowUpRight size={20} className="text-accent-green" /> : <ArrowDownRight size={20} className="text-accent-red" />}
+                  {portfolioReturnPct >= 0 ? <ArrowUpRight size={20} className="text-positive" /> : <ArrowDownRight size={20} className="text-negative" />}
                </div>
-               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(lastPointVal - firstPointVal, currency, locale)}</p>
+               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(summary.totalPL, currency, locale)}</p>
             </div>
 
-            {/* 3. Benchmark Return */}
+            {/* 4. Benchmark Return */}
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.benchmarkValue')} ({benchmarkRate}%)</span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-2xl font-extrabold text-brand">
+                  <span className="text-2xl font-extrabold text-warning">
                      +{benchmarkReturnPct.toFixed(2)}%
                   </span>
                </div>
-               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(lastBenchmarkVal - firstPointVal, currency, locale)}</p>
+               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(Math.max(0, lastBenchmarkVal - summary.totalCost), currency, locale)} ({t('reports:performance.interestGains')})</p>
             </div>
 
-            {/* 4. Outperformance Delta */}
+            {/* 5. Outperformance Delta */}
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">
                   {isOutperforming ? t('reports:performance.outperformance') : t('reports:performance.underperformance')}

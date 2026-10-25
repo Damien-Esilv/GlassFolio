@@ -6,7 +6,8 @@
 
 import { db, delay } from './db';
 import { Institute, Account, InstituteType, AccountType } from '../types';
-import { WrapperType } from '../types/types.backend';
+import { WrapperType, CostBasisMethod } from '../types/types.backend';
+import { portfolioService } from './portfolioService';
 
 // ============================================================================
 // INSTITUTE OPERATIONS
@@ -187,6 +188,16 @@ export const accountService = {
         accounts[index] = updated;
         db.saveAccounts(accounts);
 
+        return updated;
+    },
+
+    /**
+     * Change how an account values positions (WAC = PRU, FIFO = oldest lots
+     * first) and recompute every derived position.
+     */
+    setCostBasisMethod: async (id: string, method: CostBasisMethod): Promise<Account | null> => {
+        const updated = await accountService.updateAccount(id, { costBasisMethod: method });
+        if (updated) await portfolioService.recalculatePositions();
         return updated;
     },
 

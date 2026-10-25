@@ -27,7 +27,9 @@
         "lockVault": "Verrouiller le coffre",
         "vaultStatusUnlocked": "Coffre déverrouillé (AES-256-GCM)",
         "vaultStatusLocked": "Coffre verrouillé",
-        "resetFailed": "Le coffre n’a pas pu être réinitialisé. Réessayez."
+        "resetFailed": "Le coffre n’a pas pu être réinitialisé. Réessayez.",
+        "signOutPrompt": "Ce n'est pas vous, ou vous préférez vous reconnecter ? Vous êtes connecté en tant que {{email}}.",
+        "signOutButton": "Se déconnecter"
     },
     "header": {
         "lockVaultTooltip": "Verrouiller le coffre-fort immédiatement"
@@ -111,7 +113,9 @@
         "signInOnlyBadge": "Connexion seulement (le coffre demande votre mot de passe)",
         "addConfirmTitle": "Ajouter une passkey",
         "addConfirmDescription": "Confirmez votre identité : votre mot de passe sert aussi à protéger la clé du coffre pour cette passkey.",
-        "registeredWithoutPrf": "Passkey ajoutée. Cet authentificateur ne peut pas déverrouiller le coffre : votre mot de passe restera demandé après la connexion."
+        "registeredWithoutPrf": "Passkey ajoutée. Cet authentificateur ne peut pas déverrouiller le coffre : votre mot de passe restera demandé après la connexion.",
+        "enableVaultUnlockPrompt": "Passkey ajoutée. Votre navigateur demande une confirmation de plus pour qu'elle puisse aussi déverrouiller le coffre.",
+        "enableVaultUnlockButton": "Activer le déverrouillage du coffre"
     },
     "stepUp": {
         "title": "Vérification de sécurité",

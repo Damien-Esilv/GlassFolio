@@ -64,12 +64,52 @@ export const passkeyAccountService = {
         });
     },
 
+    /**
+     * RP ID of the server passkeys (cloud mode). Cached after any ceremony; otherwise read from a
+     * Supabase authentication challenge. Call it before the unlock click, never during it.
+     */
+    async resolveServerRpId(): Promise<string | undefined> {
+        if (!usesSupabasePasskeys()) return undefined;
+        const cached = passkeyService.getRememberedServerRpId();
+        if (cached) return cached;
+        try {
+            const ceremony = await supabaseClient.startPasskeyAuthentication();
+            const rpId = typeof ceremony.options.rpId === 'string' ? ceremony.options.rpId : undefined;
+            passkeyService.rememberServerRpId(rpId);
+            return rpId;
+        } catch {
+            return undefined;
+        }
+    },
+
+    /**
+     * Adds the PRF slot of an already registered passkey. Used when the browser did not return
+     * the PRF output at creation and refused a second ceremony in the same gesture (Safari).
+     */
+    async enableVaultUnlock(params: { credentialId: string; label: string; masterPassword: string; rpId?: string; transports?: string[] }): Promise<boolean> {
+        const { prfSecret } = await passkeyService.authenticate({
+            rpId: params.rpId,
+            allowCredentials: [{ id: params.credentialId, transports: params.transports }],
+            withPrf: true,
+        });
+        if (!prfSecret) return false;
+        await vaultService.enrollPasskeyPrf(params.credentialId, params.label, prfSecret, params.masterPassword, {
+            rpId: params.rpId,
+            transports: params.transports,
+        });
+        const records = await passkeyService.listPasskeys();
+        const record = records.find(r => r.id === params.credentialId);
+        if (record) await passkeyService.saveRecord({ ...record, prfEnabled: true });
+        await auditLogService.record('passkey_registered', `Passkey "${params.label}" can now unlock the vault`);
+        return true;
+    },
+
     /** The master password wraps the vault key into the new PRF slot (it is never stored). */
     async register(params: {
         user: { id: string; email: string; name: string };
         label: string;
         masterPassword: string;
-    }): Promise<{ unlocksVault: boolean }> {
+    }): Promise<{ unlocksVault: boolean; pendingVaultUnlock?: { credentialId: string; label: string; rpId: string; transports?: string[] } }> {
         if (!(await vaultService.verifyPassword(params.masterPassword))) {
             throw new Error('Invalid master password.');
         }
@@ -82,6 +122,7 @@ export const passkeyAccountService = {
             const ceremony = await supabaseClient.startPasskeyRegistration(token);
             attestation = await passkeyService.create({ user: params.user, serverOptions: ceremony.options });
             serverId = (await supabaseClient.verifyPasskeyRegistration(token, ceremony.challenge_id, attestation.credentialJson)).id;
+            passkeyService.rememberServerRpId(attestation.rpId);
         } else {
             attestation = await passkeyService.create({ user: params.user, excludeCredentialIds: existing.map(record => record.id) });
             if (!attestation.prfEnabled) {
@@ -89,14 +130,25 @@ export const passkeyAccountService = {
             }
         }
 
-        // Some authenticators only return the PRF output on an assertion, not at creation.
+        // Some authenticators only return the PRF output on an assertion, not at creation. Safari
+        // refuses that second ceremony within the same gesture: the user then confirms it with a click.
+        const slotMeta = { rpId: attestation.rpId, transports: attestation.transports };
         let prfSecret = attestation.prfSecret;
+        let pendingVaultUnlock: { credentialId: string; label: string; rpId: string; transports?: string[] } | undefined;
         if (!prfSecret && attestation.prfEnabled) {
-            prfSecret = (await passkeyService.authenticate({ allowCredentialIds: [attestation.credentialId], withPrf: true })).prfSecret;
+            try {
+                prfSecret = (await passkeyService.authenticate({
+                    rpId: attestation.rpId,
+                    allowCredentials: [{ id: attestation.credentialId, transports: attestation.transports }],
+                    withPrf: true,
+                })).prfSecret;
+            } catch {
+                pendingVaultUnlock = { credentialId: attestation.credentialId, label: params.label, ...slotMeta };
+            }
         }
         if (prfSecret) {
-            await vaultService.enrollPasskeyPrf(attestation.credentialId, params.label, prfSecret, params.masterPassword);
-        } else if (!usesSupabasePasskeys()) {
+            await vaultService.enrollPasskeyPrf(attestation.credentialId, params.label, prfSecret, params.masterPassword, slotMeta);
+        } else if (!usesSupabasePasskeys() && !pendingVaultUnlock) {
             throw new Error('This authenticator cannot unlock the vault (PRF extension unsupported).');
         }
 
@@ -116,7 +168,7 @@ export const passkeyAccountService = {
                 void supabaseClient.notifySecurityEvent(token, 'passkey_added', params.label);
             }
         }
-        return { unlocksVault: Boolean(prfSecret) };
+        return { unlocksVault: Boolean(prfSecret), pendingVaultUnlock };
     },
 
     async remove(passkey: AccountPasskey): Promise<void> {

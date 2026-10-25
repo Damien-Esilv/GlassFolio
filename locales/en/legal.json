@@ -409,6 +409,12 @@
         "category": "Strictly Necessary (Preferences)",
         "purpose": "Sidebar state and the price history you enter manually.",
         "lifespan": "Persistent until account deletion or cache clearing"
+      },
+      "passkeyRpId": {
+        "key": "gf_passkey_rp_id",
+        "category": "Strictly Necessary (Security)",
+        "purpose": "Remembers the domain (RP ID) your passkeys are bound to so the vault can be unlocked while locked. Public deployment metadata, no personal data.",
+        "lifespan": "Until account deletion or cache clearing"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",

@@ -27,7 +27,9 @@
         "lockVault": "Lock Vault",
         "vaultStatusUnlocked": "Vault Unlocked (AES-256-GCM)",
         "vaultStatusLocked": "Vault Locked",
-        "resetFailed": "The vault could not be reset. Please try again."
+        "resetFailed": "The vault could not be reset. Please try again.",
+        "signOutPrompt": "Not you, or prefer to sign in again? You are signed in as {{email}}.",
+        "signOutButton": "Sign out"
     },
     "header": {
         "lockVaultTooltip": "Lock encrypted vault immediately"
@@ -111,7 +113,9 @@
         "signInOnlyBadge": "Sign-in only (vault asks for your password)",
         "addConfirmTitle": "Add a passkey",
         "addConfirmDescription": "Confirm your identity: your password also wraps the vault key for this passkey.",
-        "registeredWithoutPrf": "Passkey added. This authenticator cannot unlock the vault, so your password will still be asked after signing in."
+        "registeredWithoutPrf": "Passkey added. This authenticator cannot unlock the vault, so your password will still be asked after signing in.",
+        "enableVaultUnlockPrompt": "Passkey added. Your browser needs one more confirmation so it can also unlock the vault.",
+        "enableVaultUnlockButton": "Enable vault unlock"
     },
     "stepUp": {
         "title": "Security Verification",

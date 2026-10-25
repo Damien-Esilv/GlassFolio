@@ -4,7 +4,7 @@
  * Snapshot-specific UI for importing positions with optional reconciliation.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import {
@@ -18,14 +18,18 @@ import {
     TrendingDown,
     Minus,
     Plus,
-    Edit2,
-    DollarSign
+    XCircle
 } from 'lucide-react';
 import { useSnapshotImport, SNAPSHOT_MAPPABLE_FIELDS } from '../hooks/useSnapshotImport';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { formatCurrency, CURRENCY_SYMBOLS } from '../utils/currency';
+import { formatCurrency } from '../utils/currency';
+import type { ImportBatch } from '../src/types';
+import type { ReconciliationDiff } from '../src/services/import/types';
+import DuplicateFileBanner from './import/DuplicateFileBanner';
+import MappingProfilesPanel from './import/MappingProfilesPanel';
+import { formatFieldError } from './import/formatFieldError';
 
 // ============================================================================
 // MAIN SNAPSHOT WIZARD
@@ -37,6 +41,10 @@ interface SnapshotWizardProps {
     rawCSVText: string;
     headers: string[];
     previewRows: string[][];
+    /** Batch that already contains this exact file (from the upload step) */
+    existingBatch?: ImportBatch | null;
+    userId?: string;
+    fileName?: string;
     onBack: () => void;
     onComplete: () => void;
 }
@@ -47,12 +55,14 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
     rawCSVText,
     headers,
     previewRows,
+    existingBatch = null,
+    userId,
+    fileName,
     onBack,
     onComplete
 }) => {
     const { t } = useTranslation('transactions');
-    const { refreshData } = useData();
-    const snapshot = useSnapshotImport(accountId, rawCSVText, headers, previewRows);
+    const snapshot = useSnapshotImport(accountId, rawCSVText, headers, previewRows, userId, fileName);
 
     return (
         <div className="space-y-8">
@@ -82,6 +92,8 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
                     </div>
                 </div>
             )}
+
+            {snapshot.step !== 'complete' && <DuplicateFileBanner batch={snapshot.existingBatch ?? existingBatch} />}
 
             {/* Step Content */}
             {snapshot.step === 'mapping' && (
@@ -161,6 +173,17 @@ const SnapshotMappingStep: React.FC<{
                 </p>
             </div>
 
+            <MappingProfilesPanel
+                templates={snapshot.mappingTemplates}
+                selectedId={snapshot.selectedTemplateId}
+                suggestedId={snapshot.suggestedTemplateId}
+                canSave={!!snapshot.isValidMapping}
+                onApply={snapshot.applyTemplate}
+                onSave={snapshot.saveAsTemplate}
+                onDelete={snapshot.deleteTemplate}
+                onRename={snapshot.renameTemplate}
+            />
+
             {/* Mapping Grid */}
             <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
                 <h3 className="text-lg font-bold text-primary mb-4">{t('snapshotWizard.mapping.fieldsTitle')}</h3>
@@ -175,7 +198,7 @@ const SnapshotMappingStep: React.FC<{
                             <select
                                 value={snapshot.mappings[field.key as keyof typeof snapshot.mappings] as string || ''}
                                 onChange={e => snapshot.setMapping(field.key as keyof typeof snapshot.mappings, e.target.value || undefined)}
-                                className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${field.required && !snapshot.mappings[field.key as keyof typeof snapshot.mappings]
+                                className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary ${field.required && !snapshot.mappings[field.key as keyof typeof snapshot.mappings]
                                     ? 'border-error/50'
                                     : 'border-subtle'
                                     }`}
@@ -302,6 +325,20 @@ const SnapshotOptionsStep: React.FC<{
                 </div>
             </div>
 
+            {/* Close assets absent from the file */}
+            <label className="flex items-start gap-3 bg-card border border-subtle rounded-xl p-4 shadow-sm cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={snapshot.closeMissingAssets}
+                    onChange={e => snapshot.setCloseMissingAssets(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-subtle bg-subtle text-primary focus:ring-primary"
+                />
+                <span>
+                    <span className="block text-primary font-medium">{t('snapshotWizard.options.closeMissingTitle')}</span>
+                    <span className="block text-secondary text-sm mt-1">{t('snapshotWizard.options.closeMissingDescription')}</span>
+                </span>
+            </label>
+
             {/* Info */}
             {snapshot.generateSyntheticTransactions && (
                 <div className="bg-info/10 border border-info/20 rounded-xl p-4 text-info text-sm">
@@ -325,259 +362,162 @@ const SnapshotPreviewStep: React.FC<{
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
     const currency = user?.preferences?.currency || 'USD';
 
-    // Snapshot Only Mode - just show positions
-    if (!snapshot.generateSyntheticTransactions) {
-        return (
-            <div className="space-y-6">
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-bold text-secondary uppercase">{t('snapshotWizard.preview.stats.totalPositions')}</span>
-                        <div className="text-2xl font-bold text-brand mt-1">{snapshot.parseStats.total}</div>
-                    </div>
-                    <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-bold text-secondary uppercase">{t('snapshotWizard.preview.stats.valid')}</span>
-                        <div className="text-2xl font-bold text-success mt-1">{snapshot.parseStats.valid}</div>
-                    </div>
-                    <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-bold text-secondary uppercase">{t('snapshotWizard.preview.stats.errors')}</span>
-                        <div className="text-2xl font-bold text-error mt-1">{snapshot.parseStats.errors}</div>
-                    </div>
-                </div>
-
-                {/* Position List */}
-                <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b border-subtle bg-subtle/50">
-                        <h3 className="text-sm font-bold text-primary">{t('snapshotWizard.preview.positionsTitle')}</h3>
-                    </div>
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-subtle text-xs uppercase text-secondary">
-                            <tr>
-                                <th className="px-4 py-3">{t('snapshotWizard.preview.table.status')}</th>
-                                <th className="px-4 py-3">{t('snapshotWizard.preview.table.asset')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.preview.table.quantity')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.preview.table.avgPrice')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.preview.table.totalValue')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-subtle">
-                            {snapshot.parsedPositions.map(pos => {
-                                const qty = parseFloat(pos.position.quantity);
-                                const price = parseFloat(pos.position.avgPrice);
-                                const total = qty * price;
-
-                                return (
-                                    <tr key={pos.id} className={pos.status === 'error' ? 'bg-error/5' : ''}>
-                                        <td className="px-4 py-3">
-                                            {pos.status === 'valid' ? (
-                                                <CheckCircle className="text-success" size={16} />
-                                            ) : (
-                                                <AlertCircle className="text-error" size={16} />
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-bold text-primary">{pos.position.displayName}</span>
-                                            {pos.position.assetIsin && (
-                                                <span className="block text-xs text-secondary font-mono">{pos.position.assetIsin}</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono text-primary">{qty.toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-right font-mono text-secondary">{formatCurrency(price, currency, locale)}</td>
-                                        <td className="px-4 py-3 text-right font-mono font-bold text-primary">{formatCurrency(total, currency, locale)}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    }
-
-    // Generate Transactions Mode - show reconciliation diff
-    if (!snapshot.reconciliationResult) return null;
-
-    const { diffs, stats } = snapshot.reconciliationResult;
+    const invalidPositions = snapshot.parsedPositions.filter(p => p.status === 'error');
+    const diffs = snapshot.reconciliationResult?.diffs ?? [];
+    const closures = diffs.filter(d => d.isClosure).length;
+    const investedBefore = diffs.reduce((sum, d) => sum + parseFloat(d.oldTotalCost), 0);
+    const investedAfter = diffs.reduce((sum, d) => sum + parseFloat(d.newTotalCost), 0);
+    const stats = snapshot.reconciliationResult?.stats;
 
     return (
         <div className="space-y-6">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <StatCard label={t('snapshotWizard.reconciliation.stats.newAssets')} value={stats.newAssets} icon={Plus} color="blue" />
-                <StatCard label={t('snapshotWizard.reconciliation.stats.increased')} value={stats.increasePositions} icon={TrendingUp} color="emerald" />
-                <StatCard label={t('snapshotWizard.reconciliation.stats.decreased')} value={stats.decreasePositions} icon={TrendingDown} color="amber" />
-                <StatCard label={t('snapshotWizard.reconciliation.stats.unchanged')} value={stats.unchangedPositions} icon={Minus} color="slate" />
-                <StatCard label={t('snapshotWizard.reconciliation.stats.needsInput')} value={stats.requiresInput} icon={DollarSign} color="rose" />
+            {stats && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <StatCard label={t('snapshotWizard.reconciliation.stats.newAssets')} value={stats.newAssets} icon={Plus} tone="brand" />
+                    <StatCard label={t('snapshotWizard.reconciliation.stats.increased')} value={stats.increasePositions} icon={TrendingUp} tone="positive" />
+                    <StatCard label={t('snapshotWizard.reconciliation.stats.decreased')} value={stats.decreasePositions - closures} icon={TrendingDown} tone="warning" />
+                    <StatCard label={t('snapshotWizard.reconciliation.stats.closed')} value={closures} icon={XCircle} tone="negative" />
+                    <StatCard label={t('snapshotWizard.reconciliation.stats.unchanged')} value={stats.unchangedPositions} icon={Minus} tone="neutral" />
+                </div>
+            )}
+
+            {/* Invested before / after */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
+                    <span className="text-xs font-bold text-secondary uppercase">{t('snapshotWizard.reconciliation.investedBefore')}</span>
+                    <div className="text-xl font-bold text-primary mt-1 font-mono">{formatCurrency(investedBefore, currency, locale)}</div>
+                </div>
+                <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
+                    <span className="text-xs font-bold text-secondary uppercase">{t('snapshotWizard.reconciliation.investedAfter')}</span>
+                    <div className="text-xl font-bold text-primary mt-1 font-mono">{formatCurrency(investedAfter, currency, locale)}</div>
+                </div>
             </div>
 
             {/* Reconciliation Table */}
             <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">
                 <div className="px-4 py-3 border-b border-subtle bg-subtle/50">
                     <h3 className="text-sm font-bold text-primary">{t('snapshotWizard.reconciliation.title')}</h3>
+                    <p className="text-xs text-secondary mt-1">
+                        {snapshot.generateSyntheticTransactions
+                            ? t('snapshotWizard.reconciliation.syntheticHint')
+                            : t('snapshotWizard.reconciliation.replaceHint')}
+                    </p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-subtle text-xs uppercase text-secondary">
                             <tr>
                                 <th className="px-4 py-3">{t('snapshotWizard.reconciliation.table.asset')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.oldQty')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.newQty')}</th>
-                                <th className="px-4 py-3 text-center">{t('snapshotWizard.reconciliation.table.delta')}</th>
+                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.quantity')}</th>
+                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.delta')}</th>
+                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.avgPrice')}</th>
+                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.investedDelta')}</th>
                                 <th className="px-4 py-3 text-center">{t('snapshotWizard.reconciliation.table.action')}</th>
-                                <th className="px-4 py-3 text-right">{t('snapshotWizard.reconciliation.table.price')}</th>
-                                <th className="px-4 py-3">{t('snapshotWizard.reconciliation.table.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-subtle">
                             {diffs.map(diff => (
-                                <ReconciliationRow
-                                    key={diff.assetKey}
-                                    diff={diff}
-                                    onUpdatePrice={snapshot.updateSellPrice}
-                                />
+                                <ReconciliationRow key={`${diff.assetKey}-${diff.isClosure}`} diff={diff} currency={currency} locale={locale} />
                             ))}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* Validation message */}
-            {stats.requiresInput > 0 && (
-                <div className="bg-warning/10 border border-warning/20 rounded-xl p-4 text-warning text-sm">
-                    <AlertTriangle size={16} className="inline mr-2" />
-                    {t('snapshotWizard.reconciliation.requiresInput', { count: stats.requiresInput })}
+            {/* Rows rejected by the parser */}
+            {invalidPositions.length > 0 && (
+                <div className="bg-card border border-negative/30 rounded-xl overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-subtle bg-negative-subtle">
+                        <h3 className="text-sm font-bold text-negative">
+                            {t('snapshotWizard.preview.invalidRows', { count: invalidPositions.length })}
+                        </h3>
+                    </div>
+                    <ul className="divide-y divide-subtle text-sm">
+                        {invalidPositions.map(pos => (
+                            <li key={pos.id} className="px-4 py-2 flex flex-wrap gap-2">
+                                <span className="font-mono text-secondary">{t('snapshotWizard.preview.rowNumber', { row: pos.rowIndex + 1 })}</span>
+                                <span className="font-bold text-primary">{pos.position.displayName}</span>
+                                <span className="text-negative">{pos.errors.map(e => formatFieldError(t, e)).join(', ')}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
         </div>
     );
 };
 
-const StatCard: React.FC<{ label: string; value: number; icon: React.ElementType; color: string }> = ({
-    label, value, icon: Icon, color
-}) => {
-    const colorClasses: Record<string, string> = {
-        blue: 'text-brand',
-        emerald: 'text-success',
-        amber: 'text-warning',
-        rose: 'text-error',
-        slate: 'text-secondary'
-    };
+type StatTone = 'brand' | 'positive' | 'warning' | 'negative' | 'neutral';
 
-    return (
-        <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
-            <span className="text-xs font-bold text-secondary uppercase">{label}</span>
-            <div className="flex items-center gap-2 mt-1">
-                <Icon className={colorClasses[color]} size={20} />
-                <span className={`text-2xl font-bold ${colorClasses[color]}`}>{value}</span>
-            </div>
-        </div>
-    );
+const STAT_TONE_CLASSES: Record<StatTone, string> = {
+    brand: 'text-brand',
+    positive: 'text-positive',
+    warning: 'text-warning',
+    negative: 'text-negative',
+    neutral: 'text-secondary'
 };
 
-const ReconciliationRow: React.FC<{
-    diff: ReturnType<typeof useSnapshotImport>['reconciliationResult'] extends { diffs: infer D } ? D extends (infer T)[] ? T : never : never;
-    onUpdatePrice: (assetKey: string, price: string) => void;
-}> = ({ diff, onUpdatePrice }) => {
+const StatCard: React.FC<{ label: string; value: number; icon: React.ElementType; tone: StatTone }> = ({
+    label, value, icon: Icon, tone
+}) => (
+    <div className="bg-card border border-subtle rounded-xl p-4 shadow-sm">
+        <span className="text-xs font-bold text-secondary uppercase">{label}</span>
+        <div className="flex items-center gap-2 mt-1">
+            <Icon className={STAT_TONE_CLASSES[tone]} size={20} />
+            <span className={`text-2xl font-bold ${STAT_TONE_CLASSES[tone]}`}>{value}</span>
+        </div>
+    </div>
+);
+
+const formatQty = (value: string, locale: string): string =>
+    parseFloat(value).toLocaleString(locale, { maximumFractionDigits: 8 });
+
+const ReconciliationRow: React.FC<{ diff: ReconciliationDiff; currency: string; locale: string }> = ({ diff, currency, locale }) => {
     const { t } = useTranslation('transactions');
-    const { user } = useAuth();
-    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
-    const currency = user?.preferences?.currency || 'USD';
-    const symbol = CURRENCY_SYMBOLS[currency] || currency;
-    const [editPrice, setEditPrice] = useState(diff.userProvidedSellPrice || '');
-    const [isEditing, setIsEditing] = useState(diff.requiresUserInput);
+    const deltaQty = parseFloat(diff.deltaQty);
+    const deltaCost = parseFloat(diff.deltaTotalCost);
+    const isNew = parseFloat(diff.oldQty) === 0 && diff.direction === 'increase';
 
-    const deltaNum = parseFloat(diff.deltaQty);
-    const isIncrease = deltaNum > 0;
-    const isDecrease = deltaNum < 0;
-
-    const handleSavePrice = () => {
-        if (editPrice.trim()) {
-            onUpdatePrice(diff.assetKey, editPrice);
-            setIsEditing(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSavePrice();
-        }
-    };
+    let actionKey = 'snapshotWizard.reconciliation.actions.unchanged';
+    let actionClass = 'bg-subtle text-secondary';
+    if (diff.syntheticType !== 'NONE') {
+        if (diff.isClosure) { actionKey = 'snapshotWizard.reconciliation.actions.close'; actionClass = 'bg-negative-subtle text-negative'; }
+        else if (isNew) { actionKey = 'snapshotWizard.reconciliation.actions.new'; actionClass = 'bg-brand/10 text-brand'; }
+        else if (diff.direction === 'increase') { actionKey = 'snapshotWizard.reconciliation.actions.increase'; actionClass = 'bg-positive-subtle text-positive'; }
+        else if (diff.direction === 'decrease') { actionKey = 'snapshotWizard.reconciliation.actions.decrease'; actionClass = 'bg-warning-subtle text-warning'; }
+        else { actionKey = 'snapshotWizard.reconciliation.actions.costBasis'; actionClass = 'bg-brand/10 text-brand'; }
+    }
 
     return (
-        <tr className={!diff.isValid ? 'bg-error/5' : diff.requiresUserInput ? 'bg-warning/5' : ''}>
+        <tr className={diff.isClosure ? 'bg-negative-subtle' : ''}>
             <td className="px-4 py-3">
                 <span className="font-bold text-primary">{diff.displayName}</span>
-                {diff.assetIsin && (
-                    <span className="block text-xs text-secondary font-mono">{diff.assetIsin}</span>
-                )}
-            </td>
-            <td className="px-4 py-3 text-right font-mono text-secondary">
-                {parseFloat(diff.oldQty) === 0 ? t('snapshotWizard.common.emptyValue') : diff.oldQty}
-            </td>
-            <td className="px-4 py-3 text-right font-mono text-primary">{diff.newQty}</td>
-            <td className="px-4 py-3 text-center">
-                <span className={`font-mono font-bold ${isIncrease ? 'text-success' : isDecrease ? 'text-warning' : 'text-secondary'}`}>
-                    {isIncrease ? '+' : ''}{deltaNum.toFixed(2)}
-                </span>
-            </td>
-            <td className="px-4 py-3 text-center">
-                {diff.syntheticType === 'BUY' && (
-                    <span className="px-2 py-1 bg-success/20 text-success rounded text-xs font-bold">
-                        {t('snapshotWizard.reconciliation.actions.buy')} {diff.syntheticQty}
+                {diff.assetIsin && <span className="block text-xs text-secondary font-mono">{diff.assetIsin}</span>}
+                {diff.validationMessage && (
+                    <span className="flex items-center gap-1 text-xs text-warning mt-1">
+                        <AlertTriangle size={12} /> {t(diff.validationMessage)}
                     </span>
                 )}
-                {diff.syntheticType === 'SELL' && (
-                    <span className="px-2 py-1 bg-warning/20 text-warning rounded text-xs font-bold">
-                        {t('snapshotWizard.reconciliation.actions.sell')} {Math.abs(parseFloat(diff.syntheticQty)).toFixed(2)}
-                    </span>
-                )}
-                {diff.syntheticType === 'NONE' && (
-                    <span className="text-secondary text-xs">{t('snapshotWizard.common.emptyValue')}</span>
-                )}
             </td>
-            <td className="px-4 py-3 text-right">
-                {diff.syntheticType === 'BUY' && (
-                    <span className="font-mono text-primary">{formatCurrency(parseFloat(diff.syntheticPrice), currency, locale)}</span>
-                )}
-                {diff.syntheticType === 'SELL' && isEditing && (
-                    <div className="flex items-center gap-2 justify-end">
-                        <span className="text-secondary">{symbol}</span>
-                        <input
-                            type="number"
-                            value={editPrice}
-                            onChange={e => setEditPrice(e.target.value)}
-                            onBlur={handleSavePrice}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            placeholder={t('snapshotWizard.reconciliation.enterPrice')}
-                            className="w-24 bg-subtle border border-warning/50 text-primary rounded px-2 py-1 text-sm text-right"
-                        />
-                    </div>
-                )}
-                {diff.syntheticType === 'SELL' && !isEditing && (
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="font-mono text-primary hover:text-brand transition-colors cursor-pointer group flex items-center gap-1 justify-end"
-                        title={t('snapshotWizard.reconciliation.clickToEdit')}
-                    >
-                        {formatCurrency(parseFloat(diff.syntheticPrice), currency, locale)}
-                        <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-brand transition-opacity" />
-                    </button>
-                )}
-                {diff.syntheticType === 'NONE' && (
-                    <span className="text-secondary">{t('snapshotWizard.common.emptyValue')}</span>
-                )}
+            <td className="px-4 py-3 text-right font-mono whitespace-nowrap">
+                <span className="text-secondary">{isNew ? t('snapshotWizard.common.emptyValue') : formatQty(diff.oldQty, locale)}</span>
+                <span className="text-secondary mx-1" aria-hidden="true">→</span>
+                <span className="text-primary">{formatQty(diff.newQty, locale)}</span>
             </td>
-            <td className="px-4 py-3">
-                {diff.isValid && !isEditing && !diff.requiresUserInput && (
-                    <CheckCircle className="text-success" size={16} />
-                )}
-                {(isEditing || diff.requiresUserInput) && (
-                    <AlertTriangle className="text-warning" size={16} />
-                )}
-                {!diff.isValid && !isEditing && !diff.requiresUserInput && (
-                    <AlertCircle className="text-error" size={16} />
-                )}
+            <td className={`px-4 py-3 text-right font-mono ${deltaQty > 0 ? 'text-positive' : deltaQty < 0 ? 'text-warning' : 'text-secondary'}`}>
+                {deltaQty > 0 ? '+' : ''}{formatQty(diff.deltaQty, locale)}
+            </td>
+            <td className="px-4 py-3 text-right font-mono whitespace-nowrap">
+                <span className="text-secondary">{isNew ? t('snapshotWizard.common.emptyValue') : formatCurrency(parseFloat(diff.oldAvgPrice), currency, locale)}</span>
+                <span className="text-secondary mx-1" aria-hidden="true">→</span>
+                <span className="text-primary">{diff.isClosure ? t('snapshotWizard.common.emptyValue') : formatCurrency(parseFloat(diff.newAvgPrice), currency, locale)}</span>
+            </td>
+            <td className="px-4 py-3 text-right font-mono text-primary">
+                {deltaCost > 0 ? '+' : ''}{formatCurrency(deltaCost, currency, locale)}
+            </td>
+            <td className="px-4 py-3 text-center">
+                <span className={`px-2 py-1 rounded text-xs font-bold ${actionClass}`}>{t(actionKey)}</span>
             </td>
         </tr>
     );

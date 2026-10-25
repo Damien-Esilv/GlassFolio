@@ -27,5 +27,12 @@
     "cash": "Cash",
     "noPositionsYet": "No positions available",
     "noAssetsAllocation": "No assets to allocate",
-    "noAssetsAllocationHint": "Add transactions or holdings to visualize your asset breakdown."
+    "noAssetsAllocationHint": "Add transactions or holdings to visualize your asset breakdown.",
+    "chartMode": {
+        "label": "Curve price source",
+        "historical": "Real prices",
+        "simulated": "Estimate",
+        "historicalHint": "Holdings valued with real historical closing prices",
+        "simulatedHint": "Smooth estimate between your cost basis and today's price"
+    }
 }

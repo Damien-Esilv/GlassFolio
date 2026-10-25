@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MailCheck, Send, RefreshCw, LogOut, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Button from '../Button';
 import { authService } from '../../src/services/security/authService';
+import { mapAuthErrorMessage } from '../../src/services/security/authErrorMapper';
 
 interface EmailVerificationGateProps {
     userEmail: string;
@@ -65,7 +66,7 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
                 onVerified();
             }, 1000);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('auth:verification.invalidOtp', 'Invalid or expired verification code.'));
+            setError(mapAuthErrorMessage(err, t, 'auth:verification.invalidOtp'));
         } finally {
             setIsVerifying(false);
         }
@@ -85,7 +86,7 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
             setCooldown(RESEND_COOLDOWN_SECONDS);
             setSuccessMessage(t('auth:verification.emailSent', 'A new verification link and code have been sent to your email.'));
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : t('auth:verification.resendFailed', 'Failed to resend email. Please try again later.'));
+            setError(mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
         } finally {
             setIsResending(false);
         }

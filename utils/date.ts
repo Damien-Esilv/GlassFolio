@@ -83,3 +83,26 @@ export const getRolling12MonthsLabels = (
     }
     return result;
 };
+
+/**
+ * Calculate the ISO 8601 week number for a given date.
+ */
+export const getISOWeekNumber = (dateInput: Date = new Date()): number => {
+    const d = new Date(Date.UTC(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
+/**
+ * Returns Monday 00:00:00 of the current week in local time.
+ */
+export const getStartOfCurrentWeek = (now: Date = new Date()): Date => {
+    const d = new Date(now);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};

@@ -206,8 +206,69 @@ const TOOLS = [
       },
       required: ['name', 'metric', 'threshold']
     }
+  },
+  {
+    name: 'preview_csv_import',
+    description: 'Read-only. Detect the delimiter, header row and data row count of a broker/bank CSV export before importing it into GlassFolio. Nothing is saved.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        csvText: { type: 'string', description: 'Raw CSV content' }
+      },
+      required: ['csvText']
+    }
+  },
+  {
+    name: 'get_cost_basis_method',
+    description: 'Read-only. Return the cost basis method of each account: WAC (weighted average cost, French PRU) or FIFO.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: { type: 'string', description: 'Optional account id' }
+      }
+    }
   }
 ];
+
+const mockAccounts = [
+  { accountId: 'acc-bourso-pea', name: 'PEA BoursoBank', method: 'WAC' },
+  { accountId: 'acc-binance', name: 'Binance Spot', method: 'FIFO' }
+];
+
+/**
+ * Minimal CSV shape detection (same rules as the app: most consistent delimiter
+ * across lines, header = first line with the modal column count).
+ */
+function previewCsv(csvText) {
+  const lines = String(csvText || '').replace(/^\uFEFF/, '').split(/\r\n|\n|\r/).filter(l => l.trim() !== '');
+  const countOutsideQuotes = (line, d) => {
+    let count = 0;
+    let inQuote = false;
+    for (const c of line) {
+      if (c === '"') inQuote = !inQuote;
+      else if (c === d && !inQuote) count++;
+    }
+    return count;
+  };
+  let delimiter = ',';
+  let best = 0;
+  for (const d of [',', ';', '\t', '|']) {
+    const freq = new Map();
+    lines.slice(0, 30).forEach(l => {
+      const c = countOutsideQuotes(l, d);
+      if (c > 0) freq.set(c, (freq.get(c) || 0) + 1);
+    });
+    for (const [cols, n] of freq) {
+      if (n * 1000 + cols > best) { best = n * 1000 + cols; delimiter = d; }
+    }
+  }
+  const counts = lines.map(l => countOutsideQuotes(l, delimiter));
+  const modal = counts.slice(0, 20).sort((a, b) =>
+    counts.filter(c => c === b).length - counts.filter(c => c === a).length || b - a)[0] ?? 0;
+  const headerRowIndex = Math.max(0, counts.findIndex(c => c >= modal));
+  const headers = (lines[headerRowIndex] || '').split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+  return { delimiter, headerRowIndex, headers, rowCount: Math.max(0, lines.length - headerRowIndex - 1) };
+}
 
 const RESOURCES = [
   {
@@ -524,6 +585,17 @@ async function handleToolCall(name, args) {
         }]
       };
     }
+    case 'preview_csv_import':
+      return {
+        content: [{ type: 'text', text: JSON.stringify(previewCsv(args?.csvText), null, 2) }]
+      };
+    case 'get_cost_basis_method':
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify(mockAccounts.filter(a => !args?.accountId || a.accountId === args.accountId), null, 2)
+        }]
+      };
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

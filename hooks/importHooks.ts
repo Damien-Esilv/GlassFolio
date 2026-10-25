@@ -21,6 +21,13 @@ import {
     parseCSVText
 } from '../src/services/importService';
 import { instituteService, accountService } from '../src/services/instituteService';
+import { readAndParseCsvFile } from '../src/services/import/csvWorkerClient';
+import { matchHistoryColumns } from '../src/services/import/columnMatcher';
+import { findTemplateForHeaders } from '../src/services/import/mappingTemplateService';
+import type { DateFormatHint } from '../src/services/import/typeNormalizer';
+import type { CsvEncoding } from '../src/services/import/types';
+import type { CostBasisMethod } from '../src/types/types.backend';
+import { computeFileHash, isFileAlreadyImported } from '../src/services/core/transactionManager';
 import i18n from '../src/i18n';
 
 // ============================================================================
@@ -46,6 +53,14 @@ export interface ImportWizardState {
     // Step 2: File Upload
     file: File | null;
     rawCSVText: string;
+    /** Encoding detected when reading the file */
+    fileEncoding: CsvEncoding | null;
+    /** Delimiter in use (auto-detected or forced by the user) */
+    delimiter: string;
+    /** Day/month ordering: 'auto' lets the engine infer it from the column */
+    dateFormat: DateFormatHint | 'auto';
+    /** Completed batch that already contains this exact file, if any */
+    existingBatch: ImportBatch | null;
 
     // Step 3: Mapping
     headers: string[];
@@ -53,6 +68,8 @@ export interface ImportWizardState {
     mappings: Partial<FieldMappings>;
     mappingTemplates: MappingTemplate[];
     selectedTemplateId: string | null;
+    /** Saved profile whose columns fit the uploaded file (suggested, never auto-applied) */
+    suggestedTemplateId: string | null;
     detectedPreset: string | null;
 
     // Step 4: Staging Area
@@ -97,12 +114,17 @@ const initialState: ImportWizardState = {
 
     file: null,
     rawCSVText: '',
+    fileEncoding: null,
+    delimiter: ',',
+    dateFormat: 'auto',
+    existingBatch: null,
 
     headers: [],
     previewRows: [],
     mappings: {},
     mappingTemplates: [],
     selectedTemplateId: null,
+    suggestedTemplateId: null,
     detectedPreset: null,
 
     stagedTransactions: [],
@@ -116,7 +138,7 @@ const initialState: ImportWizardState = {
 // HOOK
 // ============================================================================
 
-export const useImportWizard = () => {
+export const useImportWizard = (userId: string = 'default-user') => {
     const [state, setState] = useState<ImportWizardState>(initialState);
 
     // Helpers for partial state updates
@@ -135,7 +157,7 @@ export const useImportWizard = () => {
             try {
                 const [institutes, templates] = await Promise.all([
                     instituteService.getInstitutes(),
-                    importService.getMappingTemplates()
+                    importService.getMappingTemplates({ mode: 'history' })
                 ]);
                 updateState({
                     institutes,
@@ -197,6 +219,12 @@ export const useImportWizard = () => {
         updateState({ importMode: mode });
     }, [updateState]);
 
+    const setCostBasisMethod = useCallback(async (method: CostBasisMethod) => {
+        if (!state.selectedAccountId || !state.selectedInstituteId) return;
+        await accountService.setCostBasisMethod(state.selectedAccountId, method);
+        updateState({ accounts: await accountService.getAccountsByInstitute(state.selectedInstituteId) });
+    }, [state.selectedAccountId, state.selectedInstituteId, updateState]);
+
     const createInstitute = useCallback(async (name: string, type: Institute['type'], country: string = 'FR') => {
         updateState({ isLoading: true });
         try {
@@ -247,8 +275,9 @@ export const useImportWizard = () => {
         updateState({ isLoading: true, file });
 
         try {
-            const text = await file.text();
-            const { headers, rows, delimiter } = parseCSVText(text);
+            const { text, encoding, parsed } = await readAndParseCsvFile(file);
+            const { headers, rows, delimiter } = parsed;
+            const existingBatch = await isFileAlreadyImported(await computeFileHash(text));
 
             // Try to detect preset
             const detected = importService.detectPreset(headers);
@@ -262,11 +291,16 @@ export const useImportWizard = () => {
                 detectedPreset = detected.presetName;
             } else {
                 // Try auto-mapping based on header names
-                mappings = autoDetectMappings(headers);
+                mappings = matchHistoryColumns(headers);
             }
 
             updateState({
                 rawCSVText: text,
+                suggestedTemplateId: findTemplateForHeaders(state.mappingTemplates, headers)?.id ?? null,
+                selectedTemplateId: null,
+                fileEncoding: encoding,
+                delimiter,
+                existingBatch,
                 headers,
                 previewRows: rows.slice(0, 5), // Show first 5 rows
                 mappings,
@@ -277,7 +311,7 @@ export const useImportWizard = () => {
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToParseFile'), isLoading: false });
         }
-    }, [updateState]);
+    }, [state.mappingTemplates, updateState]);
 
     // =========================================================================
     // STEP 3: MAPPING
@@ -293,33 +327,90 @@ export const useImportWizard = () => {
         }));
     }, []);
 
+    /**
+     * Force a delimiter and re-parse the file (mappings are re-detected because
+     * header names change when the split changes).
+     */
+    const setDelimiter = useCallback((delimiter: string) => {
+        setState(prev => {
+            if (!prev.rawCSVText) return { ...prev, delimiter };
+            const { headers, rows } = parseCSVText(prev.rawCSVText, delimiter);
+            const detected = importService.detectPreset(headers);
+            return {
+                ...prev,
+                delimiter,
+                headers,
+                previewRows: rows.slice(0, 5),
+                mappings: detected ? detected.mappings as Partial<FieldMappings> : matchHistoryColumns(headers),
+                detectedPreset: detected ? detected.presetName : null,
+                selectedTemplateId: null
+            };
+        });
+    }, []);
+
+    const setDateFormat = useCallback((dateFormat: DateFormatHint | 'auto') => {
+        updateState({ dateFormat });
+    }, [updateState]);
+
     const applyTemplate = useCallback((templateId: string) => {
-        const template = state.mappingTemplates.find(t => t.id === templateId);
-        if (template) {
-            updateState({
+        setState(prev => {
+            const template = prev.mappingTemplates.find(t => t.id === templateId);
+            if (!template) return prev;
+            // A profile restores its delimiter (re-split the file) and its date format
+            const delimiter = template.delimiter || prev.delimiter;
+            const reparsed = prev.rawCSVText && delimiter !== prev.delimiter
+                ? parseCSVText(prev.rawCSVText, delimiter)
+                : null;
+            const dateFormat = template.dateFormat === 'DD/MM/YYYY' || template.dateFormat === 'MM/DD/YYYY'
+                ? template.dateFormat
+                : 'auto';
+            return {
+                ...prev,
                 mappings: template.mappings as Partial<FieldMappings>,
-                selectedTemplateId: templateId
-            });
-        }
-    }, [state.mappingTemplates, updateState]);
+                selectedTemplateId: templateId,
+                delimiter,
+                dateFormat,
+                ...(reparsed ? { headers: reparsed.headers, previewRows: reparsed.rows.slice(0, 5) } : {})
+            };
+        });
+    }, []);
 
     const saveAsTemplate = useCallback(async (name: string) => {
         if (!isValidMappingForAnalysis) return null;
 
         try {
-            const template = await importService.saveMappingTemplate(
-                name,
-                state.mappings as FieldMappings,
-                state.selectedInstituteId || undefined
-            );
-            const templates = await importService.getMappingTemplates();
-            updateState({ mappingTemplates: templates });
+            const template = await importService.saveMappingTemplate(name, state.mappings, {
+                userId,
+                instituteId: state.selectedInstituteId || undefined,
+                dateFormat: state.dateFormat === 'auto' ? undefined : state.dateFormat,
+                delimiter: state.delimiter,
+                mode: 'history',
+                headers: state.headers
+            });
+            const templates = await importService.getMappingTemplates({ mode: 'history' });
+            updateState({ mappingTemplates: templates, selectedTemplateId: template.id });
             return template;
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToSaveTemplate') });
             return null;
         }
-    }, [state.mappings, state.selectedInstituteId, updateState]);
+    }, [state.mappings, state.selectedInstituteId, state.dateFormat, state.delimiter, state.headers, userId, updateState]);
+
+    const deleteTemplate = useCallback(async (templateId: string) => {
+        await importService.deleteMappingTemplate(templateId);
+        const templates = await importService.getMappingTemplates({ mode: 'history' });
+        setState(prev => ({
+            ...prev,
+            mappingTemplates: templates,
+            selectedTemplateId: prev.selectedTemplateId === templateId ? null : prev.selectedTemplateId,
+            suggestedTemplateId: prev.suggestedTemplateId === templateId ? null : prev.suggestedTemplateId
+        }));
+    }, []);
+
+    const renameTemplate = useCallback(async (templateId: string, name: string) => {
+        await importService.renameMappingTemplate(templateId, name);
+        updateState({ mappingTemplates: await importService.getMappingTemplates({ mode: 'history' }) });
+    }, [updateState]);
 
     const analyzeData = useCallback(async () => {
         if (!state.selectedAccountId) {
@@ -333,7 +424,10 @@ export const useImportWizard = () => {
             const result = await importService.parseFile(state.rawCSVText, {
                 accountId: state.selectedAccountId,
                 mode: state.importMode,
-                customMappings: state.mappings as FieldMappings
+                customMappings: state.mappings as FieldMappings,
+                delimiter: state.delimiter,
+                dateFormat: state.dateFormat === 'auto' ? undefined : state.dateFormat,
+                userId
             });
 
             updateState({
@@ -345,7 +439,7 @@ export const useImportWizard = () => {
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToAnalyzeData'), isLoading: false });
         }
-    }, [state.selectedAccountId, state.rawCSVText, state.importMode, state.mappings, updateState]);
+    }, [state.selectedAccountId, state.rawCSVText, state.importMode, state.mappings, state.delimiter, state.dateFormat, userId, updateState]);
 
     // =========================================================================
     // STEP 4: STAGING AREA
@@ -482,11 +576,8 @@ export const useImportWizard = () => {
                     : t.resolution
             }));
 
-            // Compute file hash for the commit (simplified - using file name as hash for now)
-            const fileHash = await crypto.subtle.digest(
-                'SHA-256',
-                new TextEncoder().encode(state.rawCSVText)
-            ).then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+            // Same hash function as parseFile, so file-level idempotence works across both paths
+            const fileHash = await computeFileHash(state.rawCSVText);
 
             const result = await importService.commitBatch(
                 toCommit,
@@ -494,7 +585,9 @@ export const useImportWizard = () => {
                 state.importMode,
                 state.file.name,
                 fileHash,
-                'default-user' // userId
+                userId,
+                undefined,
+                state.delimiter
             );
 
             if (!result.success) {
@@ -510,7 +603,7 @@ export const useImportWizard = () => {
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToCompleteImport'), isLoading: false });
         }
-    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, updateState]);
+    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, state.delimiter, userId, updateState]);
 
     // =========================================================================
     // NAVIGATION
@@ -553,7 +646,9 @@ export const useImportWizard = () => {
     const isValidMappingForAnalysis = useMemo(() => {
         const m = state.mappings;
         const hasIdentifier = !!(m.assetSymbol || m.assetIsin);
-        return !!(m.transactionDate && m.amountPrimary && hasIdentifier);
+        // Amount can be derived from quantity × unit price when the file has no amount column
+        const hasAmount = !!(m.amountPrimary || (m.quantity && m.priceUnit));
+        return !!(m.transactionDate && hasAmount && hasIdentifier);
     }, [state.mappings]);
 
     const canProceedFromStep1 = useMemo(() =>
@@ -587,6 +682,7 @@ export const useImportWizard = () => {
         selectInstitute,
         selectAccount,
         setImportMode,
+        setCostBasisMethod,
         createInstitute,
         createAccount,
 
@@ -595,8 +691,12 @@ export const useImportWizard = () => {
 
         // Step 3 Actions
         setMapping,
+        setDelimiter,
+        setDateFormat,
         applyTemplate,
         saveAsTemplate,
+        deleteTemplate,
+        renameTemplate,
         analyzeData,
 
         // Step 4 Actions
@@ -617,69 +717,5 @@ export const useImportWizard = () => {
         reset
     };
 };
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Auto-detect mappings based on common header patterns
- */
-function autoDetectMappings(headers: string[]): Partial<FieldMappings> {
-    const mappings: Partial<FieldMappings> = {};
-    const lowerHeaders = headers.map(h => h.toLowerCase());
-
-    // Date
-    const datePatterns = ['date', 'time', 'timestamp', 'datetime'];
-    const dateIdx = lowerHeaders.findIndex(h => datePatterns.some(p => h.includes(p)));
-    if (dateIdx >= 0) mappings.transactionDate = headers[dateIdx];
-
-    // Amount
-    const amountPatterns = ['amount', 'total', 'change', 'value', 'montant'];
-    const amountIdx = lowerHeaders.findIndex(h => amountPatterns.some(p => h.includes(p)));
-    if (amountIdx >= 0) mappings.amountPrimary = headers[amountIdx];
-
-    // Symbol
-    const symbolPatterns = ['symbol', 'ticker', 'asset', 'coin', 'currency', 'devise'];
-    const symbolIdx = lowerHeaders.findIndex(h => symbolPatterns.some(p => h.includes(p)));
-    if (symbolIdx >= 0) mappings.assetSymbol = headers[symbolIdx];
-
-    // Type
-    const typePatterns = ['type', 'side', 'operation', 'action', 'sens'];
-    const typeIdx = lowerHeaders.findIndex(h => typePatterns.some(p => h.includes(p)));
-    if (typeIdx >= 0) mappings.type = headers[typeIdx];
-
-    // Label
-    const labelPatterns = ['label', 'description', 'libellé', 'remark', 'note', 'memo'];
-    const labelIdx = lowerHeaders.findIndex(h => labelPatterns.some(p => h.includes(p)));
-    if (labelIdx >= 0) mappings.rawLabel = headers[labelIdx];
-
-    // Price
-    const pricePatterns = ['price', 'prix', 'rate', 'unit'];
-    const priceIdx = lowerHeaders.findIndex(h => pricePatterns.some(p => h.includes(p)) && !h.includes('total'));
-    if (priceIdx >= 0) mappings.priceUnit = headers[priceIdx];
-
-    // Quantity
-    const qtyPatterns = ['quantity', 'qty', 'volume', 'shares', 'quantité', 'nombre'];
-    const qtyIdx = lowerHeaders.findIndex(h => qtyPatterns.some(p => h.includes(p)));
-    if (qtyIdx >= 0) mappings.quantity = headers[qtyIdx];
-
-    // Fee
-    const feePatterns = ['fee', 'frais', 'commission'];
-    const feeIdx = lowerHeaders.findIndex(h => feePatterns.some(p => h.includes(p)));
-    if (feeIdx >= 0) mappings.feeAmount = headers[feeIdx];
-
-    // ISIN
-    const isinPatterns = ['isin'];
-    const isinIdx = lowerHeaders.findIndex(h => isinPatterns.some(p => h.includes(p)));
-    if (isinIdx >= 0) mappings.assetIsin = headers[isinIdx];
-
-    // Balance
-    const balancePatterns = ['balance', 'solde'];
-    const balanceIdx = lowerHeaders.findIndex(h => balancePatterns.some(p => h.includes(p)));
-    if (balanceIdx >= 0) mappings.balanceAfter = headers[balanceIdx];
-
-    return mappings;
-}
 
 export default useImportWizard;

@@ -313,10 +313,8 @@ const RealizedUnrealizedPL: React.FC = () => {
             </div>
 
             {periodicPLData.every(d => d.pl === 0) ? (
-               <div className="h-[280px] w-full flex flex-col items-center justify-center text-center p-6 bg-subtle/30 rounded-xl border border-dashed border-subtle">
-                  <Calendar size={36} className="text-tertiary mb-2 opacity-50" />
-                  <p className="text-secondary text-xs font-semibold">{t('reports:pl.noPnLData')}</p>
-                  <p className="text-tertiary text-[11px] mt-1">{t('reports:pl.noTransactions')}</p>
+               <div className="h-[280px] w-full flex items-center justify-center text-center p-6">
+                  <p className="text-tertiary text-xs">{t('reports:pl.noPnLData')}</p>
                </div>
             ) : (
                <div className="h-[280px] w-full">
@@ -432,9 +430,8 @@ const RealizedUnrealizedPL: React.FC = () => {
             <div className={`${cardStyle} lg:col-span-2 flex flex-col justify-between`}>
                <h3 className="text-lg font-bold text-primary mb-4">{t('reports:pl.assetBreakdown')}</h3>
                {positionPLChartData.length === 0 ? (
-                  <div className="h-[280px] w-full flex flex-col items-center justify-center text-center p-6 bg-subtle/30 rounded-xl border border-dashed border-subtle">
-                     <TrendingUp size={36} className="text-tertiary mb-2 opacity-50" />
-                     <p className="text-secondary text-xs font-semibold">{t('reports:pl.noPositions')}</p>
+                  <div className="h-[280px] w-full flex items-center justify-center text-center p-6">
+                     <p className="text-tertiary text-xs">{t('reports:pl.noPositions')}</p>
                   </div>
                ) : (
                   <div className="h-[280px] w-full -mx-2">
