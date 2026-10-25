@@ -264,21 +264,32 @@ npm run lint:fix          # Auto-fix ESLint issues
 
 ### 7.6. Pipeline CI/CD (GitHub Actions)
 
-Fichier : `.github/workflows/ci.yml`
+Fichiers : `.github/workflows/ci.yml`, `.github/workflows/cd-smoke.yml`, action composite `.github/actions/setup` (Node 22 + `npm ci`).
 
 ```
-push/PR sur main|develop|feat/**|fix/**|refactor/**
+push/PR sur main|develop|feat/**|fix/**|refactor/**|chore/**|ci/**|test/**
         │
-        ├── 🔷 typecheck  ← tsc --noEmit
-        ├── 🔍 lint       ← ESLint --quiet (erreurs bloquantes uniquement)
-        └── 🧪 test       ← vitest run + coverage (seuils 70%)
+        🔒 Gate 1 ← audit npm, intégrité SHA-512, scan de secrets
+        │
+        ├── 🔷 Gate 2 ← tsc, ESLint, i18n, e-mails
+        ├── 🎨 Gate 3 ← standards, thèmes, invariants d'architecture
+        ├── 🛡️ Gate 4 ← suite de tests de sécurité
+        ├── 🧪 Gate 4 ← tests unitaires en 3 shards ──► 📊 couverture fusionnée
+        │                                                (seuils 70/60 ; sécurité 90/78)
+        ├── 🤖 Protocole MCP
+        └── 🏗️ Gate 5 ← 4 builds : local, cloud-app, showcase, vercel-parity
                 │
-                └── 🏗️ build ← vite build (uniquement si tous les gates passent)
-                         └── artifact: dist/ (7 jours)
-                         └── artifact: coverage/ (14 jours)
+                └── CI — Required ← seul check exigé par Vercel Deployment Checks
 ```
 
-**Concurrence** : les runs en cours sur la même branche sont annulés lors d'un nouveau push.
+**CD (Vercel)** : Vercel construit chaque push, mais un déploiement de production (`main`) n'est attribué aux domaines `glassfolio.dev` / `app.glassfolio.dev` qu'une fois `CI — Required` au vert (Deployment Checks, fournisseur GitHub). Après promotion, `cd-smoke.yml` vérifie HTTP 200, le repli SPA et les en-têtes de `vercel.json` (non bloquant ; en cas d'échec, `vercel rollback`).
+
+**Règles** :
+- Ne jamais renommer le job `CI — Required` : cela désactiverait silencieusement la garde de production.
+- Les seuils de couverture ne sont appliqués que sur le rapport fusionné (`npm run test:coverage:merge`) ; les shards tournent avec `VITEST_PARTIAL_COVERAGE=1`.
+- Le build `vercel-parity` reproduit exactement la commande de Vercel (`VITE_DEPLOYMENT_MODE=cloud npm run build`).
+
+**Concurrence** : les runs en cours sur la même branche sont annulés lors d'un nouveau push, sauf sur `main` (un déploiement de production en attente dépend de ce run).
 
 ### 7.7. Conformité Standards (Phase 3)
 

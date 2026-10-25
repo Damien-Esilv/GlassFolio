@@ -2,7 +2,7 @@ name: CI — GlassFolio Quality Gate
 
 on:
   push:
-    branches: [main, develop, 'feat/**', 'fix/**', 'refactor/**']
+    branches: [main, develop, 'feat/**', 'fix/**', 'refactor/**', 'chore/**', 'ci/**', 'test/**']
   pull_request:
     branches: [main, develop]
 
@@ -10,11 +10,23 @@ on:
 permissions:
   contents: read
 
-# Cancel in-progress runs on the same branch when a new push arrives
+# Cancel superseded runs on feature branches. Never on main: Vercel Deployment Checks
+# hold the production deployment of a main commit until its "CI — Required" run is green,
+# so cancelling that run would leave production waiting forever (Epic E19 — TGLA-132).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+# Pipeline shape (Epic E19 — TGLA-134): Gate 1 first (integrity must precede any job that
+# executes repository code), then every other gate in parallel, then the aggregate check.
+#
+#   Gate 1 ─┬─ Gate 2 (types, lint, i18n, emails)
+#           ├─ Gate 3 (standards)
+#           ├─ Gate 4 security suite
+#           ├─ Gate 4 unit tests ×3 shards ── coverage merge (thresholds enforced here)
+#           ├─ MCP protocol
+#           └─ Gate 5 builds ×4 (local, cloud app, showcase, Vercel parity)
+#                         └──────────────────── CI — Required (the only check Vercel gates on)
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
   # GATE 1 — Integrity & Dependency Audit
@@ -22,18 +34,13 @@ jobs:
   gate-1-integrity-audit:
     name: 🔒 Gate 1 — Integrity & Dependency Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies (clean install)
-        run: npm ci
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
       - name: Audit production dependencies (high/critical vulnerabilities)
         run: npm audit --audit-level=high --omit=dev
@@ -63,19 +70,14 @@ jobs:
   gate-2-quality:
     name: 🔷 Gate 2 — Type Safety, Lint & i18n
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
       - name: TypeScript type checking
         run: npm run check:types
@@ -102,19 +104,14 @@ jobs:
   gate-3-standards:
     name: 🎨 Gate 3 — Architectural Standards & Storage Invariants
     runs-on: ubuntu-latest
-    needs: [gate-2-quality]
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
       - name: Standalone standards verification script
         run: node scripts/check-standards.mjs
@@ -129,36 +126,78 @@ jobs:
         run: npx vitest run tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # GATE 4 — Security & Unit Test Suite
+  # GATE 4 — Security suite, sharded unit tests and merged coverage
   # ═══════════════════════════════════════════════════════════════════════════
-  gate-4-tests:
-    name: 🧪 Gate 4 — Security & Unit Test Suite
+  gate-4-security:
+    name: 🛡️ Gate 4 — Security Test Suite
     runs-on: ubuntu-latest
-    needs: [gate-3-standards]
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
       - name: Run dedicated security test suite
         run: npm run test:security
 
-      - name: Run all unit tests with coverage thresholds
-        run: npm run test:coverage
+  gate-4-tests:
+    name: 🧪 Gate 4 — Unit Tests (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Check security coverage threshold (>= 90% lines on src/services/security/**)
-        run: |
-          echo "Verifying security module coverage thresholds..."
-          # coverage/lcov.info is generated by vitest coverage
-          test -f coverage/lcov.info || (echo "::error::Coverage report not generated" && exit 1)
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      # Each shard sees only a slice of the suite: coverage thresholds are deferred to
+      # the merge job (VITEST_PARTIAL_COVERAGE=1 in the npm script switches them off).
+      - name: Run unit tests shard ${{ matrix.shard }}/3 with coverage
+        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/3 --outputFile=.vitest-reports/blob-${{ matrix.shard }}.json
+
+      - name: Upload shard report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: .vitest-reports/blob-${{ matrix.shard }}.json
+          retention-days: 1
+          if-no-files-found: error
+
+  gate-4-coverage:
+    name: 📊 Gate 4 — Merged Coverage Thresholds
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [gate-4-tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Download shard reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: vitest-blob-*
+          merge-multiple: true
+          path: .vitest-reports
+
+      # Replays every shard and enforces the thresholds from vitest.config.ts on the
+      # merged data: 70/60 global and 90 lines / 78 branches on src/services/security/**.
+      - name: Merge reports and enforce coverage thresholds
+        run: npm run test:coverage:merge
+
+      - name: Confirm the coverage report was produced
+        run: test -f coverage/lcov.info || (echo "::error::Coverage report not generated" && exit 1)
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -174,16 +213,14 @@ jobs:
   mcp-protocol:
     name: 🤖 MCP Server & Security AI Tools Protocol
     runs-on: ubuntu-latest
-    needs: [gate-3-standards]
+    timeout-minutes: 10
+    needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
       - name: Syntax check MCP server
         run: npm run check:mcp
@@ -205,79 +242,125 @@ jobs:
           echo "$RESPONSE" | grep -q "vaultStatus" || (echo "::error::Invalid get_security_status response" && exit 1)
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # GATE 5 — Dual-Mode Production Build & Bundle Budget
+  # GATE 5 — Production Builds & Bundle Budgets
+  #   local / cloud-app / showcase: the split builds (Docker + per-domain targets)
+  #   vercel-parity: the exact unified build Vercel ships to glassfolio.dev and
+  #                  app.glassfolio.dev (`npm run build` with the cloud env)
   # ═══════════════════════════════════════════════════════════════════════════
   gate-5-build:
-    name: 🏗️ Gate 5 — Dual-Mode Production Build & Bundle Budget
+    name: 🏗️ Gate 5 — Build & Bundle Budget (${{ matrix.label }})
     runs-on: ubuntu-latest
-    needs: [gate-4-tests, mcp-protocol]
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: local
+            build_cmd: npm run build:local
+            limit_kb: 2560
+            landing: absent
+            smoke: false
+          - label: cloud-app
+            build_cmd: npm run build:app
+            limit_kb: 2560
+            landing: absent
+            smoke: false
+          - label: showcase
+            build_cmd: npm run build:showcase
+            limit_kb: 1280
+            landing: present
+            smoke: false
+          - label: vercel-parity
+            build_cmd: VITE_DEPLOYMENT_MODE=cloud npm run build
+            limit_kb: 2560
+            landing: present
+            smoke: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Build production bundle (${{ matrix.label }})
+        run: ${{ matrix.build_cmd }}
 
-      - name: Build production bundle in Local mode (App only, 0 bytes Landing)
-        run: npm run build:local
-
-      - name: Check bundle size in Local mode (hard limit 2.5MB) & verify Showcase exclusion
+      - name: Check bundle budget and Landing chunk expectation
+        env:
+          LABEL: ${{ matrix.label }}
+          LIMIT_KB: ${{ matrix.limit_kb }}
+          LANDING: ${{ matrix.landing }}
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "Local mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2560 ]; then
-            echo "::error::Local bundle size ${BUNDLE_SIZE}KB exceeds 2.5MB limit"
+          echo "${LABEL} bundle size: ${BUNDLE_SIZE}KB (limit ${LIMIT_KB}KB)"
+          if [ "$BUNDLE_SIZE" -gt "$LIMIT_KB" ]; then
+            echo "::error::${LABEL} bundle size ${BUNDLE_SIZE}KB exceeds the ${LIMIT_KB}KB limit"
             exit 1
           fi
-          if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
-            echo "::error::Landing chunk was unexpectedly bundled into local app build!"
-            exit 1
+          if [ "$LANDING" = "absent" ]; then
+            if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
+              echo "::error::Landing chunk was unexpectedly bundled into the ${LABEL} build!"
+              exit 1
+            fi
+            echo "✅ ${LABEL} build verified: zero showcase assets bundled."
+          else
+            if ! ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
+              echo "::error::Landing chunk missing from the ${LABEL} build!"
+              exit 1
+            fi
+            echo "✅ ${LABEL} build verified: showcase chunk emitted."
           fi
-          echo "✅ Lean local build verified: zero showcase assets bundled."
 
-      - name: Build production bundle in Cloud App mode (Subdomain app.glassfolio.dev)
-        run: npm run build:app
-
-      - name: Check bundle size in Cloud App mode (hard limit 2.5MB) & verify Showcase exclusion
+      # Serve the built output the way a static host does and make sure the entry
+      # document and an SPA deep link both answer 200.
+      - name: Smoke test the built output (vite preview)
+        if: ${{ matrix.smoke }}
         run: |
-          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "Cloud App mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2560 ]; then
-            echo "::error::Cloud App bundle size ${BUNDLE_SIZE}KB exceeds 2.5MB limit"
-            exit 1
-          fi
-          if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
-            echo "::error::Landing chunk was unexpectedly bundled into Cloud App build!"
-            exit 1
-          fi
-          echo "✅ Cloud App build verified: zero showcase assets bundled."
-
-      - name: Build production bundle in Showcase mode (Apex glassfolio.dev)
-        run: npm run build:showcase
-
-      - name: Check bundle size in Showcase mode (hard limit 1.25MB) & verify Showcase inclusion
-        run: |
-          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "Showcase mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 1280 ]; then
-            echo "::error::Showcase bundle size ${BUNDLE_SIZE}KB exceeds 1.25MB limit"
-            exit 1
-          fi
-          if ! ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
-            echo "::error::Landing chunk missing from Showcase build!"
-            exit 1
-          fi
-          echo "✅ Showcase build verified: lightweight showcase bundle emitted."
+          npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://localhost:4173/ && break
+            sleep 1
+          done
+          curl -fsS http://localhost:4173/ | grep -qi "<div id=\"root\"" || (echo "::error::Entry document has no #root mount point" && cat preview.log && exit 1)
+          curl -fsS -o /dev/null http://localhost:4173/__smoke-deep-link__ || (echo "::error::SPA deep link did not answer 200" && cat preview.log && exit 1)
+          echo "✅ vite preview serves the entry document and the SPA fallback."
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-${{ matrix.label }}
           path: dist/
           retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # CI — Required (aggregate)
+  # The single check that Vercel Deployment Checks and branch protection require.
+  # Keep this job name stable: renaming it silently disables the production gate.
+  # ═══════════════════════════════════════════════════════════════════════════
+  ci-required:
+    name: CI — Required
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - gate-1-integrity-audit
+      - gate-2-quality
+      - gate-3-standards
+      - gate-4-security
+      - gate-4-tests
+      - gate-4-coverage
+      - mcp-protocol
+      - gate-5-build
+    steps:
+      - name: Fail unless every gate succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success")' > /dev/null; then
+            echo "✅ All gates passed."
+          else
+            echo "::error::At least one gate did not succeed — production must not be promoted."
+            exit 1
+          fi

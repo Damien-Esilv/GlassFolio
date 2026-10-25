@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// A sharded CI job only sees a slice of the suite, so thresholds are enforced once,
+// on the merged report (`npm run test:coverage:merge`), never per shard (TGLA-134).
+const isPartialCoverageRun = process.env.VITEST_PARTIAL_COVERAGE === '1';
+
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -14,7 +18,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
       // Thresholds on P1/P2 modules (critical financial & import logic)
-      thresholds: {
+      thresholds: isPartialCoverageRun ? undefined : {
         lines: 70,
         functions: 70,
         branches: 60,
