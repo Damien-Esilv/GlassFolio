@@ -27,7 +27,7 @@ const TaxHub: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const profile: FiscalProfile = user?.preferences?.fiscalProfile || {};
-    const hasFiscalProfile = !!(profile.familyStatus && profile.fiscalShares);
+    const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
     const supportedYears = taxService.getSupportedYears();
 
     // Compute the declaration year from the fiscal year rules

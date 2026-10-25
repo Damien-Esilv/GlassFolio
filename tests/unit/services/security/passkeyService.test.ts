@@ -1,11 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { passkeyService, isPasskeySupported } from '../../../../src/services/security/passkeyService';
+import { passkeyAccountService } from '../../../../src/services/security/passkeyAccountService';
+import { vaultService } from '../../../../src/services/security/vaultService';
 import { appStorage } from '../../../../src/services/storage/appStorage';
 
+const PASSWORD = 'Strong-Vault-Secret-Key-2026!#';
+
+const attestationResponse = (algorithm = -7) => ({
+    clientDataJSON: new Uint8Array([1]).buffer,
+    attestationObject: new Uint8Array([2]).buffer,
+    getTransports: () => ['internal'],
+    getPublicKeyAlgorithm: () => algorithm,
+});
+
+const assertionResponse = () => ({
+    clientDataJSON: new Uint8Array([1]).buffer,
+    authenticatorData: new Uint8Array([2]).buffer,
+    signature: new Uint8Array([3]).buffer,
+    userHandle: null,
+});
+
+const mockCredentials = (credentials: Partial<CredentialsContainer> | undefined) => {
+    Object.defineProperty(navigator, 'credentials', { value: credentials, configurable: true });
+};
+
 describe('passkeyService (WebAuthn & Dynamic Hostname Binding)', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         appStorage.clear();
         vi.restoreAllMocks();
+        await vaultService.resetVault();
     });
 
     it('detects platform authenticator availability', async () => {
@@ -17,134 +40,149 @@ describe('passkeyService (WebAuthn & Dynamic Hostname Binding)', () => {
         expect(supported).toBe(true);
     });
 
-    it('dynamically binds rp.id to window.location.hostname for Local vs Cloud compatibility', async () => {
-        const mockRawId = new Uint8Array([1, 2, 3, 4]);
+    it('creates local credentials bound to the hostname, with user verification and PRF', async () => {
         const mockCreate = vi.fn().mockResolvedValue({
-            rawId: mockRawId.buffer,
-            id: 'mock-id-base64',
-            response: { getTransports: () => ['internal'] },
+            rawId: new Uint8Array([1, 2, 3, 4]).buffer,
+            id: 'AQIDBA',
+            type: 'public-key',
+            response: attestationResponse(-257),
+            getClientExtensionResults: () => ({ prf: { enabled: true } }),
         });
-
-        Object.defineProperty(navigator, 'credentials', {
-            value: { create: mockCreate, get: vi.fn() },
-            configurable: true,
-        });
-
-        // Set custom cloud hostname
+        mockCredentials({ create: mockCreate, get: vi.fn() });
         Object.defineProperty(window, 'location', {
             value: { hostname: 'app.glassfolio.com' },
             writable: true,
             configurable: true,
         });
 
-        await passkeyService.registerPasskey(
-            { id: 'usr-1', email: 'alex@glassfolio.com', name: 'Alex' },
-            'TouchID Cloud'
-        );
-
-        expect(mockCreate).toHaveBeenCalledOnce();
-        const callArgs = mockCreate.mock.calls[0][0] as CredentialCreationOptions;
-        expect(callArgs.publicKey?.rp.id).toBe('app.glassfolio.com');
-        expect(callArgs.publicKey?.rp.name).toBe('GlassFolio');
-    });
-
-    it('registers a passkey using navigator.credentials.create and persists in appStorage', async () => {
-        const mockRawId = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
-        const mockCreate = vi.fn().mockResolvedValue({
-            rawId: mockRawId.buffer,
-            id: 'mock-id-base64',
-            response: {
-                getTransports: () => ['internal'],
-            },
+        const attestation = await passkeyService.create({
+            user: { id: 'usr-1', email: 'alex@glassfolio.com', name: 'Alex' },
+            excludeCredentialIds: ['CQgHBg=='],
         });
 
-        Object.defineProperty(navigator, 'credentials', {
-            value: { create: mockCreate, get: vi.fn() },
-            configurable: true,
-        });
-
-        const passkey = await passkeyService.registerPasskey(
-            { id: 'usr-123', email: 'test@glassfolio.com', name: 'Test User' },
-            'My YubiKey'
-        );
-
-        expect(mockCreate).toHaveBeenCalledOnce();
-        expect(passkey.name).toBe('My YubiKey');
-        expect(passkey.id).toBeDefined();
-
-        const stored = await passkeyService.listPasskeys();
-        expect(stored).toHaveLength(1);
-        expect(stored[0].name).toBe('My YubiKey');
+        const publicKey = (mockCreate.mock.calls[0][0] as CredentialCreationOptions).publicKey!;
+        expect(publicKey.rp.id).toBe('app.glassfolio.com');
+        expect(publicKey.rp.name).toBe('GlassFolio');
+        expect(publicKey.authenticatorSelection?.userVerification).toBe('required');
+        expect(publicKey.excludeCredentials).toHaveLength(1);
+        expect((publicKey.extensions as { prf?: unknown }).prf).toBeDefined();
+        expect(attestation.credentialId).toBe('AQIDBA==');
+        expect(attestation.algorithm).toBe(-257);
+        expect(attestation.prfEnabled).toBe(true);
+        expect(attestation.credentialJson.clientExtensionResults).toEqual({});
     });
 
-    it('authenticates with registered passkey via navigator.credentials.get', async () => {
-        const mockRawId = new Uint8Array([9, 8, 7, 6]);
+    it('decodes Supabase options for cloud ceremonies', async () => {
         const mockGet = vi.fn().mockResolvedValue({
-            rawId: mockRawId.buffer,
-            id: 'mock-auth-id',
+            rawId: new Uint8Array([9, 8, 7, 6]).buffer,
+            id: 'CQgHBg',
+            type: 'public-key',
+            response: assertionResponse(),
+            getClientExtensionResults: () => ({}),
+        });
+        mockCredentials({ create: vi.fn(), get: mockGet });
+
+        const result = await passkeyService.authenticate({
+            serverOptions: { challenge: 'AQID', rpId: 'glassfolio.dev', allowCredentials: [] },
         });
 
-        Object.defineProperty(navigator, 'credentials', {
-            value: { create: vi.fn(), get: mockGet },
-            configurable: true,
-        });
-
-        const authResult = await passkeyService.authenticate(['aWRvbmU=', 'aWR0d28=']);
-        expect(mockGet).toHaveBeenCalledOnce();
-        expect(authResult.credentialId).toBeDefined();
+        const publicKey = (mockGet.mock.calls[0][0] as CredentialRequestOptions).publicKey!;
+        expect(Array.from(publicKey.challenge as Uint8Array)).toEqual([1, 2, 3]);
+        expect(publicKey.rpId).toBe('glassfolio.dev');
+        expect(publicKey.userVerification).toBe('required');
+        expect(result.credentialJson.response).toMatchObject({ signature: 'Aw' });
     });
 
-    it('deletes registered passkey from appStorage', async () => {
-        const mockRawId = new Uint8Array([1, 2, 3]);
-        Object.defineProperty(navigator, 'credentials', {
-            value: {
-                create: vi.fn().mockResolvedValue({ rawId: mockRawId.buffer }),
-                get: vi.fn(),
-            },
-            configurable: true,
-        });
-
-        const passkey = await passkeyService.registerPasskey(
-            { id: 'usr-1', email: 'a@b.c', name: 'A' },
-            'Key to delete'
-        );
+    it('stores and deletes passkey records', async () => {
+        await passkeyService.saveRecord({ id: 'cred-1', name: 'Key', createdAt: new Date().toISOString(), algorithm: -7 });
         expect(await passkeyService.listPasskeys()).toHaveLength(1);
 
-        await passkeyService.deletePasskey(passkey.id);
+        await passkeyService.deletePasskey('cred-1');
         expect(await passkeyService.listPasskeys()).toHaveLength(0);
     });
 
     it('throws when registration or authentication is cancelled', async () => {
-        Object.defineProperty(navigator, 'credentials', {
-            value: {
-                create: vi.fn().mockResolvedValue(null),
-                get: vi.fn().mockResolvedValue(null),
-            },
-            configurable: true,
+        mockCredentials({
+            create: vi.fn().mockResolvedValue(null),
+            get: vi.fn().mockResolvedValue(null),
         });
 
-        await expect(
-            passkeyService.registerPasskey({ id: 'u', email: 'e', name: 'n' })
-        ).rejects.toThrow(/cancelled/i);
-
-        await expect(
-            passkeyService.authenticate(['invalid!base64!id'])
-        ).rejects.toThrow(/cancelled/i);
+        await expect(passkeyService.create({ user: { id: 'u', email: 'e', name: 'n' } })).rejects.toThrow(/cancelled/i);
+        await expect(passkeyService.authenticate({ allowCredentialIds: ['invalid!base64!id'] })).rejects.toThrow(/cancelled/i);
     });
 
     it('handles corrupt JSON in passkey storage', async () => {
-        appStorage.setItem('gf_passkeys', 'invalid-json{{{');
+        appStorage.setItem('glassfolio_security_passkeys', 'invalid-json{{{');
         expect(await passkeyService.listPasskeys()).toEqual([]);
     });
 
     it('handles unsupported WebAuthn environment gracefully', async () => {
-        Object.defineProperty(navigator, 'credentials', {
-            value: undefined,
-            configurable: true,
+        mockCredentials(undefined);
+        await expect(passkeyService.create({ user: { id: 'u', email: 'e', name: 'n' } })).rejects.toThrow(/not supported/i);
+    });
+
+    describe('local passkey lifecycle (passkeyAccountService + vault PRF slot)', () => {
+        it('refuses an authenticator that cannot unlock the vault', async () => {
+            await vaultService.setup(PASSWORD);
+            mockCredentials({
+                create: vi.fn().mockResolvedValue({
+                    rawId: new Uint8Array([1, 2]).buffer,
+                    id: 'AQI',
+                    type: 'public-key',
+                    response: attestationResponse(),
+                    getClientExtensionResults: () => ({}),
+                }),
+                get: vi.fn(),
+            });
+
+            await expect(passkeyAccountService.register({
+                user: { id: 'u1', email: 'a@b.c', name: 'A' },
+                label: 'No PRF',
+                masterPassword: PASSWORD,
+            })).rejects.toThrow(/PRF/i);
+            expect(await passkeyService.listPasskeys()).toHaveLength(0);
         });
 
-        await expect(
-            passkeyService.registerPasskey({ id: 'u', email: 'e', name: 'n' })
-        ).rejects.toThrow(/not supported/i);
+        it('enrolls a PRF slot that survives a password change and unlocks the vault', async () => {
+            await vaultService.setup(PASSWORD);
+            const prfSecret = new Uint8Array(32).fill(7);
+            const rawId = new Uint8Array([5, 6, 7, 8]).buffer;
+            const assertion = {
+                rawId,
+                id: 'BQYHCA',
+                type: 'public-key',
+                response: assertionResponse(),
+                getClientExtensionResults: () => ({ prf: { results: { first: prfSecret.buffer } } }),
+            };
+            mockCredentials({
+                create: vi.fn().mockResolvedValue({
+                    rawId,
+                    id: 'BQYHCA',
+                    type: 'public-key',
+                    response: attestationResponse(),
+                    getClientExtensionResults: () => ({ prf: { enabled: true } }),
+                }),
+                get: vi.fn().mockResolvedValue(assertion),
+            });
+
+            const { unlocksVault } = await passkeyAccountService.register({
+                user: { id: 'u1', email: 'a@b.c', name: 'A' },
+                label: 'Touch ID',
+                masterPassword: PASSWORD,
+            });
+            expect(unlocksVault).toBe(true);
+            expect(vaultService.hasPasskeySlot('BQYHCA==')).toBe(true);
+
+            await vaultService.changePassword(PASSWORD, 'Another-Vault-Secret-Key-2026!#');
+            await vaultService.lock();
+
+            await passkeyService.unlockVault();
+            expect(vaultService.isUnlocked()).toBe(true);
+
+            const [passkey] = await passkeyAccountService.list();
+            await passkeyAccountService.remove(passkey);
+            expect(vaultService.hasPasskeySlot()).toBe(false);
+            expect(await passkeyService.listPasskeys()).toHaveLength(0);
+        });
     });
 });

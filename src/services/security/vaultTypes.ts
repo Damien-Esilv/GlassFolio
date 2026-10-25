@@ -94,6 +94,14 @@ export class VaultAlreadyInitializedError extends Error {
     }
 }
 
+/** A real (non-demo) vault exists on this device and the caller did not confirm replacing it. */
+export class ExistingVaultError extends Error {
+    constructor() {
+        super('A personal vault already exists on this device.');
+        this.name = 'ExistingVaultError';
+    }
+}
+
 export class InvalidVaultCredentialsError extends Error {
     constructor() {
         super('Invalid password or recovery key.');

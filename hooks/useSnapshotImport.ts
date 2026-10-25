@@ -24,6 +24,7 @@ import {
     createPositionTransactions
 } from '../src/services/import/snapshotService';
 import { transactionManager, computeFileHash } from '../src/services/core/transactionManager';
+import { portfolioService } from '../src/services/portfolioService';
 import i18n from '../src/i18n';
 
 // ============================================================================
@@ -299,6 +300,9 @@ export const useSnapshotImport = (accountId: string, rawCSVText: string, headers
                 updateState({ error: result.error || i18n.t('transactions:snapshotWizard.errors.commitFailed'), isLoading: false });
                 return;
             }
+
+            // Recalculate derived positions so they immediately reflect the newly committed snapshot transactions
+            await portfolioService.recalculatePositions();
 
             updateState({
                 completedBatch: batch,

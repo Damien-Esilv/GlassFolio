@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ChevronLeft, ChevronDown, FileText, Globe, AlertTriangle, CheckCircle, HelpCircle, XCircle, Info } from 'lucide-react';
+import Button from '../components/Button';
 import { taxService } from '../src/services/fiscal';
 import { DEFAULT_FISCAL_YEAR } from '../src/constants/fiscalConstants';
 import { TaxSummaryResult, FiscalProfile, TaxableEvent, FiscalConfidence } from '../src/types/types.backend';
@@ -96,6 +97,7 @@ const DeclarationAssistant: React.FC = () => {
 
     const fiscalYear = searchParams.get('year') || DEFAULT_FISCAL_YEAR;
     const profile: FiscalProfile = user?.preferences?.fiscalProfile || {};
+    const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
 
     type Tab = 'cto' | 'dividends' | 'pea' | 'crypto' | 'foreign' | 'forms';
     const [activeTab, setActiveTab] = useState<Tab>('cto');
@@ -140,6 +142,22 @@ const DeclarationAssistant: React.FC = () => {
                 <AlertTriangle size={18} className="text-warning shrink-0 mt-0.5" />
                 <p className="text-xs text-secondary leading-relaxed">{t('tax:hub.disclaimer')}</p>
             </div>
+
+            {/* Incomplete Fiscal Profile Warning Banner */}
+            {!hasFiscalProfile && (
+                <div className="rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-primary mb-1">{t('tax:hub.profileRequired')}</h3>
+                        <p className="text-xs text-secondary">{t('tax:hub.profileRequiredDesc')}</p>
+                    </div>
+                    <Button
+                        size="sm"
+                        onClick={() => navigate('/settings?tab=fiscal')}
+                    >
+                        {t('tax:hub.goToSettings')}
+                    </Button>
+                </div>
+            )}
 
             {/* Tab bar */}
             <div className="flex flex-wrap gap-1 bg-subtle p-1 rounded-xl">

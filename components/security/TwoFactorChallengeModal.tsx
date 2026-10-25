@@ -1,31 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Smartphone, KeyRound, Fingerprint, AlertCircle, Loader2 } from 'lucide-react';
 import Button from '../Button';
-import { authService } from '../../src/services/security/authService';
-import { passkeyService } from '../../src/services/security/passkeyService';
-import { AuthResult } from '../../src/services/security/authTypes';
+import { useAuth } from '../../context/AuthContext';
+import { getAuthCapabilities } from '../../src/services/security/authCapabilities';
+import { SecondFactorMethod } from '../../src/services/security/authTypes';
 
 interface TwoFactorChallengeModalProps {
     isOpen: boolean;
-    onSuccess: (result: AuthResult) => void;
+    /** Second factors this account can use; the sign-in completes in AuthContext. */
+    methods: SecondFactorMethod[];
     onCancel: () => void;
 }
 
 export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = ({
     isOpen,
-    onSuccess,
+    methods,
     onCancel,
 }) => {
     const { t } = useTranslation(['security', 'auth']);
+    const { completeSecondFactor, completeSecondFactorWithPasskey } = useAuth();
     const [code, setCode] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isPasskeySupported, setIsPasskeySupported] = useState(false);
-
-    useEffect(() => {
-        passkeyService.isSupported().then(setIsPasskeySupported).catch(() => setIsPasskeySupported(false));
-    }, []);
+    const hasTotp = methods.includes('totp');
+    const hasPasskey = methods.includes('passkey');
+    const { backupCodes } = getAuthCapabilities();
 
     if (!isOpen) return null;
 
@@ -36,13 +36,8 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
 
         setError(null);
         setIsLoading(true);
-
         try {
-            if (!authService.verifySecondFactor) {
-                throw new Error('Second factor verification is not supported.');
-            }
-            const result = await authService.verifySecondFactor(cleanCode);
-            onSuccess(result);
+            await completeSecondFactor(cleanCode);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
         } finally {
@@ -54,29 +49,18 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
         setError(null);
         setIsLoading(true);
         try {
-            await passkeyService.authenticate();
-            const user = await authService.getCurrentUser();
-            if (user) {
-                onSuccess({
-                    user,
-                    session: {
-                        id: `sess-${Date.now()}`,
-                        userId: user.id,
-                        createdAt: new Date().toISOString(),
-                        lastSeenAt: new Date().toISOString(),
-                        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node',
-                        deviceLabel: 'Passkey Authenticated',
-                    },
-                });
-            } else {
-                throw new Error(t('security:lockScreen.invalidCredentials'));
-            }
+            await completeSecondFactorWithPasskey();
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : t('security:lockScreen.invalidCredentials'));
         } finally {
             setIsLoading(false);
         }
     };
+
+    let subtitle = t('security:passkeys.challengeSubtitle');
+    if (hasTotp) {
+        subtitle = backupCodes ? t('security:totp.challengeSubtitle') : t('security:totp.challengeSubtitleNoBackup');
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -87,11 +71,9 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-primary">
-                            {t('security:totp.challengeTitle', 'Two-Factor Authentication')}
+                            {t('security:totp.challengeTitle')}
                         </h3>
-                        <p className="text-xs text-subtle">
-                            {t('security:totp.challengeSubtitle', 'Enter the 6-digit code from your authenticator app or an emergency backup code.')}
-                        </p>
+                        <p className="text-xs text-subtle">{subtitle}</p>
                     </div>
                 </div>
 
@@ -103,49 +85,53 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
-                            {t('security:totp.inputLabel', 'Security Code or Backup Code')}
-                        </label>
-                        <div className="relative">
-                            <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
-                            <input
-                                type="text"
-                                autoFocus
-                                autoComplete="one-time-code"
-                                placeholder={t('security:totp.inputPlaceholder', '000000 or XXXX-XXXX')}
-                                value={code}
-                                onChange={(e) => setCode(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm font-mono tracking-widest text-center"
-                            />
+                    {hasTotp && (
+                        <div>
+                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                                {backupCodes ? t('security:totp.inputLabel') : t('security:totp.inputLabelNoBackup')}
+                            </label>
+                            <div className="relative">
+                                <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    autoComplete="one-time-code"
+                                    placeholder={backupCodes ? t('security:totp.inputPlaceholder') : t('security:totp.codePlaceholder')}
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm font-mono tracking-widest text-center"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="flex flex-col gap-2 pt-2">
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={isLoading || !code.trim()}
-                            className="w-full justify-center"
-                        >
-                            {isLoading ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <ShieldCheck size={16} className="mr-2" />
-                            )}
-                            {t('security:totp.verifyButton', 'Verify & Sign In')}
-                        </Button>
+                        {hasTotp && (
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                disabled={isLoading || !code.trim()}
+                                className="w-full justify-center"
+                            >
+                                {isLoading ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <ShieldCheck size={16} className="mr-2" />
+                                )}
+                                {t('security:totp.verifyButton')}
+                            </Button>
+                        )}
 
-                        {isPasskeySupported && (
+                        {hasPasskey && (
                             <Button
                                 type="button"
-                                variant="secondary"
+                                variant={hasTotp ? 'secondary' : 'primary'}
                                 onClick={handlePasskeyAuth}
                                 disabled={isLoading}
                                 className="w-full justify-center"
                             >
                                 <Fingerprint size={16} className="mr-2" />
-                                {t('security:passkeys.authWithPasskey', 'Authenticate with Passkey')}
+                                {t('security:passkeys.authWithPasskey')}
                             </Button>
                         )}
 
@@ -156,7 +142,7 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
                             disabled={isLoading}
                             className="w-full justify-center text-subtle"
                         >
-                            {t('security:totp.cancelButton', 'Cancel')}
+                            {t('security:totp.cancelButton')}
                         </Button>
                     </div>
                 </form>

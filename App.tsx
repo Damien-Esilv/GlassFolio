@@ -29,6 +29,8 @@ import { useTranslation } from 'react-i18next';
 import './src/i18n'; // Initialize i18n
 
 import { VaultGate } from './components/security/VaultGate';
+import { CloudMisconfiguredScreen } from './components/security/CloudMisconfiguredScreen';
+import { getAuthCapabilities } from './src/services/security/authCapabilities';
 import { getAppTarget } from './src/config/deployment';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
@@ -106,6 +108,10 @@ const LazyLegalCenter: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  if (getAuthCapabilities().misconfigured) {
+    return <CloudMisconfiguredScreen />;
+  }
+
   return (
     <AuthProvider>
       <DataProvider>

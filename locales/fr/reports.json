@@ -61,7 +61,10 @@
         "modeAll": "Tous",
         "modeRealized": "P&L Réalisé",
         "modeUnrealized": "P&L Latent",
-        "assetBreakdown": "P&L latent par actif"
+        "assetBreakdown": "P&L latent par actif",
+        "noTransactions": "Aucune transaction enregistrée pour calculer le P&L",
+        "noPositions": "Aucune position active dans le portefeuille",
+        "noPnLData": "Aucun gain ou perte pour cette période"
     },
     "feeAnalysis": {
         "title": "Analyse & Optimisation des Frais",

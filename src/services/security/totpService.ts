@@ -12,6 +12,7 @@
 
 import { fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
 import { appStorage } from '../storage/appStorage';
+import { LEGACY_TOTP_FLAG_KEY } from '../storage/storageKeys';
 
 const TOTP_STORAGE_KEY = 'glassfolio_security_totp';
 const DEFAULT_STEP_SEC = 30;
@@ -205,14 +206,15 @@ export const totpService = {
         }
     },
 
+    /** Local mode only: reads the vault, so it must be called once the vault is unlocked. */
     async isEnabled(): Promise<boolean> {
         const config = await this.getConfig();
         return Boolean(config && config.enabled);
     },
 
-    async initEnrollment(accountName: string): Promise<TotpEnrollment> {
-        const secret = generateTotpSecret(20);
-        const uri = generateTotpUri(accountName, secret);
+    async initEnrollment(accountName: string, customSecret?: string, customUri?: string): Promise<TotpEnrollment> {
+        const secret = customSecret || generateTotpSecret(20);
+        const uri = customUri || generateTotpUri(accountName, secret);
         const { plainCodes, hashedCodes } = await generateBackupCodes(10);
         return {
             secret,
@@ -272,5 +274,6 @@ export const totpService = {
 
     async disable(): Promise<void> {
         appStorage.removeItem(TOTP_STORAGE_KEY);
+        appStorage.getBacking().removeItem(LEGACY_TOTP_FLAG_KEY);
     },
 };

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { db } from '../src/services/db';
 import { computeRowHash } from '../src/services/core/transactionManager';
 import { instrumentService } from '../src/services/instrumentService';
@@ -43,6 +44,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
 }) => {
   const { t } = useTranslation('transactions');
   const { user } = useAuth();
+  const { refreshData } = useData();
   
   // Internal navigation state: 'options' | 'manual' | 'csv_upload' | 'csv_mapping' | 'success'
   const [step, setStep] = useState<'options' | 'manual' | 'csv_upload' | 'csv_mapping' | 'success'>('options');
@@ -491,7 +493,10 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
           </div>
 
           <div className="flex justify-center gap-3 pt-4">
-            <Button onClick={onComplete}>{t('snapshotWizard.complete.goToDashboard')}</Button>
+            <Button onClick={async () => {
+              await refreshData();
+              onComplete();
+            }}>{t('snapshotWizard.complete.goToDashboard')}</Button>
             <Button variant="secondary" onClick={() => {
               setManualAmount('');
               setDateMapping('');

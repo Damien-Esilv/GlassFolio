@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info } from 'lucide-react';
+import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info, Unlock } from 'lucide-react';
 import Button from '../Button';
-import { passkeyService, PasskeyRecord } from '../../src/services/security/passkeyService';
+import { passkeyService } from '../../src/services/security/passkeyService';
+import { passkeyAccountService, AccountPasskey } from '../../src/services/security/passkeyAccountService';
+import { StepUpAuthModal } from './StepUpAuthModal';
 import { useAuth } from '../../context/AuthContext';
 
 export const PasskeyManager: React.FC = () => {
@@ -11,16 +13,17 @@ export const PasskeyManager: React.FC = () => {
     const isGoogleAccount = user?.authProvider === 'google';
 
     const [isSupported, setIsSupported] = useState<boolean | null>(null);
-    const [passkeys, setPasskeys] = useState<PasskeyRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [passkeys, setPasskeys] = useState<AccountPasskey[]>([]);
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+    const [passkeyToDelete, setPasskeyToDelete] = useState<AccountPasskey | null>(null);
 
     const loadPasskeys = async () => {
         try {
-            const list = await passkeyService.listPasskeys();
-            setPasskeys(list);
+            setPasskeys(await passkeyAccountService.list());
         } catch (err) {
-            console.error('Failed to load passkeys', err);
+            setError(err instanceof Error ? err.message : t('security:passkeys.registerError'));
         }
     };
 
@@ -36,35 +39,29 @@ export const PasskeyManager: React.FC = () => {
         check();
     }, [isGoogleAccount]);
 
-    const handleAddPasskey = async () => {
+    const handleAddVerified = async ({ password }: { password: string }) => {
         if (!user) return;
         setError('');
-        setIsLoading(true);
-
+        setNotice('');
+        const label = `${typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? 'Mac' : 'Device'} Passkey`;
         try {
-            const defaultLabel = `${typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? 'Mac' : 'Device'} Passkey`;
-            await passkeyService.registerPasskey(
-                { id: user.id, email: user.email, name: user.name },
-                defaultLabel
-            );
-            await loadPasskeys();
+            const { unlocksVault } = await passkeyAccountService.register({
+                user: { id: user.id, email: user.email, name: user.name },
+                label,
+                masterPassword: password,
+            });
+            if (!unlocksVault) setNotice(t('security:passkeys.registeredWithoutPrf'));
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : t('security:passkeys.registerError');
-            setError(msg);
-        } finally {
-            setIsLoading(false);
+            setError(err instanceof Error ? err.message : t('security:passkeys.registerError'));
         }
+        await loadPasskeys();
     };
 
-    const handleDeletePasskey = async (id: string) => {
-        if (window.confirm(t('security:passkeys.deleteConfirm'))) {
-            try {
-                await passkeyService.deletePasskey(id);
-                await loadPasskeys();
-            } catch (err) {
-                console.error('Failed to delete passkey', err);
-            }
-        }
+    const handleDeleteVerified = async () => {
+        if (!passkeyToDelete) return;
+        await passkeyAccountService.remove(passkeyToDelete);
+        await loadPasskeys();
+        setPasskeyToDelete(null);
     };
 
     return (
@@ -93,8 +90,7 @@ export const PasskeyManager: React.FC = () => {
                     <Button
                         type="button"
                         size="sm"
-                        onClick={handleAddPasskey}
-                        isLoading={isLoading}
+                        onClick={() => setIsAdding(true)}
                         className="text-xs shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap"
                     >
                         <Plus size={14} />
@@ -107,6 +103,13 @@ export const PasskeyManager: React.FC = () => {
                 <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
                     <AlertCircle size={16} className="shrink-0" />
                     <span>{error}</span>
+                </div>
+            )}
+
+            {notice && (
+                <div className="p-3 bg-subtle border border-subtle rounded-xl flex items-center gap-2 text-secondary text-xs">
+                    <Info size={16} className="shrink-0 text-brand" />
+                    <span>{notice}</span>
                 </div>
             )}
 
@@ -140,7 +143,7 @@ export const PasskeyManager: React.FC = () => {
                         <div className="space-y-2">
                             {passkeys.map((passkey) => (
                                 <div
-                                    key={passkey.id}
+                                    key={passkey.key}
                                     className="flex items-center justify-between p-3 bg-subtle border border-subtle rounded-xl hover:border-border transition-colors"
                                 >
                                     <div className="flex items-center gap-2.5">
@@ -154,12 +157,18 @@ export const PasskeyManager: React.FC = () => {
                                                     date: new Date(passkey.createdAt).toLocaleDateString(),
                                                 })}
                                             </div>
+                                            <div className="text-[11px] text-tertiary inline-flex items-center gap-1">
+                                                {passkey.unlocksVault && <Unlock size={11} className="text-positive" />}
+                                                {passkey.unlocksVault
+                                                    ? t('security:passkeys.unlocksVaultBadge')
+                                                    : t('security:passkeys.signInOnlyBadge')}
+                                            </div>
                                         </div>
                                     </div>
 
                                     <button
                                         type="button"
-                                        onClick={() => handleDeletePasskey(passkey.id)}
+                                        onClick={() => setPasskeyToDelete(passkey)}
                                         title={t('security:passkeys.deleteTooltip')}
                                         className="p-2 text-tertiary hover:text-error rounded-lg hover:bg-card transition-colors"
                                     >
@@ -171,6 +180,25 @@ export const PasskeyManager: React.FC = () => {
                     )}
                 </>
             )}
+
+            <StepUpAuthModal
+                isOpen={isAdding}
+                title={t('security:passkeys.addConfirmTitle')}
+                description={t('security:passkeys.addConfirmDescription')}
+                actionLabel={t('security:passkeys.addPasskeyButton')}
+                onVerified={handleAddVerified}
+                onClose={() => setIsAdding(false)}
+            />
+
+            <StepUpAuthModal
+                isOpen={Boolean(passkeyToDelete)}
+                title={t('security:passkeys.deleteConfirm')}
+                description={t('security:stepUp.description')}
+                actionLabel={t('common:buttons.delete')}
+                actionVariant="danger"
+                onVerified={handleDeleteVerified}
+                onClose={() => setPasskeyToDelete(null)}
+            />
         </div>
     );
 };

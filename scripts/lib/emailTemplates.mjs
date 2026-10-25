@@ -28,13 +28,37 @@ export const EMAIL_EVENTS = {
         link: '{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup',
         notice: 'ignoreNotice',
     },
-    recovery: { kind: 'auth', code: false, link: '{{ .ConfirmationURL }}', notice: 'ignoreNotice' },
-    email_change: { kind: 'auth', code: false, link: '{{ .ConfirmationURL }}', notice: 'ignoreNotice' },
+    recovery: {
+        kind: 'auth',
+        code: false,
+        link: '{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery',
+        notice: 'ignoreNotice',
+    },
+    email_change: {
+        kind: 'auth',
+        code: false,
+        link: '{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change',
+        notice: 'ignoreNotice',
+    },
+    magic_link: {
+        kind: 'auth',
+        code: true,
+        link: '{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink',
+        notice: 'ignoreNotice',
+    },
+    invite: {
+        kind: 'auth',
+        code: false,
+        link: '{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite',
+        notice: 'ignoreNotice',
+    },
     reauthentication: { kind: 'auth', code: true, link: null, notice: 'ignoreNotice' },
     password_changed: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
     email_changed: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
     identity_linked: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
     identity_unlinked: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
+    mfa_factor_enrolled: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
+    mfa_factor_unenrolled: { kind: 'notification', code: false, link: null, notice: 'securityNotice' },
 };
 
 const escapeHtml = (value) =>
@@ -155,7 +179,18 @@ export function buildAuthConfigPayload(templatesDir) {
     assertLocalesComplete(locales);
     const layout = readFileSync(join(templatesDir, 'layout.html'), 'utf8');
 
-    const payload = { mailer_otp_length: 6 };
+    const payload = {
+        mailer_otp_length: 6,
+        mailer_secure_email_change_enabled: true,
+        site_url: 'https://glassfolio.dev',
+        uri_allow_list: 'https://glassfolio.dev/*,https://app.glassfolio.dev/*,http://localhost:3000/*,http://localhost:5173/*',
+        mfa_totp_enroll_enabled: true,
+        mfa_totp_verify_enabled: true,
+        passkey_enabled: true,
+        webauthn_rp_id: 'glassfolio.dev',
+        webauthn_rp_name: 'GlassFolio',
+        webauthn_rp_origins: 'https://glassfolio.dev,https://app.glassfolio.dev',
+    };
     for (const event of Object.keys(EMAIL_EVENTS)) {
         const fields = apiFieldNames(event);
         payload[fields.subject] = wrapByLocale(locales, (lang) => locales[lang].events[event].subject);

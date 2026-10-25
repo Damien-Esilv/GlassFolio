@@ -139,4 +139,26 @@ describe('Design Standards Audit — Visual Theming & Semantic Tokens', () => {
 
     expect(violations.length).toBe(0);
   });
+
+  it('should not contain any external pravatar placeholder URLs outside UserAvatar guard', () => {
+    const violations: { file: string; line: number; content: string }[] = [];
+
+    filesToScan.forEach((filePath) => {
+      if (filePath.includes('UserAvatar.tsx')) return;
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const lines = content.split('\n');
+
+      lines.forEach((lineText, lineIdx) => {
+        if (lineText.includes('pravatar.cc')) {
+          violations.push({
+            file: filePath,
+            line: lineIdx + 1,
+            content: lineText.trim(),
+          });
+        }
+      });
+    });
+
+    expect(violations).toEqual([]);
+  });
 });

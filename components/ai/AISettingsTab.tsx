@@ -38,8 +38,20 @@ export const AISettingsTab: React.FC = () => {
     models: string[];
     error?: string;
   } | null>(null);
+  const [isTestingCloud, setIsTestingCloud] = useState(false);
+  const [cloudResult, setCloudResult] = useState<{
+    ok: boolean;
+    error?: string;
+  } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const updateAISettings = (newSettings: AISettings) => {
+    setSettings(newSettings);
+    aiSettingsService.saveSettings(newSettings);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
 
   const isCloudProvider = (provider: AIProviderType): boolean =>
     ['groq', 'openai', 'anthropic', 'gemini', 'openrouter'].includes(provider);
@@ -93,32 +105,24 @@ export const AISettingsTab: React.FC = () => {
     cloudOptions.find((opt) => opt.id === activeCloudProvider) || cloudOptions[0];
 
   const handleCategorySelect = (category: AICategory) => {
+    let nextProvider: AIProviderType = 'mock';
     if (category === 'ollama') {
-      setSettings((prev) => ({ ...prev, activeProvider: 'ollama' }));
+      nextProvider = 'ollama';
     } else if (category === 'mock') {
-      setSettings((prev) => ({ ...prev, activeProvider: 'mock' }));
+      nextProvider = 'mock';
     } else {
-      if (!isCloudProvider(settings.activeProvider)) {
-        setSettings((prev) => ({
-          ...prev,
-          activeProvider: 'groq',
-        }));
-      }
+      nextProvider = isCloudProvider(settings.activeProvider) ? settings.activeProvider : 'groq';
     }
-    setSaveSuccess(false);
+    updateAISettings({ ...settings, activeProvider: nextProvider });
   };
 
   const handleCloudProviderChange = (newProvider: AIProviderType) => {
-    setSettings((prev) => ({
-      ...prev,
-      activeProvider: newProvider,
-    }));
-    setSaveSuccess(false);
+    updateAISettings({ ...settings, activeProvider: newProvider });
+    setCloudResult(null);
   };
 
   const handleModeSelect = (mode: AIExecutionMode) => {
-    setSettings((prev) => ({ ...prev, executionMode: mode }));
-    setSaveSuccess(false);
+    updateAISettings({ ...settings, executionMode: mode });
   };
 
   const handleTestOllama = async () => {
@@ -128,18 +132,27 @@ export const AISettingsTab: React.FC = () => {
       const res = await aiSettingsService.testOllamaConnection(settings.ollamaEndpoint);
       setOllamaResult(res);
       if (res.ok && res.models.length > 0 && !res.models.includes(settings.ollamaModel)) {
-        setSettings((prev) => ({ ...prev, ollamaModel: res.models[0] }));
+        updateAISettings({ ...settings, ollamaModel: res.models[0] });
       }
     } finally {
       setIsTestingOllama(false);
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    aiSettingsService.saveSettings(settings);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleTestCloud = async () => {
+    if (!settings.apiKey?.trim()) return;
+    setIsTestingCloud(true);
+    setCloudResult(null);
+    try {
+      const res = await aiSettingsService.testCloudConnection(
+        activeCloudProvider,
+        settings.apiKey,
+        settings.cloudModel
+      );
+      setCloudResult(res);
+    } finally {
+      setIsTestingCloud(false);
+    }
   };
 
   const mcpConfigJson = JSON.stringify(
@@ -168,6 +181,12 @@ export const AISettingsTab: React.FC = () => {
     icon: React.ReactNode;
   }> = [
     {
+      id: 'mock',
+      titleKey: 'ai:settings.categories.mock.name',
+      descKey: 'ai:settings.categories.mock.description',
+      icon: <Sparkles size={20} className="text-primary" />,
+    },
+    {
       id: 'ollama',
       titleKey: 'ai:settings.categories.ollama.name',
       descKey: 'ai:settings.categories.ollama.description',
@@ -179,16 +198,10 @@ export const AISettingsTab: React.FC = () => {
       descKey: 'ai:settings.categories.cloud.description',
       icon: <Cloud size={20} className="text-primary" />,
     },
-    {
-      id: 'mock',
-      titleKey: 'ai:settings.categories.mock.name',
-      descKey: 'ai:settings.categories.mock.description',
-      icon: <Sparkles size={20} className="text-primary" />,
-    },
   ];
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 animate-in fade-in">
+    <div className="space-y-6 animate-in fade-in">
       {/* 1. Header Banner */}
       <div className="p-6 rounded-2xl bg-card border border-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -201,16 +214,18 @@ export const AISettingsTab: React.FC = () => {
           </div>
         </div>
 
-        <Button type="submit" variant="primary" size="sm" className="shrink-0 whitespace-nowrap">
+        <div className="flex items-center gap-2 shrink-0">
           {saveSuccess ? (
-            <span className="flex items-center gap-2">
-              <Check size={16} />
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-medium animate-fade-in">
+              <Check size={14} />
               {t('ai:settings.saved')}
             </span>
           ) : (
-            t('ai:settings.save')
+            <span className="text-[11px] text-tertiary">
+              {t('tax:settings.autoSaved')}
+            </span>
           )}
-        </Button>
+        </div>
       </div>
 
       {/* 2. Provider Category Selection (3 Clean Tabs) */}
@@ -277,7 +292,7 @@ export const AISettingsTab: React.FC = () => {
                 <input
                   type="text"
                   value={settings.ollamaEndpoint}
-                  onChange={(e) => setSettings({ ...settings, ollamaEndpoint: e.target.value })}
+                  onChange={(e) => updateAISettings({ ...settings, ollamaEndpoint: e.target.value })}
                   placeholder="http://localhost:11434"
                   className="min-w-0 flex-1 bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
                 />
@@ -298,7 +313,7 @@ export const AISettingsTab: React.FC = () => {
               {ollamaResult?.models && ollamaResult.models.length > 0 ? (
                 <select
                   value={settings.ollamaModel}
-                  onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
+                  onChange={(e) => updateAISettings({ ...settings, ollamaModel: e.target.value })}
                   className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
                 >
                   {ollamaResult.models.map((m) => (
@@ -311,7 +326,7 @@ export const AISettingsTab: React.FC = () => {
                 <input
                   type="text"
                   value={settings.ollamaModel}
-                  onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
+                  onChange={(e) => updateAISettings({ ...settings, ollamaModel: e.target.value })}
                   placeholder="llama3.2:latest"
                   className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
                 />
@@ -338,19 +353,19 @@ export const AISettingsTab: React.FC = () => {
       )}
 
       {currentCategory === 'cloud' && (
-        <div className="p-6 rounded-2xl bg-card border border-subtle space-y-5">
+        <div className="p-5 rounded-2xl bg-card border border-subtle space-y-4">
           <div className="flex items-center gap-2">
-            <Key size={18} className="text-primary" />
-            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.cloudConfigTitle')}</h3>
+            <Key size={16} className="text-primary" />
+            <h3 className="text-xs font-semibold text-primary">{t('ai:settings.cloudConfigTitle')}</h3>
           </div>
 
-          {/* Cloud Provider Dropdown */}
-          <div className="space-y-1.5">
+          {/* 1. Cloud Provider Selector */}
+          <div className="space-y-1">
             <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.serviceLabel')}</label>
             <select
               value={activeCloudProvider}
               onChange={(e) => handleCloudProviderChange(e.target.value as AIProviderType)}
-              className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2.5 text-xs font-medium"
+              className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs font-medium"
             >
               {cloudOptions.map((opt) => (
                 <option key={opt.id} value={opt.id}>
@@ -360,50 +375,76 @@ export const AISettingsTab: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* API Key */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.apiKey')}</label>
-              <div className="relative">
+          {/* 2. API Key with Test Connection */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.apiKey')}</label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={settings.apiKey}
-                  onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
+                  onChange={(e) => updateAISettings({ ...settings, apiKey: e.target.value })}
                   placeholder={currentCloudOption.keyPlaceholder}
-                  className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs pr-10"
+                  className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs pr-9"
                 />
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-2.5 text-secondary hover:text-primary transition-colors"
+                  className="absolute right-2.5 top-2 text-secondary hover:text-primary transition-colors"
                 >
                   {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
-            </div>
-
-            {/* Model Identifier */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.model')}</label>
-                {!settings.cloudModel?.trim() && (
-                  <span className="text-[10px] text-warning font-medium">
-                    {t('ai:settings.cloud.modelRequiredNotice')}
-                  </span>
-                )}
-              </div>
-              <input
-                type="text"
-                value={settings.cloudModel}
-                onChange={(e) => setSettings({ ...settings, cloudModel: e.target.value })}
-                placeholder={currentCloudOption.modelPlaceholder || t('ai:settings.cloud.modelPlaceholder')}
-                className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
-              />
-              <p className="text-[11px] text-tertiary">
-                {t('ai:settings.cloud.modelHelp')}
-              </p>
+              <button
+                type="button"
+                onClick={handleTestCloud}
+                disabled={isTestingCloud || !settings.apiKey?.trim()}
+                className="whitespace-nowrap shrink-0 px-3 py-2 rounded-xl bg-subtle border border-subtle hover:bg-card text-xs font-medium text-primary transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={`shrink-0 ${isTestingCloud ? 'animate-spin' : ''}`} />
+                <span>{isTestingCloud ? t('ai:settings.cloud.testing') : t('ai:settings.cloud.testConnection')}</span>
+              </button>
             </div>
           </div>
+
+          {/* 3. Model Identifier (Stacked underneath) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-secondary">{t('ai:settings.cloud.model')}</label>
+              {!settings.cloudModel?.trim() && (
+                <span className="text-[10px] text-warning font-medium">
+                  {t('ai:settings.cloud.modelRequiredNotice')}
+                </span>
+              )}
+            </div>
+            <input
+              type="text"
+              value={settings.cloudModel}
+              onChange={(e) => updateAISettings({ ...settings, cloudModel: e.target.value })}
+              placeholder={currentCloudOption.modelPlaceholder || t('ai:settings.cloud.modelPlaceholder')}
+              className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
+            />
+            <p className="text-[11px] text-tertiary">
+              {t('ai:settings.cloud.modelHelp')}
+            </p>
+          </div>
+
+          {/* Test Feedback Message */}
+          {cloudResult && (
+            <div
+              className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                cloudResult.ok
+                  ? 'bg-success/10 border-success/30 text-success'
+                  : 'bg-error/10 border-error/30 text-error'
+              }`}
+            >
+              <span>
+                {cloudResult.ok
+                  ? t('ai:settings.cloud.success')
+                  : `${t('ai:settings.cloud.failure')} (${cloudResult.error})`}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -458,7 +499,7 @@ export const AISettingsTab: React.FC = () => {
             <input
               type="checkbox"
               checked={settings.enableThinking}
-              onChange={(e) => setSettings({ ...settings, enableThinking: e.target.checked })}
+              onChange={(e) => updateAISettings({ ...settings, enableThinking: e.target.checked })}
               className="sr-only peer"
             />
             <div className="w-9 h-5 bg-card border border-subtle peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-secondary after:border-subtle after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white" />
@@ -539,6 +580,6 @@ export const AISettingsTab: React.FC = () => {
           </pre>
         </div>
       </div>
-    </form>
+    </div>
   );
 };

@@ -12,12 +12,18 @@ import { WrapperType } from '../types/types.backend';
 // SUPPORTED FISCAL YEARS
 // ============================================================================
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 /** Fiscal years currently supported by the tax engine */
-export const SUPPORTED_FISCAL_YEARS = ['2024', '2025'] as const;
+export const SUPPORTED_FISCAL_YEARS = [
+    String(CURRENT_YEAR - 2),
+    String(CURRENT_YEAR - 1),
+    String(CURRENT_YEAR),
+] as const;
 export type SupportedFiscalYear = typeof SUPPORTED_FISCAL_YEARS[number];
 
-/** Default fiscal year for new users */
-export const DEFAULT_FISCAL_YEAR: SupportedFiscalYear = '2024';
+/** Default fiscal year for new users (dynamic based on current year) */
+export const DEFAULT_FISCAL_YEAR: string = String(CURRENT_YEAR);
 
 // ============================================================================
 // FORM IDENTIFIERS

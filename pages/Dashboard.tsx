@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, PieChart, Pie, Cell, XAxis } from 'recharts';
-import { ArrowUpRight, AlertTriangle, PlusCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight, AlertTriangle, PlusCircle, TrendingUp, TrendingDown, PieChart as PieChartIcon } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import GoalCard from '../components/GoalCard';
@@ -25,13 +25,17 @@ const Dashboard: React.FC = () => {
   const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
   const dateFormat = user?.preferences?.dateFormat || 'DD/MM/YYYY';
   const currency = user?.preferences?.currency || 'USD';
-  const { transactions, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading } = useData();
+  const { transactions, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [animActive, setAnimActive] = useState(false);
   const [bestHistory, setBestHistory] = useState<HistoricalPricePoint[]>([]);
   const [worstHistory, setWorstHistory] = useState<HistoricalPricePoint[]>([]);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => {
     if (!isLoadingSummary && summary) {
@@ -380,60 +384,70 @@ const Dashboard: React.FC = () => {
         {/* Donut Asset Allocation Card */}
         <div className={`${cardStyle} flex flex-col justify-between`}>
           <h3 className="text-secondary text-sm font-medium mb-2">{t('dashboard:assetAllocation')}</h3>
-          <div className="flex flex-col sm:flex-row items-center gap-4 my-auto">
-            {/* Donut Chart with Total in Center */}
-            <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={assetAllocation}
-                    innerRadius={44}
-                    outerRadius={64}
-                    paddingAngle={4}
-                    dataKey="value"
-                    stroke="none"
-                    isAnimationActive={true}
-                    animationDuration={ANIMATION_DURATION_MS}
-                    animationEasing={ANIMATION_EASING}
-                    animationBegin={0}
-                  >
-                    {assetAllocation.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
-                <span className="text-xs font-bold text-primary truncate max-w-full">
-                  <AnimatedCounter value={summary.totalValue} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} />
-                </span>
-                <span className="text-[10px] text-tertiary uppercase font-bold tracking-wider">{t('dashboard:total')}</span>
+          {assetAllocation.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-6 px-4 my-auto bg-subtle/30 rounded-2xl border-2 border-dashed border-border/60">
+              <div className="w-10 h-10 rounded-full bg-subtle flex items-center justify-center mb-2 text-tertiary">
+                <PieChartIcon size={20} />
+              </div>
+              <p className="text-xs font-semibold text-secondary mb-1">{t('dashboard:noAssetsAllocation')}</p>
+              <p className="text-[11px] text-tertiary max-w-[200px]">{t('dashboard:noAssetsAllocationHint')}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-4 my-auto">
+              {/* Donut Chart with Total in Center */}
+              <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={assetAllocation}
+                      innerRadius={44}
+                      outerRadius={64}
+                      paddingAngle={4}
+                      dataKey="value"
+                      stroke="none"
+                      isAnimationActive={true}
+                      animationDuration={ANIMATION_DURATION_MS}
+                      animationEasing={ANIMATION_EASING}
+                      animationBegin={0}
+                    >
+                      {assetAllocation.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
+                  <span className="text-xs font-bold text-primary truncate max-w-full">
+                    <AnimatedCounter value={summary.totalValue} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} />
+                  </span>
+                  <span className="text-[10px] text-tertiary uppercase font-bold tracking-wider">{t('dashboard:total')}</span>
+                </div>
+              </div>
+
+              {/* Asset Breakdown List */}
+              <div className="flex-1 w-full space-y-2">
+                {assetAllocation.map(item => (
+                  <div key={item.type} className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-secondary">{item.name}</span>
+                      <span className="text-primary">{item.percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-subtle rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: animActive ? `${item.percentage}%` : '0%',
+                          backgroundColor: item.color,
+                          transitionDuration: `${ANIMATION_DURATION_MS}ms`,
+                          transitionTimingFunction: ANIMATION_EASING
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-
-            {/* Asset Breakdown List */}
-            <div className="flex-1 w-full space-y-2">
-              {assetAllocation.map(item => (
-                <div key={item.type} className="space-y-1">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-secondary">{item.name}</span>
-                    <span className="text-primary">{item.percentage.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-subtle rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: animActive ? `${item.percentage}%` : '0%',
-                        backgroundColor: item.color,
-                        transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                        transitionTimingFunction: ANIMATION_EASING
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Best Performer Card */}

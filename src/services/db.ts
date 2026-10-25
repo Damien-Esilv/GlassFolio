@@ -199,12 +199,14 @@ class MockDB {
     // --- Institutes ---
     getInstitutes(): Institute[] {
         const stored = appStorage.getItem(STORAGE_KEYS.INSTITUTES);
-        if (!stored) return initialInstitutes;
+        if (!stored) return isRealUserVaultActive() ? [] : initialInstitutes;
 
         try {
             const storedList = JSON.parse(stored) as Institute[];
             const map = new Map<string, Institute>();
-            initialInstitutes.forEach(i => map.set(i.id, i));
+            if (!isRealUserVaultActive()) {
+                initialInstitutes.forEach(i => map.set(i.id, i));
+            }
             storedList.forEach(i => {
                 const initial = map.get(i.id);
                 map.set(i.id, {
@@ -214,7 +216,7 @@ class MockDB {
             });
             return Array.from(map.values());
         } catch {
-            return initialInstitutes;
+            return isRealUserVaultActive() ? [] : initialInstitutes;
         }
     }
 

@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Copy, Check, Download, AlertCircle, X, KeyRound } from 'lucide-react';
 import Button from '../Button';
-import { totpService, TotpEnrollment } from '../../src/services/security/totpService';
-import { generateQrSvg } from '../../src/services/security/qrCode';
+import { mfaService, TotpEnrollmentDraft } from '../../src/services/security/mfaService';
 
 interface TotpEnrollDialogProps {
     isOpen: boolean;
@@ -21,8 +20,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
 }) => {
     const { t } = useTranslation();
 
-    const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
-    const [qrSvg, setQrSvg] = useState<string>('');
+    const [enrollment, setEnrollment] = useState<TotpEnrollmentDraft | null>(null);
     const [verificationCode, setVerificationCode] = useState('');
     const [step, setStep] = useState<'scan' | 'backup'>('scan');
     const [isVerifying, setIsVerifying] = useState(false);
@@ -30,6 +28,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     const [copiedSecret, setCopiedSecret] = useState(false);
     const [copiedBackup, setCopiedBackup] = useState(false);
     const [hasConfirmedBackup, setHasConfirmedBackup] = useState(false);
+    const [isConfirmed, setIsConfirmed] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
@@ -37,19 +36,50 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
             setVerificationCode('');
             setStep('scan');
             setError('');
+            setIsConfirmed(false);
             return;
         }
 
-        const init = async () => {
-            const data = await totpService.initEnrollment(userEmail || 'user@glassfolio.com');
-            setEnrollment(data);
-            const svg = generateQrSvg(data.uri, { margin: 4, bg: 'white', color: 'black' });
-            setQrSvg(svg);
+        let cancelled = false;
+        mfaService.startTotpEnrollment(userEmail || 'user@glassfolio.com')
+            .then((draft) => {
+                if (cancelled) {
+                    void mfaService.cancelTotpEnrollment(draft);
+                    return;
+                }
+                setEnrollment(draft);
+            })
+            .catch((err: unknown) => {
+                if (!cancelled) setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
+            });
+        return () => {
+            cancelled = true;
         };
-        init();
-    }, [isOpen, userEmail]);
+    }, [isOpen, userEmail, t]);
 
-    if (!isOpen || !enrollment) return null;
+    if (!isOpen) return null;
+
+    const handleClose = () => {
+        if (!isConfirmed) void mfaService.cancelTotpEnrollment(enrollment);
+        onClose();
+    };
+
+    if (!enrollment) {
+        return error ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+                <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 shadow-2xl space-y-4">
+                    <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>{error}</span>
+                    </div>
+                    <Button type="button" variant="secondary" className="w-full" onClick={onClose}>
+                        {t('common:buttons.close')}
+                    </Button>
+                </div>
+            </div>,
+            document.body
+        ) : null;
+    }
 
     const handleCopySecret = async () => {
         try {
@@ -67,16 +97,17 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
         setIsVerifying(true);
 
         try {
-            const success = await totpService.confirmEnrollment(
-                enrollment.secret,
-                verificationCode,
-                enrollment.hashedBackupCodes
-            );
-
-            if (success) {
+            const success = await mfaService.confirmTotpEnrollment(enrollment, verificationCode);
+            if (!success) {
+                setError(t('security:totp.invalidCode'));
+            } else if (enrollment.plainBackupCodes.length > 0) {
+                setIsConfirmed(true);
                 setStep('backup');
             } else {
-                setError(t('security:totp.invalidCode'));
+                // Cloud: Supabase has no recovery codes, the factor is active right away.
+                setIsConfirmed(true);
+                onEnrolled();
+                onClose();
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : t('security:totp.invalidCode'));
@@ -134,7 +165,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                 {/* Close Button */}
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
                 >
                     <X size={18} />
@@ -172,10 +203,10 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                             <p className="text-xs text-secondary">
                                 {t('security:totp.scanQrSubtitle')}
                             </p>
-                            <div className="flex justify-center p-4 bg-white rounded-xl max-w-[200px] mx-auto shadow-inner">
+                            <div className="flex justify-center p-3 bg-white rounded-xl w-[180px] h-[180px] mx-auto shadow-inner">
                                 <div
-                                    className="w-full h-auto aspect-square flex items-center justify-center"
-                                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+                                    className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                                    dangerouslySetInnerHTML={{ __html: enrollment.qrSvg }}
                                 />
                             </div>
                         </div>

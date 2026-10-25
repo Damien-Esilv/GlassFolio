@@ -26,7 +26,8 @@
         "invalidCredentials": "Le mot de passe maître ou la clé de récupération est incorrect.",
         "lockVault": "Verrouiller le coffre",
         "vaultStatusUnlocked": "Coffre déverrouillé (AES-256-GCM)",
-        "vaultStatusLocked": "Coffre verrouillé"
+        "vaultStatusLocked": "Coffre verrouillé",
+        "resetFailed": "Le coffre n’a pas pu être réinitialisé. Réessayez."
     },
     "header": {
         "lockVaultTooltip": "Verrouiller le coffre-fort immédiatement"
@@ -85,7 +86,9 @@
         "disableConfirmTitle": "Désactiver l'authentification à deux facteurs ?",
         "disableConfirmMessage": "Êtes-vous certain de vouloir désactiver la 2FA ? Votre compte ne sera plus protégé que par votre mot de passe maître.",
         "confirmDisable": "Oui, désactiver la 2FA",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "challengeSubtitleNoBackup": "Saisissez le code à 6 chiffres de votre application d’authentification.",
+        "inputLabelNoBackup": "Code de sécurité"
     },
     "passkeys": {
         "title": "Passkeys WebAuthn",
@@ -102,7 +105,30 @@
         "authError": "Échec de l'authentification par passkey",
         "managedByGoogleBadge": "Géré par le compte Google",
         "managedByGoogleTitle": "Clés d'accès biométriques gérées par Google",
-        "managedByGoogleDesc": "Vos clés d'accès biométriques (Touch ID, Face ID, Windows Hello) et vos appareils sécurisés sont directement synchronisés et protégés par votre compte Google."
+        "managedByGoogleDesc": "Vos clés d'accès biométriques (Touch ID, Face ID, Windows Hello) et vos appareils sécurisés sont directement synchronisés et protégés par votre compte Google.",
+        "challengeSubtitle": "Confirmez votre identité avec l’une de vos passkeys.",
+        "unlocksVaultBadge": "Déverrouille votre coffre",
+        "signInOnlyBadge": "Connexion seulement (le coffre demande votre mot de passe)",
+        "addConfirmTitle": "Ajouter une passkey",
+        "addConfirmDescription": "Confirmez votre identité : votre mot de passe sert aussi à protéger la clé du coffre pour cette passkey.",
+        "registeredWithoutPrf": "Passkey ajoutée. Cet authentificateur ne peut pas déverrouiller le coffre : votre mot de passe restera demandé après la connexion."
+    },
+    "stepUp": {
+        "title": "Vérification de sécurité",
+        "description": "Veuillez confirmer votre identité avant de poursuivre cette opération sensible.",
+        "passwordLabel": "Mot de passe maître",
+        "passwordPlaceholder": "Saisissez votre mot de passe maître",
+        "totpLabel": "Code à deux facteurs",
+        "totpPlaceholder": "Code à 6 chiffres",
+        "usePasskeyButton": "Vérifier avec Passkey",
+        "passkeyVerified": "Passkey vérifiée avec succès",
+        "confirmButton": "Confirmer et poursuivre",
+        "cancelButton": "Annuler",
+        "invalidPassword": "Mot de passe maître incorrect",
+        "invalidTotp": "Code à deux facteurs incorrect",
+        "recentSignInRequired": "Par sécurité, déconnectez-vous puis reconnectez-vous avec Google, et réessayez dans les 10 minutes.",
+        "recentSignInOk": "Vous vous êtes connecté récemment avec Google : confirmez pour continuer.",
+        "passkeyRequired": "Vous confirmerez avec l’une de vos passkeys."
     },
     "totpVerifyModal": {
         "title": "Vérification à deux facteurs requise",

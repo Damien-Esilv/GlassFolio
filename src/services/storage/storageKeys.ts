@@ -25,7 +25,17 @@ const PLAINTEXT_EXCEPTIONS: ReadonlySet<string> = new Set([
 export const isSensitiveKey = (key: string): boolean =>
     key.startsWith(SENSITIVE_PREFIX) && !PLAINTEXT_EXCEPTIONS.has(key);
 
-/** Any key owned by GlassFolio (used by the vault reset to avoid wiping other apps on the same origin). */
+/** Any key owned by GlassFolio (never wipes other apps sharing the origin). */
 export const isGlassFolioKey = (key: string): boolean =>
     key.startsWith(SENSITIVE_PREFIX) || key.startsWith('gf_');
+
+/** Plaintext "TOTP enabled" marker written by earlier builds; only ever cleaned up now. */
+export const LEGACY_TOTP_FLAG_KEY = 'gf_totp_enrolled';
+
+/**
+ * Keys that belong to this device's vault. A vault reset removes these and keeps the Supabase
+ * session, consent, theme, language and public market caches.
+ */
+export const isVaultScopedKey = (key: string): boolean =>
+    isSensitiveKey(key) || key === VAULT_HEADER_KEY || key === LEGACY_TOTP_FLAG_KEY;
 

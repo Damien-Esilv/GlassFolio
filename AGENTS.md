@@ -162,18 +162,34 @@ Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doi
 
 Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et auditeurs open-source :
 
-1. **Interdiction formelle de commiter directement sur `main`** :
-   - `main` est une branche protégée réservée exclusivement aux versions de production livrables sur Azure et synchronisables vers le dépôt public.
+1. **Interdiction formelle de commiter ou fusionner sur `main` sans demande explicite de l'utilisateur** :
+   - `main` est une branche protégée réservée exclusivement aux versions de production validées par l'utilisateur.
+   - **L'agent IA ne doit JAMAIS fusionner (merge ou squash merge) sur `main` de sa propre initiative**, même si tous les tests et la CI passent au vert.
+   - Le merge sur `main` s'effectue **UNIQUEMENT lorsque l'utilisateur le demande de manière claire et explicite** dans le fil de discussion.
    - Toute tâche (`TGLA-XXX`), refactorisation ou correction **doit obligatoirement démarrer par la création et la bascule sur une branche dédiée** :
      - `feat/tgla-XXX-<short-slug>`
      - `fix/tgla-XXX-<short-slug>`
      - `chore/tgla-XXX-<short-slug>`
 
 2. **Gestion des Branches, Consolidation des Commits & Zéro Pollution Distante** :
-   - Tout commit doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
-   - **Consolidation obligatoire des micro-corrections** : Pendant le développement sur une branche dédiée, des commits intermédiaires sont autorisés. Cependant, lors de la fusion ou de la finalisation, tous les micro-ajustements cosmétiques, retouches ou essais successifs d'une même tâche doivent impérativement être **consolidés / fusionnés en un seul commit atomique et auto-suffisant** par feature majeure ou correction.
-   - **Arborescence épurée sur `main`** : Sur `main`, chaque commit représente une livraison claire et documentée.
-   - **Nettoyage drastique des branches distantes** : Dès qu'une PR est fusionnée dans `main`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
+   - Tout commit sur la branche de travail doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
+   - **Cycle d'itération sur la branche** : L'IA a l'entière liberté de créer des commits intermédiaires ou correctifs sur la branche dédiée afin de valider localement et déclencher les workflows CI GitHub Actions.
+   - **Consolidation obligatoire avant merge (Squash en 1 seul commit avec traçabilité Notion complète)** :
+     - Lorsque l'utilisateur demande explicitement le merge sur `main`, l'ensemble des commits intermédiaires, micro-ajustements cosmétiques ou essais de la branche de feature doivent impérativement être **consolidés / squashe en un seul commit atomique et auto-suffisant** représentant la livraison complète et fonctionnelle.
+     - **Préservation intégrale des identifiants Notion dans le message de commit consolidé** :
+       - Le titre et le corps du commit squashed unique **DOIVENT impérativement citer TOUS les identifiants de tâches (`TGLA-xxx`) et bugs (`BUG-xxx`)** concernés par la branche :
+         ```gitcommit
+         feat(epic-XX): description synthétique de la fonctionnalité (TGLA-097, TGLA-098, TGLA-099, TGLA-100)
+
+         Closes TGLA-097
+         Closes TGLA-098
+         Closes TGLA-099
+         Closes TGLA-100
+         ```
+       - Le workflow CI GitHub Actions `notion-sync` (`scripts/notion-sync.mjs`) extrait automatiquement l'ensemble de ces clés `TGLA-*`, passe chacune de ces tâches à `Fait` dans Notion et lie directement l'URL et le hash du commit squashed final.
+       - Ainsi, **l'historique Git sur `main` reste 100% linéaire et propre**, et **100% de la traçabilité Notion est préservée** vers ce commit de livraison unique.
+     - L'arborescence résultante sur GitHub doit être strictement linéaire et limpide : un seul commit net par feature ou bugfix.
+   - **Nettoyage drastique des branches distantes** : Dès qu'une branche est fusionnée dans `main`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
 
 3. **Garantie 6-Gates Pré-Merge (Local)** :
    - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% en local :

@@ -23,8 +23,21 @@
         "email_change": {
             "subject": "Confirmez votre nouvelle adresse email Glassfolio",
             "heading": "Confirmez votre nouvelle adresse email",
-            "body": "Vous avez demandé à remplacer l'adresse email de votre compte Glassfolio par {{ .NewEmail }}. Confirmez ce changement avec le bouton ci-dessous.",
+            "body": "Une demande a été effectuée pour associer votre compte Glassfolio à l'adresse {{ .NewEmail }}. Confirmez cette modification avec le bouton ci-dessous pour finaliser le changement.",
             "cta": "Confirmer la nouvelle adresse"
+        },
+        "magic_link": {
+            "subject": "Votre lien de connexion Glassfolio",
+            "heading": "Connectez-vous à Glassfolio",
+            "body": "Saisissez le code ci-dessous dans l'application ou cliquez sur le bouton pour vous connecter à votre compte Glassfolio.",
+            "codeLabel": "Votre code de connexion",
+            "cta": "Me connecter à Glassfolio"
+        },
+        "invite": {
+            "subject": "Vous avez été invité sur Glassfolio",
+            "heading": "Acceptez votre invitation",
+            "body": "Vous avez été invité à créer un compte sur Glassfolio. Cliquez sur le bouton ci-dessous pour accepter l'invitation et initialiser votre coffre.",
+            "cta": "Accepter l'invitation"
         },
         "reauthentication": {
             "subject": "{{ .Token }} est votre code de vérification Glassfolio",
@@ -51,6 +64,16 @@
             "subject": "Une méthode de connexion a été supprimée de votre compte Glassfolio",
             "heading": "Une méthode de connexion a été supprimée",
             "body": "Votre identité {{ .Provider }} n'est plus associée à votre compte Glassfolio ({{ .Email }})."
+        },
+        "mfa_factor_enrolled": {
+            "subject": "Une méthode d'authentification à deux facteurs a été ajoutée à votre compte Glassfolio",
+            "heading": "Méthode d'authentification ajoutée",
+            "body": "Un nouveau facteur {{ .FactorType }} vient d'être activé sur votre compte Glassfolio ({{ .Email }})."
+        },
+        "mfa_factor_unenrolled": {
+            "subject": "Une méthode d'authentification à deux facteurs a été supprimée de votre compte Glassfolio",
+            "heading": "Méthode d'authentification supprimée",
+            "body": "Le facteur {{ .FactorType }} a été retiré de votre compte Glassfolio ({{ .Email }})."
         }
     }
 }

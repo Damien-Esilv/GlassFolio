@@ -10,10 +10,19 @@
 import { DeploymentMode } from '../../config/deployment';
 import { IStorageProvider } from '../../types/storage';
 import { SupabaseAuthSession, supabaseClient, isSupabaseConfigured } from '../supabase/supabaseClient';
+import { parseEnvelope } from '../security/crypto';
 import { isSensitiveKey, VAULT_HEADER_KEY } from './storageKeys';
+
+export interface PullResult {
+    /** False when the remote could not be reached; local state must then be treated as unknown. */
+    ok: boolean;
+    hasRemoteHeader: boolean;
+}
 
 export class SyncedBackingStorageProvider implements IStorageProvider {
     private session: SupabaseAuthSession | null = null;
+    /** Cloud writes are replicated only for this user, once their vault is unlocked in the UI. */
+    private replicationUserId: string | null = null;
     private isPulling = false;
     private lastSyncError: unknown = null;
 
@@ -24,6 +33,28 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
 
     public setSupabaseSession(session: SupabaseAuthSession | null): void {
         this.session = session;
+        if (!session) this.replicationUserId = null;
+    }
+
+    /** Allows cloud replication for `userId`; ignored unless it matches the attached session. */
+    public enableReplication(userId: string): void {
+        this.replicationUserId = userId;
+    }
+
+    public disableReplication(): void {
+        this.replicationUserId = null;
+    }
+
+    public isReplicationEnabled(): boolean {
+        return this.canReplicateToCloud();
+    }
+
+    private canReplicateToCloud(): boolean {
+        return this.mode === 'cloud'
+            && this.session !== null
+            && isSupabaseConfigured()
+            && this.replicationUserId !== null
+            && this.replicationUserId === this.session.user.id;
     }
 
     public getSupabaseSession(): SupabaseAuthSession | null {
@@ -37,10 +68,11 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     /**
      * Pulls latest ciphertext records from remote (Supabase or Docker local-vault) into local store.
      */
-    public async pullFromRemote(): Promise<void> {
-        if (this.isPulling) return;
+    public async pullFromRemote(): Promise<PullResult> {
+        if (this.isPulling) return { ok: false, hasRemoteHeader: false };
         this.isPulling = true;
         this.lastSyncError = null;
+        let result: PullResult = { ok: true, hasRemoteHeader: false };
 
         try {
             if (this.mode === 'cloud' && this.session && isSupabaseConfigured()) {
@@ -51,6 +83,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
 
                 if (headerRow) {
                     this.local.setItem(VAULT_HEADER_KEY, JSON.stringify(headerRow.header_json));
+                    result = { ok: true, hasRemoteHeader: true };
                 }
 
                 for (const row of records) {
@@ -70,6 +103,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                                 for (const [k, v] of Object.entries(data.records)) {
                                     this.local.setItem(k, v);
                                 }
+                                result = { ok: true, hasRemoteHeader: VAULT_HEADER_KEY in data.records };
                             }
                         }
                     } catch {
@@ -79,9 +113,24 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             }
         } catch (err) {
             this.lastSyncError = err;
+            result = { ok: false, hasRemoteHeader: false };
             console.warn('[storage] pullFromRemote encountered error, operating on local cache', err);
         } finally {
             this.isPulling = false;
+        }
+        return result;
+    }
+
+    /**
+     * Removes this device's vault keys. In cloud mode nothing is replicated: resetting a device must
+     * never delete the user's server-side vault, which only the account deletion RPC removes (TGLA-101).
+     */
+    public removeVaultKeys(shouldRemove: (key: string) => boolean): void {
+        if (this.mode === 'cloud') this.replicationUserId = null;
+        for (const key of this.local.keys()) {
+            if (!shouldRemove(key)) continue;
+            this.local.removeItem(key);
+            if (this.mode !== 'cloud') this.replicateRemove(key);
         }
     }
 
@@ -116,7 +165,8 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         // Only replicate vault header or encrypted financial keys
         if (!isSensitiveKey(key) && key !== VAULT_HEADER_KEY) return;
 
-        if (this.mode === 'cloud' && this.session && isSupabaseConfigured()) {
+        if (this.mode === 'cloud') {
+            if (!this.canReplicateToCloud() || !this.session) return;
             if (key === VAULT_HEADER_KEY) {
                 try {
                     const parsed = JSON.parse(value) as Record<string, unknown>;
@@ -126,7 +176,8 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                 } catch {
                     // Ignored if non-json
                 }
-            } else {
+            } else if (parseEnvelope(value) !== null) {
+                // Only ciphertext ever leaves the device.
                 supabaseClient.upsertVaultRecord(this.session.accessToken, key, value).catch((err) => {
                     this.lastSyncError = err;
                 });
@@ -145,16 +196,13 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     private replicateRemove(key: string): void {
         if (!isSensitiveKey(key) && key !== VAULT_HEADER_KEY) return;
 
-        if (this.mode === 'cloud' && this.session && isSupabaseConfigured()) {
-            if (key === VAULT_HEADER_KEY) {
-                supabaseClient.clearAllVaultRecords(this.session.accessToken).catch((err) => {
-                    this.lastSyncError = err;
-                });
-            } else {
-                supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
-                    this.lastSyncError = err;
-                });
-            }
+        if (this.mode === 'cloud') {
+            // Removing the local header only resets this device; the remote vault is deleted
+            // exclusively through the account deletion RPC.
+            if (key === VAULT_HEADER_KEY || !this.canReplicateToCloud() || !this.session) return;
+            supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
+                this.lastSyncError = err;
+            });
         } else if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
             fetch('/api/local-vault', {
                 method: 'DELETE',
@@ -167,11 +215,8 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     }
 
     private replicateClear(): void {
-        if (this.mode === 'cloud' && this.session && isSupabaseConfigured()) {
-            supabaseClient.clearAllVaultRecords(this.session.accessToken).catch((err) => {
-                this.lastSyncError = err;
-            });
-        } else if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+        // Cloud: a local clear never wipes the remote vault (see replicateRemove).
+        if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
             fetch('/api/local-vault', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },

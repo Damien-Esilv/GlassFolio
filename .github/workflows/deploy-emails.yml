@@ -2,7 +2,12 @@ name: Deploy — Supabase Branded Email Templates
 
 on:
   push:
-    branches: [main, 'feat/tgla-084-branded-auth-emails']
+    branches: [main]
+    paths:
+      - 'supabase/templates/**'
+      - 'scripts/lib/emailTemplates.mjs'
+      - 'scripts/deploy-email-templates.mjs'
+      - '.github/workflows/deploy-emails.yml'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -11,6 +16,10 @@ on:
         required: true
         default: false
 
+concurrency:
+  group: deploy-emails-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -18,6 +27,7 @@ jobs:
   deploy-email-templates:
     name: ✉️ Deploy Email Templates & Auth Config
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4

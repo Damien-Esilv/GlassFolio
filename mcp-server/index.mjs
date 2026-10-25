@@ -98,6 +98,14 @@ const TOOLS = [
     }
   },
   {
+    name: 'list_auth_methods',
+    description: 'List all configured authentication and MFA methods for the account (passwords, passkeys, TOTP, recovery keys).',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
     name: 'list_vault_secrets',
     description: 'List all configured external API providers in the encrypted secrets vault (masked values only).',
     inputSchema: {
@@ -115,13 +123,10 @@ const TOOLS = [
   },
   {
     name: 'rotate_encryption_key',
-    description: 'Rotate the Data Encryption Key (DEK) and re-encrypt all sensitive records under a new key (requires confirmation).',
+    description: 'Initiate rotation of the Data Encryption Key (DEK). For security, master password is not passed to AI tools; triggers in-app step-up prompt.',
     inputSchema: {
       type: 'object',
-      properties: {
-        masterPassword: { type: 'string', description: 'Current master password to authorize re-wrapping' }
-      },
-      required: ['masterPassword']
+      properties: {}
     }
   },
   {
@@ -352,9 +357,15 @@ async function handleToolCall(name, args) {
         isInitialized: true,
         vaultStatus: 'unlocked',
         autoLockMinutes: 15,
+        deploymentMode: 'cloud',
+        totpSource: 'supabase_factor',
         totpEnabled: true,
         passkeysCount: 1,
+        hasPasskeySlot: true,
+        passkeyPrfSlotsCount: 1,
         secretsCount: 2,
+        accountSetupComplete: true,
+        aal: 'aal1',
         recentAuditEvents: args?.includeAuditHistory ? [
           { event: 'vault_unlocked', severity: 'info', timestamp: new Date().toISOString() },
           { event: 'totp_verified', severity: 'info', timestamp: new Date().toISOString() }
@@ -362,6 +373,23 @@ async function handleToolCall(name, args) {
       };
       return {
         content: [{ type: 'text', text: JSON.stringify(status, null, 2) }]
+      };
+    }
+    case 'list_auth_methods': {
+      const authMethods = {
+        deploymentMode: 'cloud',
+        authProvider: 'email',
+        hasPassword: true,
+        hasPasskeys: true,
+        passkeysCount: 1,
+        hasPasskeyUnlockSlot: true,
+        hasTotp: true,
+        totpSource: 'supabase_factor',
+        hasRecoveryKey: true,
+        note: 'Modification of credentials or MFA factors requires physical user presence and step-up authentication.'
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(authMethods, null, 2) }]
       };
     }
     case 'list_vault_secrets': {
@@ -383,7 +411,7 @@ async function handleToolCall(name, args) {
     }
     case 'rotate_encryption_key': {
       return {
-        content: [{ type: 'text', text: JSON.stringify({ success: true, message: 'DEK successfully rotated with fresh IVs' }, null, 2) }]
+        content: [{ type: 'text', text: JSON.stringify({ success: false, requiresUserPresence: true, message: 'Key rotation requires interactive master password verification. Please complete rotation in Settings → Security.' }, null, 2) }]
       };
     }
     case 'get_email_verification_status': {

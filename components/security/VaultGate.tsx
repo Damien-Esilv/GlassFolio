@@ -37,7 +37,9 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
                 vaultService.unlockOAuthVault(oauthVaultSecret).then(() => {
                     hasAutoUnlockedRef.current = true;
                 }).catch((err) => {
-                    console.warn('[VaultGate] Seamless Google OAuth auto-unlock fallback', err);
+                    // Never recreate a vault here: a fresh sign-in re-checks the server copy first.
+                    console.warn('[VaultGate] Google OAuth auto-unlock failed, signing out', err);
+                    logout();
                 });
             } else if (hasAutoUnlockedRef.current) {
                 logout();
@@ -46,6 +48,17 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
             hasAutoUnlockedRef.current = true;
         }
     }, [user, status, logout]);
+
+    // A signed-in user without any vault (e.g. reset elsewhere) must not see plaintext storage.
+    useEffect(() => {
+        if (user && status === 'uninitialized') {
+            logout();
+        }
+    }, [user, status, logout]);
+
+    if (user && status === 'uninitialized') {
+        return null;
+    }
 
     // 1. Cloud Email Verification Gate
     if (user && user.authProvider === 'email' && user.emailVerified === false) {

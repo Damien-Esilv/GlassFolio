@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
     getSecurityStatusTool,
+    listAuthMethodsTool,
     listVaultSecretsTool,
     lockVaultTool,
     rotateEncryptionKeyTool,
@@ -23,6 +24,7 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
 
     it('declares correct human-in-the-loop confirmation metadata according to AGENTS.md', () => {
         expect(getSecurityStatusTool.requiresConfirmation).toBe(false);
+        expect(listAuthMethodsTool.requiresConfirmation).toBe(false);
         expect(listVaultSecretsTool.requiresConfirmation).toBe(false);
         expect(lockVaultTool.requiresConfirmation).toBe(true);
         expect(rotateEncryptionKeyTool.requiresConfirmation).toBe(true);
@@ -30,26 +32,38 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
 
     it('is registered and discoverable in aiToolRegistry', () => {
         expect(aiToolRegistry.getTool('get_security_status')).toBeDefined();
+        expect(aiToolRegistry.getTool('list_auth_methods')).toBeDefined();
         expect(aiToolRegistry.getTool('list_vault_secrets')).toBeDefined();
         expect(aiToolRegistry.getTool('lock_vault')).toBeDefined();
         expect(aiToolRegistry.getTool('rotate_encryption_key')).toBeDefined();
     });
 
-    it('get_security_status returns current vault and security posture without leaking secrets', async () => {
+    it('get_security_status returns current vault and security posture without leaking secrets or emails', async () => {
         await vaultService.setup('Master-Pass-12345!#');
         await secretsService.saveSecret('gemini', 'Gemini Pro', 'AIzaSyTest1234567890abcdefghijklm');
-        await auditLogService.record('vault_unlocked', 'Test event', 'info');
+        await auditLogService.record('vault_unlocked', 'Unlocked for alex.developer@example.com', 'info');
 
         const status = await getSecurityStatusTool.execute({ includeAuditHistory: true }, {});
         expect(status.isInitialized).toBe(true);
         expect(status.vaultStatus).toBe('unlocked');
         expect(status.secretsCount).toBe(1);
         expect(status.recentAuditEvents).toHaveLength(2); // 1 secret_created + 1 manual event
+        expect(status.recentAuditEvents?.[0].details).not.toContain('alex.developer@example.com');
+        expect(status.recentAuditEvents?.[0].details).toContain('a***@example.com');
 
         // Context safety assert: output must be 100% clean of raw secrets
         const json = JSON.stringify(status);
         expect(() => guardrailsService.assertSafeContext(json)).not.toThrow();
         expect(json).not.toContain('AIzaSyTest1234567890abcdefghijklm');
+    });
+
+    it('list_auth_methods returns current credentials and factor statuses', async () => {
+        await vaultService.setup('Master-Pass-12345!#');
+        const res = await listAuthMethodsTool.execute({}, {});
+        expect(res.hasPassword).toBe(true);
+        expect(res.hasRecoveryKey).toBe(true);
+        expect(typeof res.hasPasskeys).toBe('boolean');
+        expect(typeof res.hasTotp).toBe('boolean');
     });
 
     it('list_vault_secrets returns masked secrets and passes context safety checks', async () => {
@@ -85,15 +99,11 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
         expect(audit.some(a => a.event === 'vault_locked')).toBe(true);
     });
 
-    it('rotate_encryption_key rotates DEK and records audit event', async () => {
-        const password = 'Master-Pass-12345!#';
-        await vaultService.setup(password);
-
-        const res = await rotateEncryptionKeyTool.execute({ masterPassword: password }, {});
-        expect(res.success).toBe(true);
-
-        const audit = await auditLogService.getEntries();
-        expect(audit.some(a => a.event === 'dek_rotated')).toBe(true);
+    it('rotate_encryption_key directs to interactive step-up and refuses plaintext master password', async () => {
+        const res = await rotateEncryptionKeyTool.execute({}, {});
+        expect(res.success).toBe(false);
+        expect(res.requiresUserPresence).toBe(true);
+        expect(res.message).toContain('interactive master password verification');
     });
 
     describe('AI Guardrails Exfiltration Prevention', () => {

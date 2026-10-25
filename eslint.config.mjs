@@ -19,6 +19,7 @@ export default [
       'tailwind.config.*',
       'postcss.config.*',
       'tests/**',                 // Tests have relaxed rules (can use any)
+      'supabase/functions/**',    // Supabase Deno Edge Functions
       'src/services/mockData.backend.ts', // Generated seed data
     ],
   },

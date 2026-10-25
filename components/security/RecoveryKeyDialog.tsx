@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Copy, Check, Download, ShieldAlert } from 'lucide-react';
+import { KeyRound, Copy, Check, Download, ShieldAlert, AlertCircle } from 'lucide-react';
 import Button from '../Button';
 
 interface RecoveryKeyDialogProps {
     recoveryKey: string;
     onConfirmed: () => void;
+    /** Shown inside the dialog (it covers the page, so errors behind it would be invisible). */
+    error?: string;
+    isSubmitting?: boolean;
 }
 
-export const RecoveryKeyDialog: React.FC<RecoveryKeyDialogProps> = ({ recoveryKey, onConfirmed }) => {
+export const RecoveryKeyDialog: React.FC<RecoveryKeyDialogProps> = ({ recoveryKey, onConfirmed, error, isSubmitting = false }) => {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const [hasConfirmed, setHasConfirmed] = useState(false);
+    const [confirmationFragment, setConfirmationFragment] = useState('');
+    const expectedFragment = recoveryKey.replace(/-/g, '').slice(-4);
 
     const handleCopy = async () => {
         try {
@@ -118,11 +123,32 @@ export const RecoveryKeyDialog: React.FC<RecoveryKeyDialogProps> = ({ recoveryKe
                     <span>{t('auth:recoveryDialog.confirmCheckbox')}</span>
                 </label>
 
+                <div>
+                    <label className="block text-xs font-medium text-secondary mb-1.5" htmlFor="recovery-key-confirmation">
+                        {t('auth:recoveryDialog.retypePrompt', { suffix: expectedFragment })}
+                    </label>
+                    <input
+                        id="recovery-key-confirmation"
+                        type="text"
+                        value={confirmationFragment}
+                        onChange={(event) => setConfirmationFragment(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+                        className="w-full bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary rounded-lg p-2 text-center font-mono tracking-widest"
+                    />
+                </div>
+
+                {error && (
+                    <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>{error}</span>
+                    </div>
+                )}
+
                 {/* Submit button */}
                 <Button
                     type="button"
                     onClick={onConfirmed}
-                    disabled={!hasConfirmed}
+                    isLoading={isSubmitting}
+                    disabled={isSubmitting || !hasConfirmed || confirmationFragment !== expectedFragment}
                     className="w-full"
                 >
                     {t('auth:recoveryDialog.continueButton')}

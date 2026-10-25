@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ChevronLeft, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Globe, CheckCircle, Info } from 'lucide-react';
+import Button from '../components/Button';
 import { taxService, OptimizationSuggestion } from '../src/services/fiscal';
 import { DEFAULT_FISCAL_YEAR } from '../src/constants/fiscalConstants';
 import { FiscalProfile, FiscalConfidence } from '../src/types/types.backend';
@@ -166,29 +167,46 @@ const TaxOptimization: React.FC = () => {
     const fiscalYear = searchParams.get('year') || DEFAULT_FISCAL_YEAR;
     const profile: FiscalProfile = user?.preferences?.fiscalProfile || EMPTY_FISCAL_PROFILE;
     const profileKey = JSON.stringify(profile);
+    const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
 
     const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(null);
     const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const loadData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const summary = await taxService.getTaxSummary(fiscalYear, profile);
-            const [pfuResult, sugResult] = await Promise.all([
-                taxService.comparePFUvsBareme(fiscalYear, profile, undefined, summary),
-                taxService.getOptimizationSuggestions(fiscalYear, profile, undefined, summary),
-            ]);
-            setPFUComparison(pfuResult);
-            setSuggestions(sugResult);
-        } catch (err) {
-            console.error('Failed to load optimization data:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [fiscalYear, profileKey]);
+    const prevFetchKeyRef = useRef<string>('');
 
-    useEffect(() => { loadData(); }, [loadData]);
+    useEffect(() => {
+        const fetchKey = `${fiscalYear}:${profileKey}`;
+        if (prevFetchKeyRef.current === fetchKey) return;
+        prevFetchKeyRef.current = fetchKey;
+
+        let isMounted = true;
+        setIsLoading(true);
+
+        (async () => {
+            try {
+                const summary = await taxService.getTaxSummary(fiscalYear, profile);
+                const [pfuResult, sugResult] = await Promise.all([
+                    taxService.comparePFUvsBareme(fiscalYear, profile, undefined, summary),
+                    taxService.getOptimizationSuggestions(fiscalYear, profile, undefined, summary),
+                ]);
+                if (isMounted) {
+                    setPFUComparison(pfuResult);
+                    setSuggestions(sugResult);
+                }
+            } catch (err) {
+                console.error('Failed to load optimization data:', err);
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        })();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [fiscalYear, profileKey]);
 
     return (
         <div className="space-y-6 w-full animate-fade-in">
@@ -206,6 +224,22 @@ const TaxOptimization: React.FC = () => {
                 <AlertTriangle size={18} className="text-warning shrink-0 mt-0.5" />
                 <p className="text-xs text-secondary leading-relaxed">{t('tax:hub.disclaimer')}</p>
             </div>
+
+            {/* Incomplete Fiscal Profile Warning Banner */}
+            {!hasFiscalProfile && (
+                <div className="rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-primary mb-1">{t('tax:hub.profileRequired')}</h3>
+                        <p className="text-xs text-secondary">{t('tax:hub.profileRequiredDesc')}</p>
+                    </div>
+                    <Button
+                        size="sm"
+                        onClick={() => navigate('/settings?tab=fiscal')}
+                    >
+                        {t('tax:hub.goToSettings')}
+                    </Button>
+                </div>
+            )}
 
             {/* PFU vs Barème */}
             <PFUCard data={pfuComparison} isLoading={isLoading} />

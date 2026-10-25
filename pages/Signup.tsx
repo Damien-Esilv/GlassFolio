@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key } from 'lucide-react';
+import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PasswordStrengthMeter } from '../components/security/PasswordStrengthMeter';
 import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
@@ -11,11 +11,16 @@ import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl, getDeploymentMode } from '../src/config/deployment';
 import { authService } from '../src/services/security/authService';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
+import { mapAuthErrorMessage } from '../src/services/security/authErrorMapper';
 
 const Signup: React.FC = () => {
    const { t } = useTranslation();
-   const { user, signup, setupLocalVault } = useAuth();
+   const {
+      user, signup, setupLocalVault, verifySignupOtp, continueSignupAfterLink,
+      pendingSignupCompletion, resumeSignup, cancelSignup, completeSignup,
+   } = useAuth();
    const navigate = useNavigate();
+   const location = useLocation();
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
 
@@ -31,7 +36,105 @@ const Signup: React.FC = () => {
    const [error, setError] = useState('');
    const [isLoading, setIsLoading] = useState(false);
    const [pendingRecoveryKey, setPendingRecoveryKey] = useState<string | null>(null);
+   const [signupStage, setSignupStage] = useState<'form' | 'verification'>('form');
+   const [otp, setOtp] = useState('');
+   const [info, setInfo] = useState('');
+   const [resendCooldown, setResendCooldown] = useState(0);
+   const [isResuming, setIsResuming] = useState(false);
+   const [recoveryError, setRecoveryError] = useState('');
+   const [isCompleting, setIsCompleting] = useState(false);
+   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+   const [overwriteText, setOverwriteText] = useState('');
    const antiBotRef = useRef<AntiBotShieldHandle | null>(null);
+
+   // Entry points from the login page: a verified account to finish, or an unverified address.
+   useEffect(() => {
+      const entry = location.state as { resume?: boolean; verify?: boolean } | null;
+      if (entry?.verify) {
+         const draftEmail = authService.getSignupDraftEmail?.();
+         if (draftEmail) {
+            setEmail(draftEmail);
+            setSignupStage('verification');
+         }
+      } else if (entry?.resume && pendingSignupCompletion) {
+         setIsResuming(true);
+         resumeSignup()
+            .then(setPendingRecoveryKey)
+            .catch((err: unknown) => setError(mapAuthErrorMessage(err, t, 'auth:signup.failedToSignup')))
+            .finally(() => setIsResuming(false));
+      }
+      // Runs once per arrival on the page.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
+
+   useEffect(() => {
+      if (resendCooldown <= 0) return;
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+   }, [resendCooldown]);
+
+   // The emailed link was opened in another tab of this browser: that tab only confirms the address
+   // (it keeps no session), this one creates the vault with the password it holds in memory.
+   useEffect(() => {
+      if (signupStage !== 'verification' || typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+      const channel = new BroadcastChannel('glassfolio_auth_channel');
+      channel.onmessage = async (event) => {
+         if (event.data?.type !== 'EMAIL_VERIFIED') return;
+         if (event.data.email && event.data.email !== email.trim().toLowerCase()) return;
+         channel.postMessage({ type: 'EMAIL_VERIFIED_ACK' });
+         try {
+            setIsLoading(true);
+            setError('');
+            setPendingRecoveryKey(await continueSignupAfterLink());
+         } catch (err) {
+            setError(mapAuthErrorMessage(err, t, 'auth:verification.invalidOtp'));
+         } finally {
+            setIsLoading(false);
+         }
+      };
+      return () => {
+         channel.close();
+      };
+   }, [signupStage, email, continueSignupAfterLink, t]);
+
+   const handleResendCode = async () => {
+      setError('');
+      setInfo('');
+      try {
+         await authService.resendEmailVerification?.(email);
+         setInfo(t('auth:verification.emailSent'));
+         setResendCooldown(30);
+      } catch (err: unknown) {
+         setError(mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
+      }
+   };
+
+   const handleVerifiedViaLink = async () => {
+      setError('');
+      setIsLoading(true);
+      try {
+         setPendingRecoveryKey(await continueSignupAfterLink());
+      } catch (err: unknown) {
+         setError(mapAuthErrorMessage(err, t, 'auth:verification.notVerifiedYet'));
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
+   const handleChangeEmail = async () => {
+      await cancelSignup();
+      setOtp('');
+      setInfo('');
+      setError('');
+      setSignupStage('form');
+   };
+
+   const handleStartOver = async () => {
+      await cancelSignup();
+      setPendingRecoveryKey(null);
+      setRecoveryError('');
+      navigate('/signup', { replace: true, state: null });
+   };
 
    const handleGoogleLogin = async () => {
       setError('');
@@ -59,7 +162,11 @@ const Signup: React.FC = () => {
       try {
          let recoveryKey: string | undefined;
          if (isLocal) {
-            recoveryKey = await setupLocalVault(name, password);
+            if (showOverwriteConfirm && overwriteText.trim().toUpperCase() !== t('auth:signup.existingVaultConfirmWord').toUpperCase()) {
+               setError(t('auth:signup.existingVaultError'));
+               return;
+            }
+            recoveryKey = await setupLocalVault(name, password, { overwriteExisting: showOverwriteConfirm });
          } else {
             if (antiBotRef.current) {
                const botRes = await antiBotRef.current.validate();
@@ -71,7 +178,9 @@ const Signup: React.FC = () => {
             }
 
             const payload = antiBotRef.current?.getPayload();
-            recoveryKey = await signup(email, password, name, { captchaToken: payload?.captchaToken });
+            await signup(email, password, name, { captchaToken: payload?.captchaToken });
+            setSignupStage('verification');
+            return;
          }
 
          if (recoveryKey) {
@@ -80,8 +189,24 @@ const Signup: React.FC = () => {
             navigate('/', { replace: true });
          }
       } catch (err: unknown) {
-         const message = err instanceof Error ? err.message : t('auth:signup.failedToSignup');
-         setError(message);
+         if (err instanceof Error && err.name === 'ExistingVaultError') {
+            setShowOverwriteConfirm(true);
+         }
+         setError(mapAuthErrorMessage(err, t, 'auth:signup.failedToSignup'));
+      } finally {
+         setIsLoading(false);
+      }
+   };
+
+   const handleOtpVerification = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      setIsLoading(true);
+      try {
+         const recoveryKey = await verifySignupOtp(email, otp);
+         setPendingRecoveryKey(recoveryKey);
+      } catch (err: unknown) {
+         setError(mapAuthErrorMessage(err, t, 'auth:verification.invalidOtp'));
       } finally {
          setIsLoading(false);
       }
@@ -149,7 +274,24 @@ const Signup: React.FC = () => {
                </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {info && (
+               <div className="mb-4 p-3 bg-subtle border border-subtle rounded-lg flex items-center gap-2 text-secondary text-sm">
+                  <Info size={16} className="shrink-0 text-brand" />
+                  <span>{info}</span>
+               </div>
+            )}
+
+            {(isResuming || (pendingSignupCompletion && (location.state as { resume?: boolean } | null)?.resume)) && (
+               <div className="mb-4 p-3 bg-subtle border border-subtle rounded-lg space-y-2 text-sm">
+                  <p className="font-semibold text-primary">{t('auth:signup.resumeTitle')}</p>
+                  <p className="text-xs text-secondary">{t('auth:signup.resumeSubtitle')}</p>
+                  <button type="button" onClick={handleStartOver} className="text-xs text-brand hover:text-brand/80 font-medium">
+                     {t('auth:signup.startOverButton')}
+                  </button>
+               </div>
+            )}
+
+            {signupStage === 'form' ? <form onSubmit={handleSubmit} className="space-y-4">
                <div>
                   <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.fullNameLabel')}</label>
                   <div className="relative">
@@ -208,12 +350,58 @@ const Signup: React.FC = () => {
                   {t('auth:signup.termsText')}
                </div>
 
-               <Button type="submit" className="w-full" isLoading={isLoading}>
-                  {isLocal ? t('auth:signup.initVaultButton') : t('auth:signup.createAccountButton')}
-               </Button>
-            </form>
+               {isLocal && showOverwriteConfirm && (
+                  <div>
+                     <label className="block text-xs font-medium text-error mb-1.5" htmlFor="overwrite-vault-confirm">
+                        {t('auth:signup.existingVaultConfirmLabel')}
+                     </label>
+                     <input
+                        id="overwrite-vault-confirm"
+                        type="text"
+                        value={overwriteText}
+                        onChange={(e) => setOverwriteText(e.target.value)}
+                        placeholder={t('auth:signup.existingVaultConfirmWord')}
+                        className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 placeholder-tertiary"
+                     />
+                  </div>
+               )}
 
-            <AntiBotShield ref={antiBotRef} />
+               <Button type="submit" className="w-full" isLoading={isLoading}>
+                  {isLocal
+                     ? (showOverwriteConfirm ? t('auth:signup.existingVaultConfirmButton') : t('auth:signup.initVaultButton'))
+                     : t('auth:signup.createAccountButton')}
+               </Button>
+            </form> : (
+               <form onSubmit={handleOtpVerification} className="space-y-4">
+                  <p className="text-sm text-secondary">{t('auth:verification.subtitle')} <span className="font-medium text-primary">{email}</span></p>
+                  <div>
+                     <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:verification.otpLabel')}</label>
+                     <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        required
+                        value={otp}
+                        onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                        className="w-full bg-subtle border border-subtle text-primary text-center tracking-[0.5em] text-lg rounded-lg focus:ring-primary focus:border-primary p-2.5"
+                     />
+                  </div>
+                  <Button type="submit" className="w-full" isLoading={isLoading} disabled={otp.length < 6}>{t('auth:verification.confirmButton')}</Button>
+                  <div className="flex flex-col items-center gap-2 pt-1 text-xs">
+                     <button type="button" onClick={handleVerifiedViaLink} disabled={isLoading} className="text-brand hover:text-brand/80 font-medium">
+                        {t('auth:verification.verifiedViaLinkButton')}
+                     </button>
+                     <button type="button" onClick={handleResendCode} disabled={resendCooldown > 0} className="text-secondary hover:text-primary disabled:opacity-60">
+                        {resendCooldown > 0 ? t('auth:verification.resendCooldown', { seconds: resendCooldown }) : t('auth:verification.resendButton')}
+                     </button>
+                     <button type="button" onClick={handleChangeEmail} className="text-secondary hover:text-primary">
+                        {t('auth:verification.changeEmailButton')}
+                     </button>
+                  </div>
+               </form>
+            )}
+
+            {signupStage === 'form' && <AntiBotShield ref={antiBotRef} />}
 
             {!isLocal && (
                <div className="mt-4 pt-4 border-t border-subtle">
@@ -256,9 +444,18 @@ const Signup: React.FC = () => {
          {pendingRecoveryKey && (
             <RecoveryKeyDialog
                recoveryKey={pendingRecoveryKey}
+               error={recoveryError}
+               isSubmitting={isCompleting}
                onConfirmed={() => {
-                  setPendingRecoveryKey(null);
-                  navigate('/', { replace: true });
+                  setRecoveryError('');
+                  setIsCompleting(true);
+                  completeSignup()
+                     .then(() => {
+                        setPendingRecoveryKey(null);
+                        navigate('/', { replace: true });
+                     })
+                     .catch((err: unknown) => setRecoveryError(mapAuthErrorMessage(err, t, 'auth:signup.failedToSignup')))
+                     .finally(() => setIsCompleting(false));
                }}
             />
          )}

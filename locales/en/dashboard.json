@@ -25,5 +25,7 @@
     "assetAllocation": "Asset Allocation",
     "total": "Total",
     "cash": "Cash",
-    "noPositionsYet": "No positions available"
+    "noPositionsYet": "No positions available",
+    "noAssetsAllocation": "No assets to allocate",
+    "noAssetsAllocationHint": "Add transactions or holdings to visualize your asset breakdown."
 }
