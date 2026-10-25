@@ -1,0 +1,15 @@
+name: Setup Node & install
+description: Node 22 with the npm cache and a clean, lockfile-exact install (checkout must run first)
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install dependencies (clean install)
+      shell: bash
+      run: npm ci

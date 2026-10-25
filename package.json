@@ -4,6 +4,9 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "dev:online": "node scripts/dev-server.mjs --online",
@@ -19,6 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:shard": "VITEST_PARTIAL_COVERAGE=1 vitest run --coverage --reporter=blob",
+    "test:coverage:merge": "vitest run --merge-reports=.vitest-reports --coverage",
     "test:security": "vitest run tests/unit/services/security tests/unit/services/ai/tools/securityTools.test.ts",
     "check:types": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
