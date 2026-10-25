@@ -7,7 +7,6 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     proxy: {
-      // Proxy Yahoo Finance requests in dev to avoid CORS / 403 issues
       '/yf': {
         target: 'https://query1.finance.yahoo.com',
         changeOrigin: true,
@@ -25,4 +24,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  build: {
+    target: 'esnext',
+    modulePreload: {
+      polyfill: false,
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        passes: 2
+      },
+    }
+  }
 });
