@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info } from 'lucide-react';
 import Button from '../Button';
 import { passkeyService, PasskeyRecord } from '../../src/services/security/passkeyService';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 export const PasskeyManager: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
+    const isGoogleAccount = user?.authProvider === 'google';
 
     const [isSupported, setIsSupported] = useState<boolean | null>(null);
     const [passkeys, setPasskeys] = useState<PasskeyRecord[]>([]);
@@ -25,6 +26,7 @@ export const PasskeyManager: React.FC = () => {
 
     useEffect(() => {
         const check = async () => {
+            if (isGoogleAccount) return;
             const supported = await passkeyService.isSupported();
             setIsSupported(supported);
             if (supported) {
@@ -32,7 +34,7 @@ export const PasskeyManager: React.FC = () => {
             }
         };
         check();
-    }, []);
+    }, [isGoogleAccount]);
 
     const handleAddPasskey = async () => {
         if (!user) return;
@@ -82,7 +84,12 @@ export const PasskeyManager: React.FC = () => {
                     </div>
                 </div>
 
-                {isSupported && (
+                {isGoogleAccount ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-subtle border border-subtle text-xs text-subtle shrink-0">
+                        <Info size={14} className="text-brand shrink-0" />
+                        <span>{t('security:passkeys.managedByGoogleBadge')}</span>
+                    </div>
+                ) : isSupported && (
                     <Button
                         type="button"
                         size="sm"
@@ -103,50 +110,66 @@ export const PasskeyManager: React.FC = () => {
                 </div>
             )}
 
-            {isSupported === false && (
-                <div className="p-3 bg-subtle border border-subtle rounded-xl text-xs text-tertiary">
-                    {t('security:passkeys.notSupported')}
+            {isGoogleAccount ? (
+                <div className="p-4 bg-subtle border border-subtle rounded-xl flex items-start gap-3 text-xs text-secondary leading-relaxed">
+                    <ShieldCheck size={20} className="text-positive shrink-0 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-primary">
+                            {t('security:passkeys.managedByGoogleTitle')}
+                        </p>
+                        <p className="mt-1 text-tertiary">
+                            {t('security:passkeys.managedByGoogleDesc')}
+                        </p>
+                    </div>
                 </div>
-            )}
-
-            {isSupported && passkeys.length === 0 && (
-                <div className="p-4 bg-subtle border border-subtle rounded-xl text-center text-xs text-secondary">
-                    {t('security:passkeys.noPasskeys')}
-                </div>
-            )}
-
-            {isSupported && passkeys.length > 0 && (
-                <div className="space-y-2">
-                    {passkeys.map((passkey) => (
-                        <div
-                            key={passkey.id}
-                            className="flex items-center justify-between p-3 bg-subtle border border-subtle rounded-xl hover:border-border transition-colors"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <ShieldCheck size={18} className="text-success shrink-0" />
-                                <div>
-                                    <div className="text-xs font-semibold text-primary">
-                                        {passkey.name}
-                                    </div>
-                                    <div className="text-[11px] text-tertiary">
-                                        {t('security:passkeys.createdOn', {
-                                            date: new Date(passkey.createdAt).toLocaleDateString(),
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => handleDeletePasskey(passkey.id)}
-                                title={t('security:passkeys.deleteTooltip')}
-                                className="p-2 text-tertiary hover:text-error rounded-lg hover:bg-card transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+            ) : (
+                <>
+                    {isSupported === false && (
+                        <div className="p-3 bg-subtle border border-subtle rounded-xl text-xs text-tertiary">
+                            {t('security:passkeys.notSupported')}
                         </div>
-                    ))}
-                </div>
+                    )}
+
+                    {isSupported && passkeys.length === 0 && (
+                        <div className="p-4 bg-subtle border border-subtle rounded-xl text-center text-xs text-secondary">
+                            {t('security:passkeys.noPasskeys')}
+                        </div>
+                    )}
+
+                    {isSupported && passkeys.length > 0 && (
+                        <div className="space-y-2">
+                            {passkeys.map((passkey) => (
+                                <div
+                                    key={passkey.id}
+                                    className="flex items-center justify-between p-3 bg-subtle border border-subtle rounded-xl hover:border-border transition-colors"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <ShieldCheck size={18} className="text-success shrink-0" />
+                                        <div>
+                                            <div className="text-xs font-semibold text-primary">
+                                                {passkey.name}
+                                            </div>
+                                            <div className="text-[11px] text-tertiary">
+                                                {t('security:passkeys.createdOn', {
+                                                    date: new Date(passkey.createdAt).toLocaleDateString(),
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeletePasskey(passkey.id)}
+                                        title={t('security:passkeys.deleteTooltip')}
+                                        className="p-2 text-tertiary hover:text-error rounded-lg hover:bg-card transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

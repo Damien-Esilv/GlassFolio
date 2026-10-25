@@ -43,13 +43,26 @@
         "passwordsMismatch": "Les nouveaux mots de passe ne correspondent pas",
         "passwordChangedSuccess": "Mot de passe maître modifié avec succès. Clés de chiffrement ré-enveloppées.",
         "submitChange": "Mettre à jour le mot de passe maître",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "managedByGoogle": "Authentification et coffre gérés par Google OAuth",
+        "regenerateRecoveryKey": "Régénérer la clé de secours",
+        "regenerateTitle": "Régénérer la clé de secours d'urgence",
+        "regenerateSubtitle": "Confirmez votre mot de passe maître pour dériver une nouvelle clé de secours 256-bit.",
+        "masterPasswordConfirm": "Mot de passe maître",
+        "confirmRegenerate": "Régénérer"
     },
     "totp": {
         "title": "Authentification à deux facteurs (2FA / TOTP)",
         "subtitle": "Protégez votre compte avec Google Authenticator, 1Password ou Authy",
+        "challengeTitle": "Authentification à deux facteurs",
+        "challengeSubtitle": "Entrez le code à 6 chiffres de votre application d'authentification ou un code de secours.",
+        "inputLabel": "Code de sécurité ou code de secours",
+        "inputPlaceholder": "000000 ou XXXX-XXXX",
+        "cancelButton": "Annuler",
         "enableButton": "Activer la 2FA",
         "disableButton": "Désactiver la 2FA",
+        "managedByGoogle": "La double authentification (2FA) est gérée directement par votre compte Google",
+        "statusGoogle": "Géré par Google",
         "statusEnabled": "La 2FA est active et protège votre compte",
         "statusDisabled": "La 2FA n'est pas active",
         "scanQrTitle": "1. Scannez le QR Code",
@@ -78,6 +91,7 @@
         "title": "Passkeys WebAuthn",
         "subtitle": "Connectez-vous et déverrouillez votre coffre en toute sécurité avec Touch ID, Face ID ou une clé de sécurité FIDO2",
         "addPasskeyButton": "Ajouter une passkey (Biométrie / FIDO2)",
+        "authWithPasskey": "S'authentifier par Passkey",
         "notSupported": "WebAuthn / Passkeys n'est pas pris en charge sur cet appareil ou navigateur",
         "noPasskeys": "Aucune passkey enregistrée pour le moment",
         "createdOn": "Créée le {{date}}",
@@ -85,7 +99,10 @@
         "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette passkey ?",
         "promptLabel": "Nom de la passkey (ex: MacBook Touch ID)",
         "registerError": "Échec de l'enregistrement de la passkey",
-        "authError": "Échec de l'authentification par passkey"
+        "authError": "Échec de l'authentification par passkey",
+        "managedByGoogleBadge": "Géré par le compte Google",
+        "managedByGoogleTitle": "Clés d'accès biométriques gérées par Google",
+        "managedByGoogleDesc": "Vos clés d'accès biométriques (Touch ID, Face ID, Windows Hello) et vos appareils sécurisés sont directement synchronisés et protégés par votre compte Google."
     },
     "totpVerifyModal": {
         "title": "Vérification à deux facteurs requise",

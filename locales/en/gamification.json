@@ -69,6 +69,7 @@
     "title": "Active Missions",
     "subtitle": "Complete non-intrusive financial habits to earn bonus XP.",
     "claim": "Claim +{{xp}} XP",
+    "claimReward": "Claim",
     "claimed": "Claimed",
     "completed": "Completed",
     "inProgress": "In Progress",

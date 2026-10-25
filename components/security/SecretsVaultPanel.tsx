@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, Plus, Trash2, Eye, EyeOff, AlertCircle, X, Check } from 'lucide-react';
 import Button from '../Button';
@@ -125,8 +126,8 @@ export const SecretsVaultPanel: React.FC = () => {
             )}
 
             {/* Add Secret Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+            {showAddModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
                     <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 shadow-2xl space-y-4">
                         <button
                             type="button"
@@ -234,7 +235,8 @@ export const SecretsVaultPanel: React.FC = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

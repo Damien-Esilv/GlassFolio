@@ -18,6 +18,7 @@ export const PBKDF2_ITERATIONS = 600_000;
 export const SALT_BYTES = 16;
 export const IV_BYTES = 12;
 export const RECOVERY_KEY_BYTES = 20; // 160 bits → 32 Base32 chars
+export const RECOVERY_KEY_256_BYTES = 32; // 256 bits → 52/56 Base32 chars
 const KEY_BITS = 256;
 const MAX_ITERATIONS = 10_000_000;
 
@@ -26,6 +27,7 @@ export const HKDF_INFO = {
     AUTH: 'gf-auth-key-v1',
     RECOVERY_KEK: 'gf-vault-recovery-kek-v1',
     PASSKEY_KEK: 'gf-vault-passkey-kek-v1',
+    OAUTH_KEK: 'gf-vault-oauth-kek-v1',
 } as const;
 
 export class CryptoUnavailableError extends Error {
@@ -136,6 +138,21 @@ export const derivePasskeyKek = async (prfSecret: Bytes, saltB64: string): Promi
     );
 };
 
+/** Derives the OAuth KEK from verified Google OAuth identity material (0-Password flow). */
+export const deriveOAuthKek = async (oauthSecret: string, saltB64: string): Promise<CryptoKey> => {
+    const s = subtle();
+    const secretBytes = utf8Encode(oauthSecret.normalize('NFKC'));
+    const base = await s.importKey('raw', secretBytes, 'HKDF', false, ['deriveKey']);
+    wipe(secretBytes);
+    return s.deriveKey(
+        hkdfParams(HKDF_INFO.OAUTH_KEK, fromBase64(saltB64)),
+        base,
+        { name: 'AES-KW', length: KEY_BITS },
+        false,
+        ['wrapKey', 'unwrapKey']
+    );
+};
+
 // ── DEK management ────────────────────────────────────────────────────────────
 
 /** Generates a fresh DEK. Extractable ONLY so it can be wrapped during setup/enrollment. */
@@ -216,8 +233,65 @@ export const formatRecoveryKey = (bytes: Uint8Array): string =>
 export const parseRecoveryKey = (input: string): Bytes | null => {
     try {
         const bytes = fromBase32(input);
-        return bytes.length === RECOVERY_KEY_BYTES ? bytes : null;
+        return (bytes.length === RECOVERY_KEY_BYTES || bytes.length === RECOVERY_KEY_256_BYTES)
+            ? bytes
+            : null;
     } catch {
         return null;
+    }
+};
+
+// ── Lightweight WebCrypto SHA-256 Proof-of-Work (Anti-Bot) ───────────────────
+
+export const createPowChallenge = (prefix = 'gf-pow'): string => {
+    const random = toBase64(randomBytes(16));
+    const timestamp = Date.now().toString(36);
+    return `${prefix}:${timestamp}:${random}`;
+};
+
+export const solveProofOfWork = async (
+    challenge: string,
+    difficultyZeroNibbles = 3
+): Promise<{ nonce: number; hash: string }> => {
+    const s = subtle();
+    const targetPrefix = '0'.repeat(difficultyZeroNibbles);
+    let nonce = 0;
+
+    while (nonce < 1_000_000) {
+        const payload = `${challenge}:${nonce}`;
+        const digest = await s.digest('SHA-256', utf8Encode(payload));
+        const hex = Array.from(new Uint8Array(digest))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+
+        if (hex.startsWith(targetPrefix)) {
+            return { nonce, hash: hex };
+        }
+        nonce++;
+    }
+
+    throw new Error('PoW solution exceeded maximum iterations');
+};
+
+export const verifyProofOfWork = async (
+    challenge: string,
+    nonce: number,
+    claimedHash: string,
+    difficultyZeroNibbles = 3
+): Promise<boolean> => {
+    try {
+        const targetPrefix = '0'.repeat(difficultyZeroNibbles);
+        if (!claimedHash.startsWith(targetPrefix)) return false;
+
+        const s = subtle();
+        const payload = `${challenge}:${nonce}`;
+        const digest = await s.digest('SHA-256', utf8Encode(payload));
+        const calculatedHex = Array.from(new Uint8Array(digest))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+
+        return calculatedHex === claimedHash;
+    } catch {
+        return false;
     }
 };

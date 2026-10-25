@@ -69,6 +69,7 @@
     "title": "Missions en Cours",
     "subtitle": "Accomplissez des routines financières positives pour remporter des XP bonus.",
     "claim": "Réclamer +{{xp}} XP",
+    "claimReward": "Réclamer",
     "claimed": "Réclamé",
     "completed": "Complété",
     "inProgress": "En cours",

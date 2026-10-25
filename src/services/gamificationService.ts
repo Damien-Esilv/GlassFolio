@@ -1,5 +1,5 @@
 import { InvestorRank, GamificationQuest, ThemeReward } from '../../types';
-import { db, delay } from './db';
+import { db, delay, isRealUserVaultActive } from './db';
 
 export const INVESTOR_RANKS: InvestorRank[] = [
     {
@@ -192,8 +192,11 @@ export const gamificationService = {
         await delay(200);
         const stored = db.getQuests();
         if (stored.length === 0) {
-            db.saveQuests(INITIAL_QUESTS);
-            return INITIAL_QUESTS;
+            const defaultQuests = isRealUserVaultActive()
+                ? INITIAL_QUESTS.map(q => ({ ...q, completed: false, claimed: false, progress: 0 }))
+                : INITIAL_QUESTS;
+            db.saveQuests(defaultQuests);
+            return defaultQuests;
         }
         return stored;
     },
@@ -205,7 +208,9 @@ export const gamificationService = {
         await delay(200);
         let quests = db.getQuests();
         if (quests.length === 0) {
-            quests = [...INITIAL_QUESTS];
+            quests = isRealUserVaultActive()
+                ? INITIAL_QUESTS.map(q => ({ ...q, completed: false, claimed: false, progress: 0 }))
+                : [...INITIAL_QUESTS];
         }
         const questIndex = quests.findIndex(q => q.id === questId);
         if (questIndex === -1) {

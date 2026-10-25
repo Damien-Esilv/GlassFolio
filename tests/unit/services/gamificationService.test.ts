@@ -99,7 +99,7 @@ describe('GamificationService', () => {
     });
 
     it('allows demo user to reach level 6 and unlock emerald theme upon claiming 2 quests', async () => {
-      const initialDemoXp = 2200;
+      const initialDemoXp = 2150;
       const initialLevel = gamificationService.calculateLevel(initialDemoXp);
       expect(initialLevel).toBe(5);
 
@@ -111,7 +111,7 @@ describe('GamificationService', () => {
       expect(quest2.completed).toBe(true);
 
       const totalClaimedXp = initialDemoXp + quest1.rewardXp + quest2.rewardXp;
-      expect(totalClaimedXp).toBe(2550); // 2200 + 150 + 200
+      expect(totalClaimedXp).toBe(2500); // 2150 + 150 + 200 = exactly 2500 (level 6 threshold)
 
       const newLevel = gamificationService.calculateLevel(totalClaimedXp);
       expect(newLevel).toBe(6);

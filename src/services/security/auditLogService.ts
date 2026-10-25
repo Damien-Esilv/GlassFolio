@@ -13,6 +13,7 @@ const MAX_AUDIT_ENTRIES = 500;
 export type AuditSeverity = 'info' | 'warning' | 'critical';
 
 export type AuditEventType =
+    | 'auth_login'
     | 'vault_unlocked'
     | 'vault_locked'
     | 'password_changed'
@@ -25,7 +26,18 @@ export type AuditEventType =
     | 'secret_created'
     | 'secret_deleted'
     | 'login_failed'
-    | 'lockout_triggered';
+    | 'lockout_triggered'
+    | 'oauth_google_login'
+    | 'email_verified'
+    | 'email_change_requested'
+    | 'email_change_completed'
+    | 'recovery_key_used'
+    | 'recovery_key_rotated'
+    | 'password_reset_requested'
+    | 'account_conflict_blocked'
+    | 'antibot_blocked'
+    | 'totp_verified'
+    | 'passkey_authenticated';
 
 export interface AuditLogEntry {
     id: string;

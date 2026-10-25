@@ -3,8 +3,16 @@
  * Covers: objectsToCSV, CSV Formula Injection mitigation, generateBackupData
  */
 
-import { describe, it, expect } from 'vitest';
-import { objectsToCSV, generateBackupData } from '../../../src/services/exportService';
+import { describe, it, expect, vi } from 'vitest';
+import {
+  objectsToCSV,
+  generateBackupData,
+  exportTransactionsCSV,
+  exportTransactionsJSON,
+  exportBackupJSON,
+  exportRGPDZip
+} from '../../../src/services/exportService';
+import { appStorage } from '../../../src/services/storage/appStorage';
 
 describe('exportService - objectsToCSV', () => {
   it('returns empty string for empty array', () => {
@@ -74,12 +82,87 @@ describe('exportService - objectsToCSV', () => {
 });
 
 describe('exportService - generateBackupData', () => {
-  it('generates a structured backup payload', () => {
+  it('generates a structured backup payload with full account data', () => {
+    appStorage.setItem('glassfolio_user', JSON.stringify({
+      id: 'u-export-1',
+      email: 'alex@example.com',
+      masterPasswordHash: 'secret-hash',
+      authSalt: 'secret-salt',
+      preferences: { theme: 'night', currency: 'EUR' }
+    }));
+    appStorage.setItem('glassfolio_gamification_v1', JSON.stringify({
+      xp: 450,
+      level: 3,
+      streaks: 5
+    }));
+    appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify({
+      model: 'gpt-4o',
+      apiKey: 'sk-secret-key-123',
+      language: 'fr'
+    }));
+    appStorage.setItem('glassfolio_ai_chats_v1', JSON.stringify([
+      { id: 'chat-1', title: 'Fiscalité' }
+    ]));
+    appStorage.setItem('glassfolio_security_audit_log', JSON.stringify([
+      { id: 'log-1', action: 'login' }
+    ]));
+
     const payload = generateBackupData();
     expect(payload.version).toBe('1.0');
     expect(payload.schema).toBe('transfer');
     expect(payload.exportedBy).toBe('GlassFolio-v1');
     expect(new Date(payload.exportedAt).valueOf()).not.toBeNaN();
     expect(typeof payload.data).toBe('object');
+
+    // Verify comprehensive non-financial entities are exported and sanitized
+    const data = payload.data as Record<string, any[]>;
+    expect(Array.isArray(data.userProfile)).toBe(true);
+    expect(data.userProfile[0].id).toBe('u-export-1');
+    expect(data.userProfile[0].masterPasswordHash).toBeUndefined();
+    expect(data.userProfile[0].authSalt).toBeUndefined();
+
+    expect(Array.isArray(data.gamification)).toBe(true);
+    expect(data.gamification[0].xp).toBe(450);
+
+    expect(Array.isArray(data.aiSettings)).toBe(true);
+    expect(data.aiSettings[0].apiKey).toBeUndefined();
+
+    expect(Array.isArray(data.aiConversations)).toBe(true);
+    expect(data.aiConversations[0].id).toBe('chat-1');
+
+    expect(Array.isArray(data.securityAuditLogs)).toBe(true);
+    expect(data.securityAuditLogs[0].id).toBe('log-1');
+  });
+
+  it('triggers transactions-only exports without errors', async () => {
+    // Mock document.createElement & click for downloadFile helper
+    const clickMock = vi.fn();
+    const linkMock = { href: '', download: '', click: clickMock };
+    vi.spyOn(document, 'createElement').mockReturnValue(linkMock as any);
+    vi.spyOn(document.body, 'appendChild').mockImplementation(() => linkMock as any);
+    vi.spyOn(document.body, 'removeChild').mockImplementation(() => linkMock as any);
+    global.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+    global.URL.revokeObjectURL = vi.fn();
+
+    await exportTransactionsCSV();
+    expect(clickMock).toHaveBeenCalled();
+    expect(linkMock.download).toContain('glassfolio-transactions-');
+    expect(linkMock.download).toContain('.csv');
+
+    clickMock.mockClear();
+    await exportTransactionsJSON();
+    expect(clickMock).toHaveBeenCalled();
+    expect(linkMock.download).toContain('glassfolio-transactions-');
+    expect(linkMock.download).toContain('.json');
+
+    clickMock.mockClear();
+    await exportBackupJSON();
+    expect(clickMock).toHaveBeenCalled();
+    expect(linkMock.download).toContain('glassfolio-backup-');
+
+    clickMock.mockClear();
+    await exportRGPDZip();
+    expect(clickMock).toHaveBeenCalled();
+    expect(linkMock.download).toContain('glassfolio-data-export-');
   });
 });

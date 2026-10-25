@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Copy, Check, Download, AlertCircle, X, KeyRound } from 'lucide-react';
 import Button from '../Button';
@@ -42,7 +43,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
         const init = async () => {
             const data = await totpService.initEnrollment(userEmail || 'user@glassfolio.com');
             setEnrollment(data);
-            const svg = generateQrSvg(data.uri, { margin: 2, bg: 'white', color: 'black' });
+            const svg = generateQrSvg(data.uri, { margin: 4, bg: 'white', color: 'black' });
             setQrSvg(svg);
         };
         init();
@@ -127,8 +128,8 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
         onClose();
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
             <div className="relative w-full max-w-lg bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
@@ -298,6 +299,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

@@ -635,10 +635,22 @@ const Dashboard: React.FC = () => {
                   transitionDelay: `${idx * STAGGER_DELAY_MS}ms`
                 }}
               >
-                <div className="flex items-center gap-3 min-w-0 mr-2">
+                <div 
+                  className="flex items-center gap-3 min-w-0 mr-2 flex-1 cursor-pointer"
+                  onClick={() => {
+                    if (!alert.read) {
+                      markAlertAsRead(alert.id);
+                    }
+                    if (alert.actionUrl) {
+                      navigate(alert.actionUrl);
+                    } else {
+                      navigate('/notifications');
+                    }
+                  }}
+                >
                   <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-warning shrink-0' : 'text-positive shrink-0'} />
                   <div className="min-w-0">
-                    <p className="font-bold text-xs text-primary truncate">{alert.title}</p>
+                    <p className="font-bold text-xs text-primary truncate hover:underline">{alert.title}</p>
                     <p className="text-[10px] text-tertiary truncate">{alert.message}</p>
                   </div>
                 </div>

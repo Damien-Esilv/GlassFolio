@@ -3,6 +3,7 @@ import { User } from '../types';
 import { userRepository } from '../src/services/repositories';
 import { vaultService } from '../src/services/security/vaultService';
 import { authService } from '../src/services/security/authService';
+import { AuthResult } from '../src/services/security/authTypes';
 import { appStorage } from '../src/services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../src/services/storage/storageKeys';
 
@@ -10,12 +11,13 @@ import { consumeUrlBootstrapParams } from '../src/config/urlBootstrap';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<string | undefined>;
+  login: (email: string, password: string, options?: { captchaToken?: string }) => Promise<AuthResult>;
+  signup: (email: string, password: string, name: string, options?: { captchaToken?: string }) => Promise<string | undefined>;
   unlockLocalVault: (password: string) => Promise<void>;
   setupLocalVault: (name: string, password: string) => Promise<string | undefined>;
   logout: () => void;
   lockVault: () => Promise<void>;
+  deleteAccount: (options?: { password?: string; confirmationText?: string }) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   isAuthenticated: boolean;
   isVaultLocked: boolean;
@@ -179,9 +181,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadLanguage();
   }, [user?.preferences?.language]);
 
-  const login = async (email: string, password: string): Promise<void> => {
-    const res = await authService.signIn(email, password);
-    setUser(res.user);
+  const login = async (email: string, password: string, options?: { captchaToken?: string }): Promise<AuthResult> => {
+    const res = await authService.signIn(email, password, options);
+    if (!res.requiresTwoFactor) {
+      setUser(res.user);
+    }
+    return res;
   };
 
   const unlockLocalVault = async (password: string): Promise<void> => {
@@ -195,8 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.recoveryKey;
   };
 
-  const signup = async (email: string, password: string, name: string): Promise<string | undefined> => {
-    const res = await authService.signUp(email, password, name);
+  const signup = async (email: string, password: string, name: string, options?: { captchaToken?: string }): Promise<string | undefined> => {
+    const res = await authService.signUp(email, password, name, options);
     setUser(res.user);
     return res.recoveryKey;
   };
@@ -215,7 +220,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const lockVault = async () => {
+    if (user?.authProvider === 'google') {
+      await logout();
+      return;
+    }
     await vaultService.lock();
+  };
+
+  const deleteAccount = async (options?: { password?: string; confirmationText?: string }) => {
+    if (typeof authService.deleteAccountPermanently === 'function') {
+      await authService.deleteAccountPermanently(options);
+    } else {
+      await authService.signOut();
+    }
+    setUser(null);
   };
 
   const updateProfile = async (data: Partial<User>): Promise<void> => {
@@ -256,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setupLocalVault,
       logout,
       lockVault,
+      deleteAccount,
       updateProfile,
       isAuthenticated: !!user,
       isVaultLocked: vaultStatus === 'locked',
