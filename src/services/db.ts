@@ -427,7 +427,25 @@ class MockDB {
     /**
      * Export all data (for backup)
      */
-    exportAll(): Record<string, unknown> {
+    /**
+     * Reads a persisted collection exactly as stored. Unlike the typed getters it never falls back
+     * to the demo seed data, so an export can only ever contain what the account actually owns.
+     */
+    private readPersistedList(key: string): unknown[] {
+        const stored = appStorage.getItem(key);
+        if (!stored) return [];
+        try {
+            const parsed: unknown = JSON.parse(stored);
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+            return [];
+        }
+    }
+
+    exportAll(options?: { persistedOnly?: boolean }): Record<string, unknown> {
+        const persistedOnly = options?.persistedOnly === true;
+        const pick = <T>(getter: () => T[], key: string): unknown[] =>
+            persistedOnly ? this.readPersistedList(key) : getter();
         let userProfile: unknown[] = [];
         const storedUser = appStorage.getItem('glassfolio_user');
         if (storedUser) {
@@ -489,22 +507,24 @@ class MockDB {
         }
 
         return {
-            transactions: this.getTransactions(),
-            positions: this.getPositions(),
-            goals: this.getGoals(),
-            achievements: this.getAchievements(),
-            alerts: this.getAlerts(),
-            alertRules: this.getAlertRules(),
-            assetGroups: this.getAssetGroups(),
-            institutes: this.getInstitutes(),
-            accounts: this.getAccounts(),
-            importBatches: this.getImportBatches(),
-            unifiedTransactions: this.getUnifiedTransactions(),
-            mappingTemplates: this.getMappingTemplates(),
-            assetPositions: this.getAssetPositions(),
-            instruments: this.getInstruments(),
-            quests: this.getQuests(),
-            pinnedBadges: this.getPinnedBadges().map(id => ({ id })),
+            transactions: pick(() => this.getTransactions(), STORAGE_KEYS.TRANSACTIONS),
+            positions: pick(() => this.getPositions(), STORAGE_KEYS.POSITIONS),
+            goals: pick(() => this.getGoals(), STORAGE_KEYS.GOALS),
+            achievements: pick(() => this.getAchievements(), STORAGE_KEYS.ACHIEVEMENTS),
+            alerts: pick(() => this.getAlerts(), STORAGE_KEYS.ALERTS),
+            alertRules: pick(() => this.getAlertRules(), STORAGE_KEYS.ALERT_RULES),
+            assetGroups: pick(() => this.getAssetGroups(), STORAGE_KEYS.ASSET_GROUPS),
+            institutes: pick(() => this.getInstitutes(), STORAGE_KEYS.INSTITUTES),
+            accounts: pick(() => this.getAccounts(), STORAGE_KEYS.ACCOUNTS),
+            importBatches: pick(() => this.getImportBatches(), STORAGE_KEYS.IMPORT_BATCHES),
+            unifiedTransactions: pick(() => this.getUnifiedTransactions(), STORAGE_KEYS.UNIFIED_TRANSACTIONS),
+            mappingTemplates: pick(() => this.getMappingTemplates(), STORAGE_KEYS.MAPPING_TEMPLATES),
+            assetPositions: pick(() => this.getAssetPositions(), STORAGE_KEYS.ASSET_POSITIONS),
+            instruments: pick(() => this.getInstruments(), STORAGE_KEYS.INSTRUMENTS),
+            quests: pick(() => this.getQuests(), STORAGE_KEYS.QUESTS),
+            pinnedBadges: persistedOnly
+                ? this.readPersistedList(STORAGE_KEYS.PINNED_BADGES).map(id => ({ id }))
+                : this.getPinnedBadges().map(id => ({ id })),
             userProfile,
             gamification,
             aiSettings,

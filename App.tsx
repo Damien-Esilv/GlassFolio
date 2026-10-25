@@ -35,7 +35,7 @@ import { getAppTarget } from './src/config/deployment';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
-import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
+import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 
 // Lazy-loaded showcase & legal pages to preserve core bundle budget
 // @ts-expect-error import.meta.env is injected by Vite at compile time
@@ -171,7 +171,7 @@ const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>
-          <VercelAnalytics />
+          <ConsentGatedAnalytics />
         </Router>
       </DataProvider>
     </AuthProvider>

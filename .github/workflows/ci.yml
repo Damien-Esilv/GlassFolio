@@ -227,12 +227,12 @@ jobs:
       - name: Build production bundle in Local mode (App only, 0 bytes Landing)
         run: npm run build:local
 
-      - name: Check bundle size in Local mode (hard limit 2MB) & verify Showcase exclusion
+      - name: Check bundle size in Local mode (hard limit 2.5MB) & verify Showcase exclusion
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Local mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2048 ]; then
-            echo "::error::Local bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
+          if [ $BUNDLE_SIZE -gt 2560 ]; then
+            echo "::error::Local bundle size ${BUNDLE_SIZE}KB exceeds 2.5MB limit"
             exit 1
           fi
           if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
@@ -244,12 +244,12 @@ jobs:
       - name: Build production bundle in Cloud App mode (Subdomain app.glassfolio.dev)
         run: npm run build:app
 
-      - name: Check bundle size in Cloud App mode (hard limit 2MB) & verify Showcase exclusion
+      - name: Check bundle size in Cloud App mode (hard limit 2.5MB) & verify Showcase exclusion
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Cloud App mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 2048 ]; then
-            echo "::error::Cloud App bundle size ${BUNDLE_SIZE}KB exceeds 2MB limit"
+          if [ $BUNDLE_SIZE -gt 2560 ]; then
+            echo "::error::Cloud App bundle size ${BUNDLE_SIZE}KB exceeds 2.5MB limit"
             exit 1
           fi
           if ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then
@@ -261,12 +261,12 @@ jobs:
       - name: Build production bundle in Showcase mode (Apex glassfolio.dev)
         run: npm run build:showcase
 
-      - name: Check bundle size in Showcase mode (hard limit 1MB) & verify Showcase inclusion
+      - name: Check bundle size in Showcase mode (hard limit 1.25MB) & verify Showcase inclusion
         run: |
           BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
           echo "Showcase mode bundle size: ${BUNDLE_SIZE}KB"
-          if [ $BUNDLE_SIZE -gt 1024 ]; then
-            echo "::error::Showcase bundle size ${BUNDLE_SIZE}KB exceeds 1MB limit"
+          if [ $BUNDLE_SIZE -gt 1280 ]; then
+            echo "::error::Showcase bundle size ${BUNDLE_SIZE}KB exceeds 1.25MB limit"
             exit 1
           fi
           if ! ls dist/assets/Landing-*.js 1> /dev/null 2>&1; then

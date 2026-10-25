@@ -340,4 +340,8 @@ For contributors and AI agents working on this codebase:
 
 ## 📄 License
 
-Private / Proprietary. All rights reserved.
+GlassFolio is **source-available**, not open-source in the OSI sense. The code is published under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+
+- You may download, study and modify it, and propose contributions, for any **non-commercial** use.
+- Any commercial use or monetization, of the original or of a modified version, is prohibited.
+- The intellectual property remains with the author. See [CONTRIBUTING.md](CONTRIBUTING.md) for how contributions are accepted.

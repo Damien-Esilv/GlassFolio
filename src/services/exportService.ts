@@ -6,7 +6,31 @@
  * 2. RGPD Zip archive (JSON + CSV per entity) using zero-dependency Zip generator
  */
 
-import { db } from './db';
+import i18n from 'i18next';
+import { db, isRealUserVaultActive } from './db';
+import { getConsent } from './consentService';
+import { totpService } from './security/totpService';
+import { passkeyService } from './security/passkeyService';
+
+/** Thrown when an export is requested for a demo / not-yet-created account (no personal data to export). */
+export class ExportNotAllowedError extends Error {
+    constructor() {
+        super('Export unavailable: the demo account holds no personal data.');
+        this.name = 'ExportNotAllowedError';
+    }
+}
+
+/** Only a real (non-demo) vault owns personal data that can be exported. */
+export function canExportAccountData(): boolean {
+    return isRealUserVaultActive();
+}
+
+function assertExportable(): void {
+    if (!canExportAccountData()) throw new ExportNotAllowedError();
+}
+
+export const GDPR_EXPORT_SCHEMA = 'glassfolio-gdpr-export';
+export const GDPR_EXPORT_VERSION = '2.0';
 
 export interface BackupPayload {
     version: string;
@@ -168,8 +192,8 @@ function downloadFile(blob: Blob, filename: string) {
 /**
  * Generate full backup JSON object
  */
-export function generateBackupData(): BackupPayload {
-    const data = db.exportAll();
+export function generateBackupData(options?: { persistedOnly?: boolean }): BackupPayload {
+    const data = db.exportAll(options);
     return {
         version: '1.0',
         exportedAt: new Date().toISOString(),
@@ -183,6 +207,7 @@ export function generateBackupData(): BackupPayload {
  * Trigger transactions only CSV download
  */
 export async function exportTransactionsCSV(): Promise<void> {
+    assertExportable();
     const transactions = db.getTransactions();
     const csvContent = objectsToCSV(transactions as unknown as Record<string, unknown>[]);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -194,6 +219,7 @@ export async function exportTransactionsCSV(): Promise<void> {
  * Trigger transactions only JSON download
  */
 export async function exportTransactionsJSON(): Promise<void> {
+    assertExportable();
     const transactions = db.getTransactions();
     const jsonContent = JSON.stringify({ transactions }, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json' });
@@ -205,6 +231,7 @@ export async function exportTransactionsJSON(): Promise<void> {
  * Trigger full backup JSON download
  */
 export async function exportBackupJSON(): Promise<void> {
+    assertExportable();
     const payload = generateBackupData();
     const jsonString = JSON.stringify(payload, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -212,27 +239,66 @@ export async function exportBackupJSON(): Promise<void> {
     downloadFile(blob, `glassfolio-backup-${today}.json`);
 }
 
+async function readSecuritySummary(): Promise<{ totpEnabled: boolean | null; passkeyCount: number | null }> {
+    let totpEnabled: boolean | null = null;
+    let passkeyCount: number | null = null;
+    try {
+        totpEnabled = await totpService.isEnabled();
+    } catch {
+        // Locked or unavailable: reported as unknown rather than failing the export.
+    }
+    try {
+        passkeyCount = (await passkeyService.listPasskeys()).length;
+    } catch {
+        // Same as above.
+    }
+    return { totpEnabled, passkeyCount };
+}
+
 /**
- * Trigger RGPD ZIP download (ZIP containing backup.json and individual CSV files)
+ * Builds the GDPR access / portability archive (Art. 15 and 20) as a file map.
+ * Only data persisted for the real account is included, never demo seed data and never secrets
+ * (password hashes, salts, API keys, TOTP / passkey material).
+ */
+export async function buildRGPDArchiveFiles(): Promise<Record<string, string>> {
+    assertExportable();
+    const exportedAt = new Date().toISOString();
+    const today = exportedAt.split('T')[0];
+    const payload = generateBackupData({ persistedOnly: true });
+    const data = (payload.data ?? {}) as Record<string, unknown>;
+    const profile = Array.isArray(data.userProfile) ? data.userProfile[0] ?? null : null;
+
+    const files: Record<string, string> = {};
+    const collections: Record<string, number> = {};
+
+    files[`data/glassfolio-backup-${today}.json`] = JSON.stringify(payload, null, 2);
+    Object.entries(data).forEach(([entityName, entityData]) => {
+        if (Array.isArray(entityData) && entityData.length > 0) {
+            collections[entityName] = entityData.length;
+            files[`data/csv/${entityName}.csv`] = objectsToCSV(entityData as Record<string, unknown>[]);
+        }
+    });
+
+    files['profile.json'] = JSON.stringify(profile, null, 2);
+    files['consent.json'] = JSON.stringify(getConsent(), null, 2);
+    files['security-summary.json'] = JSON.stringify(await readSecuritySummary(), null, 2);
+    files['manifest.json'] = JSON.stringify({
+        schema: GDPR_EXPORT_SCHEMA,
+        version: GDPR_EXPORT_VERSION,
+        exportedAt,
+        collections,
+        excludedByDesign: ['masterPasswordHash', 'authSalt', 'apiKey', 'customApiKey', 'totpSecret', 'passkeyMaterial'],
+        files: Object.keys(files).concat(['manifest.json', 'README.txt']).sort(),
+    }, null, 2);
+    files['README.txt'] = i18n.t('settings:dataAndBackup.gdprReadme', { date: today });
+    return files;
+}
+
+/**
+ * Trigger RGPD ZIP download (manifest, profile, consent, security summary, JSON backup and CSV per entity)
  */
 export async function exportRGPDZip(): Promise<void> {
-    const payload = generateBackupData();
+    const files = await buildRGPDArchiveFiles();
     const today = new Date().toISOString().split('T')[0];
-    const zipFiles: Record<string, string> = {};
-
-    // Add main JSON file
-    zipFiles[`glassfolio-backup-${today}.json`] = JSON.stringify(payload, null, 2);
-
-    // Add CSV files per entity
-    if (payload.data) {
-        Object.entries(payload.data).forEach(([entityName, entityData]) => {
-            if (Array.isArray(entityData) && entityData.length > 0) {
-                const csvContent = objectsToCSV(entityData as Record<string, unknown>[]);
-                zipFiles[`csv_exports/${entityName}.csv`] = csvContent;
-            }
-        });
-    }
-
-    const zipBlob = createSimpleZip(zipFiles);
-    downloadFile(zipBlob, `glassfolio-data-export-${today}.zip`);
+    downloadFile(createSimpleZip(files), `glassfolio-data-export-${today}.zip`);
 }

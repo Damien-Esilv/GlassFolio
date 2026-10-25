@@ -82,7 +82,9 @@
         "confirmDeleteButton": "Supprimer définitivement",
         "deleting": "Suppression en cours...",
         "deleteSuccess": "Votre compte a été supprimé avec succès.",
-        "invalidPasswordOrConfirm": "Mot de passe ou texte de confirmation invalide."
+        "invalidPasswordOrConfirm": "Mot de passe ou texte de confirmation invalide.",
+        "exportUnavailableDemo": "Le compte de démonstration ne contient aucune donnée personnelle : l'export est disponible uniquement pour un vrai compte.",
+        "gdprReadme": "GlassFolio — Archive d'export de vos données personnelles (RGPD art. 15 et 20)\nGénérée le {{date}} depuis votre navigateur : aucune donnée n'a transité par un serveur.\n\nContenu :\n- manifest.json : liste des fichiers, nombre d'éléments par collection, secrets volontairement exclus.\n- profile.json : votre profil (identifiant, email, nom, préférences). Les empreintes de mot de passe et sels sont exclus.\n- consent.json : votre choix de consentement aux cookies / mesure d'audience.\n- security-summary.json : état de la double authentification et nombre de passkeys (aucun secret).\n- data/ : sauvegarde JSON complète et un fichier CSV par type de donnée (compatible tableur).\n\nSeules les données réellement enregistrées dans votre compte sont incluses ; aucune donnée de démonstration.\nPour exercer vos autres droits (rectification, opposition, limitation), consultez la Politique de confidentialité."
     },
     "backupWizard": {
         "title": "Importer & Restaurer un Backup JSON",
@@ -102,5 +104,11 @@
         "restoreSuccess": "Restauration complète effectuée avec succès !",
         "mergeSuccess": "Fusion terminée : {{count}} éléments importés ou mis à jour !",
         "importError": "Erreur lors de l'importation"
+    },
+    "legal": {
+        "title": "Légal & confidentialité",
+        "subtitle": "Documents en vigueur (version {{version}}) : mentions légales, confidentialité, conditions d'utilisation, cookies et accessibilité.",
+        "cookiePreferences": "Préférences cookies",
+        "rightsHint": "Pour exercer vos droits (rectification, opposition, limitation), utilisez l'export et la suppression de compte de cette page, ou écrivez à {{email}}."
     }
 }

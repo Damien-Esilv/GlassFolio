@@ -190,7 +190,7 @@ export const supabaseClient = {
         email: string,
         password: string,
         name?: string,
-        options?: { captchaToken?: string; locale?: string }
+        options?: { captchaToken?: string; locale?: string; legalAcceptance?: { version: string; acceptedAt: string } }
     ): Promise<SupabaseAuthSession> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');
@@ -200,7 +200,14 @@ export const supabaseClient = {
             email,
             password,
             // `locale` selects the language of branded auth emails (supabase/templates).
-            data: { name, locale: options?.locale, glassfolio_signup_state: 'pending' },
+            data: {
+                name,
+                locale: options?.locale,
+                glassfolio_signup_state: 'pending',
+                // Server-side proof of acceptance of the Terms / Privacy Policy version (E15).
+                legal_version: options?.legalAcceptance?.version,
+                legal_accepted_at: options?.legalAcceptance?.acceptedAt,
+            },
         };
         if (options?.captchaToken) {
             body.gotrue_meta_security = { captcha_token: options.captchaToken };

@@ -136,7 +136,7 @@
       "fee": "Broker Fee",
       "currency": "Currency"
     },
-    "trademarkDisclaimer": "Trademark Notice: BoursoBank, Trade Republic, Binance, Kraken, Bitget, and Coinbase are registered trademarks of their respective owners. GlassFolio is an independent open-source software project with no affiliation, sponsorship, or endorsement. Brand names are cited solely to indicate technical file compatibility (Art. L.713-6 CPI / EU Regulation 2017/1001 Art. 14)."
+    "trademarkDisclaimer": "Trademark Notice: BoursoBank, Trade Republic, Binance, Kraken, Bitget, and Coinbase are registered trademarks of their respective owners. GlassFolio is an independent source-available software project with no affiliation, sponsorship, or endorsement. Brand names are cited solely to indicate technical file compatibility (Art. L.713-6 CPI / EU Regulation 2017/1001 Art. 14)."
   },
   "securityAi": {
     "sectionBadge": "E2EE Encrypted Vault & Model Context Protocol",
@@ -234,8 +234,8 @@
     "cookiesStorage": "Cookies & Local Storage",
     "accessibility": "Accessibility (RGAA)",
     "cookiePreferencesBtn": "Cookie Preferences",
-    "regulatoryDisclaimer": "AMF / DGFiP Notice: GlassFolio is an open-source informational software showcase. Simulations and analytics are provided for educational purposes only and never constitute personalized investment, legal, or fiscal advice.",
+    "regulatoryDisclaimer": "AMF / DGFiP Notice: GlassFolio is a source-available informational software showcase. Simulations and analytics are provided for educational purposes only and never constitute personalized investment, legal, or fiscal advice.",
     "trademarkNotice": "Nominative Trademark Use: All third-party bank, broker, exchange, and trademark names mentioned throughout GlassFolio (including BoursoBank, Trade Republic, Binance, Kraken, Bitget, and Coinbase) remain the exclusive property of their respective trademark holders. They are referenced strictly for descriptive interoperability purposes (Art. L.713-6 CPI / EU Trademark Regulation Art. 14).",
-    "copyright": "© {{year}} GlassFolio — Open-Source E2EE FinTech Architecture."
+    "copyright": "© {{year}} GlassFolio — Source-Available E2EE FinTech Architecture."
   }
 }

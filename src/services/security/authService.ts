@@ -14,7 +14,7 @@ import { User } from '../../types/domain';
 import { isErr } from '../../types/result';
 import { db, delay } from '../db';
 import { userRepository } from '../repositories';
-import { AuthResult, AuthSession, EmailTokenHashType, IAuthProvider, PendingSignup, SecondFactorMethod, StepUpProof, VerifyTokenHashResult } from './authTypes';
+import { AuthResult, AuthSession, SignUpOptions, EmailTokenHashType, IAuthProvider, PendingSignup, SecondFactorMethod, StepUpProof, VerifyTokenHashResult } from './authTypes';
 import { evaluatePassword } from './passwordValidator';
 import { vaultService } from './vaultService';
 import { totpService } from './totpService';
@@ -24,6 +24,7 @@ import { ExistingVaultError } from './vaultTypes';
 import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import { getSyncedStorageProvider } from '../storage/storageFactory';
+import { purgeLocalAccountFootprint } from '../storage/accountErasure';
 import {
     isSupabaseConfigured,
     SupabaseAuthSession,
@@ -578,6 +579,7 @@ export class LocalAuthProvider implements IAuthProvider {
         await userRepository.clearUser();
         db.resetToInitialData();
         await this.signOut();
+        purgeLocalAccountFootprint();
     }
 }
 
@@ -1006,7 +1008,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         email: string,
         password: string,
         name: string,
-        options?: { captchaToken?: string }
+        options?: SignUpOptions
     ): Promise<AuthResult> {
         const pending = await this.beginSignupVerification(email, password, name, options);
         // Projects with email confirmation disabled return a live session. They may
@@ -1029,7 +1031,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         email: string,
         password: string,
         name: string,
-        options?: { captchaToken?: string }
+        options?: SignUpOptions
     ): Promise<PendingSignup> {
         this.checkLockout();
         const validation = evaluatePassword(password);
@@ -1622,6 +1624,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await userRepository.clearUser();
         db.resetToInitialData();
         await this.signOut();
+        purgeLocalAccountFootprint();
     }
 }
 

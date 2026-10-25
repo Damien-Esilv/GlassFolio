@@ -6,9 +6,11 @@
  *  - Zero analytics tracking before explicit opt-in (`getConsent() === null`)
  *  - Zero analytics tracking if refused (`analytics === false`)
  *  - Zero analytics tracking in `local` self-hosted deployment mode
+ *  - A stored choice expires after 13 months and is asked again (`isConsentExpired`)
  */
 
 import { getDeploymentMode } from '../config/deployment';
+import { CONSENT_MAX_AGE_MONTHS } from '../config/legal';
 import { appStorage } from './storage/appStorage';
 import { CONSENT_STORAGE_KEY } from './storage/storageKeys';
 
@@ -48,6 +50,15 @@ function notifyConsentListeners(record: ConsentRecord | null): void {
   });
 }
 
+/** A consent choice older than 13 months (CNIL guidance) is no longer valid and must be asked again. */
+export function isConsentExpired(updatedAt: string, now: number = Date.now()): boolean {
+  const recordedAt = Date.parse(updatedAt);
+  if (Number.isNaN(recordedAt)) return true;
+  const expiry = new Date(recordedAt);
+  expiry.setMonth(expiry.getMonth() + CONSENT_MAX_AGE_MONTHS);
+  return now >= expiry.getTime();
+}
+
 export function getConsent(): ConsentRecord | null {
   try {
     const raw = appStorage.getItem(CONSENT_STORAGE_KEY);
@@ -59,6 +70,7 @@ export function getConsent(): ConsentRecord | null {
       typeof parsed.analytics === 'boolean' &&
       typeof parsed.updatedAt === 'string'
     ) {
+      if (isConsentExpired(parsed.updatedAt)) return null;
       return {
         version: 1,
         analytics: parsed.analytics,

@@ -1,7 +1,7 @@
 {
   "banner": {
     "title": "Privacy & GDPR Cookie Consent",
-    "description": "GlassFolio uses strictly necessary local storage to operate your client-side encrypted vault and interface preferences. We do not use third-party advertising cookies. With your explicit consent, we may collect anonymous telemetry to improve feature stability in cloud mode.",
+    "description": "GlassFolio uses strictly necessary local storage to operate your client-side encrypted vault and interface preferences. We do not use third-party advertising cookies. Anonymous audience measurement (Vercel Web Analytics, cookieless) is loaded only with your explicit consent; your choice is kept for 13 months and then asked again.",
     "acceptButton": "Accept optional analytics",
     "refuseButton": "Refuse optional analytics",
     "customizeLink": "Learn more in Cookie Settings"
@@ -21,50 +21,341 @@
   },
   "legalNotice": {
     "title": "Mentions Légales — Legal Notice",
-    "lastUpdated": "Last updated: October 2026",
-    "publisherTitle": "1. Site & Project Publisher",
-    "publisherText": "The GlassFolio showcase application and source code are published as an open-source personal software project by:",
-    "publisherName": "Publisher: Damien",
-    "publisherStatus": "Status: Individual open-source software project (Portfolio & Demonstration)",
-    "publisherContact": "Contact & Support: GitHub Issues & Discussions at https://github.com/Damien-Esilv",
-    "publisherProfile": "Project Repository & GitHub Profile: https://github.com/Damien-Esilv",
-    "hostingTitle": "2. Web Hosting & Infrastructure Providers",
-    "hostingText": "The GlassFolio web application is hosted as a static client-side bundle on:",
-    "hostingPrimary": "Primary Hosting: Vercel Inc. — 440 N Barranca Ave #4133, Covina, CA 91723, USA (Edge CDN Distribution) & Supabase Inc. (Cloud synchronization for client-side end-to-end encrypted records).",
-    "hostingSecondary": "Source Code & Version Control: GitHub, Inc. — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA.",
-    "ipTitle": "3. Intellectual Property & Open-Source License",
-    "ipText": "The GlassFolio application, architecture, and documentation are distributed under an open-source license. Third-party brand names, tickers, logos, and exchange trademarks mentioned (e.g., BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure, Vercel, Supabase) remain the exclusive property of their respective trademark holders. They are cited strictly for identification, technical interoperability, and descriptive purposes in accordance with Article L.713-6 of the French Intellectual Property Code and Article 14 of Regulation (EU) 2017/1001 on the European Union trade mark (nominative fair use)."
+    "lastUpdated": "Last updated: {{date}} (version {{version}})",
+    "sections": [
+      {
+        "id": "publisher",
+        "title": "1. Site, Application & Source Code Publisher",
+        "paragraphs": [
+          "GlassFolio (showcase site glassfolio.dev and application app.glassfolio.dev) is published on a non-professional basis by an individual, Damien, who has chosen to remain anonymous under Article 6-III-2 of French Law No. 2004-575 of 21 June 2004 (LCEN). His full identity has been disclosed to the hosting providers listed below."
+        ],
+        "items": [
+          "Publisher and publication director: Damien",
+          "Status: individual, personal non-commercial software project",
+          "Contact (legal notice, GDPR rights, content reports): {{email}}",
+          "Source code and issue tracker: https://github.com/Damien-Esilv"
+        ]
+      },
+      {
+        "id": "hosting",
+        "title": "2. Web Hosting & Infrastructure Providers",
+        "paragraphs": [
+          "The site and application are served as a static client bundle. GlassFolio's servers (hosting, database, email delivery) are located in the European Union, in Ireland."
+        ],
+        "items": [
+          "Site and application hosting: Vercel Inc. — 440 N Barranca Ave #4133, Covina, CA 91723, United States (processing region Dublin, Ireland; static files are delivered by a global CDN).",
+          "Authentication database and encrypted vault: Supabase, Inc. — Europe region (Ireland, eu-west-1). Contact details: https://supabase.com/contact.",
+          "Transactional email delivery: Resend, Inc. — Europe region (Ireland, eu-west-1) — https://resend.com.",
+          "Source code and version control: GitHub, Inc. — 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, United States."
+        ]
+      },
+      {
+        "id": "ip",
+        "title": "3. Intellectual Property & Source Code License",
+        "paragraphs": [
+          "GlassFolio, its architecture, source code, interfaces and documentation are the exclusive intellectual property of its author. The source code is made available free of charge under the PolyForm Noncommercial 1.0.0 license: you may download, study, modify it and propose contributions for any non-commercial use. Any commercial use or monetization, of the original or of a modified version, is prohibited. This is a source-available license and is not an OSI-approved open-source license.",
+          "Third-party trademarks, tickers, logos, and names of institutions or brokers mentioned (e.g., BoursoBank, Trade Republic, Binance, Kraken, Apple, Google, Microsoft Azure, Vercel, Supabase, Resend) remain the exclusive property of their respective owners. They are cited strictly for identification, technical interoperability and functional description purposes, in accordance with Article L.713-6 of the French Intellectual Property Code and Article 14 of Regulation (EU) 2017/1001 on the European Union trade mark (nominative fair use)."
+        ]
+      },
+      {
+        "id": "data",
+        "title": "4. Personal Data",
+        "paragraphs": [
+          "The processing of your personal data is detailed in the Privacy Policy. You can exercise your rights at any time at {{email}} or directly from Settings > Data."
+        ]
+      },
+      {
+        "id": "law",
+        "title": "5. Governing Law",
+        "paragraphs": [
+          "This notice and use of the service are governed by French law. Subject to mandatory consumer protection rules, French courts have jurisdiction."
+        ]
+      }
+    ]
   },
   "privacy": {
     "title": "Privacy Policy (GDPR)",
-    "lastUpdated": "Last updated: October 2026",
-    "e2eeTitle": "1. Client-Side End-to-End Encrypted (E2EE) Architecture",
-    "e2eeText": "GlassFolio is engineered from the ground up on an end-to-end encryption (E2EE) architecture. All sensitive financial records (transactions, holdings, average purchase prices, fiscal declarations, goals, and BYOK AI keys) are encrypted directly inside your browser memory using WebCrypto AES-256-GCM. Derivation uses PBKDF2-SHA256 with 600,000 iterations and HKDF-SHA256.",
-    "e2eeNoServer": "Crucially, no financial records are ever exposed in plaintext. Your unencrypted financial data, master password, recovery key, and TOTP seeds are never transmitted in plaintext to any third party or remote server.",
-    "externalTitle": "2. External Network Calls & Market Data",
-    "externalText": "To provide live portfolio valuations and AI capabilities, your browser may establish direct client-side network connections to the following external endpoints:",
-    "externalYahoo": "Yahoo Finance & CoinGecko: Direct HTTP requests from your browser for real-time asset market quotes and foreign exchange rates (cached locally with a 15-minute TTL).",
-    "externalAi": "User-Configured AI Providers: If you configure a BYOK API key (OpenAI, Anthropic, Groq, OpenRouter), requests are sent directly from your browser to the chosen provider. Alternatively, you may select Local Ollama for 100% offline, zero-data-egress AI assistance.",
-    "externalCdn": "Static Assets: Tailwind CSS is injected via cdn.tailwindcss.com and font styles from Google Fonts (fonts.googleapis.com). No user portfolio data is ever shared with these CDNs.",
-    "rightsTitle": "3. GDPR Rights & Data Portability",
-    "rightsText": "Under Regulation (EU) 2016/679 (GDPR), you hold complete sovereignty over your data:",
-    "rightAccess": "Right of Access & Portability (Art. 20): You can export your entire unencrypted ledger and portfolio as a standardized JSON backup at any time from Settings.",
-    "rightErasure": "Right to Erasure (Art. 17): You can completely purge all stored keys and ciphertext instantly via the Settings 'Purge Vault' action.",
-    "rightComplaint": "Right to lodge a complaint: You have the right to lodge a complaint with the French supervisory authority, the CNIL (Commission Nationale de l'Informatique et des Libertés — www.cnil.fr)."
+    "lastUpdated": "Last updated: {{date}} (version {{version}})",
+    "sections": [
+      {
+        "id": "controller",
+        "title": "1. Data Controller",
+        "paragraphs": [
+          "In cloud mode (app.glassfolio.dev), the data controller is the GlassFolio publisher (see Legal Notice), reachable at {{email}}. No Data Protection Officer (DPO) is appointed, as appointment is not mandatory for this processing.",
+          "In self-hosted mode (local Docker container), no data is sent to the publisher: you alone are responsible for the data stored on your machine."
+        ]
+      },
+      {
+        "id": "e2ee",
+        "title": "1 bis. Client-Side End-to-End Encrypted (E2EE) Architecture",
+        "paragraphs": [
+          "GlassFolio is designed from the ground up around the end-to-end encryption (E2EE) paradigm. All your sensitive financial data (transactions, holdings, unit cost basis, tax declarations, goals and private AI API keys) is encrypted directly in your browser memory through the WebCrypto API using AES-256-GCM. Key derivation relies on PBKDF2-SHA256 (600,000 iterations) and HKDF-SHA256."
+        ],
+        "callout": {
+          "tone": "positive",
+          "text": "Crucially, no financial data is ever exposed in plaintext. Your plaintext financial data, master password, recovery key and TOTP secrets are never transmitted in clear to any third party nor accessible to administrators."
+        }
+      },
+      {
+        "id": "data",
+        "title": "2. Data Processed",
+        "paragraphs": [
+          "Cloud mode — data we process to run your account:"
+        ],
+        "items": [
+          "Account identity: email address, display name, technical identifier, sign-in method (email or Google).",
+          "Security data: two-factor authentication factors (TOTP, passkeys) and authentication logs kept by Supabase (sign-in dates, IP address, browser).",
+          "Encrypted vault: vault header (salt, derivation parameters) and encrypted envelopes holding your financial data, unreadable on the server side.",
+          "Interface preferences (theme, language) stored locally in your browser.",
+          "Local mode (Docker): none of this data leaves your machine."
+        ]
+      },
+      {
+        "id": "purposes",
+        "title": "3. Purposes and Legal Bases",
+        "items": [
+          "Create and manage your account, sync your encrypted vault: performance of the contract formed by the Terms of Use (Art. 6.1.b GDPR).",
+          "Send transactional emails (verification code, confirmation link, security notifications): performance of the contract (Art. 6.1.b).",
+          "Secure the service (strong authentication, abuse limiting, authentication logs): legitimate interest in protecting accounts (Art. 6.1.f).",
+          "Optional anonymous audience measurement (Vercel Web Analytics, cookieless: page views, country, device and browser type): only with your consent (Art. 6.1.a), which you can withdraw at any time. Never loaded in self-hosted mode.",
+          "Comply with legal obligations and handle your rights requests (Art. 6.1.c).",
+          "No automated decision producing legal effects is made; the AI assistant provides non-decisional information."
+        ]
+      },
+      {
+        "id": "recipients",
+        "title": "4. Recipients and Processors",
+        "paragraphs": [
+          "Your data is neither sold nor rented. It is processed by the following technical providers, strictly to operate the service:"
+        ],
+        "table": "subprocessors"
+      },
+      {
+        "id": "transfers",
+        "title": "5. Server Location and Transfers Outside the European Union",
+        "paragraphs": [
+          "Your account data and encrypted envelopes are stored in the European Union (Supabase, Ireland). Application hosting (Vercel, Dublin) and email delivery (Resend, Ireland) are also configured in the Ireland region; only the site's static files are delivered by a global CDN.",
+          "Server location alone does not rule out every transfer, however: Supabase, Vercel, Resend, GitHub and Google are companies established in the United States, whose staff may access data from that country (support, administration). These accesses rely on the EU-US Data Privacy Framework adequacy decision or on the European Commission standard contractual clauses, depending on the provider. Because vault data is end-to-end encrypted in your browser, no provider receives your financial data in clear."
+        ]
+      },
+      {
+        "id": "external",
+        "title": "6. External Network Calls & Market Data",
+        "paragraphs": [
+          "To provide live portfolio valuations and AI capabilities, your browser may establish direct network connections to the following endpoints:"
+        ],
+        "items": [
+          "Yahoo Finance & CoinGecko: Direct HTTP requests from your browser for real-time market prices and currency exchange rates (locally cached with a 15-minute TTL). These services receive your IP address, not your positions.",
+          "User-Configured AI Providers: If you configure a personal API key (OpenAI, Anthropic, Groq, OpenRouter), requests are sent directly from your browser to the selected provider, under its own terms. Alternatively, you can use Ollama locally for 100% offline AI assistance with no data leakage.",
+          "Static resources: Tailwind CSS is loaded from cdn.tailwindcss.com, which transmits your IP address and browser to that CDN. No portfolio data is shared. The Inter font is hosted by GlassFolio and calls no Google service."
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "7. Retention Periods",
+        "items": [
+          "Account and encrypted data: kept as long as your account exists, deleted when the account is deleted.",
+          "Unfinished sign-ups (unconfirmed email or vault not created): automatically purged after 24 hours.",
+          "Technical authentication and email-delivery logs: kept by Supabase and Resend for service security, for a limited period set by each provider.",
+          "Backups: after deletion, encrypted copies may remain with the host until the end of their rotation cycle, then are permanently erased.",
+          "Cookie consent choice: 13 months maximum, then asked again.",
+          "Local mode: until you purge the vault or delete the Docker volume."
+        ]
+      },
+      {
+        "id": "rights",
+        "title": "8. GDPR Rights & Data Portability",
+        "paragraphs": [
+          "In accordance with Regulation (EU) 2016/679 (GDPR) and the French Data Protection Act, you have full sovereignty over your data. Every request is answered within one month; if there is reasonable doubt about your identity, proof of identity may be requested."
+        ],
+        "items": [
+          "Right of access and portability (Art. 15 and 20): export a ZIP archive (profile, consent, JSON backup and CSVs) at any time from Settings > Data & Backups. The demo account holds no personal data and cannot be exported.",
+          "Right to rectification (Art. 16): edit your name, email and preferences from Settings > Profile.",
+          "Right to erasure (Art. 17): \"Delete my account\" in Settings > Data & Backups permanently erases your account, your encrypted data on our servers and the local data on this device (a security confirmation is required). The \"Purge vault\" action only clears this device.",
+          "Rights to restriction and objection (Art. 18 and 21) and withdrawal of consent (Art. 7): write to {{email}} or manage your consent in the Cookies tab.",
+          "Directives on what happens to your data after your death: write to {{email}}.",
+          "Right to lodge a complaint: You have the right to lodge a complaint with the French supervisory authority, the CNIL (Commission Nationale de l'Informatique et des Libertés — www.cnil.fr)."
+        ]
+      },
+      {
+        "id": "security",
+        "title": "9. Security",
+        "paragraphs": [
+          "Client-side AES-256-GCM encryption, TLS connections, per-user database isolation (Row Level Security), two-factor authentication (TOTP, passkeys) and strengthened confirmation for sensitive actions (export, email change, account deletion). End-to-end encryption means that if you lose both your master password and your recovery key, your data is permanently unrecoverable, including by the publisher."
+        ]
+      },
+      {
+        "id": "cookies",
+        "title": "10. Cookies and Local Storage",
+        "paragraphs": [
+          "GlassFolio uses no tracking cookie. The full inventory of local storage and the management of your consent are in the \"Cookies & Storage\" tab."
+        ]
+      },
+      {
+        "id": "minors",
+        "title": "11. Minors",
+        "paragraphs": [
+          "The service is reserved for adults (18 years or older). We do not knowingly collect data from minors; if you believe a minor created an account, write to {{email}} to have it deleted."
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "12. Changes to this Policy",
+        "paragraphs": [
+          "This policy may change. The date and version appear at the top of the page; for significant changes, you will be informed in the application."
+        ]
+      }
+    ],
+    "subprocessors": {
+      "headerName": "Provider",
+      "headerPurpose": "Purpose",
+      "headerLocation": "Location",
+      "supabase": {
+        "name": "Supabase",
+        "purpose": "Authentication and encrypted vault storage",
+        "location": "EU (Ireland)"
+      },
+      "vercel": {
+        "name": "Vercel",
+        "purpose": "Hosting and delivery of the site and application; anonymous audience measurement if you accept it",
+        "location": "EU (Dublin) for processing; global CDN for static files"
+      },
+      "resend": {
+        "name": "Resend",
+        "purpose": "Transactional and security email delivery",
+        "location": "EU (Ireland)"
+      },
+      "github": {
+        "name": "GitHub",
+        "purpose": "Source code hosting (no user data)",
+        "location": "United States"
+      },
+      "google": {
+        "name": "Google",
+        "purpose": "\"Continue with Google\" sign-in (optional)",
+        "location": "United States"
+      },
+      "marketData": {
+        "name": "Yahoo Finance, CoinGecko",
+        "purpose": "Market prices and exchange rates (calls from your browser)",
+        "location": "United States / global"
+      },
+      "aiProviders": {
+        "name": "AI providers (BYOK)",
+        "purpose": "AI assistant, only if you configure your own key",
+        "location": "Depends on the chosen provider"
+      }
+    }
   },
   "terms": {
     "title": "Terms of Use (CGU) & Disclaimers",
-    "lastUpdated": "Last updated: October 2026",
-    "disclaimerTitle": "1. Non-Financial & Non-Tax Advice Disclaimer (AMF / DGFiP)",
-    "disclaimerImportant": "GlassFolio is strictly an informational software demonstration and mathematical simulation tool. It does NOT provide certified investment advice (Conseil en Investissements Financiers — CIF), portfolio management services, or legal tax counsel under French or European financial regulations.",
-    "disclaimerDetail": "Tax simulations (PFU 30% vs Case 2OP Barème Progressif, Cerfa 2042 / 2074 / 3916 boxes) and ETF fee drag projections are computed based on user-supplied inputs and prevailing statutory rules. Users are solely responsible for verifying their official declarations with the French DGFiP tax administration or a qualified chartered accountant.",
-    "asIsTitle": "2. Software Provided 'As-Is'",
-    "asIsText": "GlassFolio is provided 'as is' and 'as available', without warranty of any kind, express or implied. The author and contributors shall not be held liable for any calculation discrepancy, market quote delay, data loss, or financial decision made based on the software."
+    "lastUpdated": "Last updated: {{date}} (version {{version}})",
+    "sections": [
+      {
+        "id": "purpose",
+        "title": "1. Purpose and Acceptance",
+        "paragraphs": [
+          "These terms govern the free use of GlassFolio (showcase site, cloud application and self-hosted version). By creating an account or using the application, you declare that you have read and accepted them."
+        ]
+      },
+      {
+        "id": "service",
+        "title": "2. Description of the Service",
+        "paragraphs": [
+          "GlassFolio is a wealth-tracking dashboard: entering or importing transactions, positions, goals, tax simulations and an AI assistant. It runs in cloud mode (account and encrypted sync) or in self-hosted local mode."
+        ]
+      },
+      {
+        "id": "eligibility",
+        "title": "3. Eligibility",
+        "paragraphs": [
+          "The service is reserved for adults (18 years or older) with the legal capacity to enter into agreements."
+        ]
+      },
+      {
+        "id": "account",
+        "title": "4. Account, Master Password and Recovery Key",
+        "paragraphs": [
+          "You are responsible for the confidentiality of your credentials. End-to-end encryption means the publisher can neither read your data, nor recover your master password, nor reset it."
+        ],
+        "callout": {
+          "tone": "warning",
+          "text": "Keep your recovery key in a safe place. If you lose both your master password and your recovery key, your data is permanently inaccessible and no recovery is possible."
+        }
+      },
+      {
+        "id": "disclaimer",
+        "title": "5. Non-Financial & Non-Tax Advice Disclaimer (AMF / DGFiP)",
+        "paragraphs": [
+          "Tax simulations (30% flat tax vs progressive scale Box 2OP, Cerfa forms 2042 / 2074 / 3916) and ETF fee erosion projections are computed from user-entered data and known legal brackets. The user remains solely responsible for verifying official declarations with the DGFiP or a qualified professional (chartered accountant, tax lawyer)."
+        ],
+        "callout": {
+          "tone": "warning",
+          "text": "GlassFolio is strictly a software demonstration and mathematical simulation tool for informational purposes. It DOES NOT PROVIDE certified financial investment advice (CIF), portfolio management services for third parties, nor tax or legal advice within the meaning of French and European regulations."
+        }
+      },
+      {
+        "id": "data",
+        "title": "6. Market Data, Calculations and AI Assistant",
+        "paragraphs": [
+          "Prices and exchange rates come from third-party sources and may be delayed, incomplete or wrong. AI assistant answers may contain errors and never constitute a recommendation. If you use your own API key (BYOK), its use and billing fall under your contract with the chosen provider."
+        ]
+      },
+      {
+        "id": "usage",
+        "title": "7. Acceptable Use",
+        "paragraphs": [
+          "You must not undermine the security or operation of the service, automate it abusively, attempt to access other people's data, or exploit it commercially (see article 8)."
+        ]
+      },
+      {
+        "id": "ip",
+        "title": "8. Intellectual Property and License",
+        "paragraphs": [
+          "The GlassFolio source code is available under the PolyForm Noncommercial 1.0.0 license: downloading, studying, modifying and contributing are permitted for non-commercial use. Any monetization, of the original or of a modified version, is prohibited, and intellectual property remains with the author. Proposed contributions are accepted under these same conditions."
+        ]
+      },
+      {
+        "id": "availability",
+        "title": "9. Service Availability",
+        "paragraphs": [
+          "The service is free and provided without any availability guarantee. It may be interrupted for maintenance, evolve or stop. If cloud mode is closed, reasonable notice will be given so that you can export your data."
+        ]
+      },
+      {
+        "id": "liability",
+        "title": "10. Software Provided \"As-Is\" and Liability",
+        "paragraphs": [
+          "GlassFolio is provided \"as is\", without warranty of any kind, express or implied. The author and contributors shall not be liable for calculation discrepancies, delayed stock quotes, data loss or investment decisions made based on the software, within the limits permitted by law. Nothing in these terms excludes liability that cannot legally be excluded (willful misconduct, gross negligence, mandatory consumer rights)."
+        ]
+      },
+      {
+        "id": "termination",
+        "title": "11. Termination and Deletion",
+        "paragraphs": [
+          "You can delete your account at any time from Settings > Data & Backups. The publisher may suspend an account in case of abuse or risk to the security of the service."
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "12. Changes to the Terms",
+        "paragraphs": [
+          "These terms may change; the version in force appears at the top of the page. For significant changes, you will be informed in the application. If you reject the new terms, you can delete your account."
+        ]
+      },
+      {
+        "id": "law",
+        "title": "13. Governing Law and Contact",
+        "paragraphs": [
+          "These terms are governed by French law. For any question: {{email}}."
+        ]
+      }
+    ]
   },
   "cookies": {
     "title": "Cookies & Local Storage Inventory",
     "lastUpdated": "Last updated: October 2026",
-    "overviewText": "GlassFolio does NOT use third-party tracking cookies or advertising pixels. All persistent client-side data is managed through the browser's local storage abstraction layer (appStorage) under strict cryptographic segmentation.",
+    "overviewText": "GlassFolio uses NO third-party tracking cookies or advertising pixels. All client-side persisted data is managed through the browser local storage under strict cryptographic segmentation; the keys listed below are the only ones written.",
     "tableTitle": "Inventory of Storage Keys",
     "tableKey": "Key Name",
     "tableCategory": "Classification",
@@ -93,7 +384,31 @@
         "key": "gf_consent_v1",
         "category": "Strictly Necessary (Consent State)",
         "purpose": "Stores your CNIL GDPR analytics consent record and timestamp.",
-        "lifespan": "13 months (CNIL recommended)"
+        "lifespan": "13 months maximum, then asked again"
+      },
+      "supabaseSession": {
+        "key": "gf_sb_session",
+        "category": "Strictly Necessary (Session)",
+        "purpose": "Keeps your cloud-mode sign-in session (Supabase tokens) so you do not have to sign in again. Absent in local mode.",
+        "lifespan": "Until sign-out or session expiry"
+      },
+      "oauthVerifier": {
+        "key": "gf_oauth_pkce_verifier",
+        "category": "Strictly Necessary (Security)",
+        "purpose": "Temporary security value (PKCE) during Google sign-in.",
+        "lifespan": "Removed when sign-in completes"
+      },
+      "marketCaches": {
+        "key": "gf_price_cache / gf_fx_rates_cache / gf_historical_price_cache / glassfolio_price_cache",
+        "category": "Strictly Necessary (Public cache)",
+        "purpose": "Locally caches public prices and exchange rates to limit network calls. Holds no personal data.",
+        "lifespan": "Minutes to hours, then refreshed"
+      },
+      "uiState": {
+        "key": "gf_sidebar_collapsed / gf_manual_price_history",
+        "category": "Strictly Necessary (Preferences)",
+        "purpose": "Sidebar state and the price history you enter manually.",
+        "lifespan": "Persistent until account deletion or cache clearing"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",
@@ -109,13 +424,13 @@
     "title": "Accessibility Declaration (RGAA 4.1)",
     "lastUpdated": "Last updated: October 2026",
     "statusTitle": "1. Compliance Status",
-    "statusText": "GlassFolio commits to making its interface accessible in accordance with Article 47 of French Law No. 2005-102 of February 11, 2005. The application is currently PARTIALLY COMPLIANT with the General Accessibility Improvement Framework (RGAA version 4.1 / WCAG 2.1 Level AA), as a formal external audit is pending.",
+    "statusText": "GlassFolio strives to make its interface accessible according to the General Accessibility Improvement Framework (RGAA version 4.1 / WCAG 2.1 level AA). This declaration is made voluntarily. The application is currently PARTIALLY COMPLIANT, pending a formal external audit.",
     "standardsTitle": "2. Implemented Accessibility Features",
     "featAria": "Semantic Landmarks & ARIA: Proper semantic tags (header, nav, main, section, footer), accessible button labels (aria-label on all icon-only controls), and accordion controls (aria-expanded, aria-controls).",
     "featContrast": "WCAG AA Color Contrast: Strict SSOT semantic token system enforcing minimum 4.5:1 text-to-background contrast across Light, Dark, and Midnight themes.",
     "featKeyboard": "Keyboard Navigation: Visible focus outlines and tab sequence across all interactive controls, modals, and drawers.",
     "featMotion": "Reduced Motion: Respects the user's operating system prefers-reduced-motion preference, disabling decorative transitions and animations.",
     "feedbackTitle": "3. Feedback & Contact",
-    "feedbackText": "If you encounter an accessibility defect or barrier on this application, please open an issue on the repository or contact Damien via https://github.com/Damien-Esilv."
+    "feedbackText": "If you encounter an accessibility defect preventing access to content or a feature, write to {{email}} or open a ticket via https://github.com/Damien-Esilv."
   }
 }
