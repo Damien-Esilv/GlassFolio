@@ -321,10 +321,11 @@ export const SecuritySettingsTab: React.FC = () => {
 
                         <form onSubmit={handleChangeMasterPassword} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
+                                <label htmlFor="oldPassword" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:vaultSection.oldPassword')}
                                 </label>
                                 <input
+                                    id="oldPassword"
                                     type="password"
                                     required
                                     value={oldPassword}
@@ -335,10 +336,11 @@ export const SecuritySettingsTab: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
+                                <label htmlFor="newPassword" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:vaultSection.newPassword')}
                                 </label>
                                 <input
+                                    id="newPassword"
                                     type="password"
                                     required
                                     value={newPassword}
@@ -350,10 +352,11 @@ export const SecuritySettingsTab: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
+                                <label htmlFor="confirmPassword" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:vaultSection.confirmPassword')}
                                 </label>
                                 <input
+                                    id="confirmPassword"
                                     type="password"
                                     required
                                     value={confirmPassword}
@@ -431,10 +434,11 @@ export const SecuritySettingsTab: React.FC = () => {
 
                         <form onSubmit={handleRegenerateRecoveryKey} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
+                                <label htmlFor="regeneratePassword" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:vaultSection.masterPasswordConfirm', 'Master Password')}
                                 </label>
                                 <input
+                                    id="regeneratePassword"
                                     type="password"
                                     required
                                     autoFocus
