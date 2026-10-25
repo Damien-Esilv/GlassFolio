@@ -84,22 +84,32 @@ const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
 
     return (
         <div className="relative group w-full">
-            <button
-                type="button"
-                onClick={onClick}
-                className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full ${
+            <div
+                className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border transition-all duration-300 text-left w-full ${
                     compact ? 'min-h-[140px]' : 'p-6'
                 } ${
                     ach.unlocked 
                         ? 'bg-card border-border hover:border-strong shadow-sm' 
                         : 'bg-subtle/40 border-subtle opacity-70 hover:opacity-100'
-                }`}
+                } ${onClick ? 'hover:scale-[1.02] cursor-pointer' : ''}`}
+                onClick={onClick}
+                role={onClick ? 'button' : undefined}
+                tabIndex={onClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        onClick();
+                    }
+                }}
             >
                 {/* Pin Action (Top right) */}
                 {onTogglePin && (
                     <button
                         type="button"
-                        onClick={onTogglePin}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePin(e);
+                        }}
                         title={isPinned ? t('gamification:unpinBadge') : t('gamification:pinBadge')}
                         className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${
                             isPinned 
@@ -132,7 +142,7 @@ const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
                         style={{ width: `${progressPercent}%` }} 
                     />
                 </div>
-            </button>
+            </div>
         </div>
     );
 };
