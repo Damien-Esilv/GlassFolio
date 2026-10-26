@@ -565,6 +565,9 @@ export function validateRow(
 
     // Date validation
     allErrors.push(...validateDate(data.transactionDate));
+    if (data.valueDate) {
+        allErrors.push(...validateDate(data.valueDate, 'valueDate'));
+    }
 
     // Amount validation
     allErrors.push(...validateAmount(data.amountPrimary));

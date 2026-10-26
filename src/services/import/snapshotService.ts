@@ -22,6 +22,7 @@ import { portfolioService } from '../portfolioService';
 import { parseCSVText, parseDate, parseDecimal, detectDateFormat } from './importManager';
 import { instrumentService } from '../instrumentService';
 import { buildLedger, QTY_EPSILON } from '../portfolio/positionLedger';
+import { validateDate } from '../core/validationService';
 
 /** Cost basis differences below half a cent are rounding noise */
 const COST_EPSILON = 0.005;
@@ -275,6 +276,10 @@ export async function parseSnapshotFile(
 
         // Parse optional date
         const purchaseDate = rawDate ? parseDate(rawDate, dateHint) || undefined : undefined;
+        if (rawDate && rawDate.trim() !== '') {
+            const dateErrors = validateDate(purchaseDate || rawDate, 'purchaseDate');
+            errors.push(...dateErrors);
+        }
 
         // Build display name
         const displayName = assetName || assetSymbol || assetIsin || 'Unknown';
@@ -694,6 +699,19 @@ export async function createPositionTransactions(
  */
 export async function buildSnapshotCommit(params: SnapshotCommitParams): Promise<UnifiedTransaction[]> {
     const { mode, positions, accountId, batchId, date, userId, closeMissing } = params;
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date && new Date(date) > tomorrow) {
+        throw new Error('Snapshot date cannot be in the future');
+    }
+
+    for (const pos of positions) {
+        if (pos.purchaseDate && new Date(pos.purchaseDate) > tomorrow) {
+            throw new Error('Snapshot purchase date cannot be in the future');
+        }
+    }
 
     if (mode === 'synthetic' && params.diffs) {
         return generateReconciliationTransactions(params.diffs, batchId, accountId, date, userId);

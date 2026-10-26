@@ -12,7 +12,10 @@ import {
     alertRules as initialAlertRules,
     financialGoals as initialGoals,
     achievements as initialAchievements,
-    assetGroups as initialAssetGroups
+    assetGroups as initialAssetGroups,
+    buildDemoTransactions,
+    buildDemoAlerts,
+    buildDemoAlertRules
 } from './mockData';
 import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
 
@@ -32,7 +35,12 @@ import {
     importBatches as initialImportBatches,
     unifiedTransactions as initialUnifiedTransactions,
     mappingTemplates as initialMappingTemplates,
-    instruments as initialInstruments
+    instruments as initialInstruments,
+    buildDemoInstitutes,
+    buildDemoAccounts,
+    buildDemoImportBatches,
+    buildDemoUnifiedTransactions,
+    buildDemoInstruments
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
 import { VAULT_HEADER_KEY } from './storage/storageKeys';
@@ -80,7 +88,7 @@ class MockDB {
     getTransactions(): Transaction[] {
         const stored = appStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
         if (stored) return JSON.parse(stored);
-        return isRealUserVaultActive() ? [] : initialTransactions;
+        return isRealUserVaultActive() ? [] : buildDemoTransactions();
     }
 
     saveTransactions(data: Transaction[]) {
@@ -165,7 +173,7 @@ class MockDB {
     getAlerts(): Alert[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ALERTS);
         if (stored) return JSON.parse(stored);
-        return isRealUserVaultActive() ? [] : initialAlerts;
+        return isRealUserVaultActive() ? [] : buildDemoAlerts();
     }
 
     saveAlerts(data: Alert[]) {
@@ -175,7 +183,7 @@ class MockDB {
     getAlertRules(): AlertRule[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ALERT_RULES);
         if (stored) return JSON.parse(stored);
-        return isRealUserVaultActive() ? [] : initialAlertRules;
+        return isRealUserVaultActive() ? [] : buildDemoAlertRules();
     }
 
     saveAlertRules(data: AlertRule[]) {
@@ -199,13 +207,13 @@ class MockDB {
     // --- Institutes ---
     getInstitutes(): Institute[] {
         const stored = appStorage.getItem(STORAGE_KEYS.INSTITUTES);
-        if (!stored) return isRealUserVaultActive() ? [] : initialInstitutes;
+        if (!stored) return isRealUserVaultActive() ? [] : buildDemoInstitutes();
 
         try {
             const storedList = JSON.parse(stored) as Institute[];
             const map = new Map<string, Institute>();
             if (!isRealUserVaultActive()) {
-                initialInstitutes.forEach(i => map.set(i.id, i));
+                buildDemoInstitutes().forEach(i => map.set(i.id, i));
             }
             storedList.forEach(i => {
                 const initial = map.get(i.id);
@@ -216,7 +224,7 @@ class MockDB {
             });
             return Array.from(map.values());
         } catch {
-            return isRealUserVaultActive() ? [] : initialInstitutes;
+            return isRealUserVaultActive() ? [] : buildDemoInstitutes();
         }
     }
 
@@ -231,18 +239,18 @@ class MockDB {
     // --- Accounts ---
     getAccounts(): Account[] {
         const stored = appStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-        if (!stored) return isRealUserVaultActive() ? [] : initialAccounts;
+        if (!stored) return isRealUserVaultActive() ? [] : buildDemoAccounts();
 
         try {
             const storedList = JSON.parse(stored) as Account[];
             const map = new Map<string, Account>();
             if (!isRealUserVaultActive()) {
-                initialAccounts.forEach(a => map.set(a.id, a));
+                buildDemoAccounts().forEach(a => map.set(a.id, a));
             }
             storedList.forEach(a => map.set(a.id, a));
             return Array.from(map.values());
         } catch {
-            return isRealUserVaultActive() ? [] : initialAccounts;
+            return isRealUserVaultActive() ? [] : buildDemoAccounts();
         }
     }
 
@@ -261,7 +269,7 @@ class MockDB {
     // --- Import Batches ---
     getImportBatches(): ImportBatch[] {
         const stored = appStorage.getItem(STORAGE_KEYS.IMPORT_BATCHES);
-        if (!stored) return isRealUserVaultActive() ? [] : initialImportBatches;
+        if (!stored) return isRealUserVaultActive() ? [] : buildDemoImportBatches();
 
         // Migrate old batches to new schema if needed
         const batches = JSON.parse(stored) as ImportBatch[];
@@ -294,7 +302,7 @@ class MockDB {
     // --- Unified Transactions ---
     getUnifiedTransactions(): UnifiedTransaction[] {
         const stored = appStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
-        if (!stored) return isRealUserVaultActive() ? [] : initialUnifiedTransactions;
+        if (!stored) return isRealUserVaultActive() ? [] : buildDemoUnifiedTransactions();
 
         // Migrate old transactions to new schema if needed
         const transactions = JSON.parse(stored) as UnifiedTransaction[];
@@ -373,7 +381,7 @@ class MockDB {
     // --- Instruments ---
     getInstruments(): Instrument[] {
         const stored = appStorage.getItem(STORAGE_KEYS.INSTRUMENTS);
-        return stored ? JSON.parse(stored) : initialInstruments;
+        return stored ? JSON.parse(stored) : (isRealUserVaultActive() ? [] : buildDemoInstruments());
     }
 
     saveInstruments(data: Instrument[]) {

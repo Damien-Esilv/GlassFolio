@@ -1,4 +1,6 @@
 import { Position, Transaction, Alert, AlertRule, ReportCard, FinancialGoal, Achievement, AssetGroup } from '../types';
+import { daysAgoISO, monthsAgoISO, yearsAgoISO, toLegacyDateTime } from '../utils/demoDates';
+import { getRolling12MonthsLabels } from '../utils/date';
 
 export const positions: Position[] = [
   {
@@ -152,180 +154,417 @@ export const assetGroups: AssetGroup[] = [
   }
 ];
 
-export const transactions: Transaction[] = [
-  {
-    id: 't-untracked-demo-1',
-    date: '2024-05-10 10:00:00',
-    type: 'Buy',
-    instrument: 'Untracked Private Startup',
-    symbol: 'UNTRACKED_CORP_XYZ',
-    amount: 10,
-    price: 100.00,
-    total: 1000.00,
-    currency: 'EUR',
-    source: 'Boursobank',
-    fees: 0.00,
-    status: 'Completed',
-    assetClass: 'Equity',
-    bankName: 'Boursobank',
-    accountName: 'PEA'
-  },
-  {
-    id: 't1',
-    date: '2022-01-15 08:00:00',
-    type: 'Deposit',
-    instrument: 'Euro Deposit',
-    symbol: 'EUR',
-    amount: 15000,
-    price: 1.00,
-    total: 15000.00,
-    currency: 'EUR',
-    source: 'Boursobank',
-    fees: 0.00,
-    status: 'Completed',
-    assetClass: 'Cash',
-    bankName: 'Boursobank',
-    accountName: 'PEA'
-  },
-  {
-    id: 't2',
-    date: '2022-06-10 14:30:00',
-    type: 'Buy',
-    instrument: 'Apple Inc.',
-    symbol: 'AAPL',
-    amount: 100,
-    price: 150.00,
-    total: 15000.00,
-    currency: 'USD',
-    source: 'Trade Republic',
-    fees: 1.00,
-    status: 'Completed',
-    assetClass: 'Equity'
-  },
-  {
-    id: 't3',
-    date: '2023-01-18 16:00:00',
-    type: 'Buy',
-    instrument: 'Microsoft Corporation',
-    symbol: 'MSFT',
-    amount: 20,
-    price: 380.00,
-    total: 7600.00,
-    currency: 'USD',
-    source: 'Trade Republic',
-    fees: 1.00,
-    status: 'Completed',
-    assetClass: 'Equity'
-  },
-  {
-    id: 't4',
-    date: '2023-08-10 10:00:00',
-    type: 'Buy',
-    instrument: 'Vanguard Total World ETF',
-    symbol: 'VT',
-    amount: 50,
-    price: 90.00,
-    total: 4500.00,
-    currency: 'USD',
-    source: 'Trade Republic',
-    fees: 2.50,
-    status: 'Completed',
-    assetClass: 'ETF'
-  },
-  {
-    id: 't5',
-    date: '2024-02-15 11:30:00',
-    type: 'Buy',
-    instrument: 'Amundi MSCI World UCITS ETF',
-    symbol: 'CW8',
-    amount: 30,
-    price: 420.00,
-    total: 12600.00,
-    currency: 'EUR',
-    source: 'Boursobank',
-    fees: 0.00,
-    status: 'Completed',
-    assetClass: 'ETF'
-  },
-  {
-    id: 't6',
-    date: '2024-11-01 16:00:00',
-    type: 'Buy',
-    instrument: 'Bitcoin',
-    symbol: 'BTC',
-    amount: 0.5,
-    price: 45000.00,
-    total: 22500.00,
-    currency: 'USD',
-    source: 'Binance',
-    fees: 22.50,
-    status: 'Completed',
-    assetClass: 'Crypto'
-  },
-  {
-    id: 't7',
-    date: '2025-05-12 16:30:00',
-    type: 'Buy',
-    instrument: 'Ethereum',
-    symbol: 'ETH',
-    amount: 3.5,
-    price: 2800.00,
-    total: 9800.00,
-    currency: 'USD',
-    source: 'Binance',
-    fees: 9.80,
-    status: 'Completed',
-    assetClass: 'Crypto'
-  }
-];
+export function buildDemoTransactions(now: Date = new Date()): Transaction[] {
+  return [
+    {
+      id: 't-untracked-demo-1',
+      date: toLegacyDateTime(daysAgoISO(7, 9, 30, now)),
+      type: 'Buy',
+      instrument: 'Untracked Private Startup',
+      symbol: 'UNTRACKED_CORP_XYZ',
+      amount: 10,
+      price: 100.00,
+      total: 1000.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'Equity',
+      bankName: 'Boursobank',
+      accountName: 'PEA'
+    },
+    {
+      id: 't1',
+      date: toLegacyDateTime(yearsAgoISO(4, 11, 5, 8, 0, now)),
+      type: 'Deposit',
+      instrument: 'Euro Deposit',
+      symbol: 'EUR',
+      amount: 15000,
+      price: 1.00,
+      total: 15000.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'Cash',
+      bankName: 'Boursobank',
+      accountName: 'PEA'
+    },
+    {
+      id: 't2',
+      date: toLegacyDateTime(yearsAgoISO(4, 2, 10, 14, 30, now)),
+      type: 'Buy',
+      instrument: 'Apple Inc.',
+      symbol: 'AAPL',
+      amount: 100,
+      price: 150.00,
+      total: 15000.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    {
+      id: 't3',
+      date: toLegacyDateTime(yearsAgoISO(3, 8, 18, 16, 0, now)),
+      type: 'Buy',
+      instrument: 'Microsoft Corporation',
+      symbol: 'MSFT',
+      amount: 20,
+      price: 380.00,
+      total: 7600.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    {
+      id: 't4',
+      date: toLegacyDateTime(yearsAgoISO(3, 2, 10, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 50,
+      price: 90.00,
+      total: 4500.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 2.50,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't5',
+      date: toLegacyDateTime(yearsAgoISO(2, 4, 15, 11, 30, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 30,
+      price: 420.00,
+      total: 12600.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't6',
+      date: toLegacyDateTime(yearsAgoISO(2, 0, 1, 16, 0, now)),
+      type: 'Buy',
+      instrument: 'Bitcoin',
+      symbol: 'BTC',
+      amount: 0.5,
+      price: 45000.00,
+      total: 22500.00,
+      currency: 'USD',
+      source: 'Binance',
+      fees: 22.50,
+      status: 'Completed',
+      assetClass: 'Crypto'
+    },
+    {
+      id: 't7',
+      date: toLegacyDateTime(yearsAgoISO(2, 0, 1, 16, 30, now)),
+      type: 'Buy',
+      instrument: 'Ethereum',
+      symbol: 'ETH',
+      amount: 3.5,
+      price: 2800.00,
+      total: 9800.00,
+      currency: 'USD',
+      source: 'Binance',
+      fees: 9.80,
+      status: 'Completed',
+      assetClass: 'Crypto'
+    },
+    // Monthly DCA purchases spread across the last 12 months
+    {
+      id: 't-dca-12',
+      date: toLegacyDateTime(monthsAgoISO(12, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 2,
+      price: 430.00,
+      total: 860.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-11',
+      date: toLegacyDateTime(monthsAgoISO(11, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 5,
+      price: 92.00,
+      total: 460.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-10',
+      date: toLegacyDateTime(monthsAgoISO(10, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Microsoft Corporation',
+      symbol: 'MSFT',
+      amount: 2,
+      price: 390.00,
+      total: 780.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    {
+      id: 't-dca-9',
+      date: toLegacyDateTime(monthsAgoISO(9, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 2,
+      price: 435.00,
+      total: 870.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-8',
+      date: toLegacyDateTime(monthsAgoISO(8, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 5,
+      price: 95.00,
+      total: 475.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-7',
+      date: toLegacyDateTime(monthsAgoISO(7, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Apple Inc.',
+      symbol: 'AAPL',
+      amount: 5,
+      price: 165.00,
+      total: 825.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    {
+      id: 't-dca-6',
+      date: toLegacyDateTime(monthsAgoISO(6, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 2,
+      price: 440.00,
+      total: 880.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-5',
+      date: toLegacyDateTime(monthsAgoISO(5, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 5,
+      price: 98.00,
+      total: 490.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-4',
+      date: toLegacyDateTime(monthsAgoISO(4, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Microsoft Corporation',
+      symbol: 'MSFT',
+      amount: 2,
+      price: 400.00,
+      total: 800.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    {
+      id: 't-dca-3',
+      date: toLegacyDateTime(monthsAgoISO(3, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 2,
+      price: 450.00,
+      total: 900.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-2',
+      date: toLegacyDateTime(monthsAgoISO(2, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 5,
+      price: 100.00,
+      total: 500.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-dca-1',
+      date: toLegacyDateTime(monthsAgoISO(1, 15, 10, 0, now)),
+      type: 'Buy',
+      instrument: 'Apple Inc.',
+      symbol: 'AAPL',
+      amount: 5,
+      price: 170.00,
+      total: 850.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'Equity'
+    },
+    // Recent purchases and adjustments (between J-7 and J-1)
+    {
+      id: 't-recent-1',
+      date: toLegacyDateTime(daysAgoISO(6, 10, 30, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 5,
+      price: 460.00,
+      total: 2300.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-recent-2',
+      date: toLegacyDateTime(daysAgoISO(4, 15, 0, now)),
+      type: 'Buy',
+      instrument: 'Vanguard Total World ETF',
+      symbol: 'VT',
+      amount: 5,
+      price: 105.00,
+      total: 525.00,
+      currency: 'USD',
+      source: 'Trade Republic',
+      fees: 1.00,
+      status: 'Completed',
+      assetClass: 'ETF'
+    },
+    {
+      id: 't-recent-3',
+      date: toLegacyDateTime(daysAgoISO(2, 14, 15, now)),
+      type: 'Sell',
+      instrument: 'Ethereum',
+      symbol: 'ETH',
+      amount: 2.08,
+      price: 3400.00,
+      total: 7072.00,
+      currency: 'USD',
+      source: 'Binance',
+      fees: 7.00,
+      status: 'Completed',
+      assetClass: 'Crypto'
+    }
+  ];
+}
 
-export const alerts: Alert[] = [
-  {
-    id: 'a1',
-    type: 'warning',
-    category: 'security',
-    title: 'Mapping Issues',
-    message: 'Review and resolve mapping issues for 3 imported transactions.',
-    date: '2026-10-19T09:30:00.000Z',
-    read: false,
-    archived: false,
-    actionUrl: '/import-history',
-    dedupKey: 'seed-mapping-issues'
-  },
-  {
-    id: 'a2',
-    type: 'success',
-    category: 'portfolio',
-    title: 'Dividend Received',
-    message: 'You received $45.20 in dividends from AAPL.',
-    date: '2026-10-18T14:15:00.000Z',
-    read: false,
-    archived: false,
-    actionUrl: '/positions',
-    dedupKey: 'seed-dividend-aapl'
-  }
-];
+export function buildDemoAlerts(now: Date = new Date()): Alert[] {
+  return [
+    {
+      id: 'a1',
+      type: 'warning',
+      category: 'security',
+      title: 'Mapping Issues',
+      message: 'Review and resolve mapping issues for 3 imported transactions.',
+      date: daysAgoISO(1, 9, 30, now),
+      read: false,
+      archived: false,
+      actionUrl: '/import-history',
+      dedupKey: 'seed-mapping-issues'
+    },
+    {
+      id: 'a2',
+      type: 'success',
+      category: 'portfolio',
+      title: 'Dividend Received',
+      message: 'You received $45.20 in dividends from AAPL.',
+      date: daysAgoISO(3, 14, 15, now),
+      read: false,
+      archived: false,
+      actionUrl: '/positions',
+      dedupKey: 'seed-dividend-aapl'
+    }
+  ];
+}
 
-export const alertRules: AlertRule[] = [
-  {
-    id: 'rule-btc-target',
-    name: 'BTC > $60,000',
-    metric: 'price_above',
-    symbol: 'BTC',
-    threshold: 60000,
-    enabled: true,
-    createdAt: '2026-10-01T10:00:00.000Z'
-  },
-  {
-    id: 'rule-aapl-pl',
-    name: 'AAPL P&L > +15%',
-    metric: 'pl_percent_above',
-    symbol: 'AAPL',
-    threshold: 15,
-    enabled: true,
-    createdAt: '2026-10-05T12:00:00.000Z'
-  }
-];
+export function buildDemoAlertRules(now: Date = new Date()): AlertRule[] {
+  return [
+    {
+      id: 'rule-btc-target',
+      name: 'BTC > $60,000',
+      metric: 'price_above',
+      symbol: 'BTC',
+      threshold: 60000,
+      enabled: true,
+      createdAt: daysAgoISO(14, 10, 0, now)
+    },
+    {
+      id: 'rule-aapl-pl',
+      name: 'AAPL P&L > +15%',
+      metric: 'pl_percent_above',
+      symbol: 'AAPL',
+      threshold: 15,
+      enabled: true,
+      createdAt: daysAgoISO(10, 12, 0, now)
+    }
+  ];
+}
+
+export const transactions: Transaction[] = buildDemoTransactions();
+export const alerts: Alert[] = buildDemoAlerts();
+export const alertRules: AlertRule[] = buildDemoAlertRules();
 
 export const reports: ReportCard[] = [
   {
@@ -541,17 +780,14 @@ export const achievements: Achievement[] = [
   }
 ];
 
-export const dashboardChartData = [
-  { name: 'Jan', value: 80000 },
-  { name: 'Feb', value: 82000 },
-  { name: 'Mar', value: 79000 },
-  { name: 'Apr', value: 85000 },
-  { name: 'May', value: 89000 },
-  { name: 'Jun', value: 92000 },
-  { name: 'Jul', value: 95000 },
-  { name: 'Aug', value: 94000 },
-  { name: 'Sep', value: 98000 },
-  { name: 'Oct', value: 102000 },
-  { name: 'Nov', value: 105000 },
-  { name: 'Dec', value: 112000 },
-];
+const DEMO_CHART_VALUES = [80000, 82000, 79000, 85000, 89000, 92000, 95000, 94000, 98000, 102000, 105000, 112000];
+
+export function buildDemoDashboardChartData(now: Date = new Date()): { name: string; value: number }[] {
+  const rollingLabels = getRolling12MonthsLabels(now, 'en-US');
+  return rollingLabels.map((name, index) => ({
+    name,
+    value: DEMO_CHART_VALUES[index % DEMO_CHART_VALUES.length]
+  }));
+}
+
+export const dashboardChartData = buildDemoDashboardChartData();
