@@ -59,7 +59,9 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
     };
 
     let subtitle = t('security:passkeys.challengeSubtitle');
-    if (hasTotp) {
+    if (hasTotp && hasPasskey) {
+        subtitle = t('security:totp.challengeOrPasskeySubtitle');
+    } else if (hasTotp) {
         subtitle = backupCodes ? t('security:totp.challengeSubtitle') : t('security:totp.challengeSubtitleNoBackup');
     }
 
@@ -88,13 +90,16 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {hasTotp && (
                         <div>
-                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                            <label htmlFor="two-factor-code" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {backupCodes ? t('security:totp.inputLabel') : t('security:totp.inputLabelNoBackup')}
                             </label>
                             <div className="relative">
                                 <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
                                 <input
+                                    id="two-factor-code"
+                                    name="otp"
                                     type="text"
+                                    inputMode="numeric"
                                     autoFocus
                                     autoComplete="one-time-code"
                                     placeholder={backupCodes ? t('security:totp.inputPlaceholder') : t('security:totp.codePlaceholder')}

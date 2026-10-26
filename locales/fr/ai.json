@@ -44,6 +44,7 @@
   "actionCard": {
     "title": "Validation Requise (Human-in-the-loop)",
     "subtitle": "L'assistant demande votre accord avant d'enregistrer cette opération :",
+    "actionType": "Type d'action",
     "confirm": "Valider & Enregistrer",
     "reject": "Refuser",
     "confirmed": "Action validée et exécutée",

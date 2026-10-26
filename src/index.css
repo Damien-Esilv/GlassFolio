@@ -425,3 +425,9 @@ textarea::selection {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}

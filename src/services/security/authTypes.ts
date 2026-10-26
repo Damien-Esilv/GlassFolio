@@ -83,7 +83,7 @@ export interface IAuthProvider {
     /** Abandons a sign-in waiting for its second factor (locks the vault / ends the AAL1 session). */
     cancelSecondFactor?(): Promise<void>;
     changeEmail?(currentPassword: string, newEmail: string): Promise<void>;
-    changePassword?(oldPassword: string, newPassword: string, options?: { nonce?: string }): Promise<void>;
+    changePassword?(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void>;
     requestPasswordReset?(email: string, redirectTo?: string): Promise<void>;
     recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
     resendEmailVerification?(email?: string): Promise<void>;

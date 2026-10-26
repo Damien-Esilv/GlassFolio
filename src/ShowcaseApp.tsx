@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
 import { buildAppDestinationUrl, getAppUrl } from './config/deployment';
+import { getInitialPublicPreferences } from './hooks/usePublicThemeLang';
 import './i18n';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
@@ -34,7 +35,8 @@ const AppRedirectHandler: React.FC = () => {
       return;
     }
 
-    const destination = buildAppDestinationUrl(targetPath);
+    const { theme, language } = getInitialPublicPreferences();
+    const destination = buildAppDestinationUrl(targetPath, { theme, lang: language });
     if (typeof window !== 'undefined' && destination && destination !== window.location.href) {
       window.location.assign(destination);
     }

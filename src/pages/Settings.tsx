@@ -554,7 +554,7 @@ const Settings: React.FC = () => {
                                                                     ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
                                                                     : isUnlocked
                                                                         ? 'border-subtle bg-card hover:bg-card-hover hover:border-strong cursor-pointer'
-                                                                        : 'border-subtle/50 bg-subtle/30 opacity-60 cursor-not-allowed'
+                                                                        : 'border-subtle bg-subtle/30 opacity-60 cursor-not-allowed'
                                                             }`}
                                                         >
                                                             <div className="flex items-center gap-3 min-w-0">
@@ -622,7 +622,7 @@ const Settings: React.FC = () => {
                                         </div>
 
                                         {prefData.notifications && (
-                                            <div className="space-y-5 pl-2 sm:pl-4 border-l-2 border-primary/20 animate-in fade-in slide-in-from-top-1">
+                                            <div className="space-y-5 animate-in fade-in slide-in-from-top-1">
                                                 {/* Live Toasts Toggle */}
                                                 <div className="flex items-center justify-between">
                                                     <div>

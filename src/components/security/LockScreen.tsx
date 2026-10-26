@@ -187,6 +187,16 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
 
                 {mode === 'password' ? (
                     <form onSubmit={handleUnlockWithPassword} className="space-y-4">
+                        {/* Hidden username to anchor password manager identification */}
+                        <input
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            defaultValue={user?.email || 'user'}
+                            className="sr-only"
+                            tabIndex={-1}
+                            aria-hidden="true"
+                        />
                         <div>
                             <label className="block text-xs font-medium text-secondary mb-1.5" htmlFor="vault-password">
                                 {t('security:lockScreen.passwordLabel')}
@@ -195,7 +205,9 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" size={18} />
                                 <input
                                     id="vault-password"
+                                    name="password"
                                     type="password"
+                                    autoComplete="current-password"
                                     autoFocus={!isDemo}
                                     required
                                     value={password}
@@ -247,7 +259,10 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" size={18} />
                                 <input
                                     id="vault-recovery-key"
+                                    name="recovery-key"
                                     type="text"
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     autoFocus
                                     required
                                     value={recoveryKey}

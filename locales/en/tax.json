@@ -280,7 +280,47 @@
             "activeZoneBadge": "Your zone",
             "zoneBreakdown": "Official French zone breakdown",
             "yearSelector": "Fiscal year",
-            "autoUpdating": "Dynamic future-proof updates with zero manual config"
+            "autoUpdating": "Dynamic future-proof updates with zero manual config",
+            "zone1Title": "Zone 1",
+            "zone2Title": "Zone 2",
+            "zone3Title": "Zone 3",
+            "paperTitle": "Paper"
+        },
+        "topicContent": {
+            "cto": {
+                "rule1": "Flat Tax (PFU 30%) or optional progressive income tax scale",
+                "rule2": "Cost basis calculated using Weighted Average Price (PMP)",
+                "rule3": "Capital losses can offset capital gains of the same nature, carried forward for 10 years",
+                "rule4": "Form 2074 for detailed sales reporting, Form 2042 boxes 3VG / 3VH"
+            },
+            "pea": {
+                "tableHeaders": {
+                    "age": "Plan Age",
+                    "incomeTax": "Income Tax on Gains",
+                    "socialCharges": "Social Charges",
+                    "closes": "Closure on Withdrawal?"
+                },
+                "status": {
+                    "exempt": "Exempt",
+                    "yes": "Yes",
+                    "noPartial": "No (partial allowed)",
+                    "years": "years",
+                    "overYears": "> {{count}} years"
+                },
+                "depositCap": "Deposit cap: {{peaCap}} € (PEA), {{pmeCap}} € (PEA-PME)",
+                "rule1": "Internal dividends and capital gains are not taxable",
+                "rule2": "After 5 years: partial withdrawals without account closure, only social charges apply"
+            },
+            "crypto": {
+                "threshold": "Exemption threshold: {{amount}} € of annual sales",
+                "rule1Prefix": "Crypto-to-crypto exchanges:",
+                "rule1Highlight": "tax-neutral",
+                "rule1Suffix": "(no taxation)",
+                "rule2": "Sales to fiat currency (€, $) or real-world goods: taxable at 30%",
+                "rule3": "Capital losses cannot be carried forward to future years (unlike CTO)",
+                "rule4": "Form 2042-C boxes 3AN (gain) / 3BN (loss)"
+            },
+            "comingSoon": "Detailed content coming soon for this topic."
         },
         "sources": {
             "title": "Official Sources",

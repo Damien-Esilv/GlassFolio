@@ -10,6 +10,7 @@ import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
 import { evaluatePassword } from '../services/security/passwordValidator';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl, getDeploymentMode } from '../config/deployment';
+import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { authService } from '../services/security/authService';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
@@ -219,9 +220,10 @@ const Signup: React.FC = () => {
       }
    };
 
+   const { theme, language } = usePublicThemeLang();
    const showcaseAvailable = isShowcaseAvailable();
    const isExternalShowcase = Boolean(getShowcaseUrl());
-   const showcaseDestination = buildShowcaseDestinationUrl('/');
+   const showcaseDestination = buildShowcaseDestinationUrl('/', { theme, lang: language });
 
    return (
       <div className="min-h-screen flex items-center justify-center bg-canvas p-4 relative">
@@ -298,16 +300,32 @@ const Signup: React.FC = () => {
                </div>
             )}
 
-            {signupStage === 'form' ? <form onSubmit={handleSubmit} className="space-y-4">
+            {signupStage === 'form' ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+               {isLocal && (
+                  <input
+                     type="text"
+                     name="username"
+                     id="local-signup-username"
+                     autoComplete="username"
+                     defaultValue="local-user"
+                     className="sr-only"
+                     tabIndex={-1}
+                     aria-hidden="true"
+                  />
+               )}
                <div>
-                  <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.fullNameLabel')}</label>
+                  <label htmlFor="signup-name" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.fullNameLabel')}</label>
                   <div className="relative">
                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                      <input
+                        id="signup-name"
+                        name="name"
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        autoComplete="name"
                         className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                         placeholder={t('auth:signup.fullNamePlaceholder')}
                      />
@@ -316,14 +334,18 @@ const Signup: React.FC = () => {
 
                {!isLocal && (
                   <div>
-                     <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.emailLabel')}</label>
+                     <label htmlFor="signup-email" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.emailLabel')}</label>
                      <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                         <input
+                           id="signup-email"
+                           name="email"
                            type="email"
                            required
                            value={email}
                            onChange={(e) => setEmail(e.target.value)}
+                           autoComplete="username"
+                           spellCheck={false}
                            className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                            placeholder={t('auth:signup.emailPlaceholder')}
                         />
@@ -332,7 +354,7 @@ const Signup: React.FC = () => {
                )}
 
                <div>
-                  <label className="block text-xs font-medium text-secondary mb-1.5">
+                  <label htmlFor="signup-password" className="block text-xs font-medium text-secondary mb-1.5">
                      {isLocal ? t('auth:signup.masterPasswordLabel') : t('auth:signup.passwordLabel')}
                   </label>
                   <div className="relative">
@@ -342,10 +364,13 @@ const Signup: React.FC = () => {
                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                      )}
                      <input
+                        id="signup-password"
+                        name="password"
                         type="password"
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="new-password"
                         className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                         placeholder={isLocal ? t('auth:signup.masterPasswordPlaceholder') : t('auth:signup.passwordPlaceholder')}
                      />
@@ -395,19 +420,22 @@ const Signup: React.FC = () => {
                      ? (showOverwriteConfirm ? t('auth:signup.existingVaultConfirmButton') : t('auth:signup.initVaultButton'))
                      : t('auth:signup.createAccountButton')}
                </Button>
-            </form> : (
+            </form>
+            ) : (
                <form onSubmit={handleOtpVerification} className="space-y-4">
                   <p className="text-sm text-secondary">{t('auth:verification.subtitle')} <span className="font-medium text-primary">{email}</span></p>
                   <div>
-                     <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:verification.otpLabel')}</label>
+                     <label htmlFor="signup-otp" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:verification.otpLabel')}</label>
                      <input
+                        id="signup-otp"
+                        name="otp"
                         type="text"
                         inputMode="numeric"
                         autoComplete="one-time-code"
                         required
                         value={otp}
                         onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 8))}
-                        className="w-full bg-subtle border border-subtle text-primary text-center tracking-[0.5em] text-lg rounded-lg focus:ring-primary focus:border-primary p-2.5"
+                        className="w-full bg-subtle border border-subtle text-primary font-mono text-center tracking-[0.5em] text-lg rounded-lg focus:ring-primary focus:border-primary p-2.5"
                      />
                   </div>
                   <Button type="submit" className="w-full" isLoading={isLoading} disabled={otp.length < 6}>{t('auth:verification.confirmButton')}</Button>

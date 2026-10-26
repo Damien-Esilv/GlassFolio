@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { appStorage } from '../services/storage/appStorage';
 import {
-  PUBLIC_LANG_STORAGE_KEY,
-  PUBLIC_THEME_STORAGE_KEY,
-} from '../services/storage/storageKeys';
+  getSyncedPublicTheme,
+  setSyncedPublicTheme,
+  getSyncedPublicLanguage,
+  setSyncedPublicLanguage,
+  applyPublicDomTheme,
+  isPublicBaseTheme,
+  type PublicBaseTheme,
+  type SupportedLanguage,
+} from '../services/storage/publicPreferencesSync';
 
-export type ShowcaseTheme = 'light' | 'dark' | 'night';
-export type ShowcaseLanguage = 'en' | 'fr';
+export type ShowcaseTheme = PublicBaseTheme;
+export type ShowcaseLanguage = SupportedLanguage;
 
 export interface LanguageOption {
   code: ShowcaseLanguage;
@@ -40,55 +45,21 @@ export function getInitialPublicPreferences(): {
   language: ShowcaseLanguage;
   currency: string;
 } {
-  const storedTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
-  let validTheme: ShowcaseTheme = 'night';
-  if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'night') {
-    validTheme = storedTheme;
-  } else if (typeof document !== 'undefined') {
-    const attr = document.documentElement.getAttribute('data-theme');
-    if (attr === 'light' || attr === 'dark' || attr === 'night') {
-      validTheme = attr;
-    }
-  }
-
-  const storedLang = appStorage.getItem(PUBLIC_LANG_STORAGE_KEY);
-  let validLang: ShowcaseLanguage = 'en';
-  if (storedLang === 'fr' || storedLang === 'en') {
-    validLang = storedLang;
-  } else if (typeof document !== 'undefined' && document.documentElement.lang?.toLowerCase().startsWith('fr')) {
-    validLang = 'fr';
-  }
-
-  const currency = validLang === 'fr' ? 'EUR' : 'USD';
-  return { theme: validTheme, language: validLang, currency };
+  const theme = getSyncedPublicTheme();
+  const language = getSyncedPublicLanguage();
+  const currency = language === 'fr' ? 'EUR' : 'USD';
+  return { theme, language, currency };
 }
 
 function resolveInitialTheme(userTheme?: string): ShowcaseTheme {
-  if (userTheme === 'light' || userTheme === 'dark' || userTheme === 'night') {
+  if (isPublicBaseTheme(userTheme)) {
     return userTheme;
   }
-  const stored = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'night') {
-    return stored;
-  }
-  if (typeof document !== 'undefined') {
-    const attr = document.documentElement.getAttribute('data-theme');
-    if (attr === 'light' || attr === 'dark' || attr === 'night') {
-      return attr;
-    }
-  }
-  return 'night';
+  return getSyncedPublicTheme();
 }
 
 function applyDomTheme(theme: ShowcaseTheme): void {
-  if (typeof document === 'undefined') return;
-  const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
-  if (theme === 'light') {
-    root.classList.remove('dark');
-  } else {
-    root.classList.add('dark');
-  }
+  applyPublicDomTheme(theme);
 }
 
 export function usePublicThemeLang() {
@@ -111,7 +82,7 @@ export function usePublicThemeLang() {
   const setTheme = useCallback(
     (nextTheme: ShowcaseTheme) => {
       setThemeState(nextTheme);
-      appStorage.setItem(PUBLIC_THEME_STORAGE_KEY, nextTheme);
+      setSyncedPublicTheme(nextTheme);
       applyDomTheme(nextTheme);
       if (user && updateProfile) {
         updateProfile({
@@ -138,7 +109,7 @@ export function usePublicThemeLang() {
 
   const setLanguage = useCallback(
     (nextLang: ShowcaseLanguage) => {
-      appStorage.setItem(PUBLIC_LANG_STORAGE_KEY, nextLang);
+      setSyncedPublicLanguage(nextLang);
       if (typeof i18n.changeLanguage === 'function') {
         i18n.changeLanguage(nextLang);
       }

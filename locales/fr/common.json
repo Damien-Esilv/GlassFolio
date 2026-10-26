@@ -27,6 +27,7 @@
     "close": "Fermer",
     "error": "Une erreur est survenue",
     "actions": {
+        "title": "Actions",
         "seeAll": "Voir tout",
         "viewReport": "Voir le rapport",
         "viewHistory": "Voir l'historique",

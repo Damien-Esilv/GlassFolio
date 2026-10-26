@@ -126,17 +126,21 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                        <label htmlFor="email-otp" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                             {t('auth:verification.otpLabel', 'Verification Code (6 digits)')}
                         </label>
                         <input
+                            id="email-otp"
+                            name="otp"
                             type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
                             maxLength={8}
                             autoFocus
-                            placeholder="123456"
+                            placeholder={t('security:totp.codePlaceholder', '000000')}
                             value={otpCode}
                             onChange={(e) => setOtpCode(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-center font-mono text-base tracking-widest"
+                            className="w-full px-4 py-2.5 rounded-xl bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:border-primary text-center font-mono text-base tracking-widest"
                         />
                     </div>
 

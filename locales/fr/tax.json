@@ -280,7 +280,47 @@
             "activeZoneBadge": "Votre zone",
             "zoneBreakdown": "Découpage officiel par zone en France",
             "yearSelector": "Année fiscale",
-            "autoUpdating": "Mise à jour automatique pérenne sans ajout manuel futur"
+            "autoUpdating": "Mise à jour automatique pérenne sans ajout manuel futur",
+            "zone1Title": "Zone 1",
+            "zone2Title": "Zone 2",
+            "zone3Title": "Zone 3",
+            "paperTitle": "Papier"
+        },
+        "topicContent": {
+            "cto": {
+                "rule1": "Imposition au PFU (30 %) ou sur option au barème progressif",
+                "rule2": "Prix de revient calculé selon la méthode du Prix Moyen Pondéré (PMP)",
+                "rule3": "Moins-values imputables sur les plus-values de même nature, reportables pendant 10 ans",
+                "rule4": "Formulaire 2074 pour le détail des cessions, 2042 cases 3VG / 3VH"
+            },
+            "pea": {
+                "tableHeaders": {
+                    "age": "Âge du plan",
+                    "incomeTax": "IR sur gains",
+                    "socialCharges": "Prélèvements sociaux",
+                    "closes": "Clôture ?"
+                },
+                "status": {
+                    "exempt": "Exonéré",
+                    "yes": "Oui",
+                    "noPartial": "Non (partiel possible)",
+                    "years": "ans",
+                    "overYears": "> {{count}} ans"
+                },
+                "depositCap": "Plafond versements: {{peaCap}} € (PEA), {{pmeCap}} € (PEA-PME)",
+                "rule1": "Les dividendes et plus-values internes ne sont pas imposables",
+                "rule2": "Après 5 ans: retraits partiels sans clôture, seuls les PS s'appliquent"
+            },
+            "crypto": {
+                "threshold": "Seuil d'exonération: {{amount}} € de cessions annuelles",
+                "rule1Prefix": "Échanges crypto-crypto :",
+                "rule1Highlight": "fiscalement neutres",
+                "rule1Suffix": "(pas d'imposition)",
+                "rule2": "Cessions vers monnaie fiduciaire (€, $) ou bien réel: imposables à 30 %",
+                "rule3": "Moins-values non reportables (contrairement au CTO)",
+                "rule4": "Formulaire 2042-C cases 3AN (gain) / 3BN (perte)"
+            },
+            "comingSoon": "Contenu détaillé à venir pour ce sujet."
         },
         "sources": {
             "title": "Sources officielles",

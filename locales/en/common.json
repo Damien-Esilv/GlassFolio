@@ -27,6 +27,7 @@
     "close": "Close",
     "error": "An error occurred",
     "actions": {
+        "title": "Actions",
         "seeAll": "See All",
         "viewReport": "View Report",
         "viewHistory": "View History",

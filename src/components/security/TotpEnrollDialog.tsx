@@ -236,12 +236,15 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                         {/* 2. Verification Form */}
                         <form onSubmit={handleVerify} className="space-y-3 pt-2">
                             <div>
-                                <label className="block text-xs font-medium text-secondary mb-1">
+                                <label htmlFor="totp-enroll-code" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:totp.verifyTitle')}
                                 </label>
                                 <input
+                                    id="totp-enroll-code"
+                                    name="otp"
                                     type="text"
                                     inputMode="numeric"
+                                    autoComplete="one-time-code"
                                     pattern="[0-9]*"
                                     maxLength={6}
                                     required
