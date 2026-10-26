@@ -28,8 +28,11 @@ export const AI_AND_MARKET_ORIGINS = Object.freeze([
  */
 export const TRUSTED_TYPES_POLICIES = Object.freeze(['glassfolio-qr', 'default']);
 
-/** Local AI (Ollama) runs on the user's machine, whatever the port. */
-export const LOCAL_AI_ORIGINS = Object.freeze(['http://localhost:*', 'http://127.0.0.1:*', 'http://[::1]:*']);
+/**
+ * Local AI (Ollama) runs on the user's machine, whatever the port. (`http://[::1]:*` is not a valid
+ * CSP source in browsers, so IPv6 loopback is intentionally absent.)
+ */
+export const LOCAL_AI_ORIGINS = Object.freeze(['http://localhost:*', 'http://127.0.0.1:*']);
 
 export const CSP_PROFILES = Object.freeze({
   /** Self-hosted Docker image / `npm run dev`: market data goes through the same-origin /yf proxy. */

@@ -1,3 +1,4 @@
+import './config/zodRuntime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 // Inter is self-hosted (no request to Google Fonts, hence no visitor IP sent to a third party).
