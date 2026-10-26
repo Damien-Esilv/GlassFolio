@@ -30,6 +30,30 @@ describe('backupRestoreService', () => {
             expect(result.payload?.version).toBe('1.0.0');
         });
 
+        describe('format version', () => {
+            const backupWith = (version: unknown): string => JSON.stringify({
+                ...(version === undefined ? {} : { version }),
+                exportedAt: '2026-10-05T10:00:00Z',
+                schema: 'transfer',
+                data: { transactions: [] }
+            });
+
+            it.each(['1.0', '1.0.0', '1.9.3', 1])('accepts format version %s', version => {
+                expect(validateBackupContent(backupWith(version)).valid).toBe(true);
+            });
+
+            it('accepts an old export that carries no version', () => {
+                expect(validateBackupContent(backupWith(undefined)).valid).toBe(true);
+            });
+
+            it.each(['2.0', '2', '10.1.0', 'abc'])('rejects format version %s with the version in the message params', version => {
+                const result = validateBackupContent(backupWith(version));
+                expect(result.valid).toBe(false);
+                expect(result.error).toBe('unsupported_version');
+                expect(result.errorParams?.version).toBe(version);
+            });
+        });
+
         it('should reject invalid JSON string', () => {
             const result = validateBackupContent('{ invalid json');
             expect(result.valid).toBe(false);

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isDemoAccount } from '../services/security/demoAccount';
 import Button from '../components/Button';
 import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key, Info } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
@@ -17,7 +18,7 @@ import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 const Signup: React.FC = () => {
    const { t } = useTranslation();
    const {
-      user, signup, setupLocalVault, verifySignupOtp, continueSignupAfterLink,
+      user, logout, signup, setupLocalVault, verifySignupOtp, continueSignupAfterLink,
       pendingSignupCompletion, resumeSignup, cancelSignup, completeSignup,
    } = useAuth();
    const navigate = useNavigate();
@@ -25,10 +26,17 @@ const Signup: React.FC = () => {
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
 
+   const logoutRef = useRef(logout);
+   logoutRef.current = logout;
+
    useEffect(() => {
-      if (user) {
-         navigate('/', { replace: true });
+      if (!user) return;
+      // A demo session left over from the showcase must not block creating a real account.
+      if (isDemoAccount(user)) {
+         logoutRef.current();
+         return;
       }
+      navigate('/', { replace: true });
    }, [user, navigate]);
 
    const [name, setName] = useState('');

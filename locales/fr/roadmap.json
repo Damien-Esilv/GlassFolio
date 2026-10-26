@@ -1,0 +1,42 @@
+{
+  "title": "Feuille de route",
+  "intro": "Ce qui arrive prochainement dans GlassFolio. Les échéances sont indicatives et peuvent évoluer avec le projet.",
+  "status": {
+    "inProgress": "En cours",
+    "planned": "Prévu",
+    "exploring": "À l'étude"
+  },
+  "horizon": {
+    "q4-2026": "T4 2026",
+    "q1-2027": "T1 2027",
+    "later": "Plus tard"
+  },
+  "items": {
+    "assetClasses": {
+      "title": "Nouvelles classes d'actifs",
+      "body": "Métaux précieux, private equity et objets de collection, valorisés automatiquement quand un prix de marché existe ou manuellement à votre rythme."
+    },
+    "manualEntry": {
+      "title": "Saisie manuelle des transactions",
+      "body": "Enregistrez un achat, une vente ou un dividende directement dans l'application, en complément de l'import CSV."
+    },
+    "aiImport": {
+      "title": "Import assisté par IA",
+      "body": "Laissez l'assistant lire un export CSV inconnu et proposer l'association des colonnes, que vous validez."
+    },
+    "liabilities": {
+      "title": "Emprunts et passif",
+      "body": "Suivez vos crédits immobiliers et à la consommation pour voir votre patrimoine net de dettes."
+    },
+    "brokerSync": {
+      "title": "Connexion directe aux courtiers",
+      "body": "Actualisez vos positions directement depuis les courtiers et plateformes pris en charge, sans exporter de fichier."
+    },
+    "jurisdictions": {
+      "title": "Nouvelles juridictions fiscales",
+      "body": "Étendre le moteur fiscal modulaire au-delà de la France, en commençant par les pays les plus demandés."
+    }
+  },
+  "disclaimer": "Les fonctionnalités déjà livrées sont listées dans les nouveautés.",
+  "changelogLink": "Voir les nouveautés"
+}

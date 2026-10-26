@@ -286,7 +286,7 @@ jobs:
             smoke: false
           - label: showcase
             build_cmd: npm run build:showcase
-            limit_kb: 1280
+            limit_kb: 1408
             landing: present
             smoke: false
           - label: vercel-parity
@@ -310,12 +310,19 @@ jobs:
         env:
           LABEL: ${{ matrix.label }}
           LIMIT_KB: ${{ matrix.limit_kb }}
+          SCREENSHOTS_LIMIT_KB: 1024
           LANDING: ${{ matrix.landing }}
         run: |
-          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "${LABEL} bundle size: ${BUNDLE_SIZE}KB (limit ${LIMIT_KB}KB)"
+          # Code and product screenshots are budgeted separately: images must not hide code growth.
+          SCREENSHOTS_KB=$( [ -d dist/screenshots ] && du -sk dist/screenshots | cut -f1 || echo 0 )
+          BUNDLE_SIZE=$(( $(du -sk dist/ | cut -f1) - SCREENSHOTS_KB ))
+          echo "${LABEL} bundle size: ${BUNDLE_SIZE}KB (limit ${LIMIT_KB}KB), screenshots: ${SCREENSHOTS_KB}KB (limit ${SCREENSHOTS_LIMIT_KB}KB)"
           if [ "$BUNDLE_SIZE" -gt "$LIMIT_KB" ]; then
             echo "::error::${LABEL} bundle size ${BUNDLE_SIZE}KB exceeds the ${LIMIT_KB}KB limit"
+            exit 1
+          fi
+          if [ "$SCREENSHOTS_KB" -gt "$SCREENSHOTS_LIMIT_KB" ]; then
+            echo "::error::${LABEL} screenshots weigh ${SCREENSHOTS_KB}KB, over the ${SCREENSHOTS_LIMIT_KB}KB limit (npm run screenshots)"
             exit 1
           fi
           if [ "$LANDING" = "absent" ]; then

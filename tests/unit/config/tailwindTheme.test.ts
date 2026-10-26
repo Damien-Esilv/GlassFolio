@@ -5,7 +5,7 @@ import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 import resolveConfig from 'tailwindcss/resolveConfig';
 import tailwindConfig from '../../../tailwind.config';
-import { buildThemeColors, extractCssVariableNames } from '../../../src/config/tailwindTheme.mjs';
+import { buildThemeColors, colorValue, extractCssVariableNames } from '../../../src/config/tailwindTheme.mjs';
 
 const root = process.cwd();
 const stylesheet = readFileSync(join(root, 'src/index.css'), 'utf-8');
@@ -31,10 +31,10 @@ describe('Tailwind theme derived from src/index.css (E31 — TGLA-141)', () => {
           --text-primary: #111; --bg-card: #fff; --border-strong: #999;
           --shadow-card: none; --font-size: 1px; --spacing: 2px;
         }`);
-      expect(tables.colors).toEqual({ positive: 'var(--color-positive)', 'accent-green': 'var(--color-accent-green)' });
-      expect(tables.textColor).toEqual({ primary: 'var(--text-primary)' });
-      expect(tables.backgroundColor).toEqual({ card: 'var(--bg-card)' });
-      expect(tables.borderColor).toEqual({ strong: 'var(--border-strong)', border: 'var(--border-subtle)' });
+      expect(tables.colors).toEqual({ positive: colorValue('--color-positive'), 'accent-green': colorValue('--color-accent-green') });
+      expect(tables.textColor).toEqual({ primary: colorValue('--text-primary') });
+      expect(tables.backgroundColor).toEqual({ card: colorValue('--bg-card') });
+      expect(tables.borderColor).toEqual({ strong: colorValue('--border-strong'), border: colorValue('--border-subtle') });
     });
 
     it('turns a variable added to the stylesheet into working utilities with no other change', async () => {
@@ -47,10 +47,31 @@ describe('Tailwind theme derived from src/index.css (E31 — TGLA-141)', () => {
       ]).process('@tailwind utilities;', { from: undefined });
 
       expect(result.css).toContain('.text-ocean');
-      expect(result.css).toMatch(/\.text-ocean\s*\{[^}]*color:\s*var\(--color-ocean\)/);
-      expect(result.css).toMatch(/\.bg-ocean\s*\{[^}]*background-color:\s*var\(--color-ocean\)/);
-      expect(result.css).toMatch(/\.border-ocean\s*\{[^}]*border-color:\s*var\(--color-ocean\)/);
-      expect(result.css).toMatch(/\.bg-panel\s*\{[^}]*background-color:\s*var\(--bg-panel\)/);
+      expect(result.css).toMatch(/\.text-ocean\s*\{[^}]*color:\s*color-mix\(in srgb, var\(--color-ocean\)/);
+      expect(result.css).toMatch(/\.bg-ocean\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--color-ocean\)/);
+      expect(result.css).toMatch(/\.border-ocean\s*\{[^}]*border-color:\s*color-mix\(in srgb, var\(--color-ocean\)/);
+      expect(result.css).toMatch(/\.bg-panel\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--bg-panel\)/);
+    });
+  });
+
+  describe('opacity modifiers', () => {
+    it('emits CSS for /NN modifiers from the single parent variable, and 100% without a modifier', async () => {
+      const css = ':root { --color-ocean: #123456; --bg-panel: #abcdef; --border-subtle: #222222; }';
+      const result = await postcss([
+        tailwindcss({
+          content: [{ raw: '<i class="bg-ocean bg-ocean/10 text-ocean/60 border-ocean/30 bg-panel/60 border-border/50"></i>' }],
+          theme: { extend: buildThemeColors(css) },
+        }),
+      ]).process('@tailwind utilities;', { from: undefined });
+
+      expect(colorValue('--color-ocean')).toContain('<alpha-value>');
+      expect(result.css).toMatch(/\.bg-ocean\\\/10\s*\{[^}]*color-mix\(in srgb, var\(--color-ocean\) calc\(0\.1 \* 100%\), transparent\)/);
+      expect(result.css).toMatch(/\.text-ocean\\\/60\s*\{[^}]*calc\(0\.6 \* 100%\)/);
+      expect(result.css).toMatch(/\.border-ocean\\\/30\s*\{[^}]*calc\(0\.3 \* 100%\)/);
+      expect(result.css).toMatch(/\.bg-panel\\\/60\s*\{[^}]*var\(--bg-panel\) calc\(0\.6 \* 100%\)/);
+      expect(result.css).toMatch(/\.border-border\\\/50\s*\{[^}]*var\(--border-subtle\) calc\(0\.5 \* 100%\)/);
+      // no modifier: opacity variable defaults to 1 => 100% of the variable (same color as before)
+      expect(result.css).toMatch(/\.bg-ocean\s*\{[^}]*var\(--color-ocean\) calc\(var\(--tw-bg-opacity, 1\) \* 100%\)/);
     });
   });
 
@@ -63,23 +84,23 @@ describe('Tailwind theme derived from src/index.css (E31 — TGLA-141)', () => {
       expect(variables.length).toBeGreaterThan(30);
       for (const variable of variables) {
         const [, prefix, name] = variable.match(/^--([a-z]+)-(.+)$/) as RegExpMatchArray;
-        expect(extend[tableByPrefix[prefix]]?.[name], `${variable} is missing from the Tailwind theme`).toBe(`var(${variable})`);
+        expect(extend[tableByPrefix[prefix]]?.[name], `${variable} is missing from the Tailwind theme`).toBe(colorValue(variable));
       }
     });
 
     it('keeps the semantic utilities the app relies on', () => {
       const theme = resolveConfig(tailwindConfig).theme as unknown as Record<string, Record<string, string>>;
-      expect(theme.textColor.primary).toBe('var(--text-primary)');
-      expect(theme.textColor.secondary).toBe('var(--text-secondary)');
-      expect(theme.textColor.positive).toBe('var(--color-positive)');
-      expect(theme.textColor['accent-blue']).toBe('var(--color-accent-blue)');
-      expect(theme.backgroundColor.canvas).toBe('var(--bg-canvas)');
-      expect(theme.backgroundColor.card).toBe('var(--bg-card)');
-      expect(theme.backgroundColor['brand-static']).toBe('var(--color-brand-static)');
-      expect(theme.backgroundColor.primary).toBe('var(--color-primary)');
-      expect(theme.borderColor.subtle).toBe('var(--border-subtle)');
-      expect(theme.borderColor.border).toBe('var(--border-subtle)');
-      expect(theme.colors['negative-subtle']).toBe('var(--color-negative-subtle)');
+      expect(theme.textColor.primary).toBe(colorValue('--text-primary'));
+      expect(theme.textColor.secondary).toBe(colorValue('--text-secondary'));
+      expect(theme.textColor.positive).toBe(colorValue('--color-positive'));
+      expect(theme.textColor['accent-blue']).toBe(colorValue('--color-accent-blue'));
+      expect(theme.backgroundColor.canvas).toBe(colorValue('--bg-canvas'));
+      expect(theme.backgroundColor.card).toBe(colorValue('--bg-card'));
+      expect(theme.backgroundColor['brand-static']).toBe(colorValue('--color-brand-static'));
+      expect(theme.backgroundColor.primary).toBe(colorValue('--color-primary'));
+      expect(theme.borderColor.subtle).toBe(colorValue('--border-subtle'));
+      expect(theme.borderColor.border).toBe(colorValue('--border-subtle'));
+      expect(theme.colors['negative-subtle']).toBe(colorValue('--color-negative-subtle'));
     });
 
     it('does not hand-list colors: they must be declared once, in src/index.css', () => {

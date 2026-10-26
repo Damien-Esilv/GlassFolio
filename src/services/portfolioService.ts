@@ -1,4 +1,4 @@
-import { Position, PositionFilter, DashboardSummary } from '../types';
+import { Position, PositionFilter, DashboardSummary, Instrument, RealizedPLSummary } from '../types';
 import type { ChartPriceMode } from '../types/domain';
 import { db, delay } from './db';
 import { refreshPositionPrices, fetchRealPriceHistory, HistoricalPricePoint } from './priceService';
@@ -7,7 +7,15 @@ import { formatChartDate, DateFormatPattern } from '../utils/date';
 import { roundCurrency } from '../utils/currency';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
-import { buildLedger, applyTransaction, defaultLedgerKey, emptyLedgerState, sortChronologically, LedgerState } from './portfolio/positionLedger';
+import { buildLedger, buildRealizedEvents, applyTransaction, defaultLedgerKey, emptyLedgerState, rowSymbol, sortChronologically, LedgerState } from './portfolio/positionLedger';
+
+/** Asset class shown for a position, from its instrument (no instrument: equity) */
+const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => {
+    if (!instrument) return 'Equity';
+    if (instrument.type === 'stock') return 'Equity';
+    if (instrument.type === 'crypto') return 'Crypto';
+    return instrument.type === 'cash' ? 'Cash' : 'ETF';
+};
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
@@ -50,7 +58,6 @@ export const portfolioService = {
 
         // Replay the journal through the shared ledger (WAC or FIFO per account)
         const ledger = buildLedger(unifiedTxs, {
-            keyOf: tx => (tx.instrumentId ? `${tx.accountId}:${tx.instrumentId}` : null),
             methodFor: accountId => accountMap.get(accountId)?.costBasisMethod ?? 'WAC'
         });
 
@@ -60,7 +67,7 @@ export const portfolioService = {
             const instrument = instrumentMap.get(firstTx.instrumentId);
             const account = accountMap.get(firstTx.accountId);
             const institute = account ? instituteMap.get(account.instituteId) : null;
-            const symbol = instrument?.marketIdentifier.symbol || firstTx.assetSymbol;
+            const symbol = instrument?.marketIdentifier.symbol || rowSymbol(firstTx) || firstTx.assetSymbol;
             const isCash = instrument?.type === 'cash';
             const lastPrice = isCash ? 1 : parseFloat(lastTx.priceUnit || '0') || (state.quantity > 0 ? state.costBasis / state.quantity : 0);
 
@@ -75,7 +82,7 @@ export const portfolioService = {
                 unrealizedPL: 0,
                 unrealizedPLPercent: 0,
                 currency: instrument?.denominationCurrency || firstTx.feeAsset || 'EUR',
-                type: instrument ? (instrument.type === 'stock' ? 'Equity' : instrument.type === 'crypto' ? 'Crypto' : instrument.type === 'cash' ? 'Cash' : 'ETF') : 'Equity',
+                type: positionTypeOf(instrument),
                 source: institute?.name || 'Unknown',
                 bankName: institute?.name,
                 accountName: account?.name
@@ -96,6 +103,50 @@ export const portfolioService = {
 
         // Save calculated positions to DB (cache)
         await portfolioRepository.savePositions(positions);
+    },
+
+    /**
+     * Realized gains and losses from the journal: every sale replayed through the ledger of its
+     * account (WAC or FIFO), converted to the base currency.
+     */
+    getRealizedPL: async (baseCurrency: string = 'EUR'): Promise<RealizedPLSummary> => {
+        await delay(100);
+        const journal = db.getUnifiedTransactions();
+        const methodByAccount = new Map(db.getAccounts().map(a => [a.id, a.costBasisMethod ?? 'WAC']));
+        const instrumentById = new Map(db.getInstruments().map(i => [i.id, i]));
+        const txById = new Map(journal.map(tx => [tx.id, tx]));
+
+        const events = buildRealizedEvents(journal, { methodFor: accountId => methodByAccount.get(accountId) ?? 'WAC' });
+        if (events.length === 0) return { total: 0, byMonth: [], entries: [] };
+
+        const currencyOf = (txId: string): string => {
+            const tx = txById.get(txId);
+            return (tx ? instrumentById.get(tx.instrumentId)?.denominationCurrency : undefined) || 'EUR';
+        };
+        const rates = await currencyService.getExchangeRates([...new Set(events.map(e => currencyOf(e.txId)))], baseCurrency);
+
+        const entries = events.map(event => {
+            const tx = txById.get(event.txId);
+            const instrument = tx ? instrumentById.get(tx.instrumentId) : undefined;
+            return {
+                date: event.date,
+                symbol: instrument?.marketIdentifier.symbol || (tx ? rowSymbol(tx) || tx.assetSymbol : '') || '',
+                assetType: positionTypeOf(instrument),
+                value: roundCurrency(currencyService.convertAmount(event.realizedPL, currencyOf(event.txId), baseCurrency, rates))
+            };
+        });
+
+        const months = new Map<string, number>();
+        for (const entry of entries) {
+            const month = entry.date.slice(0, 7);
+            months.set(month, (months.get(month) ?? 0) + entry.value);
+        }
+
+        return {
+            total: roundCurrency(entries.reduce((sum, entry) => sum + entry.value, 0)),
+            byMonth: [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, value]) => ({ month, value: roundCurrency(value) })),
+            entries
+        };
     },
 
     getDashboardSummary: async (
@@ -242,7 +293,7 @@ export const portfolioService = {
                 if (key) {
                     const next = applyTransaction(ledgerStates.get(key) ?? emptyLedgerState(), tx, accountMethods.get(tx.accountId) ?? 'WAC');
                     ledgerStates.set(key, next);
-                    const symbol = instrumentSymbols.get(tx.instrumentId) || tx.assetSymbol;
+                    const symbol = instrumentSymbols.get(tx.instrumentId) || rowSymbol(tx) || tx.assetSymbol;
                     ledgerSymbols.set(key, symbol);
                     // Re-aggregate this symbol across accounts
                     assetQuantities[symbol] = Array.from(ledgerStates.entries())

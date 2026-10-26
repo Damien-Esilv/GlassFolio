@@ -27,6 +27,7 @@
     "close": "Close",
     "error": "An error occurred",
     "actions": {
+        "title": "Actions",
         "seeAll": "See All",
         "viewReport": "View Report",
         "viewHistory": "View History",
@@ -135,7 +136,11 @@
             "SNAPSHOT_QTY_REQUIRED": "Quantity is required",
             "SNAPSHOT_PRICE_REQUIRED": "Average price (cost basis per unit) is required",
             "LABEL_MISSING": "Description recommended for the audit trail",
-            "OVERSELL": "Cannot sell {{sell}} {{symbol}}: only {{position}} held"
+            "OVERSELL": "Cannot sell {{sell}} {{symbol}}: only {{position}} held",
+            "TYPE_INFERRED": "No type in the file: read as {{type}} from the sign of the quantity or amount",
+            "TYPE_UNRECOGNIZED": "Unknown type \"{{label}}\": check that this row is really a {{type}}",
+            "CORPORATE_ACTION_UNSUPPORTED": "Splits and spin-offs are not supported: import a snapshot of your holdings instead",
+            "COST_UNKNOWN": "No price or cash amount in this file: cost or proceeds are unknown (set to 0)"
         },
         "secrets": {
             "saveFailed": "The secret could not be saved. Please try again."

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, PieChart, Pie } from 'recharts';
 import { ArrowLeft, TrendingUp, Receipt, CheckCircle2, Clock, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { currencyService } from '../services/currencyService';
+import { portfolioService } from '../services/portfolioService';
+import type { RealizedPLEntry } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { formatChartDate } from '../utils/date';
 import AnimatedCounter from '../components/AnimatedCounter';
@@ -38,74 +40,66 @@ const RealizedUnrealizedPL: React.FC = () => {
       }, 0);
    }, [filteredPositions, currency]);
 
-   // Calculate estimated Realized P&L from Sell transactions
-   const realizedPL = useMemo(() => {
-      const sellTxs = transactions.filter(tx => tx.type === 'Sell');
-      if (sellTxs.length === 0) {
-         return 0;
-      }
-      return sellTxs.reduce((sum, tx) => {
-         const gain = (tx.price * tx.amount) * 0.15;
-         const valInBase = currencyService.convertAmount(gain, tx.currency || 'EUR', currency);
-         return sum + valInBase;
-      }, 0);
-   }, [transactions, currency]);
+   // Realized P&L comes from the ledger (each sale against its cost basis), refreshed when the journal changes
+   const [realizedEntries, setRealizedEntries] = useState<RealizedPLEntry[]>([]);
+   useEffect(() => {
+      let cancelled = false;
+      portfolioService.getRealizedPL(currency)
+         .then(summary => { if (!cancelled) setRealizedEntries(summary.entries); })
+         .catch(() => { if (!cancelled) setRealizedEntries([]); });
+      return () => { cancelled = true; };
+   }, [currency, transactions]);
+
+   const filteredRealized = useMemo(() => {
+      if (selectedCategories.length === 0) return realizedEntries;
+      return realizedEntries.filter(e => selectedCategories.some(cat => isAssetClassMatch(e.assetType, cat)));
+   }, [realizedEntries, selectedCategories]);
+
+   const realizedPL = useMemo(() => filteredRealized.reduce((sum, e) => sum + e.value, 0), [filteredRealized]);
 
    const totalPL = realizedPL + unrealizedPL;
 
-   // Generate Periodic (Monthly) P&L breakdown chart data for row 2
+   // Periodic P&L: realized gains per month (or per week over 1M). Unrealized gains have no history.
    const periodicPLData = useMemo(() => {
-      let monthsCount = 12;
       const now = new Date();
-      if (timeRange === '1M') monthsCount = 4; // 4 weeks
+      const showRealized = plMode !== 'UNREALIZED';
+      const round = (value: number) => Math.round(value * 100) / 100;
+
+      if (timeRange === '1M') {
+         const weekMs = 7 * 24 * 60 * 60 * 1000;
+         return Array.from({ length: 4 }, (_, i) => {
+            const end = now.getTime() - (3 - i) * weekMs;
+            const start = end - weekMs;
+            const pl = showRealized
+               ? filteredRealized.reduce((sum, e) => {
+                  const time = new Date(e.date).getTime();
+                  return time > start && time <= end ? sum + e.value : sum;
+               }, 0)
+               : 0;
+            return { name: `W${i + 1}`, pl: round(pl) };
+         });
+      }
+
+      let monthsCount = 12;
       if (timeRange === '3M') monthsCount = 3;
       if (timeRange === 'YTD') monthsCount = Math.max(1, now.getMonth() + 1);
-      if (timeRange === '1Y') monthsCount = 12;
       if (timeRange === 'ALL') monthsCount = 24;
 
-      // Category seed based on symbols in filtered positions for unique, realistic curves per category
-      const symbolSeed = filteredPositions.reduce((acc, p, idx) => {
-         return acc + (p.symbol ? p.symbol.charCodeAt(0) : 65) * (idx + 1);
-      }, 42);
-
-      const activeUnrealized = unrealizedPL;
-      const activeRealized = realizedPL;
-      const activeTotal = activeUnrealized + activeRealized;
-
-      let targetPL = activeTotal;
-      if (plMode === 'REALIZED') targetPL = activeRealized;
-      if (plMode === 'UNREALIZED') targetPL = activeUnrealized;
-
-      const baseMonthlyAvg = targetPL / Math.max(1, monthsCount);
+      const byMonth = new Map<string, number>();
+      for (const entry of filteredRealized) {
+         const month = entry.date.slice(0, 7);
+         byMonth.set(month, (byMonth.get(month) ?? 0) + entry.value);
+      }
 
       return Array.from({ length: monthsCount }, (_, i) => {
-         let label = '';
-         if (timeRange === '1M') {
-            label = `W${i + 1}`;
-         } else if (timeRange === '3M' || timeRange === 'YTD') {
-            const d = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1 - i), 1);
-            label = d.toLocaleDateString(locale, { month: 'short' });
-         } else {
-            // 1Y & ALL: 12 or 24 rolling months ending at current month
-            const d = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1 - i), 1);
-            label = formatChartDate(d, 'month', dateFormat, locale);
-         }
-
-         // Realistic, non-repeating monthly variance driven by asset category seed & month index
-         const noise1 = Math.sin(i * 0.85 + (symbolSeed % 7)) * 0.7;
-         const noise2 = Math.cos(i * 1.35 + (symbolSeed % 11)) * 0.5;
-         const noise3 = ((i * 3 + symbolSeed) % 5 - 2) * 0.15;
-         
-         const monthlyMultiplier = 0.5 + noise1 + noise2 + noise3;
-         const monthlyVal = baseMonthlyAvg * monthlyMultiplier;
-
-         const pl = Math.round(monthlyVal * 10) / 10;
-         return {
-            name: label,
-            pl
-         };
+         const d = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1 - i), 1);
+         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+         const label = timeRange === '3M' || timeRange === 'YTD'
+            ? d.toLocaleDateString(locale, { month: 'short' })
+            : formatChartDate(d, 'month', dateFormat, locale);
+         return { name: label, pl: showRealized ? round(byMonth.get(key) ?? 0) : 0 };
       });
-   }, [timeRange, locale, filteredPositions, plMode, unrealizedPL, realizedPL, dateFormat]);
+   }, [timeRange, locale, plMode, filteredRealized, dateFormat]);
 
    // Top Gainers and Losers (Unrealized P&L) - Top 5
    const nonCashPositions = useMemo(() => filteredPositions.filter(p => p.type !== 'Cash'), [filteredPositions]);
@@ -227,7 +221,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                <div className="text-3xl font-extrabold text-primary">
                   <AnimatedCounter value={totalPL} currency={currency} locale={locale} />
                </div>
-               <p className="text-tertiary text-xs mt-1">Realized + Unrealized P&L</p>
+               <p className="text-tertiary text-xs mt-1">{t('reports:pl.totalDesc')}</p>
             </div>
 
             {/* 2. Realized P&L */}
@@ -309,7 +303,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                   <Calendar size={20} className="text-brand" />
                   <h3 className="text-xl font-bold text-primary">{t('reports:pl.monthlyTitle')} ({timeRange})</h3>
                </div>
-               <span className="text-xs text-tertiary font-semibold">{t('reports:pl.subtitle')}</span>
+               <span className="text-xs text-tertiary font-semibold">{t('reports:pl.monthlyNote')}</span>
             </div>
 
             {periodicPLData.every(d => d.pl === 0) ? (

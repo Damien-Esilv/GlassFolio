@@ -11,71 +11,91 @@ const CANONICAL_TYPES: ReadonlySet<string> = new Set([
     'ADJUSTMENT', 'BALANCE_ADJUSTMENT', 'SNAPSHOT_ADJUSTMENT',
 ]);
 
+/** Stock splits, reverse splits, spin-offs: they change quantities without any cash flow. */
+const CORPORATE_ACTION_PATTERN = /\b(?:reverse\s+)?split\b|regroupement|spin[\s-]?off|scission|attribution gratuite/;
+
 /**
- * Normalize raw transaction type string to standard TransactionType.
+ * Classify a raw type label. Returns null when the label is empty or unknown, so callers
+ * can tell "recognized" apart from "defaulted".
  */
-export function normalizeTransactionType(rawType: string): TransactionType {
-    if (!rawType) return 'BUY';
+function classifyLabel(rawType: string): TransactionType | null {
+    if (!rawType) return null;
 
     // Exact canonical value (e.g. the `operation` column of GlassFolio's own export): keep it as is.
     const canonical = rawType.trim().toUpperCase();
     if (CANONICAL_TYPES.has(canonical)) return canonical as TransactionType;
 
     const lower = rawType.toLowerCase().trim();
+    const has = (...needles: string[]): boolean => needles.some(needle => lower.includes(needle));
+
+    if (CORPORATE_ACTION_PATTERN.test(lower)) return 'ADJUSTMENT';
+
+    // Sell wording that contains a buy keyword ("rachat" holds "achat", "verkauf" holds "kauf") is tested first
+    if (has('verkauf', 'rachat', 'transaction sold', 'transaction spend', 'vendita', 'venta', 'cession')) {
+        return 'SELL';
+    }
 
     // Buy patterns
-    if (lower.includes('buy') || lower.includes('achat') || lower.includes('purchase')) {
+    if (has('buy', 'achat', 'purchase', 'kauf', 'souscription', 'transaction revenue', 'compra', 'acquisto', 'acquisition')) {
         return 'BUY';
     }
 
     // Sell patterns
-    if (lower.includes('sell') || lower.includes('vente') || lower.includes('sold')) {
+    if (has('sell', 'vente', 'sold')) {
         return 'SELL';
     }
 
     // Deposit patterns
-    if (lower.includes('deposit') || lower.includes('dépôt') || lower.includes('virement reçu') ||
-        lower.includes('credit') || lower.includes('crédit') || lower.includes('versement')) {
+    if (has('deposit', 'dépôt', 'virement reçu', 'credit', 'crédit', 'versement', 'apport', 'einzahlung')) {
         return 'DEPOSIT';
     }
 
     // Withdraw patterns
-    if (lower.includes('withdraw') || lower.includes('retrait') || lower.includes('virement émis') ||
-        lower.includes('debit') || lower.includes('débit')) {
+    if (has('withdraw', 'retrait', 'virement émis', 'debit', 'débit', 'auszahlung')) {
         return 'WITHDRAW';
     }
 
     // Income patterns (dividends, interest, staking, cashback)
-    if (lower.includes('dividend') || lower.includes('dividende') || lower.includes('interest') ||
-        lower.includes('intérêt') || lower.includes('distribution') || lower.includes('staking') ||
-        lower.includes('reward') || lower.includes('cashback') || lower.includes('saveback') ||
-        lower.includes('airdrop') || lower.includes('mining')) {
+    if (has('dividend', 'dividende', 'interest', 'intérêt', 'distribution', 'staking', 'reward', 'cashback',
+        'saveback', 'airdrop', 'mining', 'coupon', 'zinsen')) {
         return 'INCOME';
     }
 
     // Expense patterns
-    if (lower.includes('fee') || lower.includes('frais') || lower.includes('commission')) {
+    if (has('fee', 'frais', 'commission', 'gebühr')) {
         return 'EXPENSE';
     }
 
     // Transfer patterns
-    if (lower.includes('transfer') || lower.includes('virement') || lower.includes('send') ||
-        lower.includes('receive') || lower.includes('envoi')) {
+    if (has('transfer', 'virement', 'send', 'receive', 'envoi')) {
         return 'TRANSFER';
     }
 
     // Swap patterns
-    if (lower.includes('swap') || lower.includes('exchange') || lower.includes('convert') ||
-        lower.includes('small assets') || lower.includes('dust')) {
+    if (has('swap', 'exchange', 'convert', 'small assets', 'dust')) {
         return 'SWAP';
     }
 
     // Adjustment patterns
-    if (lower.includes('adjust') || lower.includes('correction') || lower.includes('manual')) {
+    if (has('adjust', 'correction', 'manual')) {
         return 'ADJUSTMENT';
     }
 
-    return 'BUY';
+    return null;
+}
+
+/** True when a cell reads like a transaction type label (buy, vente, Verkauf, dividend, split…) */
+export function isKnownTypeLabel(rawType: string): boolean {
+    const lower = rawType.toLowerCase().trim();
+    return classifyLabel(rawType) !== null || (lower !== '' && CORPORATE_ACTION_PATTERN.test(lower));
+}
+
+/**
+ * Normalize raw transaction type string to standard TransactionType.
+ * Unknown or empty labels fall back to BUY; use resolveTransactionType to tell them apart.
+ */
+export function normalizeTransactionType(rawType: string): TransactionType {
+    return classifyLabel(rawType) ?? 'BUY';
 }
 
 /**
@@ -241,10 +261,18 @@ export function parseDate(dateStr: string, formatHint?: string): string | null {
     return null;
 }
 
+export type DecimalSeparator = ',' | '.';
+
+/** "1,234" / "12.345": an integer part of 1-3 digits, no leading zero run, then exactly 3 digits. */
+function isThreeDigitGroup(intPart: string, fracPart: string): boolean {
+    return fracPart.length === 3 && intPart.length >= 1 && intPart.length <= 3 && !/^0+$/.test(intPart);
+}
+
 /**
  * Resolve a number that contains a single kind of separator (only ',' or only '.').
+ * A decimalHint (the separator the whole file uses) settles the ambiguous 3-digit case.
  */
-function resolveSingleSeparator(value: string, separator: ',' | '.'): string | null {
+function resolveSingleSeparator(value: string, separator: DecimalSeparator, decimalHint?: DecimalSeparator): string | null {
     const parts = value.split(separator);
     if (parts.length > 2) {
         // Repeated separator can only be a thousands separator: 1.234.567 / 1,234,567
@@ -254,9 +282,12 @@ function resolveSingleSeparator(value: string, separator: ',' | '.'): string | n
         return null;
     }
     const [intPart, fracPart] = parts;
-    if (separator === ',' && fracPart.length === 3 && intPart.length >= 1 && intPart.length <= 3 && !/^0+$/.test(intPart)) {
+    if (isThreeDigitGroup(intPart, fracPart)) {
+        if (decimalHint) {
+            return separator === decimalHint ? `${intPart}.${fracPart}` : intPart + fracPart;
+        }
         // "1,234" — historically treated as US thousands grouping
-        return intPart + fracPart;
+        if (separator === ',') return intPart + fracPart;
     }
     return `${intPart || '0'}.${fracPart}`;
 }
@@ -268,8 +299,11 @@ function resolveSingleSeparator(value: string, separator: ',' | '.'): string | n
  * currency symbols/codes anywhere (12,50 € · EUR 12.50 · $1,250.50), narrow/non-breaking
  * spaces, explicit '+', trailing minus (12,50-), accounting negatives ((12.50)),
  * unicode minus and scientific notation (1.2E-5).
+ *
+ * A lone ',' or '.' followed by exactly 3 digits ("1,500") is ambiguous: pass the file's
+ * decimalHint (see detectDecimalSeparator) to read it as a decimal or as thousands.
  */
-export function parseDecimal(value: string | undefined): string | null {
+export function parseDecimal(value: string | undefined, decimalHint?: DecimalSeparator): string | null {
     if (value === undefined || value === null) return null;
     let cleaned = String(value).trim();
     if (cleaned === '') return null;
@@ -314,9 +348,9 @@ export function parseDecimal(value: string | undefined): string | null {
         if (cleaned.split(decimalSep).length > 2) return null;
         normalized = cleaned.split(thousandsSep).join('').replace(decimalSep, '.');
     } else if (lastComma >= 0) {
-        normalized = resolveSingleSeparator(cleaned, ',');
+        normalized = resolveSingleSeparator(cleaned, ',', decimalHint);
     } else if (lastDot >= 0) {
-        normalized = resolveSingleSeparator(cleaned, '.');
+        normalized = resolveSingleSeparator(cleaned, '.', decimalHint);
     } else {
         normalized = cleaned;
     }
@@ -326,4 +360,128 @@ export function parseDecimal(value: string | undefined): string | null {
     if (!Number.isFinite(num)) return null;
 
     return (negative && num !== 0 ? -num : num).toString();
+}
+
+/**
+ * Infer which separator a numeric column uses for decimals. Only unambiguous samples vote
+ * ("1 234,56", "3.5", "2,5"); a lone 3-digit group ("1,500") says nothing, except in a
+ * semicolon-delimited file where a comma is far more likely a decimal than a thousands mark.
+ */
+export function detectDecimalSeparator(samples: string[], delimiter?: string): DecimalSeparator | undefined {
+    let commaVotes = 0;
+    let pointVotes = 0;
+    let ambiguousCommas = 0;
+
+    for (const sample of samples) {
+        const cleaned = String(sample ?? '').replace(/[A-Za-z€$£¥₿%'’\s\u00a0\u202f+\-−()]/g, '');
+        if (!/^[\d.,]+$/.test(cleaned) || !/\d/.test(cleaned)) continue;
+
+        const lastComma = cleaned.lastIndexOf(',');
+        const lastDot = cleaned.lastIndexOf('.');
+        if (lastComma >= 0 && lastDot >= 0) {
+            if (lastComma > lastDot) commaVotes++;
+            else pointVotes++;
+            continue;
+        }
+
+        const separator: DecimalSeparator | null = lastComma >= 0 ? ',' : lastDot >= 0 ? '.' : null;
+        if (!separator) continue;
+        const parts = cleaned.split(separator);
+        if (parts.length > 2) continue; // repeated separator: thousands grouping
+        if (isThreeDigitGroup(parts[0], parts[1])) {
+            if (separator === ',') ambiguousCommas++;
+            continue;
+        }
+        if (separator === ',') commaVotes++;
+        else pointVotes++;
+    }
+
+    if (commaVotes > pointVotes) return ',';
+    if (pointVotes > commaVotes) return '.';
+    if (commaVotes === 0 && ambiguousCommas > 0 && delimiter === ';') return ',';
+    return undefined;
+}
+
+/**
+ * 'signed' when an amount column mixes negative and positive values (cash flow convention:
+ * outflow negative). A column that is all positive or all negative carries no direction.
+ */
+export function detectAmountSignConvention(samples: string[]): 'signed' | 'unsigned' {
+    let hasNegative = false;
+    let hasPositive = false;
+    for (const sample of samples) {
+        const parsed = parseDecimal(sample);
+        if (parsed === null) continue;
+        const value = Number(parsed);
+        if (value < 0) hasNegative = true;
+        else if (value > 0) hasPositive = true;
+    }
+    return hasNegative && hasPositive ? 'signed' : 'unsigned';
+}
+
+export interface TypeResolutionInput {
+    rawType: string;
+    /** Parsed quantity, sign preserved */
+    quantity: string | null;
+    /** Parsed cash amount, sign preserved */
+    amount: string | null;
+    /** The amount column of the file mixes signs (see detectAmountSignConvention) */
+    amountSigned: boolean;
+    /** The row is about a currency, not a security (bank statement line) */
+    isCashAsset: boolean;
+}
+
+export interface TypeResolution {
+    type: TransactionType;
+    /** Where the answer comes from: the type label, the sign of quantity/amount, or the BUY default */
+    source: 'label' | 'sign' | 'default';
+    /** The label was understood (false for an empty or unknown label) */
+    recognized: boolean;
+    /** Split, spin-off…: not supported as a journal entry */
+    corporateAction: boolean;
+}
+
+const toSignedNumber = (value: string | null): number | null => {
+    if (value === null || value === '') return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+};
+
+/**
+ * Decide the transaction type of a row: the label first, then the signs of quantity and
+ * amount, and BUY only as a last resort. A currency is never bought: its lines are deposits
+ * and withdrawals.
+ */
+export function resolveTransactionType(input: TypeResolutionInput): TypeResolution {
+    const { rawType, isCashAsset, amountSigned } = input;
+
+    if (CORPORATE_ACTION_PATTERN.test(rawType.toLowerCase().trim())) {
+        return { type: 'ADJUSTMENT', source: 'label', recognized: true, corporateAction: true };
+    }
+
+    const labelType = classifyLabel(rawType);
+    if (labelType) {
+        let type = labelType;
+        if (isCashAsset && type === 'BUY') type = 'WITHDRAW';
+        else if (isCashAsset && type === 'SELL') type = 'DEPOSIT';
+        return { type, source: 'label', recognized: true, corporateAction: false };
+    }
+
+    const quantity = toSignedNumber(input.quantity);
+    const amount = toSignedNumber(input.amount);
+
+    if (isCashAsset) {
+        if (amount !== null && amount < 0) return { type: 'WITHDRAW', source: 'sign', recognized: false, corporateAction: false };
+        return { type: 'DEPOSIT', source: amountSigned && amount !== null && amount > 0 ? 'sign' : 'default', recognized: false, corporateAction: false };
+    }
+
+    if (quantity !== null && quantity !== 0) {
+        // Cash-flow convention: a positive amount in a signed column is money coming in
+        const isSell = quantity < 0 || (amountSigned && amount !== null && amount > 0);
+        return { type: isSell ? 'SELL' : 'BUY', source: 'sign', recognized: false, corporateAction: false };
+    }
+    if (amount !== null && amount < 0) return { type: 'BUY', source: 'sign', recognized: false, corporateAction: false };
+    if (amountSigned && amount !== null && amount > 0) return { type: 'SELL', source: 'sign', recognized: false, corporateAction: false };
+
+    return { type: 'BUY', source: 'default', recognized: false, corporateAction: false };
 }

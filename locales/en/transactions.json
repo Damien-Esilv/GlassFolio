@@ -148,7 +148,56 @@
             "templateNamePlaceholder": "Template name...",
             "notMappedOption": "— Not mapped —",
             "preview": "Preview (First {{rows}} Rows × {{columns}} Columns)",
-            "identifierRequiredWarning": "Please map either the ISIN Code or the Asset Symbol (at least one is required) to proceed."
+            "identifierRequiredWarning": "Please map either the ISIN Code or the Asset Symbol (at least one is required) to proceed.",
+            "match": {
+                "title": "Match your columns",
+                "intro": "Tell GlassFolio what each column of your file contains. Most are found automatically; check the ones marked below.",
+                "fileStats": "Columns: {{columns}} · Rows: {{rows}}",
+                "summaryLabel": "Column matching summary",
+                "summary": {
+                    "matched": "Matched",
+                    "attention": "To check",
+                    "ignored": "Not used"
+                },
+                "acceptAll": "Accept all suggestions ({{count}})",
+                "filter": {
+                    "label": "Columns to show",
+                    "all": "All columns",
+                    "attention": "To check ({{count}})"
+                },
+                "table": {
+                    "column": "Column in your file",
+                    "samples": "Example values",
+                    "field": "Use it as"
+                },
+                "selectLabel": "Use column \"{{column}}\" as",
+                "ignoreOption": "Don't use this column",
+                "status": {
+                    "matched": "Matched",
+                    "attention": "To check",
+                    "ignored": "Not used"
+                },
+                "suggestion": "Suggested: {{field}}",
+                "useSuggestion": "Use",
+                "useSuggestionFor": "Use the suggestion {{field}} for column \"{{column}}\"",
+                "couldBe": "Could be: {{fields}}",
+                "alsoUsedAs": "Also used as: {{field}}",
+                "allSorted": "Every column is sorted out. Check the preview below, then continue.",
+                "requiredLegend": "* required field",
+                "required": {
+                    "title": "Required information",
+                    "amount": "Amount, or quantity and unit price",
+                    "identifier": "Asset symbol or ISIN",
+                    "found": "Found in \"{{column}}\"",
+                    "foundDerived": "Computed from quantity and unit price",
+                    "missing": "Not matched yet"
+                },
+                "pagination": {
+                    "range": "Columns {{from}}–{{to}} of {{total}}",
+                    "previous": "Previous",
+                    "next": "Next"
+                }
+            }
         },
         "fields": {
             "transactionDate": "Transaction Date",
@@ -164,7 +213,9 @@
             "taxAmount": "Tax Amount",
             "valueDate": "Value Date",
             "balanceAfter": "Balance After",
-            "externalId": "External ID (for dedup)"
+            "externalId": "External ID (for dedup)",
+            "assetName": "Asset Name",
+            "currency": "Currency"
         },
         "staging": {
             "stats": {
@@ -198,7 +249,12 @@
             "doneEditing": "Done editing",
             "importing": "Importing",
             "skipping": "Skipping",
-            "removeRow": "Remove row"
+            "removeRow": "Remove row",
+            "pagination": {
+                "range": "Rows {{from}}–{{to}} of {{total}}",
+                "previous": "Previous",
+                "next": "Next"
+            }
         },
         "common": {
             "emptyValue": "—"
@@ -242,7 +298,16 @@
             "label": "Cost basis method",
             "wac": "Weighted average cost (PRU)",
             "fifo": "FIFO — first in, first out",
-            "hint": "Used for this account's average cost and realized gains. Changing it recalculates every position."
+            "hint": "Used for this account's average cost and realized gains. Changing it recalculates every position.",
+            "wacHint": "Every purchase is averaged into one price (PRU). Each sale is valued at that average.",
+            "fifoHint": "The oldest shares are sold first, so each sale uses the price you paid for them.",
+            "taxNote": "Your tax return always uses the weighted average price (PMP), whichever method you pick here."
+        },
+        "mappedPreview": {
+            "title": "How your first rows will be stored",
+            "hint": "This is exactly what the import will keep. If a date, an amount or an asset looks wrong, change its column above.",
+            "row": "Row {{index}}",
+            "incomplete": "Match the date, the amount and the asset to see how your rows will be stored."
         }
     },
     "cashWizard": {

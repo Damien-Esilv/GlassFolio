@@ -113,6 +113,7 @@
             "prototype_pollution": "Données refusées : tentative de pollution de prototype détectée.",
             "invalid_collection": "Format de collection invalide pour « {{collection}} » : un tableau est attendu.",
             "checksum_mismatch": "Fichier altéré ou incomplet : la somme de contrôle ne correspond pas aux données.",
+            "unsupported_version": "Cette sauvegarde provient d'une version plus récente de GlassFolio (format {{version}}). Mettez l'application à jour avant de la restaurer.",
             "invalid_zip": "Archive ZIP illisible ou corrompue.",
             "unsupported_compression": "Compression ZIP non prise en charge.",
             "crc_mismatch": "Archive ZIP corrompue : un fichier ne passe pas le contrôle d'intégrité.",

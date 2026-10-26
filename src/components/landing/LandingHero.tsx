@@ -1,12 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ShieldCheck, ArrowRight, Lock, PieChart } from 'lucide-react';
+import { m } from 'motion/react';
+import { Sparkles, ShieldCheck, PieChart } from 'lucide-react';
 import { useDemoAccess } from '../../hooks/useDemoAccess';
 import { TrendBadge } from '../ui/TrendBadge';
 import { TrendValue } from '../ui/TrendValue';
 import { CHART_SERIES_PALETTE } from '../../constants/themeTokens';
-import { getAppUrl, buildAppDestinationUrl } from '../../config/deployment';
+import { TiltCard } from './motion/TiltCard';
+import { HeroModeChoice } from './HeroModeChoice';
+
+/** One orchestrated page-load sequence: badge, headline words, copy, actions, then the live card. */
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const rise = (delay: number) => ({
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.7, ease: EASE_OUT },
+});
 
 type EnvelopeFilter = 'all' | 'pea' | 'cto' | 'crypto';
 type BaseCurrency = 'EUR' | 'USD' | 'CHF';
@@ -79,7 +88,6 @@ export const LandingHero: React.FC = () => {
   const { launchDemo, isLaunchingDemo } = useDemoAccess();
   const [selectedEnvelope, setSelectedEnvelope] = useState<EnvelopeFilter>('all');
   const [selectedCurrency, setSelectedCurrency] = useState<BaseCurrency>('EUR');
-  const isExternalApp = Boolean(getAppUrl());
 
   const stats = STATS_MAP[selectedEnvelope];
   const fx = FX_RATES[selectedCurrency];
@@ -89,68 +97,68 @@ export const LandingHero: React.FC = () => {
   const pruConverted = useMemo(() => stats.pruEur * fx, [stats.pruEur, fx]);
 
   const activeLocale = i18n.language && i18n.language.startsWith('fr') ? 'fr-FR' : 'en-US';
+  const titleWords = t('landing:hero.title').split(' ');
+  const wordsDoneAt = 0.15 + titleWords.length * 0.045;
+
 
   return (
     <section className="relative overflow-hidden pt-12 pb-16 lg:pt-20 lg:pb-24">
-      {/* Subtle background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-brand/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="landing-aurora" aria-hidden="true" />
+      <div className="landing-grid" aria-hidden="true" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center max-w-3xl mx-auto mb-10 lg:mb-14">
           {/* Trust Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/20 text-brand text-xs font-semibold mb-6 animate-fade-in">
+          <m.div
+            {...rise(0)}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-xs font-semibold mb-6"
+          >
             <ShieldCheck size={14} />
             <span>{t('landing:hero.badge')}</span>
-          </div>
+          </m.div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary leading-[1.15] mb-6">
-            {t('landing:hero.title')}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary leading-[1.15] mb-6 text-balance">
+            {titleWords.map((word, index) => (
+              <React.Fragment key={`${word}-${index}`}>
+                <m.span
+                  className="inline-block"
+                  initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ delay: 0.15 + index * 0.045, duration: 0.6, ease: EASE_OUT }}
+                >
+                  {word}
+                </m.span>
+                {index < titleWords.length - 1 && ' '}
+              </React.Fragment>
+            ))}
           </h1>
 
-          <p className="text-base sm:text-lg text-secondary leading-relaxed mb-8">
+          <m.p {...rise(wordsDoneAt)} className="text-base sm:text-lg text-secondary leading-relaxed mb-8">
             {t('landing:hero.subtitle')}
-          </p>
+          </m.p>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-4">
+          {/* Local or cloud: two choices of equal weight */}
+          <m.div {...rise(wordsDoneAt + 0.1)} className="mb-5">
+            <HeroModeChoice />
+          </m.div>
+
+          <m.div {...rise(wordsDoneAt + 0.2)} className="flex flex-col items-center gap-2">
             <button
               type="button"
               onClick={() => launchDemo('/')}
               disabled={isLaunchingDemo}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-brand/25 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 text-brand text-sm font-bold px-4 py-2 rounded-xl hover:bg-brand/10 transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <Sparkles size={17} />
+              <Sparkles size={16} />
               <span>{t('landing:common.launchInteractiveDemo')}</span>
             </button>
-
-            {isExternalApp ? (
-              <a
-                href={buildAppDestinationUrl('/signup')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-subtle hover:bg-card-hover border border-subtle text-primary text-sm font-bold px-6 py-3.5 rounded-xl transition-all"
-              >
-                <Lock size={16} className="text-secondary" />
-                <span>{t('landing:common.createEncryptedVault')}</span>
-                <ArrowRight size={15} />
-              </a>
-            ) : (
-              <Link
-                to="/signup"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-subtle hover:bg-card-hover border border-subtle text-primary text-sm font-bold px-6 py-3.5 rounded-xl transition-all"
-              >
-                <Lock size={16} className="text-secondary" />
-                <span>{t('landing:common.createEncryptedVault')}</span>
-                <ArrowRight size={15} />
-              </Link>
-            )}
-          </div>
-
-          <p className="text-xs text-tertiary">
-            {t('landing:hero.envelopesBadge')}
-          </p>
+            <p className="text-xs text-tertiary">{t('landing:hero.envelopesBadge')}</p>
+          </m.div>
         </div>
 
         {/* Interactive Hero Card */}
-        <div className="max-w-4xl mx-auto bg-card border border-subtle rounded-2xl p-5 sm:p-8 shadow-2xl relative transition-all">
+        <m.div {...rise(wordsDoneAt + 0.35)} className="max-w-4xl mx-auto">
+        <TiltCard maxTilt={3} className="bg-card border border-subtle rounded-2xl p-5 sm:p-8 shadow-2xl relative">
           {/* Top Bar: Card Title + Demo Data Badge */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-subtle pb-5 mb-6">
             <div className="flex items-center gap-2.5">
@@ -212,7 +220,13 @@ export const LandingHero: React.FC = () => {
           </div>
 
           {/* Dynamic Figures */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 rounded-xl bg-subtle/60 border border-subtle mb-6">
+          <m.div
+            key={`${selectedEnvelope}-${selectedCurrency}`}
+            initial={{ opacity: 0.35, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: EASE_OUT }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 rounded-xl bg-subtle border border-subtle mb-6"
+          >
             <div>
               <p className="text-xs font-medium text-secondary mb-1">{t('landing:hero.metrics.netWorth')}</p>
               <div className="text-2xl sm:text-3xl font-extrabold text-primary">
@@ -257,7 +271,7 @@ export const LandingHero: React.FC = () => {
                 />
               </div>
             </div>
-          </div>
+          </m.div>
 
           {/* Allocation Progress Bar & Segments */}
           <div>
@@ -268,11 +282,13 @@ export const LandingHero: React.FC = () => {
 
             {/* Stacked Bar */}
             <div className="h-3 w-full bg-subtle rounded-full overflow-hidden flex gap-0.5">
-              {stats.segments.map((seg, idx) => (
-                <div
-                  key={idx}
-                  style={{ width: `${seg.percent}%` }}
-                  className={`h-full ${seg.colorToken.bg} transition-all duration-500`}
+              {stats.segments.map((seg) => (
+                <m.div
+                  key={seg.labelKey}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${seg.percent}%` }}
+                  transition={{ duration: 0.7, ease: EASE_OUT }}
+                  className={`h-full ${seg.colorToken.bg}`}
                   title={`${t(seg.labelKey)}: ${seg.percent}%`}
                 />
               ))}
@@ -289,7 +305,8 @@ export const LandingHero: React.FC = () => {
               ))}
             </div>
           </div>
-        </div>
+        </TiltCard>
+        </m.div>
       </div>
     </section>
   );

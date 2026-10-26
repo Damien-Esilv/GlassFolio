@@ -1,0 +1,51 @@
+{
+  "title": "Le projet",
+  "intro": "GlassFolio est un outil de suivi de patrimoine personnel construit en toute transparence : sur votre argent, sur ses frais et sur son propre code.",
+  "name": {
+    "title": "D'où vient le nom",
+    "glass": {
+      "word": "Glass",
+      "meaning": "Transparence",
+      "body": "Une vision claire de vos comptes et de ce que vous coûtent réellement vos frais, et un code que chacun peut lire."
+    },
+    "folio": {
+      "word": "Folio",
+      "meaning": "Portefeuille",
+      "body": "Une vue consolidée et unifiée de votre patrimoine, tous courtiers, enveloppes et devises confondus."
+    }
+  },
+  "story": {
+    "title": "L'histoire",
+    "p1": "GlassFolio est conçu et maintenu par Damien, étudiant en école d'ingénieur à l'ESILV, en France. Il est né d'un besoin simple : suivre PEA, CTO, crypto et livrets au même endroit, sans confier ses données financières à un tiers.",
+    "p2": "Il est développé en synergie avec des outils d'IA avancés, tout en appliquant les standards de l'ingénierie logicielle professionnelle à chaque étape."
+  },
+  "practices": {
+    "title": "Comment il est construit",
+    "intro": "Le projet suit la même discipline qu'une équipe produit.",
+    "tasks": {
+      "title": "Gestion de projet par tâches",
+      "body": "Le travail est découpé en epics, sprints et tâches suivies, chacune reliée aux commits qui la livrent."
+    },
+    "cicd": {
+      "title": "CI/CD",
+      "body": "Chaque envoi déclenche six contrôles qualité : types, lint, traductions, standards, tests de sécurité et suite de tests complète."
+    },
+    "tests": {
+      "title": "Tests automatisés",
+      "body": "Plus de 1 400 tests automatisés couvrent les services, le chiffrement, le moteur fiscal et l'interface."
+    },
+    "security": {
+      "title": "Sécurité rigoureuse",
+      "body": "Politique de sécurité du contenu stricte, dépendances épinglées, coffre chiffré et conteneur durci."
+    },
+    "delivery": {
+      "title": "Déploiement continu",
+      "body": "Chaque branche obtient un déploiement de prévisualisation, et la production n'est livrée qu'une fois les contrôles au vert."
+    }
+  },
+  "links": {
+    "repo": "Voir le dépôt",
+    "guide": "L'installer soi-même",
+    "profile": "Damien sur GitHub"
+  }
+}

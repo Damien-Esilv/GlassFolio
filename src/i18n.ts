@@ -17,6 +17,10 @@ import aiEN from '../locales/en/ai.json';
 import securityEN from '../locales/en/security.json';
 import landingEN from '../locales/en/landing.json';
 import legalEN from '../locales/en/legal.json';
+import selfhostEN from '../locales/en/selfhost.json';
+import aboutEN from '../locales/en/about.json';
+import roadmapEN from '../locales/en/roadmap.json';
+import changelogEN from '../locales/en/changelog.json';
 import notificationsEN from '../locales/en/notifications.json';
 
 import commonFR from '../locales/fr/common.json';
@@ -34,6 +38,10 @@ import aiFR from '../locales/fr/ai.json';
 import securityFR from '../locales/fr/security.json';
 import landingFR from '../locales/fr/landing.json';
 import legalFR from '../locales/fr/legal.json';
+import selfhostFR from '../locales/fr/selfhost.json';
+import aboutFR from '../locales/fr/about.json';
+import roadmapFR from '../locales/fr/roadmap.json';
+import changelogFR from '../locales/fr/changelog.json';
 import notificationsFR from '../locales/fr/notifications.json';
 
 const resources = {
@@ -53,6 +61,10 @@ const resources = {
         security: securityEN,
         landing: landingEN,
         legal: legalEN,
+        selfhost: selfhostEN,
+        about: aboutEN,
+        roadmap: roadmapEN,
+        changelog: changelogEN,
         notifications: notificationsEN,
     },
     fr: {
@@ -71,6 +83,10 @@ const resources = {
         security: securityFR,
         landing: landingFR,
         legal: legalFR,
+        selfhost: selfhostFR,
+        about: aboutFR,
+        roadmap: roadmapFR,
+        changelog: changelogFR,
         notifications: notificationsFR,
     },
 };

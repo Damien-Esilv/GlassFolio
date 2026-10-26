@@ -12,10 +12,11 @@ import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { isDemoAccount } from '../services/security/demoAccount';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
-   const { login, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
+   const { login, logout, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -36,11 +37,18 @@ const Login: React.FC = () => {
       isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
    }, []);
 
+   const logoutRef = useRef(logout);
+   logoutRef.current = logout;
+
    useEffect(() => {
-      if (user) {
-         navigate(from, { replace: true });
+      if (!user) return;
+      // A demo session left over from the showcase must not block signing in to a real account.
+      if (isDemoAccount(user)) {
+         if (!isLaunchingDemo) logoutRef.current();
+         return;
       }
-   }, [user, navigate, from]);
+      navigate(from, { replace: true });
+   }, [user, navigate, from, isLaunchingDemo]);
 
    // Verified account whose vault was never finalized: finish the sign-up (no secret in router state).
    useEffect(() => {

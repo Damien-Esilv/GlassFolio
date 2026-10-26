@@ -35,8 +35,16 @@ import {
     isTaxableWrapper,
     isPEAWrapper,
     CGI_ARTICLES,
-    TAXABLE_CESSION_TYPES,
 } from '../../constants/fiscalConstants';
+
+import {
+    buildRealizedEvents,
+    resolveFee,
+    resolveGrossValue,
+    resolveQuantity,
+    sortChronologically,
+    QTY_EPSILON,
+} from '../portfolio/positionLedger';
 
 // ============================================================================
 // HELPER TYPES
@@ -133,16 +141,37 @@ function isCryptoToFiatCession(tx: EnrichedTransaction): boolean {
 }
 
 // ============================================================================
-// CAPITAL GAINS — CTO (Art. 150-0 A CGI)
+// SHARED HELPERS FOR CAPITAL GAINS
+// ============================================================================
+
+/** Currency of a taxable event: the currency of the row's amounts */
+function eventCurrency(tx: EnrichedTransaction): string {
+    return tx.originalCurrency || tx.instrument?.denominationCurrency || 'EUR';
+}
+
+/** Amounts in a foreign currency with no recorded exchange rate cannot be declared in EUR as is */
+function lacksFxRate(currency: string, tx: EnrichedTransaction): boolean {
+    return currency !== 'EUR' && !tx.fxRate;
+}
+
+const symbolOf = (tx: EnrichedTransaction): string =>
+    tx.assetSymbol || tx.instrument?.marketIdentifier.symbol || '';
+
+// ============================================================================
+// CAPITAL GAINS — CTO (Art. 150-0 A and 150-0 D CGI)
 // ============================================================================
 
 /**
  * Calculate PMP (Prix Moyen Pondéré) based capital gains for CTO accounts.
- * Uses all transactions up to the end of the fiscal year to build cost basis,
- * then identifies sells within the fiscal year.
- * 
+ * Replays the shared position ledger (same quantity, fee and adjustment rules as the portfolio
+ * screens) in weighted-average mode: the PMP is mandatory for securities, whatever cost basis
+ * method the account displays.
+ *
  * PMP = (Total cost of acquisitions including fees) / Total quantity held
  * Gain = Sale proceeds - (PMP × quantity sold) - sale fees
+ *
+ * A sale that exceeds the recorded holdings is declared with the missing part at zero cost
+ * (conservative), flagged `quantity_exceeds_holdings`.
  */
 export function calculateCTOCapitalGains(
     allTransactions: EnrichedTransaction[],
@@ -154,91 +183,60 @@ export function calculateCTOCapitalGains(
 
     // Group transactions by (accountId, instrumentId) for CTO accounts only
     const groups = new Map<string, EnrichedTransaction[]>();
-    
+
     for (const tx of allTransactions) {
         if (!isTaxableWrapper(tx.resolvedWrapperType)) continue;
         if (isCryptoTransaction(tx)) continue; // Crypto handled separately
         if (!tx.instrumentId || tx.instrument?.type === 'cash') continue;
-        
+        if (new Date(tx.transactionDate).getTime() >= yearEnd) continue;
+
         const key = `${tx.accountId}:${tx.instrumentId}`;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(tx);
     }
 
-    for (const [, groupTxs] of groups) {
-        // Sort by date ascending
-        const sorted = [...groupTxs]
-            .filter(tx => new Date(tx.transactionDate).getTime() < yearEnd)
-            .sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+    for (const groupTxs of groups.values()) {
+        const byId = new Map(groupTxs.map(tx => [tx.id, tx]));
+        const sales = buildRealizedEvents(groupTxs, { keyOf: () => 'pmp', methodFor: () => 'WAC' });
 
-        const costBasis: CostBasisEntry = { totalCost: 0, totalQuantity: 0 };
+        for (const sale of sales) {
+            if (getFiscalYearFromDate(sale.date) !== fiscalYear) continue;
+            const tx = byId.get(sale.txId);
+            if (!tx) continue;
 
-        for (const tx of sorted) {
-            const qty = Math.abs(parseFloat(tx.quantity || tx.amountPrimary || '0'));
-            const fees = parseFloat(tx.feeAmount || '0');
-            const amount = Math.abs(parseFloat(tx.amountPrimary || '0'));
+            const quantity = resolveQuantity(tx);
+            const saleProceeds = resolveGrossValue(tx, quantity);
+            const fees = resolveFee(tx);
+            const acquisitionCost = sale.costRemoved;
+            const taxableAmount = saleProceeds - acquisitionCost - fees;
+            const pmp = sale.quantity > 0 ? acquisitionCost / sale.quantity : 0;
 
-            if (tx.type === 'BUY' || tx.type === 'DEPOSIT') {
-                // Add to cost basis (including fees per French PMP rules)
-                costBasis.totalCost += amount + fees;
-                costBasis.totalQuantity += qty;
-            } else if (TAXABLE_CESSION_TYPES.includes(tx.type as typeof TAXABLE_CESSION_TYPES[number])) {
-                // Only process sells within the fiscal year (fast O(1) string slice with robust fallback)
-                const txYear = getFiscalYearFromDate(tx.transactionDate);
-                
-                if (txYear !== fiscalYear) {
-                    // Sell before the fiscal year: adjust cost basis
-                    costBasis.totalQuantity -= qty;
-                    if (costBasis.totalQuantity > 0) {
-                        costBasis.totalCost = (costBasis.totalCost / (costBasis.totalQuantity + qty)) * costBasis.totalQuantity;
-                    } else {
-                        costBasis.totalCost = 0;
-                    }
-                    continue;
-                }
+            const missingData: string[] = [];
+            if (acquisitionCost <= 0) missingData.push('acquisition_cost_unknown');
+            if (quantity - sale.quantity > QTY_EPSILON) missingData.push('quantity_exceeds_holdings');
+            const currency = eventCurrency(tx);
+            if (lacksFxRate(currency, tx)) missingData.push('fx_rate_missing');
+            const confidence: FiscalConfidence = missingData.length === 0 ? 'determined' : 'estimated';
 
-                // Calculate PMP at the time of sale
-                const pmp = costBasis.totalQuantity > 0
-                    ? costBasis.totalCost / costBasis.totalQuantity
-                    : 0;
-
-                const acquisitionCost = pmp * qty;
-                const saleProceeds = amount;
-                const taxableAmount = saleProceeds - acquisitionCost - fees;
-
-                const confidence: FiscalConfidence = pmp > 0 ? 'determined' : 'estimated';
-                const missingData: string[] = [];
-                if (pmp === 0) missingData.push('acquisition_cost_unknown');
-
-                events.push({
-                    transactionIds: [tx.id],
-                    fiscalYear,
-                    eventType: taxableAmount >= 0 ? 'capital_gain' : 'capital_loss',
-                    symbol: tx.assetSymbol || tx.instrument?.marketIdentifier.symbol || 'UNKNOWN',
-                    instrumentName: tx.instrument?.name || tx.label || 'Unknown',
-                    accountId: tx.accountId,
-                    wrapperType: tx.resolvedWrapperType,
-                    grossAmount: saleProceeds,
-                    acquisitionCost,
-                    taxableAmount,
-                    fees,
-                    currency: tx.instrument?.denominationCurrency || 'EUR',
-                    eventDate: tx.transactionDate,
-                    confidence,
-                    explanation: `PMP: ${pmp.toFixed(4)} × ${qty} = ${acquisitionCost.toFixed(2)}€ cost basis. Sale proceeds: ${saleProceeds.toFixed(2)}€. Net: ${taxableAmount.toFixed(2)}€`,
-                    legalReference: CGI_ARTICLES.ART_150_0_A,
-                    missingData: missingData.length > 0 ? missingData : undefined,
-                });
-
-                // Update cost basis after the sale
-                costBasis.totalQuantity -= qty;
-                if (costBasis.totalQuantity > 0) {
-                    costBasis.totalCost = pmp * costBasis.totalQuantity;
-                } else {
-                    costBasis.totalCost = 0;
-                    costBasis.totalQuantity = 0;
-                }
-            }
+            events.push({
+                transactionIds: [tx.id],
+                fiscalYear,
+                eventType: taxableAmount >= 0 ? 'capital_gain' : 'capital_loss',
+                symbol: tx.assetSymbol || tx.instrument?.marketIdentifier.symbol || 'UNKNOWN',
+                instrumentName: tx.instrument?.name || tx.label || 'Unknown',
+                accountId: tx.accountId,
+                wrapperType: tx.resolvedWrapperType,
+                grossAmount: saleProceeds,
+                acquisitionCost,
+                taxableAmount,
+                fees,
+                currency,
+                eventDate: tx.transactionDate,
+                confidence,
+                explanation: `PMP: ${pmp.toFixed(4)} × ${sale.quantity} = ${acquisitionCost.toFixed(2)}€ cost basis. Sale proceeds: ${saleProceeds.toFixed(2)}€. Net: ${taxableAmount.toFixed(2)}€`,
+                legalReference: CGI_ARTICLES.ART_150_0_A,
+                missingData: missingData.length > 0 ? missingData : undefined,
+            });
         }
     }
 
@@ -249,13 +247,57 @@ export function calculateCTOCapitalGains(
 // CRYPTO GAINS — Art. 150 VH bis CGI
 // ============================================================================
 
+/** A transfer between own wallets: the deposit arrives within a week, minus at most 2% network fees */
+const TRANSFER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const TRANSFER_FEE_TOLERANCE = 0.02;
+
+/**
+ * Pair each crypto DEPOSIT with the WITHDRAW it comes from (same asset, same amount minus
+ * network fees, within a week). Both legs are tax-neutral: moving coins between your own wallets
+ * is neither a cession nor an acquisition.
+ */
+function findOwnTransfers(cryptoTxs: EnrichedTransaction[]): Set<string> {
+    const neutral = new Set<string>();
+    const withdrawals = cryptoTxs.filter(tx => tx.type === 'WITHDRAW');
+    const time = (tx: EnrichedTransaction): number => new Date(tx.transactionDate).getTime();
+
+    for (const deposit of cryptoTxs.filter(tx => tx.type === 'DEPOSIT')) {
+        const received = resolveQuantity(deposit);
+        let source: EnrichedTransaction | undefined;
+        let closest = Infinity;
+
+        for (const withdrawal of withdrawals) {
+            if (neutral.has(withdrawal.id) || symbolOf(withdrawal) !== symbolOf(deposit)) continue;
+            const sent = resolveQuantity(withdrawal);
+            if (sent <= 0 || received > sent * (1 + 1e-9) || (sent - received) / sent > TRANSFER_FEE_TOLERANCE) continue;
+            const gap = Math.abs(time(withdrawal) - time(deposit));
+            if (gap <= TRANSFER_WINDOW_MS && gap < closest) {
+                source = withdrawal;
+                closest = gap;
+            }
+        }
+
+        if (source) {
+            neutral.add(source.id);
+            neutral.add(deposit.id);
+        }
+    }
+
+    return neutral;
+}
+
 /**
  * Calculate crypto capital gains using the French formula (Art. 150 VH bis).
  * 
  * Formula per cession:
- *   Plus-value = Prix de cession − (Prix total d'acquisition × Prix de cession / Valeur totale du portefeuille)
+ *   Plus-value = Prix de cession − (Prix total d'acquisition × Prix de cession / Valeur globale du portefeuille)
  * 
  * Key rules:
+ *   - After every cession (this year or an earlier one) the total acquisition price is reduced
+ *     by the fraction of it contained in the cession price
+ *   - The portfolio value is that of ALL crypto assets held just before the cession; assets with
+ *     no known price are left out and flagged `portfolio_valuation_incomplete`
+ *   - Moves between own wallets (withdrawal + matching deposit) are neutral
  *   - Crypto-to-crypto exchanges are tax-neutral
  *   - Only cessions to fiat (or payment for goods/services) trigger taxation
  *   - Below 305€ total annual cessions: exempt (but still declarable)
@@ -269,54 +311,55 @@ export function calculateCryptoGains(
     const events: TaxableEvent[] = [];
     const yearEnd = new Date(`${parseInt(fiscalYear) + 1}-01-01T00:00:00Z`).getTime();
 
-    // Build global crypto portfolio cost basis (all acquisitions up to cession date)
-    const cryptoTxs = allTransactions
-        .filter(tx => isCryptoTransaction(tx) && tx.isFiscal)
-        .sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+    // Global crypto portfolio, replayed chronologically up to the end of the fiscal year
+    const cryptoTxs = sortChronologically(allTransactions.filter(tx => isCryptoTransaction(tx) && tx.isFiscal));
+    const ownTransfers = findOwnTransfers(cryptoTxs);
 
-    // Track total acquisition cost of ALL crypto assets (cumulative)
+    // Total acquisition price of the whole portfolio (reduced after every cession)
     let totalAcquisitionCost = 0;
-
-    // Track per-asset quantities for portfolio valuation
-    const assetQuantities = new Map<string, number>();
+    const holdings = new Map<string, number>();
+    const lastPrice = new Map<string, number>();
 
     for (const tx of cryptoTxs) {
-        const txTime = new Date(tx.transactionDate).getTime();
-        if (txTime >= yearEnd) break;
+        if (new Date(tx.transactionDate).getTime() >= yearEnd) break;
+        if (ownTransfers.has(tx.id)) continue;
 
-        const qty = Math.abs(parseFloat(tx.quantity || '0'));
-        const amount = Math.abs(parseFloat(tx.amountPrimary || '0'));
-        const fees = parseFloat(tx.feeAmount || '0');
-        const symbol = tx.assetSymbol || tx.instrument?.marketIdentifier.symbol || '';
+        const symbol = symbolOf(tx);
+        const quantity = resolveQuantity(tx);
+        const gross = resolveGrossValue(tx, quantity);
+        const fees = resolveFee(tx);
+        const explicitPrice = parseFloat(tx.priceUnit || '0');
+        const unitPrice = explicitPrice > 0 ? explicitPrice : (quantity > 0 && gross > 0 ? gross / quantity : undefined);
+        if (unitPrice !== undefined) lastPrice.set(symbol, unitPrice);
 
         if (tx.type === 'BUY' || tx.type === 'DEPOSIT') {
-            totalAcquisitionCost += amount + fees;
-            assetQuantities.set(symbol, (assetQuantities.get(symbol) || 0) + qty);
+            totalAcquisitionCost += gross + fees;
+            holdings.set(symbol, (holdings.get(symbol) ?? 0) + quantity);
         } else if (isCryptoToFiatCession(tx)) {
-            const txYear = getFiscalYearFromDate(tx.transactionDate);
+            // Value of every held asset just before the cession, at its last known price
+            let portfolioValue = 0;
+            let priceMissing = false;
+            for (const [asset, held] of holdings) {
+                if (held <= QTY_EPSILON) continue;
+                const price = lastPrice.get(asset);
+                if (price === undefined) priceMissing = true;
+                else portfolioValue += held * price;
+            }
 
-            if (txYear === fiscalYear) {
-                // Calculate portfolio value at the time of cession
-                // For simplicity, we use the sale price × remaining quantity as an approximation
-                const priceUnit = parseFloat(tx.priceUnit || '0');
-                const currentQty = assetQuantities.get(symbol) || 0;
-                
-                // Estimate total portfolio value (simplified: we only track sold asset's value)
-                // In production, this would need live prices for ALL crypto assets at cession time
-                const estimatedPortfolioValue = currentQty * priceUnit;
+            const cessionPrice = gross;
+            const fractionOfPortfolio = portfolioValue > 0 ? Math.min(1, cessionPrice / portfolioValue) : 0;
+            const costBasisForCession = totalAcquisitionCost * fractionOfPortfolio;
+            const taxableAmount = cessionPrice - costBasisForCession - fees;
 
-                const cessionPrice = amount;
-                const fractionOfPortfolio = estimatedPortfolioValue > 0
-                    ? cessionPrice / estimatedPortfolioValue
-                    : 0;
-                const costBasisForCession = totalAcquisitionCost * fractionOfPortfolio;
-                const taxableAmount = cessionPrice - costBasisForCession - fees;
-
-                const confidence: FiscalConfidence = estimatedPortfolioValue > 0 ? 'estimated' : 'insufficient_data';
+            if (getFiscalYearFromDate(tx.transactionDate) === fiscalYear) {
+                const currency = eventCurrency(tx);
                 const missingData: string[] = [];
+                const confidence: FiscalConfidence = portfolioValue > 0 ? 'estimated' : 'insufficient_data';
                 if (confidence === 'estimated') {
                     missingData.push('portfolio_valuation_approximated');
+                    if (priceMissing) missingData.push('portfolio_valuation_incomplete');
                 }
+                if (lacksFxRate(currency, tx)) missingData.push('fx_rate_missing');
 
                 events.push({
                     transactionIds: [tx.id],
@@ -330,17 +373,19 @@ export function calculateCryptoGains(
                     acquisitionCost: costBasisForCession,
                     taxableAmount,
                     fees,
-                    currency: 'EUR',
+                    currency,
                     eventDate: tx.transactionDate,
                     confidence,
-                    explanation: `Art. 150 VH bis: Cession ${cessionPrice.toFixed(2)}€ − (${totalAcquisitionCost.toFixed(2)}€ × ${cessionPrice.toFixed(2)}€ / ${estimatedPortfolioValue.toFixed(2)}€) = ${taxableAmount.toFixed(2)}€`,
+                    explanation: `Art. 150 VH bis: Cession ${cessionPrice.toFixed(2)}€ − (${totalAcquisitionCost.toFixed(2)}€ × ${cessionPrice.toFixed(2)}€ / ${portfolioValue.toFixed(2)}€) = ${taxableAmount.toFixed(2)}€`,
                     legalReference: CGI_ARTICLES.ART_150_VH_BIS,
                     missingData: missingData.length > 0 ? missingData : undefined,
                 });
             }
 
-            // Update quantities
-            assetQuantities.set(symbol, Math.max(0, (assetQuantities.get(symbol) || 0) - qty));
+            // The acquisition price carried forward shrinks by the share contained in this cession,
+            // whether or not it falls in the declared year
+            totalAcquisitionCost = Math.max(0, totalAcquisitionCost - costBasisForCession);
+            holdings.set(symbol, Math.max(0, (holdings.get(symbol) ?? 0) - quantity));
         }
     }
 

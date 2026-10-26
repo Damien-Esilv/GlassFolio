@@ -36,10 +36,12 @@ import {
   Globe,
   CheckCircle2
 } from 'lucide-react';
-import { useImportWizard, MAPPABLE_FIELDS, WizardStep } from '../hooks/importHooks';
+import { useImportWizard, WizardStep } from '../hooks/importHooks';
 import { useAuth } from '../context/AuthContext';
 import DetectedFormatPanel from '../components/import/DetectedFormatPanel';
 import DuplicateFileBanner from '../components/import/DuplicateFileBanner';
+import ColumnMappingTable from '../components/import/ColumnMappingTable';
+import MappedPreview from '../components/import/MappedPreview';
 import MappingProfilesPanel from '../components/import/MappingProfilesPanel';
 import { formatFieldError } from '../components/import/formatFieldError';
 import { InstituteType, AccountType, WrapperType } from '../types';
@@ -489,18 +491,39 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
           )}
 
           {/* Cost basis method (applies to every position of the account) */}
-          <label className="mt-6 block">
-            <span className="block text-xs font-bold text-secondary uppercase mb-1">{t('importWizard.costBasis.label')}</span>
-            <select
-              value={wizard.selectedAccount?.costBasisMethod ?? 'WAC'}
-              onChange={e => void wizard.setCostBasisMethod(e.target.value as 'WAC' | 'FIFO')}
-              className="w-full sm:w-auto bg-subtle border border-subtle text-primary text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary"
-            >
-              <option value="WAC">{t('importWizard.costBasis.wac')}</option>
-              <option value="FIFO">{t('importWizard.costBasis.fifo')}</option>
-            </select>
-            <span className="block text-xs text-secondary mt-1">{t('importWizard.costBasis.hint')}</span>
-          </label>
+          <fieldset className="mt-6">
+            <legend className="block text-xs font-bold text-secondary uppercase mb-2">{t('importWizard.costBasis.label')}</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                { method: 'WAC', titleKey: 'importWizard.costBasis.wac', hintKey: 'importWizard.costBasis.wacHint' },
+                { method: 'FIFO', titleKey: 'importWizard.costBasis.fifo', hintKey: 'importWizard.costBasis.fifoHint' },
+              ] as const).map(option => {
+                const selected = (wizard.selectedAccount?.costBasisMethod ?? 'WAC') === option.method;
+                return (
+                  <label
+                    key={option.method}
+                    className={`cursor-pointer rounded-xl border-2 p-4 transition-all focus-within:ring-2 focus-within:ring-primary ${selected
+                      ? 'border-brand bg-brand/10'
+                      : 'border-subtle bg-subtle hover:bg-card-hover'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="cost-basis-method"
+                      value={option.method}
+                      checked={selected}
+                      onChange={() => void wizard.setCostBasisMethod(option.method)}
+                      aria-describedby={`cost-basis-${option.method}-hint`}
+                      className="sr-only"
+                    />
+                    <span className="block text-sm font-bold text-primary">{t(option.titleKey)}</span>
+                    <span id={`cost-basis-${option.method}-hint`} className="block text-xs text-secondary mt-1">{t(option.hintKey)}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs text-secondary mt-2">{t('importWizard.costBasis.hint')}</p>
+            <p className="text-xs text-tertiary mt-1">{t('importWizard.costBasis.taxNote')}</p>
+          </fieldset>
 
           {/* Continue Button */}
           <div className="mt-6 flex justify-end">
@@ -599,13 +622,6 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
 const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
   const { t } = useTranslation('transactions');
 
-  // Check if a header is mapped to any field
-  const isHeaderMapped = (header: string): boolean => {
-    return Object.values(wizard.mappings).some(mapping => mapping === header);
-  };
-
-  const isIdentifierMapped = !!(wizard.mappings.assetSymbol || wizard.mappings.assetIsin);
-
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <DuplicateFileBanner batch={wizard.existingBatch} />
@@ -640,119 +656,17 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         </div>
       )}
 
-      {/* Header Tokens - Visual Mapping Status */}
-      {wizard.headers.length > 0 && (
-        <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold text-primary mb-3">{t('importWizard.mapping.csvHeaders')}</h3>
-          <div className="flex flex-wrap gap-2">
-            {wizard.headers.map((header, idx) => {
-              const isMapped = isHeaderMapped(header);
-              return (
-                <span
-                  key={idx}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isMapped
-                    ? 'bg-success/20 text-success border border-success/30'
-                    : 'bg-error/20 text-error border border-error/30'
-                    }`}
-                >
-                  {header}
-                </span>
-              );
-            })}
-          </div>
-          <p className="text-xs text-secondary mt-3">
-            <span className="inline-block w-3 h-3 rounded bg-success/20 border border-success/30 mr-1"></span>
-            {t('importWizard.mapping.mapped')}
-            <span className="inline-block w-3 h-3 rounded bg-error/20 border border-error/30 ml-4 mr-1"></span>
-            {t('importWizard.mapping.notMapped')}
-          </p>
-        </div>
-      )}
+      <ColumnMappingTable
+        columns={wizard.mappingColumns}
+        summary={wizard.mappingSummary}
+        rowCount={wizard.rowCount}
+        mappings={wizard.mappings}
+        pendingCount={wizard.pendingSuggestionCount}
+        onChange={wizard.setColumnField}
+        onAcceptAll={wizard.acceptAllProposals}
+      />
 
-      {/* Mapping Grid */}
-      <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-primary">{t('importWizard.mapping.columnMapping')}</h2>
-
-        </div>
-
-        {/* Missing Identifier Warning */}
-        {wizard.selectedAccount?.type === 'investment' && !isIdentifierMapped && (
-          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4 mb-6 flex items-center gap-3 animate-pulse">
-            <AlertTriangle className="text-warning" size={20} />
-            <span className="text-warning text-sm font-medium">
-              {t('importWizard.mapping.identifierRequiredWarning')}
-            </span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {MAPPABLE_FIELDS.map(field => {
-            const isIdentifierField = field.key === 'assetSymbol' || field.key === 'assetIsin';
-            const isInvestment = wizard.selectedAccount?.type === 'investment';
-
-            return (
-              <div key={field.key} className="space-y-1">
-                <label className="flex items-center gap-1 text-xs font-bold text-secondary uppercase">
-                  {t(field.labelKey)}
-                  {field.required && <span className="text-error">*</span>}
-                  {isInvestment && isIdentifierField && !isIdentifierMapped && (
-                    <span className="text-error" title="One of Symbol or ISIN is required">*</span>
-                  )}
-                </label>
-                <select
-                  value={wizard.mappings[field.key as keyof typeof wizard.mappings] as string || ''}
-                  onChange={e => wizard.setMapping(field.key as keyof typeof wizard.mappings, e.target.value || undefined)}
-                  className={`w-full bg-subtle border text-primary text-sm rounded-lg p-2.5 ${(field.required && !wizard.mappings[field.key as keyof typeof wizard.mappings]) || (isInvestment && isIdentifierField && !isIdentifierMapped)
-                    ? 'border-error/50'
-                    : 'border-subtle'
-                    } focus:ring-primary focus:border-primary`}
-                >
-                  <option value="">{t('importWizard.mapping.notMappedOption')}</option>
-                  {wizard.headers.map(h => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Live Preview - Dynamic Columns */}
-      {wizard.previewRows.length > 0 && wizard.headers.length > 0 && (
-        <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-subtle bg-subtle/50">
-            <h3 className="text-sm font-bold text-primary">
-              {t('importWizard.mapping.preview', { rows: wizard.previewRows.length, columns: wizard.headers.length })}
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-subtle text-xs uppercase text-secondary">
-                <tr>
-                  {wizard.headers.map((header, idx) => (
-                    <th key={idx} className="px-4 py-2 whitespace-nowrap">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-subtle">
-                {wizard.previewRows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="text-secondary">
-                    {row.map((cell, cellIdx) => (
-                      <td key={cellIdx} className="px-4 py-2 font-mono text-xs whitespace-nowrap">
-                        {cell || t('importWizard.common.emptyValue')}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <MappedPreview rows={wizard.mappedPreview} ready={wizard.isValidMappingForAnalysis} />
     </div>
   );
 };
@@ -761,9 +675,17 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
 // STEP 4: STAGING AREA
 // ============================================================================
 
+/** Staged rows shown per page: a 2,000-row file stays light to render and to scroll */
+const STAGING_PAGE_SIZE = 50;
+
 const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
   const { t } = useTranslation('transactions');
   const { stats, stagedTransactions } = wizard;
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(stagedTransactions.length / STAGING_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * STAGING_PAGE_SIZE;
+  const pageRows = stagedTransactions.slice(pageStart, pageStart + STAGING_PAGE_SIZE);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -825,12 +747,25 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
               </tr>
             </thead>
             <tbody className="divide-y divide-subtle">
-              {stagedTransactions.map(tx => (
+              {pageRows.map(tx => (
                 <StagingRow key={tx.id} tx={tx} wizard={wizard} />
               ))}
             </tbody>
           </table>
         </div>
+        {pageCount > 1 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-subtle px-4 py-3 text-sm text-secondary">
+            <span>{t('importWizard.staging.pagination.range', { from: pageStart + 1, to: pageStart + pageRows.length, total: stagedTransactions.length })}</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
+                {t('importWizard.staging.pagination.previous')}
+              </Button>
+              <Button size="sm" variant="secondary" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>
+                {t('importWizard.staging.pagination.next')}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,66 @@
+{
+  "title": "Guide d'auto-hébergement",
+  "intro": "Faites tourner l'application GlassFolio complète sur votre ordinateur ou votre serveur avec Docker. Votre coffre chiffré est écrit dans un volume que vous contrôlez, rien ne dépend de notre infrastructure et le code source est public.",
+  "backToHome": "Retour à l'accueil",
+  "ctaGithub": "Voir le code sur GitHub",
+  "ctaDemo": "Essayer d'abord la démo",
+  "tocLabel": "Sur cette page",
+  "copyLabel": "Copier : {{what}}",
+  "sections": {
+    "quickstart": {
+      "title": "Démarrage rapide",
+      "body": "Clonez le dépôt et démarrez le conteneur. Le script npm vérifie d'abord vos réglages réseau, puis construit l'image et la lance en arrière-plan.",
+      "open": "Ouvrez {{url}} dans votre navigateur et créez votre coffre. La première construction prend quelques minutes ; les démarrages suivants, quelques secondes.",
+      "dailyTitle": "Commandes du quotidien",
+      "logs": "Suivre les journaux du conteneur",
+      "stop": "Arrêter l'application (vos données restent dans le volume)"
+    },
+    "requirements": {
+      "title": "Prérequis",
+      "items": {
+        "docker": "Docker Engine 24 ou plus récent avec Compose v2, ou Docker Desktop sous macOS et Windows (WSL 2).",
+        "node": "Node.js 22, utilisé par le script de démarrage pour vérifier vos réglages réseau avant de lancer Docker.",
+        "git": "Git, pour télécharger le code puis récupérer les mises à jour.",
+        "resources": "Environ 1 Go d'espace disque pour l'image. Le conteneur est limité à 512 Mo de mémoire."
+      }
+    },
+    "configuration": {
+      "title": "Configuration",
+      "body": "Les réglages sont des variables d'environnement. Mettez les réglages durables dans docker/docker.env, ou placez-les devant la commande de démarrage pour un changement ponctuel. Ne mettez jamais le jeton d'accès dans un fichier : définissez-le dans votre terminal.",
+      "variable": "Variable",
+      "default": "Défaut",
+      "purpose": "Rôle",
+      "empty": "(vide)",
+      "vars": {
+        "GLASSFOLIO_PORT": "Port de votre machine sur lequel l'application répond.",
+        "GLASSFOLIO_BIND": "Adresse réseau d'écoute. 127.0.0.1 garde l'application privée à cet ordinateur.",
+        "GLASSFOLIO_DATA": "Emplacement de vos données chiffrées : le volume Docker nommé, ou un dossier de l'hôte accessible en écriture à l'utilisateur 1000.",
+        "GLASSFOLIO_ACCESS_TOKEN": "Mot de passe demandé par le navigateur quand l'application est accessible depuis le réseau. 16 caractères minimum.",
+        "GLASSFOLIO_ALLOWED_HOSTS": "Noms de domaine autorisés à utiliser l'API du coffre, séparés par des virgules, par exemple derrière un proxy inverse. localhost et les adresses IP fonctionnent toujours.",
+        "GLASSFOLIO_CSP_CONNECT_SRC": "Origines supplémentaires que la page peut appeler, séparées par des espaces, comme un serveur Ollama distant."
+      }
+    },
+    "network": {
+      "title": "Accès depuis votre réseau",
+      "body": "Par défaut, seul cet ordinateur peut ouvrir l'application. Pour y accéder depuis un téléphone ou une autre machine, écoutez sur toutes les interfaces et définissez un jeton d'accès ; le script de démarrage refuse d'exposer l'application sans jeton.",
+      "login": "Votre navigateur demande alors un nom d'utilisateur et un mot de passe : l'utilisateur est glassfolio et le mot de passe est le jeton. Le point /health reste ouvert pour la supervision.",
+      "proxy": "Pour un accès depuis l'extérieur de chez vous, placez l'application derrière un proxy inverse en HTTPS et déclarez son domaine dans GLASSFOLIO_ALLOWED_HOSTS. N'exposez jamais le port 3000 directement sur Internet."
+    },
+    "backup": {
+      "title": "Sauvegarder et restaurer",
+      "body": "Tout ce que vous saisissez se trouve dans le volume /data du conteneur, déjà chiffré. Cette commande écrit une copie compressée dans le dossier courant pendant que l'application continue de tourner.",
+      "restore": "Pour restaurer une sauvegarde, arrêtez le conteneur, remplacez le contenu du volume par l'archive, puis redémarrez-le.",
+      "restoreLabel": "Restaurer une sauvegarde"
+    },
+    "update": {
+      "title": "Mettre à jour",
+      "body": "Récupérez le dernier code et relancez le script de démarrage. L'image est reconstruite et votre volume de données est conservé tel quel."
+    },
+    "ai": {
+      "title": "IA locale avec Ollama",
+      "body": "L'assistant peut tourner entièrement sur votre machine grâce à Ollama : aucune donnée de portefeuille ne quitte votre réseau. Installez Ollama, téléchargez un modèle, puis démarrez-le pour qu'il accepte les requêtes venant de l'adresse de l'application.",
+      "settings": "Dans GlassFolio, ouvrez les Paramètres, choisissez Ollama comme fournisseur d'IA et gardez l'adresse par défaut http://localhost:11434.",
+      "remote": "Si Ollama tourne sur une autre machine, ajoutez son adresse à GLASSFOLIO_CSP_CONNECT_SRC pour que la page soit autorisée à l'appeler."
+    }
+  }
+}
