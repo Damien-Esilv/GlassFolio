@@ -31,4 +31,13 @@ describe('qrCode generator', () => {
         expect(transparentSvg).not.toContain('<rect');
         expect(transparentSvg).toContain('fill="black"');
     });
+
+    it('sanitizes malicious color and bg strings to prevent XSS / attribute injection', () => {
+        const text = 'otpauth://totp/GlassFolio:test?secret=JBSWY3DPEHPK3PXP';
+        const maliciousPayload = 'black"><script>alert(1)</script><path fill="red';
+        const svg = generateQrSvg(text, { color: maliciousPayload, bg: maliciousPayload });
+
+        expect(svg).not.toContain('<script>');
+        expect(svg).toContain('&quot;&gt;&lt;script&gt;');
+    });
 });

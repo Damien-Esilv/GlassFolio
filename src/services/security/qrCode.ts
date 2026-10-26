@@ -30,6 +30,18 @@ export const generateQrMatrix = (text: string): boolean[][] => {
  * Returns a standalone, responsive, ISO-compliant SVG string for the QR code.
  * Uses a standard quiet zone margin (minimum 4 modules) to guarantee immediate scanning.
  */
+const sanitizeSvgAttribute = (val: string): string =>
+    val.replace(/[&<>"']/g, (char) => {
+        switch (char) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#39;';
+            default: return char;
+        }
+    });
+
 export const generateQrSvg = (
     text: string,
     options?: { size?: number; margin?: number; color?: string; bg?: string }
@@ -38,8 +50,8 @@ export const generateQrSvg = (
     const size = matrix.length;
     const margin = options?.margin ?? 4;
     const totalSize = size + margin * 2;
-    const fg = options?.color || 'black';
-    const bg = options?.bg || 'white';
+    const fg = sanitizeSvgAttribute(options?.color || 'black');
+    const bg = sanitizeSvgAttribute(options?.bg || 'white');
 
     let pathData = '';
     for (let r = 0; r < size; r++) {
