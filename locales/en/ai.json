@@ -45,6 +45,7 @@
   "actionCard": {
     "title": "Action Confirmation Required",
     "subtitle": "The assistant requests your authorization to record this change:",
+    "actionType": "Action Type",
     "confirm": "Approve & Execute",
     "reject": "Decline",
     "confirmed": "Action Approved & Executed",

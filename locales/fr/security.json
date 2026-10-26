@@ -41,6 +41,7 @@
         "changeMasterPassword": "Modifier le mot de passe maître",
         "lockNow": "Verrouiller le coffre maintenant",
         "oldPassword": "Mot de passe actuel",
+        "oldPasswordRequired": "Veuillez saisir votre mot de passe actuel.",
         "newPassword": "Nouveau mot de passe maître",
         "confirmPassword": "Confirmer le nouveau mot de passe",
         "passwordsMismatch": "Les nouveaux mots de passe ne correspondent pas",
@@ -90,6 +91,7 @@
         "confirmDisable": "Oui, désactiver la 2FA",
         "cancel": "Annuler",
         "challengeSubtitleNoBackup": "Saisissez le code à 6 chiffres de votre application d’authentification.",
+        "challengeOrPasskeySubtitle": "Saisissez le code à 6 chiffres de votre application d’authentification, ou authentifiez-vous avec votre passkey.",
         "inputLabelNoBackup": "Code de sécurité"
     },
     "passkeys": {
@@ -154,7 +156,8 @@
         "saveSecret": "Enregistrer le secret chiffré",
         "cancel": "Annuler",
         "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette clé d'API ?",
-        "savedSuccess": "Clé secrète enregistrée en toute sécurité dans le coffre."
+        "savedSuccess": "Clé secrète enregistrée en toute sécurité dans le coffre.",
+        "customProvider": "Fournisseur personnalisé"
     },
     "audit": {
         "title": "Journal d'audit de sécurité",
@@ -165,7 +168,13 @@
         "event": "Événement",
         "details": "Détails",
         "timestamp": "Horodatage",
-        "severity": "Gravité"
+        "severity": "Gravité",
+        "severities": {
+            "all": "Toutes les gravités",
+            "info": "Information",
+            "warning": "Avertissement",
+            "critical": "Critique"
+        }
     },
     "localPersistence": {
         "unavailable": {

@@ -52,7 +52,7 @@ export const AIActionApprovalCard: React.FC<AIActionApprovalCardProps> = ({
 
       <div className="p-3 rounded-lg bg-card border border-subtle space-y-1.5 text-xs">
         <div className="flex justify-between py-0.5 border-b border-subtle/50">
-          <span className="text-tertiary">Type d'action :</span>
+          <span className="text-tertiary">{t('ai:actionCard.actionType')} :</span>
           <span className="font-semibold text-primary">{typeLabel}</span>
         </div>
 

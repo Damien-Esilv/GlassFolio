@@ -41,6 +41,7 @@
         "changeMasterPassword": "Change Master Password",
         "lockNow": "Lock Vault Immediately",
         "oldPassword": "Current Password",
+        "oldPasswordRequired": "Please enter your current password.",
         "newPassword": "New Master Password",
         "confirmPassword": "Confirm New Password",
         "passwordsMismatch": "New passwords do not match",
@@ -90,6 +91,7 @@
         "confirmDisable": "Yes, Disable 2FA",
         "cancel": "Cancel",
         "challengeSubtitleNoBackup": "Enter the 6-digit code from your authenticator app.",
+        "challengeOrPasskeySubtitle": "Enter the 6-digit code from your authenticator app, or authenticate with your passkey.",
         "inputLabelNoBackup": "Security code"
     },
     "passkeys": {
@@ -154,7 +156,8 @@
         "saveSecret": "Save Encrypted Secret",
         "cancel": "Cancel",
         "deleteConfirm": "Are you sure you want to delete this API key?",
-        "savedSuccess": "Secret key securely saved in vault."
+        "savedSuccess": "Secret key securely saved in vault.",
+        "customProvider": "Custom Provider"
     },
     "audit": {
         "title": "Security Audit Log",
@@ -165,7 +168,13 @@
         "event": "Event",
         "details": "Details",
         "timestamp": "Timestamp",
-        "severity": "Severity"
+        "severity": "Severity",
+        "severities": {
+            "all": "All Severities",
+            "info": "Info",
+            "warning": "Warning",
+            "critical": "Critical"
+        }
     },
     "localPersistence": {
         "unavailable": {

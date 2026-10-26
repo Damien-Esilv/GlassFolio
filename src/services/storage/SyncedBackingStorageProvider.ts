@@ -152,7 +152,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             if (key === VAULT_HEADER_KEY) {
                 try {
                     const parsed = JSON.parse(value) as Record<string, unknown>;
-                    supabaseClient.upsertVaultHeader(this.session.accessToken, parsed).catch((err) => {
+                    supabaseClient.upsertVaultHeader(this.session.accessToken, parsed, Boolean(parsed.totpEnabled)).catch((err) => {
                         this.lastSyncError = err;
                     });
                 } catch {

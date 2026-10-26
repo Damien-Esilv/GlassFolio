@@ -466,7 +466,7 @@ export class LocalAuthProvider implements IAuthProvider {
         }
     }
 
-    public async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    public async changePassword(oldPassword: string, newPassword: string, _options?: { nonce?: string; totpCode?: string }): Promise<void> {
         this.checkLockout();
 
         const user = await userRepository.getUser();
@@ -738,7 +738,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         const methods: SecondFactorMethod[] = [];
         if (factors.some(factor => factor.factor_type === 'totp')) {
             if (getSessionAssurance(session.accessToken).aal !== 'aal2') methods.push('totp');
-        } else if (options?.offerPasskey) {
+        }
+        if (options?.offerPasskey) {
             const passkeys = await supabaseClient.listPasskeys(session.accessToken).catch(() => []);
             if (passkeys.length > 0) methods.push('passkey');
         }
@@ -767,7 +768,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         passkeyService.rememberServerRpId(rpId);
         const assertion = await passkeyService.authenticate({ serverOptions: ceremony.options, withPrf: true });
         const session = await supabaseClient.verifyPasskeyAuthentication(ceremony.challenge_id, assertion.credentialJson);
-        return this.continueAfterPrimaryAuth(session, 'email', (verified) => this.finishPasskeySignIn(verified, { ...assertion, rpId }));
+        return this.finishPasskeySignIn(session, { ...assertion, rpId });
     }
 
     private async finishPasskeySignIn(
@@ -1249,7 +1250,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await auditLogService.record('email_change_requested', `Confirmation emails sent to verify change to ${cleanNewEmail}`);
     }
 
-    public override async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string }): Promise<void> {
+    public override async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void> {
         this.checkLockout();
 
         const user = await userRepository.getUser();
@@ -1266,9 +1267,29 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             this.registerFailure();
             throw new Error('Invalid current password.');
         }
-        const active = await this.getActiveSession();
+        let active = await this.getActiveSession();
         if (!active) {
             throw new Error('Your session expired. Sign in again to change your password.');
+        }
+
+        // In cloud mode, ensure we have an active session with proper AAL assurance
+        if (user?.email) {
+            try {
+                let freshSession = await supabaseClient.signInWithPassword(user.email, oldPassword);
+                const factors = await supabaseClient.listMfaFactors(freshSession.accessToken).catch(() => []);
+                const hasTotp = factors.some(f => f.factor_type === 'totp' && f.status === 'verified');
+                if (hasTotp) {
+                    if (options?.totpCode) {
+                        freshSession = await this.verifyTotpForSession(freshSession, options.totpCode);
+                    } else if (getSessionAssurance(active.accessToken).aal === 'aal2') {
+                        freshSession = active;
+                    }
+                }
+                active = freshSession;
+                this.persistSession(active);
+            } catch {
+                // If re-authenticating with oldPassword fails, proceed with active session
+            }
         }
 
         // Supabase first: the account and vault passwords are the same secret, so if the server
@@ -1276,6 +1297,14 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await supabaseClient.updateUser(active.accessToken, { password: newPassword, ...(options?.nonce ? { nonce: options.nonce } : {}) });
         try {
             await vaultService.changePassword(oldPassword, newPassword);
+            const header = vaultService.getVaultHeader();
+            if (header) {
+                await supabaseClient.upsertVaultHeader(
+                    active.accessToken,
+                    header as unknown as Record<string, unknown>,
+                    Boolean(header.totpEnabled)
+                );
+            }
         } catch (err) {
             await supabaseClient.updateUser(active.accessToken, { password: oldPassword }).catch(() => undefined);
             throw err;

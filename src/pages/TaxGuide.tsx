@@ -247,7 +247,7 @@ const DynamicCalendarSection: React.FC = () => {
                             : 'bg-card border-subtle'
                     }`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold uppercase text-primary">Zone 1</span>
+                            <span className="text-xs font-bold uppercase text-primary">{t('tax:guide.calendar.zone1Title')}</span>
                             {userDeadlines.userZone === 'zone_1' && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand text-white">
                                     {t('tax:guide.calendar.activeZoneBadge')}
@@ -266,7 +266,7 @@ const DynamicCalendarSection: React.FC = () => {
                             : 'bg-card border-subtle'
                     }`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold uppercase text-primary">Zone 2</span>
+                            <span className="text-xs font-bold uppercase text-primary">{t('tax:guide.calendar.zone2Title')}</span>
                             {userDeadlines.userZone === 'zone_2' && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand text-white">
                                     {t('tax:guide.calendar.activeZoneBadge')}
@@ -285,7 +285,7 @@ const DynamicCalendarSection: React.FC = () => {
                             : 'bg-card border-subtle'
                     }`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold uppercase text-primary">Zone 3</span>
+                            <span className="text-xs font-bold uppercase text-primary">{t('tax:guide.calendar.zone3Title')}</span>
                             {userDeadlines.userZone === 'zone_3' && (
                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand text-white">
                                     {t('tax:guide.calendar.activeZoneBadge')}
@@ -300,7 +300,7 @@ const DynamicCalendarSection: React.FC = () => {
 
                     <div className="p-4 rounded-xl border bg-card border-subtle">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold uppercase text-secondary">Papier</span>
+                            <span className="text-xs font-bold uppercase text-secondary">{t('tax:guide.calendar.paperTitle')}</span>
                         </div>
                         <p className="text-xs text-secondary mb-2">{t('tax:guide.calendar.paperDeclaration')}</p>
                         <p className="text-sm font-bold text-primary capitalize">
@@ -369,10 +369,10 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                         <div className="space-y-3">
                             <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.keyRules')}</h3>
                             <ul className="space-y-2 text-sm text-secondary">
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Imposition au PFU (30 %) ou sur option au barème progressif</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Prix de revient calculé selon la méthode du Prix Moyen Pondéré (PMP)</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Moins-values imputables sur les plus-values de même nature, reportables pendant 10 ans</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Formulaire 2074 pour le détail des cessions, 2042 cases 3VG / 3VH</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule1')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule2')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule3')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule4')}</li>
                             </ul>
                         </div>
                         {rules && (
@@ -405,10 +405,10 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                                     <table className="w-full text-xs">
                                         <thead className="bg-subtle text-secondary uppercase">
                                             <tr>
-                                                <th className="px-4 py-2 text-left">Âge du plan</th>
-                                                <th className="px-4 py-2 text-left">IR sur gains</th>
-                                                <th className="px-4 py-2 text-left">Prélèvements sociaux</th>
-                                                <th className="px-4 py-2 text-left">Clôture ?</th>
+                                                <th className="px-4 py-2 text-left">{t('tax:guide.topicContent.pea.tableHeaders.age')}</th>
+                                                <th className="px-4 py-2 text-left">{t('tax:guide.topicContent.pea.tableHeaders.incomeTax')}</th>
+                                                <th className="px-4 py-2 text-left">{t('tax:guide.topicContent.pea.tableHeaders.socialCharges')}</th>
+                                                <th className="px-4 py-2 text-left">{t('tax:guide.topicContent.pea.tableHeaders.closes')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-subtle">
@@ -416,15 +416,15 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                                                 <tr key={i} className="hover:bg-subtle/50">
                                                     <td className="px-4 py-2 text-primary">
                                                         {rule.maxAgeYears === Infinity
-                                                            ? `> ${rule.minAgeYears} ans`
-                                                            : `${rule.minAgeYears}–${rule.maxAgeYears} ans`}
+                                                            ? t('tax:guide.topicContent.pea.status.overYears', { count: rule.minAgeYears })
+                                                            : `${rule.minAgeYears}–${rule.maxAgeYears} ${t('tax:guide.topicContent.pea.status.years')}`}
                                                     </td>
                                                     <td className={`px-4 py-2 font-semibold ${rule.incomeTaxRate === 0 ? 'text-success' : 'text-error'}`}>
-                                                        {rule.incomeTaxRate === 0 ? 'Exonéré' : `${(rule.incomeTaxRate * 100).toFixed(1)} %`}
+                                                        {rule.incomeTaxRate === 0 ? t('tax:guide.topicContent.pea.status.exempt') : `${(rule.incomeTaxRate * 100).toFixed(1)} %`}
                                                     </td>
                                                     <td className="px-4 py-2 text-secondary">{(rule.socialRate * 100).toFixed(1)} %</td>
                                                     <td className={`px-4 py-2 font-medium ${rule.closesOnWithdrawal ? 'text-error' : 'text-success'}`}>
-                                                        {rule.closesOnWithdrawal ? 'Oui' : 'Non (partiel possible)'}
+                                                        {rule.closesOnWithdrawal ? t('tax:guide.topicContent.pea.status.yes') : t('tax:guide.topicContent.pea.status.noPartial')}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -433,9 +433,9 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                                 </div>
                             )}
                             <ul className="space-y-2 text-sm text-secondary">
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Plafond versements: {rules?.pea.maxDeposit.toLocaleString('fr-FR')} € (PEA), {rules?.pea.maxDepositPME.toLocaleString('fr-FR')} € (PEA-PME)</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Les dividendes et plus-values internes ne sont pas imposables</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Après 5 ans: retraits partiels sans clôture, seuls les PS s'appliquent</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.depositCap', { peaCap: rules?.pea.maxDeposit.toLocaleString('fr-FR') ?? '150 000', pmeCap: rules?.pea.maxDepositPME.toLocaleString('fr-FR') ?? '75 000' })}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.rule1')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.rule2')}</li>
                             </ul>
                         </div>
                         <div className="text-xs text-tertiary"><p className="font-semibold text-secondary mb-1">{t('tax:guide.topicDetail.legalReferences')}</p><p>Art. 163 quinquies D du CGI — BOI-RPPM-RCM-40-50</p></div>
@@ -449,11 +449,11 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                         <div className="space-y-3">
                             <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.keyRules')}</h3>
                             <ul className="space-y-2 text-sm text-secondary">
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Seuil d'exonération: {rules?.crypto.exemptionThreshold} € de cessions annuelles</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Échanges crypto-crypto: <strong className="text-success">fiscalement neutres</strong> (pas d'imposition)</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Cessions vers monnaie fiduciaire (€, $) ou bien réel: imposables à 30 %</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Moins-values non reportables (contrairement au CTO)</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />Formulaire 2042-C cases 3AN (gain) / 3BN (perte)</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.threshold', { amount: rules?.crypto.exemptionThreshold ?? 305 })}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule1Prefix')} <strong className="text-success">{t('tax:guide.topicContent.crypto.rule1Highlight')}</strong> {t('tax:guide.topicContent.crypto.rule1Suffix')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule2')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule3')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule4')}</li>
                             </ul>
                             <div className="space-y-3">
                                 <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.examples')}</h3>
@@ -480,7 +480,7 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                         <h2 className="text-xl font-bold text-primary">{t(`tax:guide.topics.${topicId}.title`)}</h2>
                         <p className="text-secondary text-sm">{t(`tax:guide.topics.${topicId}.desc`)}</p>
                         <div className="rounded-xl bg-subtle p-4 text-xs text-secondary">
-                            <p>Contenu détaillé à venir pour ce sujet.</p>
+                            <p>{t('tax:guide.topicContent.comingSoon')}</p>
                         </div>
                     </div>
                 );

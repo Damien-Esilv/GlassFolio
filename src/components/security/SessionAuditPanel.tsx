@@ -87,10 +87,10 @@ export const SessionAuditPanel: React.FC = () => {
                             onChange={(e) => setFilterSeverity(e.target.value as AuditSeverity | 'all')}
                             className="bg-subtle border border-subtle text-primary text-xs rounded-lg px-2.5 py-1.5"
                         >
-                            <option value="all">All Severities</option>
-                            <option value="info">Info</option>
-                            <option value="warning">Warning</option>
-                            <option value="critical">Critical</option>
+                            <option value="all">{t('security:audit.severities.all')}</option>
+                            <option value="info">{t('security:audit.severities.info')}</option>
+                            <option value="warning">{t('security:audit.severities.warning')}</option>
+                            <option value="critical">{t('security:audit.severities.critical')}</option>
                         </select>
                         <button
                             type="button"

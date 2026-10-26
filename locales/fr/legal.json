@@ -377,7 +377,7 @@
       "themeLang": {
         "key": "gf_public_theme / gf_public_lang",
         "category": "Strictement Nécessaire (Préférences)",
-        "purpose": "Mémorise votre thème d'interface (Clair, Sombre, Midnight) et votre langue (FR, EN) entre les sessions.",
+        "purpose": "Mémorise votre thème d'interface (Clair, Sombre, Midnight) et votre langue (FR, EN) entre les sessions et entre glassfolio.dev et app.glassfolio.dev.",
         "lifespan": "Persistant jusqu'à l'effacement du cache"
       },
       "consent": {

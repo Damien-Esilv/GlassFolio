@@ -63,7 +63,7 @@ export const FaqAccordion: React.FC = () => {
                     id={contentId}
                     role="region"
                     aria-labelledby={buttonId}
-                    className="px-5 pb-5 pt-1 text-xs sm:text-sm text-secondary leading-relaxed border-t border-subtle/50"
+                    className="px-5 pb-5 pt-1 text-xs sm:text-sm text-secondary leading-relaxed"
                   >
                     {t(`landing:faq.items.${key}.answer`)}
                   </div>

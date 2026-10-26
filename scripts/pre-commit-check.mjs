@@ -161,7 +161,7 @@ for (const file of stagedFiles) {
       }
 
       // Hex color invariant
-      if (!file.includes('mockData') && !file.includes('src/constants/')) {
+      if (!file.includes('mockData') && !file.includes('src/constants/') && !file.startsWith('supabase/')) {
         const hexMatches = line.match(hexRegex);
         if (hexMatches) {
           violations.push({
@@ -174,7 +174,7 @@ for (const file of stagedFiles) {
       }
 
       // Raw Tailwind palette invariant
-      if (!file.includes('mockData') && !file.includes('src/constants/')) {
+      if (!file.includes('mockData') && !file.includes('src/constants/') && !file.startsWith('supabase/')) {
         const tailwindMatches = line.match(rawTailwindColorRegex);
         if (tailwindMatches) {
           violations.push({

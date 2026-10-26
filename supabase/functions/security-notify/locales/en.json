@@ -1,0 +1,14 @@
+{
+  "passkey_added": {
+    "subject": "A new passkey was added to your GlassFolio account",
+    "heading": "New passkey registered",
+    "body": "The biometric or security passkey <strong>\"{{passkeyName}}\"</strong> was just added to your GlassFolio account (<code>{{email}}</code>)."
+  },
+  "passkey_removed": {
+    "subject": "A passkey was removed from your GlassFolio account",
+    "heading": "Passkey removed",
+    "body": "The biometric or security passkey <strong>\"{{passkeyName}}\"</strong> was removed from your account (<code>{{email}}</code>)."
+  },
+  "alertNote": "If you did not perform this action, your account may be compromised. Go immediately to Settings > Security to lock your vault and change your master password.",
+  "footerText": "Automated security notification • GlassFolio • End-to-End Encryption (E2EE)"
+}

@@ -8,8 +8,8 @@ interface ChartModeToggleProps {
 }
 
 const MODES: { value: ChartPriceMode; labelKey: string; hintKey: string }[] = [
-    { value: 'historical', labelKey: 'dashboard:chartMode.historical', hintKey: 'dashboard:chartMode.historicalHint' },
-    { value: 'simulated', labelKey: 'dashboard:chartMode.simulated', hintKey: 'dashboard:chartMode.simulatedHint' }
+    { value: 'simulated', labelKey: 'dashboard:chartMode.simulated', hintKey: 'dashboard:chartMode.simulatedHint' },
+    { value: 'historical', labelKey: 'dashboard:chartMode.historical', hintKey: 'dashboard:chartMode.historicalHint' }
 ];
 
 /**

@@ -7,6 +7,10 @@
     "goals": {
         "title": "Objectifs financiers",
         "createNew": "Créer un nouvel objectif",
+        "groups": "Groupes",
+        "editGroupAssets": "Modifier les actifs du groupe",
+        "color": "Couleur",
+        "done": "Terminé",
         "editGoal": "Modifier l'objectif",
         "deleteGoal": "Supprimer l'objectif",
         "noGoals": "Aucun objectif créé",

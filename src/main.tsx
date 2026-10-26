@@ -4,8 +4,12 @@ import ReactDOM from 'react-dom/client';
 // Inter is self-hosted (no request to Google Fonts, hence no visitor IP sent to a third party).
 import './fonts.css';
 import './index.css';
+import { consumeUrlBootstrapParams } from './config/urlBootstrap';
 import { installTrustedTypesDefaultPolicy } from './services/security/trustedTypes';
 import { bootstrapLocalPersistence } from './services/storage/localPersistenceBootstrap';
+
+// Synchronous preference & URL handoff bootstrap before any render
+consumeUrlBootstrapParams();
 
 // Before any library code runs: Trusted Types `default` policy (same-origin script URLs only)
 installTrustedTypesDefaultPolicy();

@@ -260,16 +260,31 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
             expect(supabaseClient.signOut).toHaveBeenCalled();
         });
 
-        it('still asks the TOTP after a passkey sign-in when the account has one (AAL1 session)', async () => {
+        it('does NOT ask for TOTP after a passkey sign-in even when the account has TOTP enrolled', async () => {
+            await vaultService.setup(PASSWORD, { authProvider: 'email' });
+            await vaultService.enrollPasskeyPrf(CRED_ID, 'Touch ID', PRF_SECRET, PASSWORD);
+            await userRepository.saveUser(user());
+            await vaultService.lock();
             vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue([{ id: 'f-1', factor_type: 'totp', status: 'verified' }]);
             mockWebAuthnGet(assertion());
-            vi.spyOn(supabaseClient, 'verifyPasskeyAuthentication').mockResolvedValue(session('sb-1', jwt({ aal: 'aal1', amr: [] })));
+            vi.spyOn(supabaseClient, 'verifyPasskeyAuthentication').mockResolvedValue(session('sb-1', jwt({ aal: 'aal1', amr: [{ method: 'passkey' }] })));
 
             const result = await provider.signInWithPasskey();
-            expect(result.secondFactorMethods).toEqual(['totp']);
-            await expect(provider.verifySecondFactorWithPasskey()).rejects.toThrow(/authenticator app/i);
-            await provider.cancelSecondFactor();
-            await expect(provider.verifySecondFactor('123456')).rejects.toThrow(/expired/i);
+            expect(result.requiresTwoFactor).toBeUndefined();
+            expect(result.user.id).toBe('sb-1');
+            expect(vaultService.isUnlocked()).toBe(true);
+        });
+
+        it('offers both TOTP and Passkey when signing in with password on an account with both enrolled', async () => {
+            await vaultService.setup(PASSWORD, { authProvider: 'email' });
+            await vaultService.lock();
+            vi.spyOn(supabaseClient, 'signInWithPassword').mockResolvedValue(session('sb-1', jwt({ aal: 'aal1' })));
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue([{ id: 'f-1', factor_type: 'totp', status: 'verified' }]);
+            vi.spyOn(supabaseClient, 'listPasskeys').mockResolvedValue([{ id: 'pk-1', created_at: '2026-10-01' }]);
+
+            const pending = await provider.signIn('user@example.com', PASSWORD);
+            expect(pending.requiresTwoFactor).toBe(true);
+            expect(pending.secondFactorMethods).toEqual(['totp', 'passkey']);
         });
 
         it('confirms a password sign-in with a passkey of the same account only', async () => {
