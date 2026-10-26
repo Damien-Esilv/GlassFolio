@@ -51,10 +51,13 @@ export function extractCashStatements(
 
     const statements: CashBalanceStatement[] = [];
     let skipped = 0;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     for (const row of rows) {
         const date = parseDate(row[dateIdx] || '', dateHint);
         const balance = parseDecimal(row[balanceIdx]);
-        if (!date || balance === null) {
+        if (!date || balance === null || new Date(date) > tomorrow) {
             skipped++;
             continue;
         }
@@ -72,6 +75,12 @@ export async function recordCashBalances(params: RecordCashBalancesParams): Prom
     const { accountId, currency, statements, userId, source, fileName } = params;
     if (statements.length === 0) {
         return { success: false, transactionCount: 0, batchId: null, error: 'No valid balance statement' };
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (statements.some(s => new Date(s.date) > tomorrow)) {
+        return { success: false, transactionCount: 0, batchId: null, error: 'Cannot record cash balance statements with dates in the future' };
     }
 
     const instrument = await instrumentService.findOrCreateInstrument({

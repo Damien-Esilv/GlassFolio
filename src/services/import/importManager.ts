@@ -374,7 +374,8 @@ export async function parseFile(
 
         // Validate with instrument context
         const rowData: RowData = {
-            transactionDate: parsed.transactionDate,
+            transactionDate: parsed.transactionDate || (rawDateStr.trim() ? rawDateStr : undefined),
+            valueDate: parsed.valueDate,
             type: parsed.type,
             amountPrimary: parsed.amountPrimary,
             assetSymbol: parsed.assetSymbol,
@@ -456,11 +457,13 @@ export async function commitBatch(
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
-    // Filter transactions to import
+    // Filter transactions to import: never import error rows
     const toImport = transactions.filter(t =>
-        t.resolution === 'import' ||
-        (t.status === 'valid' && t.resolution === 'pending') ||
-        (t.status === 'warning' && t.resolution === 'pending')
+        t.status !== 'error' && (
+            t.resolution === 'import' ||
+            (t.status === 'valid' && t.resolution === 'pending') ||
+            (t.status === 'warning' && t.resolution === 'pending')
+        )
     );
 
     if (toImport.length === 0) {
@@ -470,6 +473,23 @@ export async function commitBatch(
             batchId: null,
             error: 'No valid transactions to import'
         };
+    }
+
+    // Defense-in-depth: Ensure no transactions have future dates
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    for (const staged of toImport) {
+        if (staged.parsed.transactionDate) {
+            const txDate = new Date(staged.parsed.transactionDate);
+            if (!isNaN(txDate.getTime()) && txDate > tomorrow) {
+                return {
+                    success: false,
+                    transactionCount: 0,
+                    batchId: null,
+                    error: 'Cannot import transactions with dates in the future'
+                };
+            }
+        }
     }
 
     // Begin atomic transaction
