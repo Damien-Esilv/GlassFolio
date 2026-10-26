@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { UserAvatar } from '../../../../components/ui/UserAvatar';
+import { UserAvatar, isValidAvatarUrl } from '../../../../src/components/ui/UserAvatar';
 
 describe('<UserAvatar />', () => {
   it('renders initials when no avatar is provided', () => {
@@ -32,5 +32,31 @@ describe('<UserAvatar />', () => {
     fireEvent.error(img);
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.getByText('AS')).toBeDefined();
+  });
+
+  describe('avatar source allow-list (CodeQL js/xss-through-dom)', () => {
+    it.each([
+      '/avatars/demo-user.jpg',
+      'https://lh3.googleusercontent.com/a/photo=s96-c',
+      'data:image/png;base64,iVBORw0KGgo=',
+      'data:image/jpeg;base64,/9j/4AAQ',
+      'blob:http://localhost:3000/1234',
+    ])('accepts %s', (url) => expect(isValidAvatarUrl(url)).toBe(true));
+
+    it.each([
+      'javascript:alert(1)',
+      'data:text/html;base64,PHNjcmlwdD4=',
+      'data:image/svg+xml;base64,PHN2Zz4=',
+      'http://example.com/a.png',
+      '//evil.example/a.png',
+      'ftp://example.com/a.png',
+      '   ',
+    ])('rejects %s', (url) => expect(isValidAvatarUrl(url)).toBe(false));
+
+    it('falls back to initials for a disallowed source', () => {
+      render(<UserAvatar name="Eve Mallory" avatar="javascript:alert(1)" />);
+      expect(screen.queryByRole('img')).toBeNull();
+      expect(screen.getByText('EM')).toBeDefined();
+    });
   });
 });

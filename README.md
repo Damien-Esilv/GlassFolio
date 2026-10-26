@@ -100,7 +100,7 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
   - Seamlessly switch between `local` (offline-first browser storage) and `cloud` (ready for InstantDB/cloud sync) via `VITE_DEPLOYMENT_MODE`.
 
 ### 🎨 9. Single Source of Truth Design Tokens & Semantic Theming
-- **Strict SSOT Architecture**: `THEME_PALETTES` defined as `const` in `src/constants/themeTokens.ts`, synchronized with CSS variables in `index.html`.
+- **Strict SSOT Architecture**: `THEME_PALETTES` defined as `const` in `src/constants/themeTokens.ts`, synchronized with CSS variables in `src/index.css`.
 - **Zero Hardcoded Colors**: Enforced 0 hex/RGB/RGBA in UI components, 0 generic or raw Tailwind palette classes (`text-emerald-*`, `bg-rose-*`, etc.).
 - **Financial Micro-Primitives**: Standardized `<TrendValue />` and `<TrendBadge />` micro-components for uniform P&L delta and percentage displays.
 - **8-Color Multi-Series Palette**: `CHART_SERIES_PALETTE` with deterministic symbol hashing (`getAssetStableColor`), completely eliminating color collisions with gain/loss indicators.
@@ -196,66 +196,45 @@ Operating entirely **offline-first**, GlassFolio stores all data locally in the 
 
 ```
 GlassFolio/
-├── components/          # Reusable UI components
-│   ├── ai/              # AI drawer, approval cards, markdown & thinking components
-│   ├── security/        # Vault gates, lock screen, TOTP/passkey dialogs, secrets
-│   ├── ui/              # Semantic primitives (TrendValue, TrendBadge)
-│   ├── GoalCard.tsx     # Memoized financial goal card
-│   ├── QuestCard.tsx    # Monthly & quarterly financial mission card
-│   ├── InvestorRankCard.tsx # Rank progression & unlockable rewards card
-│   ├── CelebrationModal.tsx # Dynamic confetti celebration engine
-│   └── Layout.tsx       # Main shell with sidebar, headers, and AI trigger
-├── context/             # Global React Contexts (AuthContext, DataContext)
-├── hooks/               # Custom React hooks (CSV import, snapshot reconciliation)
-├── locales/             # 13 i18n translation namespaces (en/ & fr/)
-│   ├── en/              # ai, auth, common, dashboard, gamification, etc.
-│   └── fr/              # ai, auth, common, dashboard, gamification, etc.
-├── mcp-server/          # Standalone Model Context Protocol (MCP) server
-│   └── index.mjs        # Stdio transport exposing GlassFolio tools & resources
-├── pages/               # 16+ Routed views
-│   ├── Analytics.tsx            # Analytics hub
-│   ├── Dashboard.tsx            # Executive overview & asset distribution
-│   ├── DeclarationAssistant.tsx # Tax declaration wizard (2042/2074/3916)
-│   ├── FeeAnalysis.tsx          # ETF fees & long-term drag calculator
-│   ├── ImportHistory.tsx        # Batch manager with rollback capability
-│   ├── ImportWizard.tsx         # Multi-broker CSV import wizard
-│   ├── Portfolio.tsx            # Categorized portfolio breakdown
-│   ├── PortfolioHub.tsx         # Account and asset allocation hub
-│   ├── PortfolioPerformance.tsx # Benchmark comparisons & live ticker feeds
-│   ├── Positions.tsx            # Granular position & PRU table
-│   ├── Progress.tsx             # Goals, gamification, quests & rank hub
-│   ├── RealizedUnrealizedPL.tsx # Capital gains and losses analysis
-│   ├── Settings.tsx             # Themes, currency, security vault, AI & backup
-│   ├── TaxGuide.tsx             # French tax guide & dynamic DGFiP calendar
-│   ├── TaxHub.tsx               # Tax overview & regime selector
-│   └── TaxOptimization.tsx      # Tax-loss harvesting & PEA optimization
-├── scripts/             # DevSecOps & validation automation
-│   ├── pre-commit-check.mjs     # Pre-commit security & standards shield (<200ms)
-│   ├── check-standards.mjs      # Theming, zero-hex & zero-path audit
-│   └── check-i18n-keys.mjs      # Translation completeness verifier
-├── src/
+├── src/                 # All application code (standard Vite layout)
+│   ├── main.tsx         # React entry point (loads App or ShowcaseApp by build target)
+│   ├── App.tsx          # Application router & route guards
+│   ├── ShowcaseApp.tsx  # Public showcase build (landing, legal, consent)
+│   ├── pages/           # 16+ routed views (Dashboard, Portfolio, Positions, Tax*, Settings…)
+│   ├── components/      # Reusable UI
+│   │   ├── ai/          # AI drawer, approval cards, markdown & thinking components
+│   │   ├── security/    # Vault gates, lock screen, TOTP/passkey dialogs, secrets
+│   │   ├── ui/          # Semantic primitives (TrendValue, TrendBadge)
+│   │   └── Layout.tsx   # Main shell with sidebar, headers, and AI trigger
+│   ├── context/         # Global React Contexts (AuthContext, DataContext)
+│   ├── hooks/           # Custom React hooks (CSV import, snapshot reconciliation)
+│   ├── utils/           # CSV, currency and date helpers
 │   ├── constants/       # SSOT theme tokens, animations, asset classes
+│   ├── config/          # Deployment mode & app target resolution
+│   ├── index.css        # Theme tokens (CSS variables per theme) + Tailwind layers
 │   ├── i18n.ts          # i18next setup and namespace registration
-│   ├── types/           # Production Super-Schema, Result monads, Zod schemas
+│   ├── types/           # Domain + backend types, Result monads, Zod schemas
 │   └── services/        # Business logic, repositories & data access
-│       ├── ai/          # AI engine, tool registry (16 tools), guardrails
+│       ├── ai/          # AI engine, tool registry, guardrails
 │       ├── core/        # Transaction manager & validator services
 │       ├── fiscal/      # Tax calculation engine & calendar rules
 │       ├── import/      # CSV parsers & snapshot reconciler
 │       ├── repositories/# Repository abstraction pattern (Local / Cloud)
 │       ├── security/    # Vault lifecycle, crypto, TOTP, passkeys, secrets
-│       ├── storage/     # EncryptedStorageProvider (AES-256-GCM)
-│       ├── cache.ts     # Generic MemoryCache with TTL
-│       ├── gamificationService.ts # Ranks, quests, streaks & XP engine
-│       ├── portfolioService.ts
-│       ├── transactionService.ts
-│       └── priceService.ts
+│       └── storage/     # Encrypted storage providers (AES-256-GCM)
+├── server/              # Zero-dependency Node runtime (Docker server, Yahoo proxy)
+├── docker/              # Dockerfile for the self-hosted image
+├── locales/             # i18n translation namespaces (en/ & fr/)
+├── mcp-server/          # Standalone Model Context Protocol (MCP) server
+├── scripts/             # DevSecOps & validation automation
+├── supabase/            # Cloud-mode migrations & edge functions
+├── public/              # Static assets
 ├── test-data/           # Sample broker CSV files for testing imports
-├── tests/               # 598+ Vitest unit & integration tests (46 test files)
-├── types.ts             # Domain entity TypeScript interfaces
-├── App.tsx              # Application router & route guards
-├── index.html           # Design tokens, CSS variables & Tailwind config
-└── index.tsx            # React application entry point
+├── tests/               # Vitest unit & integration tests
+├── docker-compose.yml   # One-command self-hosting
+├── tailwind.config.ts   # Tailwind build config (colors derived automatically from src/index.css variables)
+├── postcss.config.js
+└── index.html           # HTML entry (no third-party script)
 ```
 
 ---
@@ -300,6 +279,41 @@ To preview the production bundle locally:
 ```bash
 npm run preview
 ```
+
+### 5. Self-host with Docker
+GlassFolio ships a hardened image (non-root, read-only filesystem, no capabilities) that serves the app and
+proxies market data (Yahoo Finance) on the same origin.
+
+```bash
+npm run docker:up      # build the image and start it on http://localhost:3000
+npm run docker:logs    # follow the logs
+npm run docker:down    # stop it (your data is kept)
+npm run docker:smoke   # build + start a throw-away container and verify it end to end
+```
+
+- **Data** lives in the `glassfolio-data` Docker volume (only end-to-end encrypted vault records are written there).
+  Back it up with `docker run --rm -v glassfolio_glassfolio-data:/data -v "$PWD":/backup alpine tar czf /backup/glassfolio-data.tgz -C /data .`
+- **Network**: bound to `127.0.0.1` by default. Set `GLASSFOLIO_BIND=0.0.0.0` (and optionally `GLASSFOLIO_PORT`) in
+  `docker/docker.env` to expose it on your network — put a TLS reverse proxy in front if you do.
+- **Host folder instead of a volume**: set `GLASSFOLIO_DATA=/path/to/folder` (writable by uid 1000).
+- **Where your data lives**: in local mode the server volume is the source of truth. The browser keeps only
+  preferences (theme, language, consent), so clearing the cache or opening GlassFolio in another browser does not
+  lose anything — just unlock the vault with your master password. `npm run dev` behaves the same and writes to
+  `./glassfolio-data` (git-ignored). Two browsers editing at the same moment: the last write per record wins.
+- **Behind a reverse proxy with a domain name**: set `GLASSFOLIO_ALLOWED_HOSTS=glassfolio.example.com` so the vault
+  API accepts that host (localhost and IP addresses always work; this blocks DNS-rebinding attacks).
+- **Security headers**: the server sends a strict Content-Security-Policy (`script-src 'self'`, no inline script, no
+  `eval`, no framing, Trusted Types enforced for script sinks) plus COOP, Permissions-Policy and `X-Content-Type-Options`. To let the app call another origin
+  (e.g. a remote Ollama), set `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`.
+- **Exposing the container to your network**: set both variables in your shell, never in a file. `npm run docker:up`
+  refuses a network bind without a token.
+  ```bash
+  GLASSFOLIO_BIND=0.0.0.0 GLASSFOLIO_ACCESS_TOKEN=$(openssl rand -hex 16) npm run docker:up
+  ```
+  The browser then asks once for a login (user `glassfolio`, password = the token). This is HTTP Basic: on an untrusted
+  network, put a TLS reverse proxy in front (and list its domain in `GLASSFOLIO_ALLOWED_HOSTS`).
+- **Supply chain**: the base image and every GitHub Action are pinned by SHA, npm packages by their lockfile SHA-512
+  integrity hashes; `npm run check:supply-chain` fails the build if any of them drifts.
 
 ---
 

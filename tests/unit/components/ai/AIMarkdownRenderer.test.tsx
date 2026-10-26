@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { AIMarkdownRenderer } from '../../../../components/ai/AIMarkdownRenderer';
+import { AIMarkdownRenderer } from '../../../../src/components/ai/AIMarkdownRenderer';
 import '../../../../src/i18n';
 
 describe('AIMarkdownRenderer', () => {

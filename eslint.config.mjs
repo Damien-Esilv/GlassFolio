@@ -138,7 +138,7 @@ export default [
 
   // ── Service layer exception — localStorage IS allowed in services & context ──
   {
-    files: ['src/services/**/*.ts', 'utils/**/*.ts', 'context/**/*.tsx', 'context/**/*.ts'],
+    files: ['src/services/**/*.ts', 'src/utils/**/*.ts', 'src/context/**/*.tsx', 'src/context/**/*.ts'],
     rules: {
       'no-restricted-globals': 'off',
     },
@@ -146,7 +146,7 @@ export default [
 
   // ── Node.js scripts ────────────────────────────────────────────────────────
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}'],
+    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}', 'server/**/*.{js,mjs,cjs}'],
     languageOptions: {
       globals: {
         console: 'readonly',
@@ -155,6 +155,9 @@ export default [
         __filename: 'readonly',
         URL: 'readonly',
         fetch: 'readonly',
+        Buffer: 'readonly',
+        AbortSignal: 'readonly',
+        setTimeout: 'readonly',
       },
     },
     rules: {

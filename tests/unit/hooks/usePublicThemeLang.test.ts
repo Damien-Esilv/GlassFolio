@@ -9,7 +9,7 @@ import i18n from '../../../src/i18n';
 let mockUser: unknown = null;
 const mockUpdateProfile = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
     updateProfile: mockUpdateProfile,

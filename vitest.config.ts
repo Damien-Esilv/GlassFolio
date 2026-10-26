@@ -38,7 +38,7 @@ export default defineConfig({
         'src/services/import/backupRestoreService.ts',
         'src/services/repositories/**/*.ts',
         'src/services/security/**/*.ts',
-        'utils/**/*.ts',
+        'src/utils/**/*.ts',
       ],
       exclude: [
         'src/services/mockData.backend.ts',
@@ -58,7 +58,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, 'src'),
     },
   },
 });

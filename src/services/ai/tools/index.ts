@@ -17,6 +17,7 @@ import {
   rotateEncryptionKeyTool,
   getEmailVerificationStatusTool,
   resendVerificationEmailTool,
+  getStorageStatusTool,
 } from './securityTools';
 import { getPrivacyStatusTool, exportGdprArchiveTool } from './legalTools';
 import {
@@ -57,6 +58,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(rotateEncryptionKeyTool);
   aiToolRegistry.registerTool(getEmailVerificationStatusTool);
   aiToolRegistry.registerTool(resendVerificationEmailTool);
+  aiToolRegistry.registerTool(getStorageStatusTool);
   aiToolRegistry.registerTool(listNotificationsTool);
   aiToolRegistry.registerTool(manageNotificationsTool);
   aiToolRegistry.registerTool(listAlertRulesTool);
@@ -93,6 +95,7 @@ export {
   rotateEncryptionKeyTool,
   getEmailVerificationStatusTool,
   resendVerificationEmailTool,
+  getStorageStatusTool,
   listNotificationsTool,
   manageNotificationsTool,
   listAlertRulesTool,

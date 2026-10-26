@@ -15,9 +15,9 @@ This project is an advanced financial dashboard ("GlassFolio"). Homogeneity, aes
 *   **ENFORCEMENT:** Automated CI gates `npm run check:theming` and `npm run check:standards` scan all source files. Any violation will fail the build immediately.
 
 ### 1.2. Design System & Tokens
-*   **Technology:** Tailwind CSS (via CDN/Script injection in `index.html`) + CSS Variables + typed token registry (`src/constants/themeTokens.ts`).
+*   **Technology:** Tailwind CSS 3 compiled at build time (`tailwind.config.ts`, theme variables in `src/index.css`, no third-party script) + CSS Variables + typed token registry (`src/constants/themeTokens.ts`).
 *   **Semantic Intent Tokens (`THEME_INTENT`):**
-    Represent financial and contextual meaning. Changing `--color-positive` in `index.html` cascades across all screens, badges, and charts:
+    Represent financial and contextual meaning. Declare each color once, as a CSS variable in `src/index.css` — `tailwind.config.ts` derives its utilities from those variables automatically (`--color-x`, `--text-x`, `--bg-x`, `--border-x`; see `src/config/tailwindTheme.mjs`) and must never list colors by hand. Changing `--color-positive` in `src/index.css` cascades across all screens, badges, and charts:
     *   `positive` (`text-positive`, `bg-positive`, `bg-positive-subtle`, `border-positive`): Gains, profits, outperformance, success.
     *   `negative` (`text-negative`, `bg-negative`, `bg-negative-subtle`, `border-negative`): Losses, outflows, underperformance, errors.
     *   `warning` (`text-warning`, `bg-warning`, `bg-warning-subtle`, `border-warning`): Alerts, cautions, untracked holdings, fee notices.
@@ -158,7 +158,10 @@ The system supports three distinct themes. Your code must support all three auto
 *   **Toast Notifications:** Use the toast/alert system for user feedback, never `window.alert`.
 
 ### 5.4. Directory Structure
-*   **Vite Non-Standard:** Note that `pages/` and `components/` reside in the **ROOT**, while `services/` resides in `src/`. Respect this structure; do not move files unnecessarily.
+*   **All application code lives in `src/`** (standard Vite layout): `src/pages/`, `src/components/`, `src/context/`, `src/hooks/`, `src/utils/`, `src/services/`, `src/types/`, `src/constants/`, plus the entry points `src/main.tsx`, `src/App.tsx` and `src/ShowcaseApp.tsx`. Do not add application code at the repository root.
+*   **Root stays minimal:** only configuration (`package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `eslint.config.mjs`, `vercel.json`, `docker-compose.yml`, `index.html`, `tailwind.config.ts`, `postcss.config.js`), project docs/licence, and the top-level folders `src/`, `tests/`, `scripts/` (dev & CI tooling), `server/` (zero-dependency Node runtime shared by Docker and the Vite dev server), `docker/`, `locales/`, `public/`, `mcp-server/`, `supabase/`, `test-data/`. New root files need a justification.
+*   **`@` alias** resolves to `src/`.
+*   **Security headers / CSP:** defined once in `server/securityHeaders.mjs` (profiles `local` and `cloud`). No inline scripts, no `eval`, no third-party script. A new external origin (API, image host) must be added there, then `npm run security:headers` regenerates `vercel.json`.
 *   **No `docs/` in repo:** Project documentation (feature specs, ADRs, session logs, code summaries) is centralized in the **external Obsidian vault** at `$HOME/Developpement/brain/GlassFolio/` (or via `BRAIN_PATH`), accessible via the MCP `obsidian` server. Do not create a `docs/` folder in this repo.
 
 ### 5.5. Strict Typing
@@ -294,7 +297,7 @@ push/PR sur main|develop|feat/**|fix/**|refactor/**|chore/**|ci/**|test/**
 ### 7.7. Conformité Standards (Phase 3)
 
 - **`check:i18n`** : `scripts/check-i18n-keys.mjs` — scan des `t('key')` vs `locales/en/` et `locales/fr/`. Sortie 1 si clé manquante.
-- **ESLint `no-restricted-globals`** : accès direct à `localStorage` interdit hors de `src/services/`, `utils/`, `context/`.
+- **ESLint `no-restricted-globals`** : accès direct à `localStorage` interdit hors de `src/services/`, `src/utils/`, `src/context/`.
 - **ESLint `react-hooks/rules-of-hooks`** : violation bloquante en CI.
 
 ### 7.8. Violations Connues (à corriger dans les prochains sprints)

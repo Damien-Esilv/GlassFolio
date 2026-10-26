@@ -1,6 +1,6 @@
-import { Position } from '../../types';
+import { Position } from '../types';
 import { currencyService } from './currencyService';
-import { formatChartDate, DateFormatPattern } from '../../utils/date';
+import { formatChartDate, DateFormatPattern } from '../utils/date';
 
 export interface ETFInfo {
     symbol: string;

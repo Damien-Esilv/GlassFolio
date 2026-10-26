@@ -8,7 +8,7 @@ import { portfolioService } from '../../../src/services/portfolioService';
 import { portfolioRepository, transactionRepository } from '../../../src/services/repositories';
 import { currencyService } from '../../../src/services/currencyService';
 import * as priceService from '../../../src/services/priceService';
-import { Position } from '../../../types';
+import { Position } from '../../../src/types';
 
 vi.mock('../../../src/services/priceService', () => ({
   refreshPositionPrices: vi.fn((positions: Position[]) => Promise.resolve(positions)),

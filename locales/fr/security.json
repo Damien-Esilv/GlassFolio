@@ -166,5 +166,39 @@
         "details": "Détails",
         "timestamp": "Horodatage",
         "severity": "Gravité"
+    },
+    "localPersistence": {
+        "unavailable": {
+            "title": "Serveur de données local injoignable",
+            "description": "GlassFolio conserve vos données sur le serveur local (le volume Docker) et celui-ci n'a pas répondu. Vos données sont intactes : rien n'a été modifié.",
+            "hint": "Vérifiez que le conteneur est démarré, puis réessayez.",
+            "retry": "Réessayer",
+            "retrying": "Connexion…"
+        },
+        "notice": {
+            "browserOnly": {
+                "title": "Données stockées dans ce navigateur uniquement",
+                "description": "Aucun serveur de données local n'a été trouvé : vos données restent dans ce navigateur. Vider les données du navigateur ou changer de navigateur les efface. Exportez régulièrement une sauvegarde, ou lancez GlassFolio avec Docker pour les conserver sur votre machine."
+            },
+            "saveError": {
+                "title": "Modifications non enregistrées sur le serveur local",
+                "description": "Les dernières modifications n'ont pas pu être enregistrées. GlassFolio réessaie automatiquement ; gardez cet onglet ouvert jusqu'à la disparition de ce message."
+            },
+            "legacyIgnored": {
+                "title": "Un autre coffre a été trouvé dans ce navigateur",
+                "description": "Ce navigateur contient encore un autre coffre que celui du serveur local. Le coffre du serveur est utilisé et la copie du navigateur n'a pas été touchée. Exportez-la depuis l'ancienne installation si besoin."
+            }
+        },
+        "settings": {
+            "title": "Stockage des données",
+            "serverMode": "Serveur local (volume Docker)",
+            "browserMode": "Ce navigateur uniquement",
+            "mode": "Emplacement du stockage",
+            "lastSaved": "Dernier enregistrement",
+            "neverSaved": "Rien d'enregistré pour l'instant dans cette session",
+            "pending": "Modifications en attente d'enregistrement",
+            "serverHelp": "Vos données chiffrées sont stockées sur la machine qui exécute GlassFolio. Vider ou changer de navigateur n'a aucun effet dessus.",
+            "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine."
+        }
     }
 }

@@ -2,12 +2,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { PasskeyManager } from '../../../components/security/PasskeyManager';
+import { PasskeyManager } from '../../../src/components/security/PasskeyManager';
 import { passkeyService } from '../../../src/services/security/passkeyService';
 
 let mockUser: any = null;
 
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
   }),

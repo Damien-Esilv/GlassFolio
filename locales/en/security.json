@@ -166,5 +166,39 @@
         "details": "Details",
         "timestamp": "Timestamp",
         "severity": "Severity"
+    },
+    "localPersistence": {
+        "unavailable": {
+            "title": "Local data server unreachable",
+            "description": "GlassFolio keeps your data on the local server (the Docker volume), and that server did not answer. Your data is safe; nothing was changed.",
+            "hint": "Check that the container is running, then try again.",
+            "retry": "Try again",
+            "retrying": "Connecting…"
+        },
+        "notice": {
+            "browserOnly": {
+                "title": "Data stored in this browser only",
+                "description": "No local data server was found, so your data lives in this browser. Clearing the browser data or switching browser will erase it. Export a backup regularly, or run GlassFolio with Docker to store it on your machine."
+            },
+            "saveError": {
+                "title": "Changes not saved to the local server",
+                "description": "The latest changes could not be saved. GlassFolio keeps retrying automatically; keep this tab open until this message disappears."
+            },
+            "legacyIgnored": {
+                "title": "A different vault was found in this browser",
+                "description": "This browser still holds another vault than the one on the local server. The server vault is used and the browser copy was left untouched. Export it from the old setup if you need it."
+            }
+        },
+        "settings": {
+            "title": "Data storage",
+            "serverMode": "Local server (Docker volume)",
+            "browserMode": "This browser only",
+            "mode": "Storage location",
+            "lastSaved": "Last saved",
+            "neverSaved": "Nothing saved yet in this session",
+            "pending": "Changes waiting to be saved",
+            "serverHelp": "Your encrypted data is stored on the machine running GlassFolio. Clearing your browser or changing browser does not affect it.",
+            "browserHelp": "Your data is stored in this browser. Run GlassFolio with Docker to keep it on your machine."
+        }
     }
 }

@@ -18,7 +18,7 @@ En cas de conflit entre des règles, `AI_CODING_STANDARDS.md` prime.
 ## Stack technique (réelle)
 
 - **Frontend** : React, React Router, TypeScript, Vite.
-- **UI / Theming** : Tailwind via CDN dans `index.html` + **classes sémantiques** mappées sur variables CSS.
+- **UI / Theming** : Tailwind 3 **compilé au build** (`tailwind.config.ts`, `src/index.css`, aucun script tiers) + **classes sémantiques** mappées sur variables CSS.
 - **i18n** : `i18next` + `react-i18next`, traductions dans `locales/`.
 - **Charts** : Recharts. **Icons** : lucide-react.
 - **Data** : couche `src/services/` + `src/services/db.ts` (mock `localStorage`) avec **délai artificiel** à conserver.
@@ -28,16 +28,21 @@ En cas de conflit entre des règles, `AI_CODING_STANDARDS.md` prime.
 
 ```
 GlassFolio/
-├── pages/           # Pages routées (Dashboard, Portfolio, Transactions, …)
-├── components/      # Composants UI réutilisables (Layout, cards, boutons, …)
-├── context/         # Auth/Data context (thèmes, préférences, auth)
-├── src/services/    # Couche data (db.ts + services)
-├── src/types.ts     # Interfaces TypeScript
+├── src/
+│   ├── main.tsx, App.tsx, ShowcaseApp.tsx   # Points d'entrée
+│   ├── pages/       # Pages routées (Dashboard, Portfolio, Transactions, …)
+│   ├── components/  # Composants UI réutilisables (Layout, cards, boutons, …)
+│   ├── context/     # Auth/Data context (thèmes, préférences, auth)
+│   ├── hooks/       # Hooks React
+│   ├── utils/       # Utilitaires (ex: CSV)
+│   ├── services/    # Couche data (db.ts + services)
+│   └── types/       # Interfaces TypeScript (barrel : src/types/index.ts)
+├── server/          # Runtime Node sans dépendance (serveur Docker, proxy Yahoo, coffre local)
+├── docker/          # Dockerfile de l'image auto-hébergée (+ docker-compose.yml à la racine)
 ├── locales/         # Traductions i18n (en/, fr/)
-├── utils/           # Utilitaires (ex: CSV)
 ├── test-data/       # CSV d'exemples (imports)
-├── index.html       # Variables CSS + injection Tailwind CDN
-└── curated-agent-kit/  # Pack réutilisable (référence) — pas la source de vérité
+├── tailwind.config.ts / postcss.config.js  # Build Tailwind (couleurs = variables CSS)
+└── index.html       # Point d'entrée HTML (méta, JSON-LD) — aucun script tiers
 ```
 
 > ℹ️ Il n'y a plus de dossier `docs/` dans ce dépôt. Toute la documentation projet (features, ADRs, sessions IA, codemaps) est centralisée dans le coffre Obsidian global accessible via le serveur MCP `obsidian`.
@@ -53,9 +58,14 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
   - Pas de hex, raw RGB/RGBA, ni classes Tailwind brutes (`text-emerald-*`, `bg-rose-*`, `text-amber-*`, etc.) dans les `.tsx`.
   - Utiliser obligatoirement les tokens d'intention `positive`, `negative`, `warning`, `neutral`, `brand` (`THEME_INTENT` de `src/constants/themeTokens.ts`) et les micro-composants `<TrendValue>` / `<TrendBadge>`.
   - Pour les comparatifs multi-courbes et dashboards comparatifs (jusqu'à 8 couleurs sans confusion avec les gains/pertes), utiliser `CHART_SERIES_PALETTE` via `getComparisonSeriesTokens(index)` ou `getAssetStableColor(symbol)`.
-  - Toute modification de `--color-positive` dans `index.html` doit cascader sur l'ensemble des écrans sans contradiction sémantique.
+  - Toute modification de `--color-positive` dans `src/index.css` doit cascader sur l'ensemble des écrans sans contradiction sémantique.
 - **Form elements** : respecter le pattern `bg-subtle text-primary border-subtle focus:ring-primary focus:border-primary`.
 - **Data access** : les composants/pages ne touchent jamais `localStorage` directement ; passer par `src/services/`.
+- **Mode local = serveur source de vérité** : en mode local (Docker / `npm run dev`), les clés `glassfolio_*`, `gf_vault_header` et `gf_manual_price_history` sont persistées sur le serveur (`isServerPersistedKey` + liste blanche `server/localVault.mjs`, vérifiées par un test). Une nouvelle donnée utilisateur doit donc utiliser le préfixe `glassfolio_` ; seules les préférences d'appareil (thème, langue, consentement, état UI) restent dans le navigateur.
+- **CSP & en-têtes de sécurité** : source unique `server/securityHeaders.mjs` (Docker + `vercel.json` généré par `npm run security:headers`, vérifié par `check:standards` et par le smoke post-déploiement). `script-src 'self'` : aucun script tiers, aucun `unsafe-eval`. Tout nouvel hôte appelé par l'app (API, images) doit être ajouté à la liste de ce fichier (un test scanne `src/` et échoue sinon).
+- **Trusted Types** : la CSP exige `require-trusted-types-for 'script'`. Jamais de `innerHTML`/`dangerouslySetInnerHTML` avec une chaîne brute : passer par une politique nommée de `src/services/security/trustedTypes.ts` (liste des noms dans `TRUSTED_TYPES_POLICIES`, vérifiée par test). Le SVG du QR TOTP est toujours dessiné localement, jamais pris tel quel d'un serveur.
+- **Exposition réseau Docker** : `GLASSFOLIO_BIND` hors loopback exige `GLASSFOLIO_ACCESS_TOKEN` (≥ 16 car., HTTP Basic, utilisateur `glassfolio`) ; `docker:up` refuse sinon.
+- **Chaîne d'approvisionnement** : image Docker épinglée par digest, GitHub Actions épinglées par SHA de commit, paquets npm par intégrité du lockfile ; `npm run check:supply-chain` doit rester vert.
 - **Dates** : stocker/transporter en **ISO 8601 string** ; ne pas persister de `Date` brute dans le mock DB.
 - **Typage strict** : pas de `any` ; types explicites, retours explicites sur les services.
 - **Latence simulée** : ne pas supprimer le `delay(ms)` des services/mock DB.
@@ -230,10 +240,11 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
 | Zone | Pourquoi | Règle |
 |------|----------|-------|
 | `AI_CODING_STANDARDS.md` | Référence architecturale | Toujours prioritaire |
-| `index.html` | Tokens (variables CSS) + injection Tailwind | Ne pas inventer des couleurs/classes non sémantiques |
+| `src/index.css` + `tailwind.config.ts` | Tokens (variables CSS par thème) ; `tailwind.config.ts` en dérive **automatiquement** (`--color-x`→`bg-x`/`text-x`/…, `--text-x`, `--bg-x`, `--border-x`) | Déclarer une couleur **une seule fois**, comme variable dans `src/index.css` (dans `:root` et les thèmes) ; ne jamais la lister dans `tailwind.config.ts` (test `tailwindTheme`) |
+| `index.html` | Entrée HTML | Aucun `<script src>` tiers (vérifié par test) |
 | `locales/` | Source de vérité des textes | Ne jamais supprimer une clé sans rechercher ses usages |
 | `src/services/` | Contrat data & futur InstantDB | Ne pas casser les interfaces ; pas de `localStorage` depuis les composants |
-| `context/AuthContext.tsx` | Gestion thèmes + préférences | Respecter le mécanisme `data-theme` + `.dark` |
+| `src/context/AuthContext.tsx` | Gestion thèmes + préférences | Respecter le mécanisme `data-theme` + `.dark` |
 
 ---
 

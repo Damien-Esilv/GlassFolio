@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ConsentBanner } from '../../../components/ConsentBanner';
+import { ConsentBanner } from '../../../src/components/ConsentBanner';
 import {
   getConsent,
   resetConsent,

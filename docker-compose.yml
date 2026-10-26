@@ -1,14 +1,41 @@
+# GlassFolio self-hosted (local mode). Start with: npm run docker:up   (= docker compose --env-file docker/docker.env up -d --build)
+# Data lives in the `glassfolio-data` volume (encrypted vault records). Back it up with:
+#   docker run --rm -v glassfolio-data:/data -v "$PWD":/backup alpine tar czf /backup/glassfolio-data.tgz -C /data .
+# To store data in a host folder instead, set GLASSFOLIO_DATA (the folder must be writable by uid 1000).
 services:
   glassfolio:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
+    image: glassfolio:local
     container_name: glassfolio-app
     restart: unless-stopped
+    init: true
     ports:
-      - "3000:80"
+      # Localhost only by default. Set GLASSFOLIO_BIND=0.0.0.0 to expose it on your network.
+      - "${GLASSFOLIO_BIND:-127.0.0.1}:${GLASSFOLIO_PORT:-3000}:8080"
     volumes:
-      - ./glassfolio-data:/data
+      - ${GLASSFOLIO_DATA:-glassfolio-data}:/data
     environment:
-      - NODE_ENV=production
-      - DATA_DIR=/data
+      NODE_ENV: production
+      DATA_DIR: /data
+      # Comma-separated domain names allowed to use the vault API (reverse proxy with a hostname).
+      # localhost and IP addresses always work.
+      ALLOWED_HOSTS: ${GLASSFOLIO_ALLOWED_HOSTS:-}
+      # Required login when GLASSFOLIO_BIND exposes the port (>= 16 chars). Set it in your shell, never in a file.
+      ACCESS_TOKEN: ${GLASSFOLIO_ACCESS_TOKEN:-}
+      # Extra origins the page may call (e.g. a remote Ollama: https://ollama.example.com), space-separated.
+      CSP_CONNECT_SRC: ${GLASSFOLIO_CSP_CONNECT_SRC:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Resource ceilings: a runaway request cannot take the host down
+    mem_limit: 512m
+    pids_limit: 128
+
+volumes:
+  glassfolio-data:

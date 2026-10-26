@@ -19,14 +19,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = join(__dirname, '..');
 const LOCALES_DIR = join(ROOT, 'locales');
-const SRC_DIRS = [
-  join(ROOT, 'pages'),
-  join(ROOT, 'components'),
-  join(ROOT, 'context'),
-  join(ROOT, 'hooks'),
-  join(ROOT, 'src'),
-  join(ROOT, 'App.tsx'),
-];
+const SRC_DIRS = [join(ROOT, 'src')];
 
 const SUPPORTED_LOCALES = ['en', 'fr'];
 const REPORT_MODE = process.argv.includes('--report');

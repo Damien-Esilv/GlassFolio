@@ -70,3 +70,6 @@ poc-*.html
 # Docker Local Persistent Volume
 glassfolio-data/
 
+# graph-memory MCP local index
+.graph-memory/
+

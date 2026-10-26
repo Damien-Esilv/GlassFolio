@@ -98,6 +98,14 @@ const TOOLS = [
     }
   },
   {
+    name: 'get_storage_status',
+    description: 'Report where GlassFolio keeps its data in local mode (the local server / Docker volume, or only the browser) and whether recent changes were saved. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
     name: 'list_auth_methods',
     description: 'List all configured authentication and MFA methods for the account (passwords, passkeys, TOTP, recovery keys).',
     inputSchema: {
@@ -450,6 +458,19 @@ async function handleToolCall(name, args) {
       };
       return {
         content: [{ type: 'text', text: JSON.stringify(status, null, 2) }]
+      };
+    }
+    case 'get_storage_status': {
+      const storage = {
+        deploymentMode: 'local',
+        storageLocation: 'local_server',
+        pendingChanges: 0,
+        lastSavedAt: new Date().toISOString(),
+        saveError: false,
+        legacyBrowserVaultIgnored: false
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(storage, null, 2) }]
       };
     }
     case 'list_auth_methods': {

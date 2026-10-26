@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom';
-import { ScrollToTop } from '../../../components/ui/ScrollToTop';
+import { ScrollToTop } from '../../../src/components/ui/ScrollToTop';
 
 describe('<ScrollToTop />', () => {
   beforeEach(() => {

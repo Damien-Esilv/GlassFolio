@@ -13,9 +13,10 @@ describe('Production smoke checks (Epic E19 — TGLA-132)', () => {
     const expected = expectedHeadersFromVercelConfig(vercelConfig) as Record<string, string>;
 
     it('derives the security headers from vercel.json, keyed by lower-cased name', () => {
-        expect(expected['strict-transport-security']).toBe('max-age=63072000');
+        expect(expected['strict-transport-security']).toBe('max-age=63072000; includeSubDomains');
         expect(expected['x-content-type-options']).toBe('nosniff');
-        expect(expected['x-frame-options']).toBe('SAMEORIGIN');
+        expect(expected['x-frame-options']).toBe('DENY');
+        expect(expected['content-security-policy']).toContain("script-src 'self';");
         expect(Object.keys(expected).length).toBeGreaterThanOrEqual(5);
     });
 
@@ -46,7 +47,7 @@ describe('Production smoke checks (Epic E19 — TGLA-132)', () => {
         expect(failures).toHaveLength(4);
         expect(failures.join('\n')).toContain('expected HTTP 200, got 502');
         expect(failures.join('\n')).toContain('expected an HTML document');
-        expect(failures.join('\n')).toContain('"x-frame-options" expected "SAMEORIGIN", got "missing"');
-        expect(failures.join('\n')).toContain('"strict-transport-security" expected "max-age=63072000", got "max-age=0"');
+        expect(failures.join('\n')).toContain('"x-frame-options" expected "DENY", got "missing"');
+        expect(failures.join('\n')).toContain('"strict-transport-security" expected "max-age=63072000; includeSubDomains", got "max-age=0"');
     });
 });

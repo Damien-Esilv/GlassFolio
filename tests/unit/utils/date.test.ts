@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatChartDate, getRolling12MonthsLabels, getISOWeekNumber, getStartOfCurrentWeek } from '../../../utils/date';
+import { formatDate, formatChartDate, getRolling12MonthsLabels, getISOWeekNumber, getStartOfCurrentWeek } from '../../../src/utils/date';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // formatDate

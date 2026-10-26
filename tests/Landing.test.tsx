@@ -2,9 +2,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import Landing from '../pages/Landing';
-import Login from '../pages/Login';
-import Signup from '../pages/Signup';
+import Landing from '../src/pages/Landing';
+import Login from '../src/pages/Login';
+import Signup from '../src/pages/Signup';
 import * as deploymentModule from '../src/config/deployment';
 import '../src/i18n';
 
@@ -16,7 +16,7 @@ const mockUpdateProfile = vi.fn().mockResolvedValue(undefined);
 let mockUser: unknown = null;
 let mockIsLoading = false;
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
     isLoading: mockIsLoading,
@@ -29,7 +29,7 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
-vi.mock('../context/DataContext', () => ({
+vi.mock('../src/context/DataContext', () => ({
   useData: () => ({
     lastPriceRefresh: null,
     forceRefreshPrices: vi.fn(),

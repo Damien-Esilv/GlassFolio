@@ -11,7 +11,8 @@
  * - Strictly typed & zero hardcoding
  */
 
-import { SUPPORTED_CURRENCIES } from '../../utils/currency';
+import { yahooFinanceUrl } from '../config/marketData';
+import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { appStorage } from './storage/appStorage';
 
 interface FxCache {
@@ -53,10 +54,7 @@ function writeFxCache(data: Record<string, number>): void {
  * Fetch a single exchange rate ticker from Yahoo Finance v8 chart API.
  */
 async function fetchYahooFxRate(ticker: string): Promise<number | null> {
-  // @ts-expect-error import.meta.env is injected by Vite
-  const base = import.meta.env.DEV
-    ? `/yf/v8/finance/chart/${encodeURIComponent(ticker)}`
-    : `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}`;
+  const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
 
   const url = `${base}?interval=1d&range=1d`;
 

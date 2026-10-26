@@ -11,7 +11,7 @@ vi.mock('@vercel/analytics/react', () => ({
 }));
 
 import * as deployment from '../../../src/config/deployment';
-import { ConsentGatedAnalytics } from '../../../components/ConsentGatedAnalytics';
+import { ConsentGatedAnalytics } from '../../../src/components/ConsentGatedAnalytics';
 import { resetConsent, setConsent } from '../../../src/services/consentService';
 
 describe('<ConsentGatedAnalytics />', () => {

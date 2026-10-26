@@ -1,4 +1,4 @@
-import { FinancialGoal, AssetGroup } from '../../types';
+import { FinancialGoal, AssetGroup } from '../types';
 import { delay } from './db';
 import { currencyService } from './currencyService';
 import { isAssetClassMatch } from '../constants/assetClasses';

@@ -3,12 +3,15 @@
 /**
  * Supply Chain SHA & Integrity Guard
  * Verifies that 100% of third-party dependencies in package-lock.json
- * carry cryptographically secure integrity hashes (SHA-512 / SHA-384).
+ * carry cryptographically secure integrity hashes (SHA-512 / SHA-384), that the
+ * Docker base images are pinned by digest and that every GitHub Action is pinned
+ * to a full commit SHA (Epic E31).
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findUnpinnedActions, findUnpinnedDockerBases } from './lib/supplyChainPins.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,6 +60,39 @@ try {
   }
 
   console.log(`[PASS] 100% of audited packages (${totalAudited}) have valid cryptographic SHA integrity hashes.`);
+
+  const root = resolve(__dirname, '..');
+  const pinFailures = [];
+
+  const dockerfile = join(root, 'docker/Dockerfile');
+  if (existsSync(dockerfile)) {
+    findUnpinnedDockerBases(readFileSync(dockerfile, 'utf-8')).forEach((image) =>
+      pinFailures.push(`docker/Dockerfile: base image "${image}" is not pinned by @sha256 digest`));
+  }
+
+  const workflowFiles = [];
+  const workflowDir = join(root, '.github/workflows');
+  if (existsSync(workflowDir)) {
+    readdirSync(workflowDir).filter((f) => /\.ya?ml$/.test(f)).forEach((f) => workflowFiles.push(join(workflowDir, f)));
+  }
+  const actionsDir = join(root, '.github/actions');
+  if (existsSync(actionsDir)) {
+    readdirSync(actionsDir).forEach((name) => {
+      const file = join(actionsDir, name, 'action.yml');
+      if (existsSync(file)) workflowFiles.push(file);
+    });
+  }
+  for (const file of workflowFiles) {
+    findUnpinnedActions(readFileSync(file, 'utf-8')).forEach((ref) =>
+      pinFailures.push(`${file.slice(root.length + 1)}: action "${ref}" is not pinned to a commit SHA`));
+  }
+
+  if (pinFailures.length > 0) {
+    console.error(`[FAIL] ${pinFailures.length} build input(s) are not pinned by hash:`);
+    pinFailures.forEach((f) => console.error(`  - ${f}`));
+    process.exit(1);
+  }
+  console.log(`[PASS] Docker base images and ${workflowFiles.length} workflow/action files are pinned by content hash.`);
   process.exit(0);
 } catch (err) {
   console.error('[FAIL] Error reading package-lock.json:', err.message);

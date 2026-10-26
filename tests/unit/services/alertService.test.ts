@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Alert, AlertRule, Position, FinancialGoal, GamificationQuest } from '../../../types';
+import type { Alert, AlertRule, Position, FinancialGoal, GamificationQuest } from '../../../src/types';
 
 vi.mock('../../../src/services/db', () => {
   let inMemoryAlerts: Alert[] = [];

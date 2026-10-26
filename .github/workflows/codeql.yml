@@ -1,0 +1,78 @@
+name: CodeQL — Static security analysis
+
+# Finds injection, XSS, unsafe crypto and similar issues in the TypeScript/JavaScript code.
+# Public repository: results land in the Security tab. Private repository without GitHub Advanced
+# Security: the analysis still runs, the SARIF report is kept as a build artifact and summarised
+# below (uploading to the Security tab is not available there).
+on:
+  push:
+    branches: [main, 'feat/**', 'fix/**', 'chore/**']
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  analyze:
+    name: 🔎 CodeQL (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read # lets the action read its own workflow run (required on private repositories)
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+          config: |
+            paths-ignore:
+              - tests
+              - dist
+              - coverage
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          category: /language:javascript-typescript
+          output: codeql-results
+          upload: ${{ github.event.repository.private && 'never' || 'always' }}
+
+      - name: Summarise findings
+        if: ${{ always() }}
+        run: |
+          shopt -s nullglob
+          total=0
+          for file in codeql-results/*.sarif; do
+            count=$(jq '[.runs[].results[]?] | length' "$file")
+            total=$((total + count))
+            jq -r '.runs[].results[]? | "- \(.ruleId) (\(.level // "warning")): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' "$file" | head -50 >> findings.txt || true
+          done
+          {
+            echo "### CodeQL: ${total} finding(s)"
+            [ -f findings.txt ] && cat findings.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the SARIF report
+        if: ${{ always() && github.event.repository.private }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: codeql-sarif
+          path: codeql-results
+          retention-days: 30

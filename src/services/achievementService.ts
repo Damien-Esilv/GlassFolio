@@ -1,4 +1,4 @@
-import { Achievement, Position, Transaction } from '../../types';
+import { Achievement, Position, Transaction } from '../types';
 import { db, delay } from './db';
 
 export interface AchievementUnlockEvent {

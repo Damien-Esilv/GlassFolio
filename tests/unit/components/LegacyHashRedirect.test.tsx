@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { LegacyHashRedirect } from '../../../components/ui/LegacyHashRedirect';
+import { LegacyHashRedirect } from '../../../src/components/ui/LegacyHashRedirect';
 
 const LocationDisplay: React.FC = () => {
   const location = useLocation();

@@ -66,16 +66,14 @@ function stripComments(code: string): string {
 
 describe('Architectural Invariant — Zero Direct localStorage / sessionStorage Bypass', () => {
     it('prohibits direct references to localStorage and sessionStorage outside allowed storage layer', () => {
-        const directoriesToScan = ['src', 'pages', 'components', 'context', 'hooks'];
+        const directoriesToScan = ['src'];
         const filesToScan: string[] = [];
 
         directoriesToScan.forEach((dir) => {
             getAllSourceFiles(path.join(process.cwd(), dir), filesToScan);
         });
 
-        if (fs.existsSync(path.join(process.cwd(), 'App.tsx'))) {
-            filesToScan.push('App.tsx');
-        }
+        expect(filesToScan.length).toBeGreaterThan(100);
 
         const forbiddenRegex = /\b(?:(?:window|globalThis)\.)?(?:localStorage|sessionStorage)\./g;
         const violations: { file: string; line: number; match: string; content: string }[] = [];

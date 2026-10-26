@@ -23,7 +23,7 @@ import { auditLogService } from './auditLogService';
 import { ExistingVaultError } from './vaultTypes';
 import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY, VAULT_HEADER_KEY } from '../storage/storageKeys';
-import { getSyncedStorageProvider } from '../storage/storageFactory';
+import { getSyncedStorageProvider, requireLocalPersistence } from '../storage/storageFactory';
 import { purgeLocalAccountFootprint } from '../storage/accountErasure';
 import {
     isSupabaseConfigured,
@@ -164,7 +164,7 @@ export class LocalAuthProvider implements IAuthProvider {
         const setupRes = await vaultService.setup(masterPassword);
         const recoveryKey = setupRes.recoveryKey;
 
-        const userId = `usr-local-${Math.random().toString(36).substr(2, 7)}`;
+        const userId = `usr-local-${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`;
         const localUser: User = {
             id: userId,
             name: name.trim() || 'Local Vault Master',
@@ -299,7 +299,7 @@ export class LocalAuthProvider implements IAuthProvider {
         const setupRes = await vaultService.setup(password);
         const recoveryKey = setupRes.recoveryKey;
 
-        const userId = `usr-${Math.random().toString(36).substr(2, 9)}`;
+        const userId = `usr-${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
         const newUser: User = {
             id: userId,
             name: name.trim(),
@@ -580,6 +580,7 @@ export class LocalAuthProvider implements IAuthProvider {
         db.resetToInitialData();
         await this.signOut();
         purgeLocalAccountFootprint();
+        await requireLocalPersistence();
     }
 }
 
@@ -1629,6 +1630,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         db.resetToInitialData();
         await this.signOut();
         purgeLocalAccountFootprint();
+        await requireLocalPersistence();
     }
 }
 

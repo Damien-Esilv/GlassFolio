@@ -1,4 +1,4 @@
-import { Transaction, TransactionFilter } from '../../types';
+import { Transaction, TransactionFilter } from '../types';
 import { UnifiedTransaction, Account, Institute, TransactionType } from '../types';
 import { db, delay } from './db';
 import { portfolioService } from './portfolioService';

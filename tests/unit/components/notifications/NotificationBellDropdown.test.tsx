@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { NotificationBellDropdown } from '../../../../components/notifications/NotificationBellDropdown';
+import { NotificationBellDropdown } from '../../../../src/components/notifications/NotificationBellDropdown';
 import { Alert } from '../../../../src/types/domain';
 import '../../../../src/i18n';
 
@@ -35,7 +35,7 @@ const mockAlerts: Alert[] = [
   },
 ];
 
-vi.mock('../../../../context/DataContext', () => ({
+vi.mock('../../../../src/context/DataContext', () => ({
   useData: () => ({
     alerts: mockAlerts,
     unreadAlertsCount: 1,

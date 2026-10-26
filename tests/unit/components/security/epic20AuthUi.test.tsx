@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AntiBotShield, AntiBotShieldHandle } from '../../../../components/security/AntiBotShield';
-import { TwoFactorChallengeModal } from '../../../../components/security/TwoFactorChallengeModal';
-import { EmailVerificationGate } from '../../../../components/security/EmailVerificationGate';
-import { PasswordResetFlow } from '../../../../pages/PasswordResetFlow';
+import { AntiBotShield, AntiBotShieldHandle } from '../../../../src/components/security/AntiBotShield';
+import { TwoFactorChallengeModal } from '../../../../src/components/security/TwoFactorChallengeModal';
+import { EmailVerificationGate } from '../../../../src/components/security/EmailVerificationGate';
+import { PasswordResetFlow } from '../../../../src/pages/PasswordResetFlow';
 import { authService } from '../../../../src/services/security/authService';
-import { AuthProvider } from '../../../../context/AuthContext';
+import { AuthProvider } from '../../../../src/context/AuthContext';
 
 // Initialize i18n for testing
 import '../../../../src/i18n';
