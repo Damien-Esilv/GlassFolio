@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { appStorage } from '../services/storage/appStorage';
 import {
   PUBLIC_LANG_STORAGE_KEY,

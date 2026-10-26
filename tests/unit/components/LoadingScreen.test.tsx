@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { LoadingScreen } from '../../../components/ui/LoadingScreen';
+import { LoadingScreen } from '../../../src/components/ui/LoadingScreen';
 import '../../../src/i18n';
 
 describe('<LoadingScreen />', () => {

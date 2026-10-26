@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { FinancialGoal, AssetGroup } from '../../../types';
+import type { FinancialGoal, AssetGroup } from '../../../src/types';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 // We mock at the module level BEFORE importing goalService so the service uses mocked versions.

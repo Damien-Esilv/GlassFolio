@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AppThinkingOrb } from '../../../../components/ui/AppThinkingOrb';
+import { AppThinkingOrb } from '../../../../src/components/ui/AppThinkingOrb';
 
 describe('AppThinkingOrb Component', () => {
   it('renders correctly with default state and size', () => {

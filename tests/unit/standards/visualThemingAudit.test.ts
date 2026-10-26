@@ -42,16 +42,16 @@ function getAllSourceFiles(dirPath: string, arrayOfFiles: string[] = []): string
 }
 
 describe('Design Standards Audit — Visual Theming & Semantic Tokens', () => {
-  const directoriesToScan = ['components', 'pages', 'context', 'hooks', 'src'];
+  const directoriesToScan = ['src'];
   const filesToScan: string[] = [];
 
   directoriesToScan.forEach((dir) => {
     getAllSourceFiles(path.join(process.cwd(), dir), filesToScan);
   });
 
-  if (fs.existsSync(path.join(process.cwd(), 'App.tsx'))) {
-    filesToScan.push('App.tsx');
-  }
+  it('scans the application source tree', () => {
+    expect(filesToScan.length).toBeGreaterThan(100);
+  });
 
   it('should not contain any raw Tailwind color palette classes (e.g. text-emerald-*, bg-rose-*)', () => {
     // Prohibited raw Tailwind color palette families with numeric steps (e.g., text-emerald-500, bg-amber-400)

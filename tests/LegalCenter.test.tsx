@@ -2,12 +2,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import LegalCenter from '../pages/LegalCenter';
+import LegalCenter from '../src/pages/LegalCenter';
 import { resetConsent, getConsent } from '../src/services/consentService';
 import '../src/i18n';
 
 // Mock contexts
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: null,
     isLoading: false,

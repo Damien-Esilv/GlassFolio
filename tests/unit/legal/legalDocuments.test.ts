@@ -67,14 +67,14 @@ describe.each(['fr', 'en'] as const)('legal documents (%s)', (lang) => {
 describe('storage inventory in the Cookies tab', () => {
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap(entry => {
-      if (['node_modules', 'dist', 'tests', 'curated-agent-kit', 'locales'].includes(entry)) return [];
+      if (['node_modules', 'dist', 'tests', 'locales'].includes(entry)) return [];
       const full = join(dir, entry);
       return statSync(full).isDirectory() ? walk(full) : /\.(ts|tsx)$/.test(entry) ? [full] : [];
     });
 
   const usedKeys = (): Set<string> => {
     const keys = new Set<string>();
-    ['src', 'context', 'components', 'pages', 'hooks', 'utils'].forEach(folder => {
+    ['src'].forEach(folder => {
       walk(resolve(root, folder)).forEach(file => {
         const source = readFileSync(file, 'utf-8');
         for (const match of source.matchAll(/['"`](gf_[a-z0-9_]+)['"`]/g)) keys.add(match[1]);

@@ -1,0 +1,15 @@
+# Allow-list build context: only what the image build needs (BuildKit reads this file
+# next to docker/Dockerfile). Secrets (.env*), git history, tests and docs never enter the build.
+*
+!package.json
+!package-lock.json
+!index.html
+!vite.config.ts
+!tsconfig.json
+!tailwind.config.ts
+!postcss.config.js
+!src
+!public
+!locales
+!server
+**/.DS_Store

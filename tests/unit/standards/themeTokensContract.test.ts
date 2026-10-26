@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { buildThemeColors } from '../../../src/config/tailwindTheme.mjs';
 import {
   THEME_INTENT,
   getTrendTokens,
@@ -83,9 +84,9 @@ describe('Theme Tokens Contract & HTML Synchronization (Critique 4 SSOT)', () =>
     });
   });
 
-  describe('HTML & Tailwind CDN Synchronization Contract (SSOT)', () => {
-    const indexPath = path.join(process.cwd(), 'index.html');
-    const indexContent = fs.readFileSync(indexPath, 'utf-8');
+  describe('Stylesheet & Tailwind config Synchronization Contract (SSOT)', () => {
+    const indexContent = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf-8');
+    const tailwindConfigContent = fs.readFileSync(path.join(process.cwd(), 'tailwind.config.ts'), 'utf-8');
 
     function parseCssVars(block: string): Record<string, string> {
       const vars: Record<string, string> = {};
@@ -116,7 +117,7 @@ describe('Theme Tokens Contract & HTML Synchronization (Critique 4 SSOT)', () =>
       expect(Object.keys(nightVars).length).toBeGreaterThan(15);
     });
 
-    it('should guarantee 100% of tokens in THEME_PALETTES exist and match in index.html across all 3 themes', () => {
+    it('should guarantee 100% of tokens in THEME_PALETTES exist and match in src/index.css across all 3 themes', () => {
       const themes = [
         { name: 'light', vars: lightVars, palette: THEME_PALETTES.light },
         { name: 'dark', vars: darkVars, palette: THEME_PALETTES.dark },
@@ -162,13 +163,13 @@ describe('Theme Tokens Contract & HTML Synchronization (Critique 4 SSOT)', () =>
       expect(THEME_PALETTES.night.accentBlue).toBe(authenticBlue);
     });
 
-    it('should configure extended semantic colors in tailwind.config inside index.html', () => {
-      expect(indexContent).toMatch(/(['"])?positive\1\s*:\s*['"]var\(--color-positive\)['"]/);
-      expect(indexContent).toMatch(/(['"])?negative\1\s*:\s*['"]var\(--color-negative\)['"]/);
-      expect(indexContent).toMatch(/(['"])?positive-subtle\1\s*:\s*['"]var\(--color-positive-subtle\)['"]/);
-      expect(indexContent).toMatch(/(['"])?negative-subtle\1\s*:\s*['"]var\(--color-negative-subtle\)['"]/);
-      expect(indexContent).toMatch(/(['"])?warning-subtle\1\s*:\s*['"]var\(--color-warning-subtle\)['"]/);
-      expect(indexContent).toMatch(/(['"])?brand-static\1\s*:\s*['"]var\(--color-brand-static\)['"]/);
+    it('should expose the semantic intent colors through the Tailwind theme derived from src/index.css', () => {
+      const { colors } = buildThemeColors(indexContent);
+      for (const name of ['positive', 'negative', 'positive-subtle', 'negative-subtle', 'warning-subtle', 'brand-static']) {
+        expect(colors[name], `${name} must be derived from --color-${name}`).toBe(`var(--color-${name})`);
+      }
+      // tailwind.config.ts must stay free of hand-written colors (declared once, in the stylesheet)
+      expect(tailwindConfigContent).toContain('buildThemeColors');
     });
   });
 });

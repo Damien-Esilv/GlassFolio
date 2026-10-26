@@ -1,10 +1,10 @@
-import { Position, PositionFilter, DashboardSummary } from '../../types';
+import { Position, PositionFilter, DashboardSummary } from '../types';
 import type { ChartPriceMode } from '../types/domain';
 import { db, delay } from './db';
 import { refreshPositionPrices, fetchRealPriceHistory, HistoricalPricePoint } from './priceService';
 import { currencyService } from './currencyService';
-import { formatChartDate, DateFormatPattern } from '../../utils/date';
-import { roundCurrency } from '../../utils/currency';
+import { formatChartDate, DateFormatPattern } from '../utils/date';
+import { roundCurrency } from '../utils/currency';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
 import { buildLedger, applyTransaction, defaultLedgerKey, emptyLedgerState, sortChronologically, LedgerState } from './portfolio/positionLedger';

@@ -29,7 +29,9 @@
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "check:theming": "vitest run tests/unit/standards tests/unit/components/theming",
     "check:supply-chain": "node scripts/verify-supply-chain-sha.mjs",
-    "check:standards": "node scripts/verify-supply-chain-sha.mjs && node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
+    "security:headers": "node scripts/sync-vercel-headers.mjs",
+    "check:headers": "node scripts/sync-vercel-headers.mjs --check",
+    "check:standards": "node scripts/verify-supply-chain-sha.mjs && node scripts/sync-vercel-headers.mjs --check && node scripts/check-standards.mjs && vitest run tests/unit/standards tests/unit/components/theming tests/unit/services/security/architectureInvariants.test.ts --reporter=verbose",
     "check:mcp": "node --check mcp-server/index.mjs",
     "db:purge-test-accounts": "node scripts/purge-test-accounts.mjs",
     "deploy:emails": "node scripts/deploy-email-templates.mjs",
@@ -39,6 +41,10 @@
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",
     "precommit:check": "node scripts/pre-commit-check.mjs",
     "notion:sync": "node scripts/notion-sync.mjs",
+    "docker:up": "node scripts/docker-guard.mjs && docker compose --env-file docker/docker.env up -d --build",
+    "docker:down": "docker compose --env-file docker/docker.env down",
+    "docker:logs": "docker compose --env-file docker/docker.env logs -f glassfolio",
+    "docker:smoke": "node scripts/smoke-docker.mjs",
     "mcp": "node mcp-server/index.mjs",
     "ollama:proxy": "node scripts/ollama-proxy.mjs",
     "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434"
@@ -67,13 +73,18 @@
     "@typescript-eslint/parser": "^8.71.0",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^5.0.3",
+    "autoprefixer": "^10.6.1",
     "eslint": "^9.39.5",
     "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.1.2",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "postcss-selector-parser": "^7.1.6"
   }
 }

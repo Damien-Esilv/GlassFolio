@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseCSV } from '../../../utils/csvUtils';
+import { parseCSV } from '../../../src/utils/csvUtils';
 
 describe('parseCSV', () => {
   it('returns empty structure for less than 2 lines', () => {

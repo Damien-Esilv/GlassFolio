@@ -2,10 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import Layout from '../../../components/Layout';
+import Layout from '../../../src/components/Layout';
 
 // Mock AIChatDrawer to keep tests lightweight
-vi.mock('../../../components/ai/AIChatDrawer', () => ({
+vi.mock('../../../src/components/ai/AIChatDrawer', () => ({
   AIChatDrawer: () => <div data-testid="ai-chat-drawer" />,
 }));
 
@@ -18,12 +18,12 @@ vi.mock('react-i18next', () => ({
 
 // Mock contexts
 const mockUseAuth = vi.fn();
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../src/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
 const mockUseData = vi.fn();
-vi.mock('../../../context/DataContext', () => ({
+vi.mock('../../../src/context/DataContext', () => ({
   useData: () => mockUseData(),
 }));
 

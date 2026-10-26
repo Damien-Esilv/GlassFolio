@@ -40,16 +40,15 @@ function getAllTsxFiles(dirPath: string, arrayOfFiles: string[] = []): string[] 
 
 describe('Design Standard 1.1 — No Hardcoded Hex Color Codes in TSX Components', () => {
   it('should not contain any direct hex color strings in UI components or pages', () => {
-    const directoriesToScan = ['components', 'pages', 'context', 'hooks', 'src'];
+    const directoriesToScan = ['src'];
     const filesToScan: string[] = [];
 
     directoriesToScan.forEach((dir) => {
       getAllTsxFiles(path.join(process.cwd(), dir), filesToScan);
     });
 
-    if (fs.existsSync(path.join(process.cwd(), 'App.tsx'))) {
-      filesToScan.push('App.tsx');
-    }
+    // Guard against a silent no-op scan if the source folder is ever moved again.
+    expect(filesToScan.length).toBeGreaterThan(100);
 
     const hexColorRegex = /#[0-9a-fA-F]{3,6}\b/g;
     const violations: { file: string; line: number; match: string; content: string }[] = [];

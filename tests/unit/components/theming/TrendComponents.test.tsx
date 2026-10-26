@@ -1,8 +1,8 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TrendValue } from '../../../../components/ui/TrendValue';
-import { TrendBadge } from '../../../../components/ui/TrendBadge';
+import { TrendValue } from '../../../../src/components/ui/TrendValue';
+import { TrendBadge } from '../../../../src/components/ui/TrendBadge';
 
 describe('UI Theming Micro-primitives', () => {
   describe('<TrendValue />', () => {

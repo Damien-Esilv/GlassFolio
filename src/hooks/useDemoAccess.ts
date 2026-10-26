@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { trackPublicEvent } from '../services/consentService';
 import { getAppTarget, getAppUrl, buildAppDestinationUrl } from '../config/deployment';
 import { appStorage } from '../services/storage/appStorage';

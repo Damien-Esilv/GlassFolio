@@ -14,6 +14,7 @@ import { delay } from '../db';
 import { appStorage } from '../storage/appStorage';
 import { EncryptedStorageProvider } from '../storage/EncryptedStorageProvider';
 import { isVaultScopedKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
+import { requireLocalPersistence } from '../storage/storageFactory';
 import { SyncedBackingStorageProvider } from '../storage/SyncedBackingStorageProvider';
 import {
     createKdfParams,
@@ -909,6 +910,8 @@ export class VaultService {
         } else {
             backing.keys().filter(isVaultScopedKey).forEach(key => backing.removeItem(key));
         }
+        // Local mode: the server volume must confirm the deletion before the vault counts as reset.
+        await requireLocalPersistence();
 
         this.setStatus('uninitialized');
     }

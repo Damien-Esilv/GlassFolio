@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { supabaseClient } from '../../../../src/services/supabase/supabaseClient';
 import { SyncedBackingStorageProvider } from '../../../../src/services/storage/SyncedBackingStorageProvider';
+import { LocalVaultStorageProvider } from '../../../../src/services/storage/LocalVaultStorageProvider';
 import { LocalStorageProvider } from '../../../../src/types/storage';
 import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
 import { appStorage } from '../../../../src/services/storage/appStorage';
@@ -132,81 +133,50 @@ describe('Supabase Client & Synced Storage Provider (TGLA-060 & TGLA-061)', () =
         });
     });
 
-    describe('SyncedBackingStorageProvider Dual-Mode Replication', () => {
-        it('hydrates local storage from /api/local-vault in local mode (Docker volume)', async () => {
-            const mockLocalVaultData = {
-                records: {
-                    [VAULT_HEADER_KEY]: '{"version":1,"kdf":{"salt":"test"}}',
-                    'glassfolio_portfolios': '{"encrypted":"portfolio-data"}',
-                },
-            };
-
-            const mockFetch = vi.fn().mockResolvedValue({
-                ok: true,
-                json: async () => mockLocalVaultData,
-            });
-            vi.stubGlobal('fetch', mockFetch);
-
-            const localStore = new LocalStorageProvider();
-            const syncedProvider = new SyncedBackingStorageProvider(localStore, 'local');
-
-            await syncedProvider.pullFromRemote();
-
-            expect(mockFetch).toHaveBeenCalledWith('/api/local-vault', expect.anything());
-            expect(syncedProvider.getItem(VAULT_HEADER_KEY)).toBe('{"version":1,"kdf":{"salt":"test"}}');
-            expect(syncedProvider.getItem('glassfolio_portfolios')).toBe('{"encrypted":"portfolio-data"}');
-        });
-
-        it('replicates setItem to /api/local-vault in local mode for sensitive keys only', async () => {
+    describe('SyncedBackingStorageProvider local mode (Epic E33)', () => {
+        it('makes no network call of its own: the wrapped LocalVaultStorageProvider owns persistence', async () => {
             const mockFetch = vi.fn().mockResolvedValue({ ok: true });
             vi.stubGlobal('fetch', mockFetch);
 
-            const localStore = new LocalStorageProvider();
-            const syncedProvider = new SyncedBackingStorageProvider(localStore, 'local');
+            const syncedProvider = new SyncedBackingStorageProvider(new LocalStorageProvider(), 'local');
 
-            // 1. Sensitive key triggers replication
             syncedProvider.setItem('glassfolio_transactions', '{"ciphertext":"xyz"}');
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/api/local-vault',
-                expect.objectContaining({
-                    method: 'PUT',
-                    body: JSON.stringify({ key: 'glassfolio_transactions', value: '{"ciphertext":"xyz"}' }),
-                })
-            );
-
-            mockFetch.mockClear();
-
-            // 2. Non-sensitive key (e.g. public theme) does NOT trigger /api/local-vault
             syncedProvider.setItem('gf_public_theme', 'night');
+            syncedProvider.removeItem('glassfolio_transactions');
+            syncedProvider.clear();
+
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
-        it('replicates delete and clear to /api/local-vault in local mode', async () => {
-            const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+        it('reports whether a vault header is held locally, without any remote pull', async () => {
+            const mockFetch = vi.fn();
             vi.stubGlobal('fetch', mockFetch);
+            const syncedProvider = new SyncedBackingStorageProvider(new LocalStorageProvider(), 'local');
 
-            const localStore = new LocalStorageProvider();
-            const syncedProvider = new SyncedBackingStorageProvider(localStore, 'local');
+            await expect(syncedProvider.pullFromRemote()).resolves.toEqual({ ok: true, hasRemoteHeader: false });
+            syncedProvider.setItem(VAULT_HEADER_KEY, '{"version":1}');
+            await expect(syncedProvider.pullFromRemote()).resolves.toEqual({ ok: true, hasRemoteHeader: true });
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
 
-            syncedProvider.removeItem('glassfolio_transactions');
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/api/local-vault',
-                expect.objectContaining({
-                    method: 'DELETE',
-                    body: JSON.stringify({ key: 'glassfolio_transactions' }),
-                })
-            );
+        it('persists to the local server through the vault provider, including vault resets', async () => {
+            const commits: Array<Record<string, unknown>> = [];
+            const vaultProvider = new LocalVaultStorageProvider(new LocalStorageProvider(), {
+                fetchSnapshot: async () => ({ status: 'ok', snapshot: { revision: 1, records: { [VAULT_HEADER_KEY]: '{"version":1}', glassfolio_user: 'cipher' } } }),
+                commitBatch: async (batch) => {
+                    commits.push(batch as Record<string, unknown>);
+                    return true;
+                },
+            });
+            await vaultProvider.connect();
+            const syncedProvider = new SyncedBackingStorageProvider(vaultProvider, 'local');
 
-            mockFetch.mockClear();
+            syncedProvider.removeVaultKeys(() => true);
+            await vaultProvider.flush();
 
-            syncedProvider.clear();
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/api/local-vault',
-                expect.objectContaining({
-                    method: 'DELETE',
-                    body: JSON.stringify({ all: true }),
-                })
-            );
+            expect(commits).toHaveLength(1);
+            expect((commits[0].remove as string[]).sort()).toEqual([VAULT_HEADER_KEY, 'glassfolio_user'].sort());
+            vaultProvider.dispose();
         });
     });
 });

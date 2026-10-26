@@ -53,7 +53,8 @@ export const mfaService = {
             return {
                 secret: factor.secret,
                 uri,
-                qrSvg: factor.qrCodeSvg || generateQrSvg(uri, QR_OPTIONS),
+                // Never inject server-provided markup: the QR is always drawn locally from the otpauth URI
+                qrSvg: uri ? generateQrSvg(uri, QR_OPTIONS) : '',
                 factorId: factor.id,
                 plainBackupCodes: [],
                 hashedBackupCodes: [],

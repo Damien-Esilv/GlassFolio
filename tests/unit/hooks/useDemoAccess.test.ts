@@ -18,7 +18,7 @@ vi.mock('react-router-dom', () => ({
 // Mock AuthContext
 const mockLogin = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../src/context/AuthContext', () => ({
   useAuth: () => ({
     login: mockLogin,
     user: null,

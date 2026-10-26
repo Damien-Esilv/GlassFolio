@@ -25,6 +25,7 @@ concurrency:
 #           ├─ Gate 4 security suite
 #           ├─ Gate 4 unit tests ×3 shards ── coverage merge (thresholds enforced here)
 #           ├─ MCP protocol
+#           ├─ Gate 6 Docker image + persistence smoke test
 #           └─ Gate 5 builds ×4 (local, cloud app, showcase, Vercel parity)
 #                         └──────────────────── CI — Required (the only check Vercel gates on)
 jobs:
@@ -37,7 +38,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -54,7 +57,7 @@ jobs:
           PATTERNS=('sk-[a-zA-Z0-9]{32,}' 'pk_live_[a-zA-Z0-9]+' 'AKIA[0-9A-Z]{16}' 'ghp_[a-zA-Z0-9]{36}')
           FOUND=0
           for PATTERN in "${PATTERNS[@]}"; do
-            if grep -rE "$PATTERN" src/ pages/ components/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            if grep -rE "$PATTERN" src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
               echo "::error::Potential hardcoded secret detected: $PATTERN"
               FOUND=1
             fi
@@ -74,7 +77,9 @@ jobs:
     needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -108,13 +113,18 @@ jobs:
     needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
 
       - name: Standalone standards verification script
         run: node scripts/check-standards.mjs
+
+      - name: vercel.json security headers (CSP) in sync with server/securityHeaders.mjs
+        run: npm run check:headers
 
       - name: Audit design standards (Vitest)
         run: npx vitest run tests/unit/standards --reporter=verbose
@@ -135,7 +145,9 @@ jobs:
     needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -154,7 +166,9 @@ jobs:
         shard: [1, 2, 3]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -165,7 +179,7 @@ jobs:
         run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/3 --outputFile=.vitest-reports/blob-${{ matrix.shard }}.json
 
       - name: Upload shard report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: vitest-blob-${{ matrix.shard }}
           path: .vitest-reports/blob-${{ matrix.shard }}.json
@@ -179,13 +193,15 @@ jobs:
     needs: [gate-4-tests]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
 
       - name: Download shard reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: vitest-blob-*
           merge-multiple: true
@@ -200,7 +216,7 @@ jobs:
         run: test -f coverage/lcov.info || (echo "::error::Coverage report not generated" && exit 1)
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: coverage-report
@@ -217,7 +233,9 @@ jobs:
     needs: [gate-1-integrity-audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -278,7 +296,9 @@ jobs:
             smoke: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node & install
         uses: ./.github/actions/setup
@@ -327,11 +347,33 @@ jobs:
           echo "✅ vite preview serves the entry document and the SPA fallback."
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist-${{ matrix.label }}
           path: dist/
           retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # GATE 6 — Self-hosted Docker image (Epic E31 — TGLA-137)
+  #   Builds docker/Dockerfile, runs it with the docker-compose hardening and checks the
+  #   app shell, the Yahoo proxy allow-list and that data survives a container restart.
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate-6-docker:
+    name: 🐳 Gate 6 — Docker image & persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Build the image and run the smoke test
+        run: npm run docker:smoke
 
   # ═══════════════════════════════════════════════════════════════════════════
   # CI — Required (aggregate)
@@ -352,6 +394,7 @@ jobs:
       - gate-4-coverage
       - mcp-protocol
       - gate-5-build
+      - gate-6-docker
     steps:
       - name: Fail unless every gate succeeded
         env:

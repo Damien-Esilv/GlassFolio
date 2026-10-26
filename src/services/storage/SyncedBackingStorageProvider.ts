@@ -4,7 +4,8 @@
  * Implements IStorageProvider by wrapping a local synchronous backing store (LocalStorageProvider)
  * and automatically synchronizing ciphertext records:
  *  - In Cloud mode: with Supabase PostgreSQL (E2EE Encrypted Storage).
- *  - In Local Docker mode: with the Docker Host Volume via `/api/local-vault` (survives browser wipe/switch).
+ *  - In Local mode: nothing to replicate here — the wrapped LocalVaultStorageProvider already
+ *    persists to the server volume (Epic E33).
  */
 
 import { DeploymentMode } from '../../config/deployment';
@@ -66,7 +67,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     }
 
     /**
-     * Pulls latest ciphertext records from remote (Supabase or Docker local-vault) into local store.
+     * Pulls latest ciphertext records from Supabase into the local store (cloud mode).
      */
     public async pullFromRemote(): Promise<PullResult> {
         if (this.isPulling) return { ok: false, hasRemoteHeader: false };
@@ -90,26 +91,8 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                     this.local.setItem(row.record_key, row.ciphertext);
                 }
             } else if (this.mode === 'local') {
-                // Attempt to hydrate from local Docker server volume
-                if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
-                    try {
-                        const res = await fetch('/api/local-vault', {
-                            method: 'GET',
-                            headers: { 'Accept': 'application/json' },
-                        });
-                        if (res.ok) {
-                            const data = (await res.json()) as { records?: Record<string, string> };
-                            if (data && data.records) {
-                                for (const [k, v] of Object.entries(data.records)) {
-                                    this.local.setItem(k, v);
-                                }
-                                result = { ok: true, hasRemoteHeader: VAULT_HEADER_KEY in data.records };
-                            }
-                        }
-                    } catch {
-                        // Silent fallback when running purely in vite dev without docker-server
-                    }
-                }
+                // Local mode: the server snapshot was loaded into memory at startup (LocalVaultStorageProvider).
+                result = { ok: true, hasRemoteHeader: this.local.getItem(VAULT_HEADER_KEY) !== null };
             }
         } catch (err) {
             this.lastSyncError = err;
@@ -130,7 +113,6 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         for (const key of this.local.keys()) {
             if (!shouldRemove(key)) continue;
             this.local.removeItem(key);
-            if (this.mode !== 'cloud') this.replicateRemove(key);
         }
     }
 
@@ -151,8 +133,8 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     }
 
     public clear(): void {
+        // Cloud: a local clear never wipes the remote vault (see replicateRemove).
         this.local.clear();
-        this.replicateClear();
     }
 
     public keys(): string[] {
@@ -182,14 +164,6 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                     this.lastSyncError = err;
                 });
             }
-        } else if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
-            fetch('/api/local-vault', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key, value }),
-            }).catch(() => {
-                // Ignore dev network errors
-            });
         }
     }
 
@@ -202,27 +176,6 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             if (key === VAULT_HEADER_KEY || !this.canReplicateToCloud() || !this.session) return;
             supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
                 this.lastSyncError = err;
-            });
-        } else if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
-            fetch('/api/local-vault', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key }),
-            }).catch(() => {
-                // Ignore dev network errors
-            });
-        }
-    }
-
-    private replicateClear(): void {
-        // Cloud: a local clear never wipes the remote vault (see replicateRemove).
-        if (this.mode === 'local' && typeof window !== 'undefined' && typeof fetch !== 'undefined') {
-            fetch('/api/local-vault', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ all: true }),
-            }).catch(() => {
-                // Ignore dev network errors
             });
         }
     }

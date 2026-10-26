@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { LockScreen } from '../../../components/security/LockScreen';
+import { LockScreen } from '../../../src/components/security/LockScreen';
 import { vaultService } from '../../../src/services/security/vaultService';
 
 vi.mock('react-i18next', () => ({
@@ -21,7 +21,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 const mockRefreshData = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../../context/DataContext', () => ({
+vi.mock('../../../src/context/DataContext', () => ({
   useData: () => ({
     refreshData: mockRefreshData,
   }),

@@ -9,6 +9,7 @@
  *   - rotate_encryption_key (mutation, requiresConfirmation: true): initiates key rotation prompt.
  *   - get_email_verification_status (read-only): email verification state of the account (Epic E25).
  *   - resend_verification_email (mutation, requiresConfirmation: true): re-sends verification email.
+ *   - get_storage_status (read-only): where local-mode data is stored and whether saves are healthy (Epic E33).
  *
  * Design Note: Enrollment or deletion of passkeys and TOTP factors are intentionally NOT
  * exposed as AI tools. In line with the security architecture, factor modification strictly
@@ -26,6 +27,7 @@ import { authService } from '../../security/authService';
 import { getAuthCapabilities } from '../../security/authCapabilities';
 import { getDeploymentMode } from '../../../config/deployment';
 import { getSessionAssurance } from '../../supabase/supabaseClient';
+import { getLocalVaultProvider } from '../../storage/storageFactory';
 
 /** Masks the local part of an email so the assistant never exposes the full address. */
 const maskEmail = (email: string): string => {
@@ -312,5 +314,48 @@ export const resendVerificationEmailTool: AIToolDefinition<
         message: (err as Error).message || 'Failed to resend verification email.',
       };
     }
+  },
+};
+
+export const getStorageStatusTool: AIToolDefinition<
+  Record<string, never>,
+  {
+    deploymentMode: 'local' | 'cloud';
+    storageLocation: 'local_server' | 'browser' | 'cloud';
+    pendingChanges: number;
+    lastSavedAt: string | null;
+    saveError: boolean;
+    legacyBrowserVaultIgnored: boolean;
+  }
+> = {
+  name: 'get_storage_status',
+  description:
+    'Report where GlassFolio keeps the data in local mode (the local server / Docker volume, or only this browser) and whether recent changes were saved. Read-only; never exposes data or error internals.',
+  requiresConfirmation: false,
+  parameters: {
+    type: 'object',
+    properties: {},
+  },
+  execute: async () => {
+    const deploymentMode = getDeploymentMode();
+    const status = getLocalVaultProvider()?.getStatus();
+    if (deploymentMode === 'cloud' || !status) {
+      return {
+        deploymentMode,
+        storageLocation: 'cloud',
+        pendingChanges: 0,
+        lastSavedAt: null,
+        saveError: false,
+        legacyBrowserVaultIgnored: false,
+      };
+    }
+    return {
+      deploymentMode,
+      storageLocation: status.mode === 'server' ? 'local_server' : 'browser',
+      pendingChanges: status.pending,
+      lastSavedAt: status.lastSavedAt,
+      saveError: status.lastError !== null,
+      legacyBrowserVaultIgnored: status.legacyBrowserVaultIgnored,
+    };
   },
 };

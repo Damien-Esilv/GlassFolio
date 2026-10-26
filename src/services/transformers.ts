@@ -1,4 +1,4 @@
-import { Transaction } from '../../types';
+import { Transaction } from '../types';
 import { UnifiedTransaction, Account, Institute, Instrument, InstrumentType } from '../types';
 import { db } from './db';
 import { resolveQuantity } from './portfolio/positionLedger';

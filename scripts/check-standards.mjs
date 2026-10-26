@@ -49,14 +49,7 @@ function stripComments(code) {
 }
 
 const sourceFiles = [];
-for (const dir of ['components', 'pages', 'context', 'hooks', 'src']) {
-  getAllFiles(path.join(process.cwd(), dir), sourceFiles);
-}
-for (const rootFile of ['App.tsx', 'ShowcaseApp.tsx', 'index.tsx']) {
-  if (fs.existsSync(path.join(process.cwd(), rootFile))) {
-    sourceFiles.push(rootFile);
-  }
-}
+getAllFiles(path.join(process.cwd(), 'src'), sourceFiles);
 
 // ── 1. Check Hex Colors ────────────────────────────────────────────────────────
 console.log('🎨 [1/5] Checking Design Standards: Zero hardcoded hex colors...');

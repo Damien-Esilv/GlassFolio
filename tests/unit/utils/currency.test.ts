@@ -9,7 +9,7 @@ import {
   CURRENCY_SYMBOLS,
   formatCurrency,
   roundCurrency,
-} from '../../../utils/currency';
+} from '../../../src/utils/currency';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SUPPORTED_CURRENCIES

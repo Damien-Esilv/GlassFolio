@@ -13,8 +13,8 @@ import {
     financialGoals as initialGoals,
     achievements as initialAchievements,
     assetGroups as initialAssetGroups
-} from '../../mockData';
-import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../../types';
+} from './mockData';
+import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
 
 // Backend entity types and mock data
 import {

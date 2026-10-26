@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { LandingHeader } from '../../../components/landing/LandingHeader';
+import { LandingHeader } from '../../../src/components/landing/LandingHeader';
 import * as deploymentModule from '../../../src/config/deployment';
 import '../../../src/i18n';
 
@@ -11,7 +11,7 @@ const mockLogin = vi.fn().mockResolvedValue(undefined);
 const mockLogout = vi.fn();
 let mockUser: unknown = null;
 
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
     isLoading: false,

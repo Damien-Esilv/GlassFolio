@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Position } from '../../../types';
+import type { Position } from '../../../src/types';
 
 // ── Mock fetch before importing the service ───────────────────────────────────
 const mockFetch = vi.fn();

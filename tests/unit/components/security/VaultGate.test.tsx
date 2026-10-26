@@ -2,13 +2,13 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { VaultGate } from '../../../../components/security/VaultGate';
+import { VaultGate } from '../../../../src/components/security/VaultGate';
 import { vaultService } from '../../../../src/services/security/vaultService';
 
 let mockUser: any = null;
 const mockLogout = vi.fn();
 
-vi.mock('../../../../context/AuthContext', () => ({
+vi.mock('../../../../src/context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
     logout: mockLogout,
@@ -21,7 +21,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../../../../context/DataContext', () => ({
+vi.mock('../../../../src/context/DataContext', () => ({
   useData: () => ({
     refreshData: vi.fn(),
   }),

@@ -12,8 +12,10 @@
  * - Zero hardcoding, 100% typed
  */
 
-import { Position } from '../../types';
+import { yahooFinanceUrl } from '../config/marketData';
+import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
+import { MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
@@ -131,7 +133,6 @@ function toYahooTicker(pos: Position): string | null {
     return clean;
 }
 
-const MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
 
 export interface ManualPricePoint {
     date: string; // ISO 8601 string
@@ -233,10 +234,7 @@ export function getLastPriceFetchTime(): string | null {
  * Fetches price for a single ticker via Yahoo Finance v8 chart API.
  */
 async function fetchYahooTickerPrice(ticker: string): Promise<number | null> {
-    // @ts-expect-error import.meta.env is injected by Vite
-    const base = import.meta.env.DEV
-        ? `/yf/v8/finance/chart/${encodeURIComponent(ticker)}`
-        : `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}`;
+    const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
 
     const url = `${base}?interval=1d&range=1d`;
 
@@ -433,10 +431,7 @@ export async function fetchRealPriceHistory(
     let points: HistoricalPricePoint[] = [];
 
     // 2. Fetch from Yahoo Finance
-    // @ts-expect-error import.meta.env is injected by Vite
-    const base = import.meta.env.DEV
-        ? `/yf/v8/finance/chart/${encodeURIComponent(ticker)}`
-        : `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}`;
+    const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
 
     const url = `${base}?range=${rangeParam}&interval=${intervalParam}`;
 

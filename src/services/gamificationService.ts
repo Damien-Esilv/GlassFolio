@@ -1,4 +1,4 @@
-import { InvestorRank, GamificationQuest, ThemeReward } from '../../types';
+import { InvestorRank, GamificationQuest, ThemeReward } from '../types';
 import { db, delay, isRealUserVaultActive } from './db';
 
 export const INVESTOR_RANKS: InvestorRank[] = [
