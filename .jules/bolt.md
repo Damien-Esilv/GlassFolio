@@ -1,0 +1,3 @@
+## 2025-05-20 - Incremental Delta Aggregation in Unified Ledger Replay
+**Learning:** In `portfolioService.ts`, re-aggregating position quantities during chart loop replay by converting `ledgerStates.entries()` to array, filtering, and reducing caused an $O(N \cdot K)$ performance bottleneck and garbage collection churn. Tracking quantity changes incrementally via $O(1)$ delta (`next.quantity - prevState.quantity`) reduced processing to $O(N)$.
+**Action:** When replaying sequential ledger transactions across accounts, maintain incremental asset totals rather than rescanning full ledger state maps.

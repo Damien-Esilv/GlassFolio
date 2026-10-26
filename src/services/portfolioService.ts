@@ -240,14 +240,17 @@ export const portfolioService = {
                 const { tx } = unifiedWithTime[unifiedIdx];
                 const key = defaultLedgerKey(tx);
                 if (key) {
-                    const next = applyTransaction(ledgerStates.get(key) ?? emptyLedgerState(), tx, accountMethods.get(tx.accountId) ?? 'WAC');
+                    const prevState = ledgerStates.get(key) ?? emptyLedgerState();
+                    const next = applyTransaction(prevState, tx, accountMethods.get(tx.accountId) ?? 'WAC');
                     ledgerStates.set(key, next);
                     const symbol = instrumentSymbols.get(tx.instrumentId) || tx.assetSymbol;
                     ledgerSymbols.set(key, symbol);
-                    // Re-aggregate this symbol across accounts
-                    assetQuantities[symbol] = Array.from(ledgerStates.entries())
-                        .filter(([k]) => ledgerSymbols.get(k) === symbol)
-                        .reduce((sum, [, st]) => sum + st.quantity, 0);
+
+                    // BOLT OPTIMIZATION:
+                    // Update asset quantity incrementally in O(1) time using delta = next.quantity - prevState.quantity
+                    // instead of converting ledgerStates to array, filtering, and reducing O(K) on every transaction.
+                    const deltaQty = next.quantity - prevState.quantity;
+                    assetQuantities[symbol] = (assetQuantities[symbol] || 0) + deltaQty;
                 }
                 unifiedIdx++;
             }
