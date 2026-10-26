@@ -1,0 +1,56 @@
+{
+  "title": "Changelog",
+  "intro": "What changed in GlassFolio, version by version.",
+  "versionLabel": "Version {{version}}",
+  "kind": {
+    "new": "New",
+    "improved": "Improved"
+  },
+  "roadmapLink": "See what's coming next",
+  "entries": {
+    "v5-1": {
+      "title": "A new showcase and the self-hosting guide",
+      "highlights": {
+        "showcase": "A redesigned showcase built on real screens of the app, with a guided tour of the main features.",
+        "selfHostGuide": "A step-by-step guide to run GlassFolio on your own computer or server with Docker.",
+        "pages": "New pages: the project, the roadmap and this changelog.",
+        "aiLanguage": "The assistant now always answers in the language of the interface."
+      }
+    },
+    "v5-0": {
+      "title": "Cloud, self-hosting and secure sign-in",
+      "highlights": {
+        "cloud": "GlassFolio is available online at app.glassfolio.dev, with your vault encrypted before it is stored.",
+        "selfHosted": "A self-hosted edition with Docker, keeping your encrypted data on your own server.",
+        "signIn": "Email sign-in with verification, authenticator codes (TOTP) and passkeys.",
+        "import": "A universal import engine: more file formats, column mapping and snapshot reconciliation.",
+        "notifications": "In-app notifications and alert rules on prices, gains and cash.",
+        "privacy": "A complete privacy center: data export, account deletion, terms and legal notice."
+      }
+    },
+    "v4-0": {
+      "title": "AI assistant and MCP",
+      "highlights": {
+        "mcp": "A local MCP server to use your portfolio from AI clients such as Claude Desktop and Cursor.",
+        "assistant": "An in-app assistant that answers questions and prepares operations for your approval."
+      }
+    },
+    "v2-0": {
+      "title": "Tax assistant and progress",
+      "highlights": {
+        "tax": "A tax assistant: flat tax versus progressive scale, Cerfa boxes and optimisation tips.",
+        "progress": "Savings goals, investor ranks and DCA quests.",
+        "analytics": "Sector analytics and richer market data.",
+        "design": "A redesigned interface and global dashboard."
+      }
+    },
+    "v1-0": {
+      "title": "First release",
+      "highlights": {
+        "dashboard": "A dashboard consolidating net worth, allocation and performance.",
+        "import": "CSV import of transactions from your brokers.",
+        "valuation": "Market valuation of positions with live prices."
+      }
+    }
+  }
+}

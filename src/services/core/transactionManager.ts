@@ -344,3 +344,16 @@ export function getExistingRowHashes(accountId: string): Set<string> {
             .map(tx => tx.rowHash)
     );
 }
+
+/**
+ * How many rows of an account carry each row hash. Two identical trades on the same day are
+ * legitimate, so duplicate detection must compare occurrences, not mere presence.
+ */
+export function getExistingRowHashCounts(accountId: string): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const tx of db.getUnifiedTransactions()) {
+        if (tx.accountId !== accountId) continue;
+        counts.set(tx.rowHash, (counts.get(tx.rowHash) ?? 0) + 1);
+    }
+    return counts;
+}

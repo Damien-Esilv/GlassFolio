@@ -1,0 +1,51 @@
+{
+  "title": "The project",
+  "intro": "GlassFolio is a personal wealth tracker built in the open: transparent about your money, about its fees and about its own code.",
+  "name": {
+    "title": "Where the name comes from",
+    "glass": {
+      "word": "Glass",
+      "meaning": "Transparency",
+      "body": "Clear visibility on your accounts and on what your fees really cost you, and a codebase anyone can read."
+    },
+    "folio": {
+      "word": "Folio",
+      "meaning": "Portfolio",
+      "body": "One consolidated and unified view of your wealth, across brokers, envelopes and currencies."
+    }
+  },
+  "story": {
+    "title": "The story",
+    "p1": "GlassFolio is designed and maintained by Damien, an engineering student at ESILV in France. It started from a simple need: following PEA, CTO, crypto and savings accounts in one place, without handing financial data to a third party.",
+    "p2": "It is developed together with advanced AI tools, while applying the standards of professional software engineering at every step."
+  },
+  "practices": {
+    "title": "How it is built",
+    "intro": "The project follows the same discipline as a product team.",
+    "tasks": {
+      "title": "Task-based project management",
+      "body": "Work is split into epics, sprints and tracked tasks, each linked to the commits that deliver it."
+    },
+    "cicd": {
+      "title": "CI/CD",
+      "body": "Every push runs six quality gates: types, lint, translations, standards, security tests and the full test suite."
+    },
+    "tests": {
+      "title": "Automated tests",
+      "body": "More than 1,400 automated tests cover the services, the encryption, the tax engine and the interface."
+    },
+    "security": {
+      "title": "Rigorous security",
+      "body": "Strict content security policy, pinned dependencies, encrypted vault and hardened container."
+    },
+    "delivery": {
+      "title": "Continuous deployment",
+      "body": "Every branch gets a preview deployment, and production only ships once the checks are green."
+    }
+  },
+  "links": {
+    "repo": "View the repository",
+    "guide": "Install it yourself",
+    "profile": "Damien on GitHub"
+  }
+}

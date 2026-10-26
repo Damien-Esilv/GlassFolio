@@ -22,7 +22,13 @@ import {
 } from '../services/importService';
 import { instituteService, accountService } from '../services/instituteService';
 import { readAndParseCsvFile } from '../services/import/csvWorkerClient';
-import { matchHistoryColumns } from '../services/import/columnMatcher';
+import {
+    proposeColumnMapping,
+    proposalsToMappings,
+    HISTORY_COLUMN_SPECS,
+} from '../services/import/columnMatcher';
+import type { ColumnProposal, ColumnStatus, HistoryField } from '../services/import/columnMatcher';
+import { buildRowContext, normalizeRow } from '../services/import/rowNormalizer';
 import { findTemplateForHeaders } from '../services/import/mappingTemplateService';
 import type { DateFormatHint } from '../services/import/typeNormalizer';
 import type { CsvEncoding } from '../services/import/types';
@@ -65,6 +71,12 @@ export interface ImportWizardState {
     // Step 3: Mapping
     headers: string[];
     previewRows: string[][];
+    /** First rows of the file (at most SAMPLE_ROWS), for samples and the mapped preview */
+    sampleRows: string[][];
+    /** Number of data rows in the file */
+    rowCount: number;
+    /** One proposal per source column, from headers and contents */
+    columnProposals: ColumnProposal<HistoryField>[];
     mappings: Partial<FieldMappings>;
     mappingTemplates: MappingTemplate[];
     selectedTemplateId: string | null;
@@ -94,7 +106,73 @@ export const MAPPABLE_FIELDS = [
     { key: 'feeAmount', labelKey: 'importWizard.fields.feeAmount', required: false },
     { key: 'feeAsset', labelKey: 'importWizard.fields.feeAsset', required: false },
     { key: 'taxAmount', labelKey: 'importWizard.fields.taxAmount', required: false },
+    { key: 'assetName', labelKey: 'importWizard.fields.assetName', required: false },
+    { key: 'currency', labelKey: 'importWizard.fields.currency', required: false },
+    { key: 'valueDate', labelKey: 'importWizard.fields.valueDate', required: false },
+    { key: 'balanceAfter', labelKey: 'importWizard.fields.balanceAfter', required: false },
+    { key: 'externalId', labelKey: 'importWizard.fields.externalId', required: false },
 ] as const;
+
+export type MappableField = (typeof MAPPABLE_FIELDS)[number]['key'];
+
+/** Rows kept in state for samples and the live preview (the whole file stays in rawCSVText) */
+export const SAMPLE_ROWS = 200;
+
+/** Rows shown in the "as it will be stored" preview */
+export const MAPPED_PREVIEW_ROWS = 2;
+
+/** One source column as the mapping table shows it */
+export interface MappingColumn {
+    header: string;
+    index: number;
+    samples: string[];
+    /** Field this column feeds now (null: ignored) */
+    field: MappableField | null;
+    /** Other fields fed by the same column (a statement whose "Change" is both quantity and amount) */
+    extraFields: MappableField[];
+    status: ColumnStatus;
+    /** What the engine would pick for this column, if it is not mapped yet */
+    suggestion: MappableField | null;
+    alternatives: MappableField[];
+}
+
+export interface MappingSummary {
+    total: number;
+    matched: number;
+    ambiguous: number;
+    unmatched: number;
+}
+
+const STATUS_ORDER: Record<ColumnStatus, number> = { unmatched: 0, ambiguous: 1, matched: 2 };
+const MAPPABLE_KEYS: readonly string[] = MAPPABLE_FIELDS.map(f => f.key);
+const isMappable = (field: string | null): field is MappableField => field !== null && MAPPABLE_KEYS.includes(field);
+
+/** Stored fields shown in the preview, in reading order */
+const PREVIEW_FIELDS = [
+    'transactionDate', 'type', 'assetSymbol', 'assetIsin', 'quantity', 'priceUnit',
+    'amountPrimary', 'feeAmount', 'originalCurrency', 'rawLabel'
+] as const;
+
+export interface MappedPreviewEntry {
+    field: MappableField;
+    value: string;
+}
+
+/** Everything the wizard derives from a parsed file */
+function describeFile(headers: string[], rows: string[][]) {
+    return {
+        headers,
+        previewRows: rows.slice(0, 5),
+        sampleRows: rows.slice(0, SAMPLE_ROWS),
+        rowCount: rows.length,
+        columnProposals: proposeColumnMapping(headers, rows, HISTORY_COLUMN_SPECS),
+    };
+}
+
+/** Header-keyed mapping from the confident proposals only; doubtful columns wait for the user */
+function confidentMappings(proposals: ColumnProposal<HistoryField>[]): Partial<FieldMappings> {
+    return proposalsToMappings(proposals.filter(p => p.status === 'matched')) as Partial<FieldMappings>;
+}
 
 // ============================================================================
 // INITIAL STATE
@@ -121,6 +199,9 @@ const initialState: ImportWizardState = {
 
     headers: [],
     previewRows: [],
+    sampleRows: [],
+    rowCount: 0,
+    columnProposals: [],
     mappings: {},
     mappingTemplates: [],
     selectedTemplateId: null,
@@ -279,30 +360,22 @@ export const useImportWizard = (userId: string = 'default-user') => {
             const { headers, rows, delimiter } = parsed;
             const existingBatch = await isFileAlreadyImported(await computeFileHash(text));
 
-            // Try to detect preset
+            // A known broker format first, then the confident column proposals
             const detected = importService.detectPreset(headers);
-
-            // Auto-apply detected preset mappings
-            let mappings: Partial<FieldMappings> = {};
-            let detectedPreset: string | null = null;
-
-            if (detected) {
-                mappings = detected.mappings as Partial<FieldMappings>;
-                detectedPreset = detected.presetName;
-            } else {
-                // Try auto-mapping based on header names
-                mappings = matchHistoryColumns(headers);
-            }
+            const described = describeFile(headers, rows);
+            const mappings: Partial<FieldMappings> = detected
+                ? detected.mappings as Partial<FieldMappings>
+                : confidentMappings(described.columnProposals);
+            const detectedPreset: string | null = detected ? detected.presetName : null;
 
             updateState({
+                ...described,
                 rawCSVText: text,
                 suggestedTemplateId: findTemplateForHeaders(state.mappingTemplates, headers)?.id ?? null,
                 selectedTemplateId: null,
                 fileEncoding: encoding,
                 delimiter,
                 existingBatch,
-                headers,
-                previewRows: rows.slice(0, 5), // Show first 5 rows
                 mappings,
                 detectedPreset,
                 isLoading: false,
@@ -328,6 +401,36 @@ export const useImportWizard = (userId: string = 'default-user') => {
     }, []);
 
     /**
+     * Point a source column at a target field (null: ignore the column). A column feeds one field
+     * and a field reads one column, so the previous owner of either side is released.
+     */
+    const setColumnField = useCallback((header: string, field: keyof FieldMappings | null) => {
+        setState(prev => {
+            const mappings: Partial<FieldMappings> = { ...prev.mappings };
+            (Object.keys(mappings) as (keyof FieldMappings)[]).forEach(key => {
+                if (mappings[key] === header) delete mappings[key];
+            });
+            if (field) (mappings as Record<string, string | number | undefined>)[field] = header;
+            return { ...prev, mappings, selectedTemplateId: null };
+        });
+    }, []);
+
+    /** Apply every pending suggestion to columns and fields that are still free */
+    const acceptAllProposals = useCallback(() => {
+        setState(prev => {
+            const mappings: Partial<FieldMappings> = { ...prev.mappings };
+            const mappedHeaders = new Set(Object.values(mappings).filter((v): v is string => typeof v === 'string'));
+            for (const proposal of prev.columnProposals) {
+                if (!isMappable(proposal.field) || proposal.status === 'unmatched') continue;
+                if (mappedHeaders.has(proposal.header) || mappings[proposal.field] !== undefined) continue;
+                (mappings as Record<string, string | number | undefined>)[proposal.field] = proposal.header;
+                mappedHeaders.add(proposal.header);
+            }
+            return { ...prev, mappings, selectedTemplateId: null };
+        });
+    }, []);
+
+    /**
      * Force a delimiter and re-parse the file (mappings are re-detected because
      * header names change when the split changes).
      */
@@ -336,12 +439,12 @@ export const useImportWizard = (userId: string = 'default-user') => {
             if (!prev.rawCSVText) return { ...prev, delimiter };
             const { headers, rows } = parseCSVText(prev.rawCSVText, delimiter);
             const detected = importService.detectPreset(headers);
+            const described = describeFile(headers, rows);
             return {
                 ...prev,
+                ...described,
                 delimiter,
-                headers,
-                previewRows: rows.slice(0, 5),
-                mappings: detected ? detected.mappings as Partial<FieldMappings> : matchHistoryColumns(headers),
+                mappings: detected ? detected.mappings as Partial<FieldMappings> : confidentMappings(described.columnProposals),
                 detectedPreset: detected ? detected.presetName : null,
                 selectedTemplateId: null
             };
@@ -370,7 +473,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
                 selectedTemplateId: templateId,
                 delimiter,
                 dateFormat,
-                ...(reparsed ? { headers: reparsed.headers, previewRows: reparsed.rows.slice(0, 5) } : {})
+                ...(reparsed ? describeFile(reparsed.headers, reparsed.rows) : {})
             };
         });
     }, []);
@@ -643,6 +746,57 @@ export const useImportWizard = (userId: string = 'default-user') => {
         [state.accounts, state.selectedAccountId]
     );
 
+    /** Source columns as the table shows them: unmatched, then ambiguous, then matched */
+    const mappingColumns = useMemo<MappingColumn[]>(() => {
+        const columns = state.columnProposals.map((proposal): MappingColumn => {
+            const mappedFields = MAPPABLE_FIELDS
+                .map(f => f.key as MappableField)
+                .filter(key => state.mappings[key] === proposal.header);
+            const suggestion = isMappable(proposal.field) && state.mappings[proposal.field] === undefined ? proposal.field : null;
+            // Only a doubtful proposal waits for a decision; a confident one the user cleared stays ignored
+            const pending = mappedFields.length === 0 && suggestion !== null && proposal.status === 'ambiguous';
+            return {
+                header: proposal.header,
+                index: proposal.index,
+                samples: proposal.samples,
+                field: mappedFields[0] ?? null,
+                extraFields: mappedFields.slice(1),
+                // A mapped column is decided; an unmapped one is a pending suggestion or nothing
+                status: mappedFields.length > 0 ? 'matched' : pending ? 'ambiguous' : 'unmatched',
+                suggestion: pending ? suggestion : null,
+                alternatives: proposal.alternatives.filter(isMappable),
+            };
+        });
+        return [...columns].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.index - b.index);
+    }, [state.columnProposals, state.mappings]);
+
+    const mappingSummary = useMemo<MappingSummary>(() => ({
+        total: mappingColumns.length,
+        matched: mappingColumns.filter(c => c.status === 'matched').length,
+        ambiguous: mappingColumns.filter(c => c.status === 'ambiguous').length,
+        unmatched: mappingColumns.filter(c => c.status === 'unmatched').length,
+    }), [mappingColumns]);
+
+    /** The first rows exactly as the import will store them with the current mapping */
+    const mappedPreview = useMemo<MappedPreviewEntry[][]>(() => {
+        if (state.headers.length === 0 || state.sampleRows.length === 0) return [];
+        const mappings = { transactionDate: '', amountPrimary: '', ...state.mappings } as FieldMappings;
+        const context = buildRowContext(state.headers, state.sampleRows, mappings, {
+            mode: state.importMode,
+            dateFormat: state.dateFormat === 'auto' ? undefined : state.dateFormat,
+            delimiter: state.delimiter,
+            accountCurrency: selectedAccount?.defaultCurrency
+        });
+        return state.sampleRows.slice(0, MAPPED_PREVIEW_ROWS).map(row => {
+            const { parsed } = normalizeRow(row, context);
+            return PREVIEW_FIELDS.flatMap((field): MappedPreviewEntry[] => {
+                const value = parsed[field];
+                if (value === undefined || value === '') return [];
+                return [{ field: field === 'originalCurrency' ? 'currency' : field, value: String(value) }];
+            });
+        });
+    }, [state.headers, state.sampleRows, state.mappings, state.importMode, state.dateFormat, state.delimiter, selectedAccount]);
+
     const isValidMappingForAnalysis = useMemo(() => {
         const m = state.mappings;
         const hasIdentifier = !!(m.assetSymbol || m.assetIsin);
@@ -675,6 +829,10 @@ export const useImportWizard = (userId: string = 'default-user') => {
         selectedInstitute,
         selectedAccount,
         isValidMappingForAnalysis,
+        mappingColumns,
+        mappingSummary,
+        pendingSuggestionCount: mappingSummary.ambiguous,
+        mappedPreview,
         canProceedFromStep1,
         importableTxCount,
 
@@ -691,6 +849,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
 
         // Step 3 Actions
         setMapping,
+        setColumnField,
+        acceptAllProposals,
         setDelimiter,
         setDateFormat,
         applyTemplate,

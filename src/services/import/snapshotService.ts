@@ -20,6 +20,7 @@ import { db, delay } from '../db';
 import { computeRowHash, computeFileHash, transactionManager, CommitResult } from '../core/transactionManager';
 import { portfolioService } from '../portfolioService';
 import { parseCSVText, parseDate, parseDecimal, detectDateFormat } from './importManager';
+import { detectDecimalSeparator } from './typeNormalizer';
 import { instrumentService } from '../instrumentService';
 import { buildLedger, QTY_EPSILON } from '../portfolio/positionLedger';
 import { validateDate } from '../core/validationService';
@@ -205,6 +206,10 @@ export async function parseSnapshotFile(
 
     const { headers, rows, delimiter } = parseCSVText(csvText);
     const dateHint = detectDateFormat(rows.map(r => getValue(r, headers, mappings.purchaseDate) || ''));
+    const decimalHint = detectDecimalSeparator(rows.slice(0, 1000).flatMap(r => [
+        getValue(r, headers, mappings.quantity) ?? '',
+        getValue(r, headers, mappings.avgPrice) ?? ''
+    ]), delimiter);
 
     const positions: StagedSnapshotPosition[] = rows.map((row, rowIndex) => {
         const originalRow = rowToObject(row, headers);
@@ -233,7 +238,7 @@ export async function parseSnapshotFile(
         }
 
         // Parse quantity
-        const quantity = parseDecimal(rawQty);
+        const quantity = parseDecimal(rawQty, decimalHint);
         if (!quantity) {
             errors.push({
                 field: 'quantity',
@@ -254,7 +259,7 @@ export async function parseSnapshotFile(
         }
 
         // Parse average price
-        const avgPrice = parseDecimal(rawPrice);
+        const avgPrice = parseDecimal(rawPrice, decimalHint);
         if (!avgPrice) {
             errors.push({
                 field: 'avgPrice',

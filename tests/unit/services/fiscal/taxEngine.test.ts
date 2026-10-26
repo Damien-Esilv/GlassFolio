@@ -91,6 +91,7 @@ describe('calculateCryptoGains', () => {
       transactionDate: '2024-01-15T10:00:00Z',
       type: 'BUY',
       quantity: '1',
+      priceUnit: '30000',
       amountPrimary: '30000',
       feeAmount: '10',
       assetSymbol: 'BTC',
@@ -139,6 +140,7 @@ describe('calculateCryptoGains', () => {
       transactionDate: '2024-02-01T09:00:00Z',
       type: 'BUY',
       quantity: '1',
+      priceUnit: '3000',
       amountPrimary: '3000',
       feeAmount: '0',
       assetSymbol: 'ETH',
@@ -195,6 +197,7 @@ describe('calculateCryptoGains', () => {
       transactionDate: '2024-03-01T10:00:00Z',
       type: 'DEPOSIT',
       quantity: '10',
+      priceUnit: '100',
       amountPrimary: '1000',
       feeAmount: '5',
       assetSymbol: 'SOL',
@@ -228,6 +231,7 @@ describe('calculateCryptoGains', () => {
       transactionDate: '2023-05-10T10:00:00Z',
       type: 'BUY',
       quantity: '2',
+      priceUnit: '20000',
       amountPrimary: '40000',
       feeAmount: '0',
       assetSymbol: 'BTC',
@@ -249,6 +253,7 @@ describe('calculateCryptoGains', () => {
       transactionDate: '2024-02-10T10:00:00Z',
       type: 'BUY',
       quantity: '1',
+      priceUnit: '50000',
       amountPrimary: '50000',
       feeAmount: '0',
       assetSymbol: 'BTC',
@@ -273,16 +278,15 @@ describe('calculateCryptoGains', () => {
     expect(event.transactionIds).toEqual(['tx-sell-2024']);
     expect(event.fiscalYear).toBe('2024');
 
-    // Portfolio state prior to 2024 sell:
-    // buy2023: totalAcquisitionCost = 40000, assetQuantities['BTC'] = 2
-    // sell2023: assetQuantities['BTC'] updated to 1
-    // buy2024: totalAcquisitionCost = 40000 + 50000 = 90000, assetQuantities['BTC'] = 1 + 1 = 2
-    // sell2024: currentQty = 2, priceUnit = 60000 => estimatedPortfolioValue = 120000
-    // fractionOfPortfolio = 60000 / 120000 = 0.5
-    // costBasisForCession = 90000 * 0.5 = 45000
-    // taxableAmount = 60000 - 45000 = 15000
-    expect(event.acquisitionCost).toBe(45000);
-    expect(event.taxableAmount).toBe(15000);
+    // Portfolio state, the acquisition price shrinking after every cession (art. 150 VH bis):
+    // buy2023: totalAcquisitionCost = 40000, 2 BTC
+    // sell2023: V = 2 × 25000 = 50000, fraction 25000 / 50000 = 0.5 → 20000 leaves the portfolio
+    //           (totalAcquisitionCost = 20000, 1 BTC)
+    // buy2024: totalAcquisitionCost = 20000 + 50000 = 70000, 2 BTC
+    // sell2024: V = 2 × 60000 = 120000, fraction = 60000 / 120000 = 0.5
+    // costBasisForCession = 70000 * 0.5 = 35000, taxableAmount = 60000 - 35000 = 25000
+    expect(event.acquisitionCost).toBe(35000);
+    expect(event.taxableAmount).toBe(25000);
   });
 
   it('stops processing when transactions are on or after the end of the fiscal year', () => {
@@ -307,7 +311,7 @@ describe('calculateCryptoGains', () => {
     expect(events).toEqual([]);
   });
 
-  it('returns insufficient_data confidence when priceUnit is missing or 0', () => {
+  it('derives the cession price from amount and quantity when priceUnit is 0', () => {
     const buyTx = createMockCryptoTx({
       id: 'tx-buy',
       transactionDate: '2024-01-01T10:00:00Z',
@@ -330,10 +334,30 @@ describe('calculateCryptoGains', () => {
     expect(events).toHaveLength(1);
     const event = events[0];
 
-    expect(event.confidence).toBe('insufficient_data');
-    expect(event.missingData).toBeUndefined();
-    expect(event.acquisitionCost).toBe(0);
-    expect(event.taxableAmount).toBe(1500);
+    // 1500 / 1 = 1500 per coin: the whole holding is sold, so the whole acquisition price is used
+    expect(event.confidence).toBe('estimated');
+    expect(event.missingData).toEqual(['portfolio_valuation_approximated']);
+    expect(event.acquisitionCost).toBe(1000);
+    expect(event.taxableAmount).toBe(500);
+  });
+
+  it('returns insufficient_data confidence when nothing is held before the sale', () => {
+    const sellTx = createMockCryptoTx({
+      id: 'tx-sell-nothing-held',
+      transactionDate: '2024-05-01T10:00:00Z',
+      type: 'SELL',
+      quantity: '1',
+      amountPrimary: '1500',
+      priceUnit: '1500',
+    });
+
+    const events = calculateCryptoGains([sellTx], '2024', rules2024);
+
+    expect(events).toHaveLength(1);
+    expect(events[0].confidence).toBe('insufficient_data');
+    expect(events[0].missingData).toBeUndefined();
+    expect(events[0].acquisitionCost).toBe(0);
+    expect(events[0].taxableAmount).toBe(1500);
   });
 
   it('falls back to instrument marketIdentifier symbol and instrument name', () => {

@@ -12,6 +12,10 @@ import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
+const SelfHost = React.lazy(() => import('./pages/SelfHost'));
+const About = React.lazy(() => import('./pages/About'));
+const Roadmap = React.lazy(() => import('./pages/Roadmap'));
+const Changelog = React.lazy(() => import('./pages/Changelog'));
 
 const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
@@ -53,6 +57,14 @@ export const ShowcaseApp: React.FC = () => {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/welcome" element={<Landing />} />
+            <Route path="/self-host" element={<SelfHost />} />
+            <Route path="/welcome/self-host" element={<SelfHost />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/welcome/about" element={<About />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            <Route path="/welcome/roadmap" element={<Roadmap />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/welcome/changelog" element={<Changelog />} />
             <Route path="/legal" element={<LegalCenter />} />
             <Route path="/privacy" element={<LegalCenter />} />
             <Route path="/terms" element={<LegalCenter />} />

@@ -183,7 +183,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
   };
 
   const handleRejectAction = (actionId: string) => {
-    aiService.rejectAction(actionId);
+    aiService.rejectAction(actionId, { language: i18n.language === 'en' ? 'en' : 'fr' });
     setMessages([...aiService.getMessages()]);
   };
 

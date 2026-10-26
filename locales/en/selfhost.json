@@ -1,0 +1,66 @@
+{
+  "title": "Self-hosting guide",
+  "intro": "Run the complete GlassFolio app on your own computer or server with Docker. Your encrypted vault is written to a volume you control, nothing depends on our infrastructure, and the source code is public.",
+  "backToHome": "Back to the home page",
+  "ctaGithub": "View the code on GitHub",
+  "ctaDemo": "Try the demo first",
+  "tocLabel": "On this page",
+  "copyLabel": "Copy: {{what}}",
+  "sections": {
+    "quickstart": {
+      "title": "Quick start",
+      "body": "Clone the repository and start the container. The npm script checks your network settings first, then builds the image and starts it in the background.",
+      "open": "Open {{url}} in your browser and create your vault. The first build takes a few minutes; later starts take seconds.",
+      "dailyTitle": "Everyday commands",
+      "logs": "Follow the container logs",
+      "stop": "Stop the app (your data stays in the volume)"
+    },
+    "requirements": {
+      "title": "Requirements",
+      "items": {
+        "docker": "Docker Engine 24 or later with Compose v2, or Docker Desktop on macOS and Windows (WSL 2).",
+        "node": "Node.js 22, used by the start script to check your network settings before Docker starts.",
+        "git": "Git, to download the code and later pull updates.",
+        "resources": "About 1 GB of disk space for the image. The container is capped at 512 MB of memory."
+      }
+    },
+    "configuration": {
+      "title": "Configuration",
+      "body": "Settings are environment variables. Put the stable ones in docker/docker.env, or prefix the start command with them for a one-off change. Keep the access token out of files: set it in your shell.",
+      "variable": "Variable",
+      "default": "Default",
+      "purpose": "What it does",
+      "empty": "(empty)",
+      "vars": {
+        "GLASSFOLIO_PORT": "Port on your machine where the app answers.",
+        "GLASSFOLIO_BIND": "Network address the port listens on. 127.0.0.1 keeps the app private to this computer.",
+        "GLASSFOLIO_DATA": "Where your encrypted data is stored: the named Docker volume, or a host folder writable by user ID 1000.",
+        "GLASSFOLIO_ACCESS_TOKEN": "Password required by the browser when the app is reachable from the network. At least 16 characters.",
+        "GLASSFOLIO_ALLOWED_HOSTS": "Comma-separated domain names allowed to use the vault API, for example behind a reverse proxy. localhost and IP addresses always work.",
+        "GLASSFOLIO_CSP_CONNECT_SRC": "Extra origins the page may call, space-separated, such as a remote Ollama server."
+      }
+    },
+    "network": {
+      "title": "Access from your network",
+      "body": "By default only this computer can open the app. To reach it from a phone or another machine, bind it to every interface and set an access token; the start script refuses to expose the app without one.",
+      "login": "Your browser then asks for a user name and password: the user name is glassfolio and the password is the token. The /health endpoint stays open for monitoring.",
+      "proxy": "For access from outside your home network, put the app behind a reverse proxy with HTTPS and list its domain in GLASSFOLIO_ALLOWED_HOSTS. Never expose port 3000 directly to the internet."
+    },
+    "backup": {
+      "title": "Back up and restore",
+      "body": "Everything you enter is in the container's /data volume, already encrypted. This command writes a compressed copy to the current folder while the app keeps running.",
+      "restore": "To restore a backup, stop the container, replace the volume's content with the archive, then start it again.",
+      "restoreLabel": "Restore a backup"
+    },
+    "update": {
+      "title": "Update",
+      "body": "Pull the latest code and run the start script again. The image is rebuilt and your data volume is kept as it is."
+    },
+    "ai": {
+      "title": "Local AI with Ollama",
+      "body": "The assistant can run entirely on your machine with Ollama, so no portfolio data leaves your network. Install Ollama, pull a model, then start it so that it accepts requests from the app's address.",
+      "settings": "In GlassFolio, open Settings, choose Ollama as the AI provider and keep the default address http://localhost:11434.",
+      "remote": "If Ollama runs on another machine, add its address to GLASSFOLIO_CSP_CONNECT_SRC so the page is allowed to call it."
+    }
+  }
+}

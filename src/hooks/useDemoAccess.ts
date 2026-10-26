@@ -7,6 +7,7 @@ import { getAppTarget, getAppUrl, buildAppDestinationUrl } from '../config/deplo
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { DEMO_ACCOUNT_EMAIL, DEMO_ACCOUNT_PASSWORD } from '../services/security/demoAccount';
 
 export interface UseDemoAccessResult {
   launchDemo: (targetPath?: string) => Promise<void>;
@@ -58,7 +59,7 @@ export function useDemoAccess(): UseDemoAccessResult {
 
         // 2. Same-origin unified mode (local dev & test)
         trackPublicEvent('demo_launch_clicked', { target: targetPath });
-        await login('demo@glassfolio.com', 'password');
+        await login(DEMO_ACCOUNT_EMAIL, DEMO_ACCOUNT_PASSWORD);
 
         // From /welcome or showcase: push onto history so browser Back returns to /welcome
         const isFromWelcome = location.pathname === '/welcome' || location.pathname === '/';

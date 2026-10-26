@@ -12,7 +12,8 @@
     "clearHistory": "Effacer la conversation",
     "close": "Fermer l'assistant",
     "openSettings": "Réglages IA & MCP",
-    "emptyConversation": "Posez une question sur votre patrimoine, vos allocations, votre fiscalité ou vos performances."
+    "emptyConversation": "Posez une question sur votre patrimoine, vos allocations, votre fiscalité ou vos performances.",
+    "openButton": "Assistant IA"
   },
   "chips": {
     "portfolioSummary": "📊 Bilan du portefeuille",
@@ -210,5 +211,91 @@
     "cloudModelInvalidTitle": "Modèle d'IA introuvable ou non supporté",
     "cloudModelInvalidBody": "Le modèle configuré n'a pas été reconnu par votre fournisseur ou n'est plus en service.\n\nDétail retourné par le prestataire : `{{error}}`\n\n**Comment corriger :**\n- Rendez-vous dans **Réglages > IA & MCP**.\n- Saisissez un identifiant de modèle actif et maintenu par votre fournisseur.",
     "generalError": "Une erreur est survenue lors de l'échange avec l'assistant : {{error}}"
+  },
+  "prompt": {
+    "system": "Tu es l'assistant financier personnel et privé de GlassFolio.\nTu réponds toujours en français, de façon claire, précise et synthétique, aux questions financières de l'utilisateur.\nTu disposes d'outils pour consulter le portefeuille, l'allocation d'actifs, les positions, les transactions et la fiscalité.\nRÈGLE D'OR : pour toute opération modifiant le portefeuille (enregistrement d'une transaction, création d'un objectif), appelle l'outil correspondant. L'utilisateur devra obligatoirement valider l'opération via une carte interactive.\nNe donne jamais de conseil d'investissement spéculatif sans rappeler le caractère informatif de tes réponses."
+  },
+  "service": {
+    "readOnlyBlocked": "Le mode \"Lecture Seule Stricte\" est activé. L'action **{{tool}}** a été bloquée conformément à vos réglages de sécurité.",
+    "actionApproved": "✅ L'opération a été validée et enregistrée avec succès dans votre portefeuille.",
+    "actionRejected": "❌ L'opération a été refusée et annulée. Aucune modification n'a été effectuée."
+  },
+  "mock": {
+    "greeting": "Bonjour ! Comment puis-je vous aider avec votre patrimoine aujourd’hui ?",
+    "thinking": {
+      "toolResult": {
+        "step1": "Analyse des données brutes renvoyées par l'outil \"{{tool}}\".",
+        "step2": "Calcul des ratios et agrégations financières pour la synthèse.",
+        "step3": "Formatage de la réponse en Markdown avec métriques clés."
+      },
+      "transaction": {
+        "step1": "Analyse de l'ordre financier demandé : achat de {{amount}} {{symbol}} ({{instrument}}) à {{price}} EUR.",
+        "step2": "Contrôle de sécurité et Human-in-the-Loop : une modification financière nécessite une confirmation explicite.",
+        "step3": "Préparation de la carte d'approbation d'action."
+      },
+      "goal": {
+        "step1": "Analyse de l'objectif financier d'épargne ou fonds de précaution.",
+        "step2": "Calcul de l'échéance prévisionnelle à 6 mois et du montant cible de 10 000 EUR.",
+        "step3": "Préparation de la proposition d'action avec validation Human-in-the-Loop."
+      },
+      "default": {
+        "step1": "Analyse du message conversationnel de l'utilisateur.",
+        "step2": "Identification des modules d'analyse patrimoniale, fiscale et de gestion de portefeuille disponibles.",
+        "step3": "Formulation d'un guidage personnalisé avec exemples de commandes guidées."
+      }
+    },
+    "transactionProposal": "J'ai préparé l'ordre d'achat pour **{{instrument}} ({{symbol}})**. S'agissant d'une modification financière de votre portefeuille, veuillez valider l'opération ci-dessous :",
+    "goalTitle": "Fonds d’urgence",
+    "goalProposal": "Je vous propose de créer un nouvel objectif financier. Veuillez confirmer ci-dessous pour l'enregistrer dans GlassFolio :",
+    "intro": "Je suis votre assistant financier privé GlassFolio. Je peux analyser votre portefeuille, vérifier vos allocations d'actifs, calculer vos plus-values imposables ou vous aider à enregistrer des transactions en toute sécurité.",
+    "examplesTitle": "Quelques exemples de questions :",
+    "examples": {
+      "q1": "Fais le bilan de mon patrimoine net et de mes gains.",
+      "q2": "Quelle est mon allocation d'actifs ?",
+      "q3": "Quelles sont mes positions avec leur PRU ?",
+      "q4": "Analyse mes plus-values imposables.",
+      "q5": "Enregistre un achat de 10 actions Apple."
+    },
+    "summary": {
+      "title": "📊 Synthèse de votre Portefeuille",
+      "netWorth": "Patrimoine Net Total",
+      "invested": "Montant Investi",
+      "unrealized": "Plus-Value Latente",
+      "positions": "Nombre de positions actives",
+      "followUp": "Votre portefeuille est bien diversifié. Souhaitez-vous une analyse détaillée de l'allocation d'actifs ou un point sur la fiscalité ?"
+    },
+    "allocation": {
+      "title": "🥧 Répartition de vos Actifs",
+      "tip": "Conseil : conserver un équilibre entre liquidités et actifs productifs permet de réduire la volatilité globale."
+    },
+    "positions": {
+      "title": "💼 Vos Principales Positions",
+      "asset": "Actif",
+      "quantity": "Quantité",
+      "price": "Cours",
+      "value": "Valorisation",
+      "pl": "PnL Latent",
+      "count": "{{count}} position(s) détenue(s) au total."
+    },
+    "tax": {
+      "title": "💡 Bilan Fiscal (Année {{year}})",
+      "grossGains": "Plus-values brutes",
+      "carriedLosses": "Moins-values reportables",
+      "netTaxable": "Plus-value nette imposable",
+      "estimatedTax": "Estimation d'impôt (PFU)",
+      "regime": "Régime recommandé",
+      "defaultRegime": "PFU (Flat-tax 30%)",
+      "savings": "Économie potentielle : {{amount}} €"
+    },
+    "goals": {
+      "title": "🎯 Avancement de vos Objectifs",
+      "empty": "Aucun objectif actif pour le moment."
+    },
+    "transactions": {
+      "title": "📝 Dernières Transactions",
+      "empty": "Aucune transaction récente."
+    },
+    "rawData": "Données obtenues avec succès :",
+    "rawResult": "Résultat reçu de l'outil {{tool}} : {{content}}"
   }
 }

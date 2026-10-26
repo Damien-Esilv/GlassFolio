@@ -1,4 +1,4 @@
-import { ChatMessage, AIExecutionContext, PendingActionProposal } from './types';
+import { AILanguage, ChatMessage, AIExecutionContext, PendingActionProposal } from './types';
 import { aiToolRegistry } from './aiToolRegistry';
 import { guardrailsService } from './guardrailsService';
 import { aiSettingsService } from './aiSettingsService';
@@ -16,11 +16,9 @@ import { AnthropicProvider } from './providers/anthropicProvider';
 // Ensure all standard tools are registered
 import './tools';
 
-const SYSTEM_PROMPT = `Tu es l'assistant financier personnel et privé de GlassFolio.
-Tu réponds en français clair, précis et synthétique aux questions financières de l'utilisateur.
-Tu disposes d'outils pour consulter le portefeuille, l'allocation d'actifs, les positions, les transactions et la fiscalité.
-RÈGLE D'OR : Pour toute opération modifiant le portefeuille (enregistrement d'une transaction, création d'un objectif), appelle l'outil correspondant. L'utilisateur devra obligatoirement valider l'opération via une interface interactive.
-Ne donne jamais de conseil d'investissement spéculatif sans rappeler le caractère informatif de tes réponses.`;
+/** Answers follow the interface language; the system prompt (ai:prompt.system) says so explicitly. */
+const resolveLanguage = (context: AIExecutionContext): AILanguage =>
+  context.language ?? (i18n.language?.startsWith('en') ? 'en' : 'fr');
 
 export class CloudModelNotConfiguredError extends Error {
   public provider: string;
@@ -157,8 +155,11 @@ class AIService {
         parameters: t.parameters,
       }));
 
+      const lng = resolveLanguage(context);
+      const systemPrompt = i18n.t('ai:prompt.system', { lng });
+
       // First call to the LLM
-      const initialResponse = await provider.sendMessage(this.messages, tools, SYSTEM_PROMPT);
+      const initialResponse = await provider.sendMessage(this.messages, tools, systemPrompt, lng);
 
       // Handle Tool Calls if any
       if (initialResponse.toolCalls && initialResponse.toolCalls.length > 0) {
@@ -182,7 +183,7 @@ class AIService {
               const blockedMsg: ChatMessage = {
                 id: `msg_${Date.now()}_a`,
                 role: 'assistant',
-                content: `Le mode "Lecture Seule Stricte" est activé. L'action **${toolCall.name}** a été bloquée conformément à vos réglages de sécurité.`,
+                content: i18n.t('ai:service.readOnlyBlocked', { lng, tool: toolCall.name }),
                 timestamp: new Date().toISOString(),
               };
               this.messages.push(blockedMsg);
@@ -229,7 +230,7 @@ class AIService {
         }
 
         // Second call to let LLM summarize the tool results
-        const finalResponse = await provider.sendMessage(this.messages, tools, SYSTEM_PROMPT);
+        const finalResponse = await provider.sendMessage(this.messages, tools, systemPrompt, lng);
         const finalAssistantMsg: ChatMessage = {
           id: `msg_${Date.now()}_a`,
           role: 'assistant',
@@ -248,7 +249,7 @@ class AIService {
         this.messages.push(assistantMsg);
       }
     } catch (err) {
-      const lng = context.language || (i18n.language === 'en' ? 'en' : 'fr');
+      const lng = resolveLanguage(context);
       let errorContent = '';
 
       if (err instanceof CloudModelNotConfiguredError || (err instanceof Error && err.name === 'CloudModelNotConfiguredError')) {
@@ -356,7 +357,7 @@ class AIService {
     const confirmationMsg: ChatMessage = {
       id: `msg_${Date.now()}_sys`,
       role: 'assistant',
-      content: `✅ L'opération a été validée et enregistrée avec succès dans votre portefeuille.`,
+      content: i18n.t('ai:service.actionApproved', { lng: resolveLanguage(context) }),
       timestamp: new Date().toISOString(),
     };
     this.messages.push(confirmationMsg);
@@ -367,7 +368,7 @@ class AIService {
   /**
    * Rejects a pending action.
    */
-  public rejectAction(actionId: string): PendingActionProposal {
+  public rejectAction(actionId: string, context: AIExecutionContext = {}): PendingActionProposal {
     const rejectedProposal = guardrailsService.rejectAction(actionId);
 
     for (const msg of this.messages) {
@@ -379,7 +380,7 @@ class AIService {
     const rejectionMsg: ChatMessage = {
       id: `msg_${Date.now()}_sys`,
       role: 'assistant',
-      content: `❌ L'opération a été refusée et annulée. Aucune modification n'a été effectuée.`,
+      content: i18n.t('ai:service.actionRejected', { lng: resolveLanguage(context) }),
       timestamp: new Date().toISOString(),
     };
     this.messages.push(rejectionMsg);

@@ -35,6 +35,8 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         assetSymbol: ['Coin'],
         quantity: ['Change'],
         amountPrimary: ['Change'],
+        // The fee is paid in the coin itself: not a cash cost
+        feeAsset: ['Coin'],
         rawLabel: ['Remark']
     },
     'Binance-Spot': {
@@ -80,7 +82,8 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         priceUnit: ['Price'],
         amountPrimary: ['Amount'],
         feeAmount: ['Fee'],
-        taxAmount: ['Tax']
+        taxAmount: ['Tax'],
+        currency: ['Currency']
     },
     'Coinbase': {
         transactionDate: ['Timestamp'],
@@ -111,7 +114,8 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         priceUnit: ['price'],
         quantity: ['amount'],
         amountPrimary: ['total'],
-        feeAmount: ['fees']
+        feeAmount: ['fees'],
+        currency: ['currency']
     }
 };
 

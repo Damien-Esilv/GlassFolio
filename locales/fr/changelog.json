@@ -1,0 +1,56 @@
+{
+  "title": "Nouveautés",
+  "intro": "Ce qui a changé dans GlassFolio, version après version.",
+  "versionLabel": "Version {{version}}",
+  "kind": {
+    "new": "Nouveau",
+    "improved": "Amélioré"
+  },
+  "roadmapLink": "Voir ce qui arrive",
+  "entries": {
+    "v5-1": {
+      "title": "Une nouvelle vitrine et le guide d'auto-hébergement",
+      "highlights": {
+        "showcase": "Une vitrine repensée autour de vrais écrans de l'application, avec une visite guidée des principales fonctionnalités.",
+        "selfHostGuide": "Un guide pas à pas pour faire tourner GlassFolio sur votre ordinateur ou votre serveur avec Docker.",
+        "pages": "Nouvelles pages : le projet, la feuille de route et ces nouveautés.",
+        "aiLanguage": "L'assistant répond désormais toujours dans la langue de l'interface."
+      }
+    },
+    "v5-0": {
+      "title": "Cloud, auto-hébergement et connexion sécurisée",
+      "highlights": {
+        "cloud": "GlassFolio est disponible en ligne sur app.glassfolio.dev, avec un coffre chiffré avant d'être stocké.",
+        "selfHosted": "Une édition auto-hébergée avec Docker, qui garde vos données chiffrées sur votre propre serveur.",
+        "signIn": "Connexion par e-mail avec vérification, codes d'authentification (TOTP) et passkeys.",
+        "import": "Un moteur d'import universel : plus de formats de fichiers, association des colonnes et rapprochement par instantané.",
+        "notifications": "Notifications dans l'application et règles d'alerte sur les cours, les gains et les liquidités.",
+        "privacy": "Un centre de confidentialité complet : export des données, suppression du compte, conditions et mentions légales."
+      }
+    },
+    "v4-0": {
+      "title": "Assistant IA et MCP",
+      "highlights": {
+        "mcp": "Un serveur MCP local pour utiliser votre portefeuille depuis des clients IA comme Claude Desktop et Cursor.",
+        "assistant": "Un assistant intégré qui répond aux questions et prépare des opérations soumises à votre validation."
+      }
+    },
+    "v2-0": {
+      "title": "Assistant fiscal et progression",
+      "highlights": {
+        "tax": "Un assistant fiscal : PFU ou barème progressif, cases Cerfa et pistes d'optimisation.",
+        "progress": "Objectifs d'épargne, rangs d'investisseur et quêtes DCA.",
+        "analytics": "Analyses sectorielles et données de marché enrichies.",
+        "design": "Une interface et un tableau de bord global repensés."
+      }
+    },
+    "v1-0": {
+      "title": "Première version",
+      "highlights": {
+        "dashboard": "Un tableau de bord qui consolide patrimoine, répartition et performance.",
+        "import": "Import CSV des transactions de vos courtiers.",
+        "valuation": "Valorisation des positions au prix du marché en temps réel."
+      }
+    }
+  }
+}

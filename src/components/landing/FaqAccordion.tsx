@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 
-const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'] as const;
+const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] as const;
 
 export const FaqAccordion: React.FC = () => {
   const { t } = useTranslation();
@@ -13,7 +13,7 @@ export const FaqAccordion: React.FC = () => {
   };
 
   return (
-    <section id="faq" className="py-16 lg:py-24 border-t border-subtle bg-canvas">
+    <section id="faq" className="py-16 lg:py-24 border-t border-subtle bg-canvas scroll-mt-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">

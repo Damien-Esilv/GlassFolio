@@ -1,0 +1,42 @@
+{
+  "title": "Roadmap",
+  "intro": "What is coming next to GlassFolio. Horizons are indicative and may change as the project evolves.",
+  "status": {
+    "inProgress": "In progress",
+    "planned": "Planned",
+    "exploring": "Exploring"
+  },
+  "horizon": {
+    "q4-2026": "Q4 2026",
+    "q1-2027": "Q1 2027",
+    "later": "Later"
+  },
+  "items": {
+    "assetClasses": {
+      "title": "New asset classes",
+      "body": "Precious metals, private equity and collectibles, each valued automatically when a market price exists or manually on your own schedule."
+    },
+    "manualEntry": {
+      "title": "Manual transaction entry",
+      "body": "Record a purchase, a sale or a dividend directly in the app, alongside CSV import."
+    },
+    "aiImport": {
+      "title": "AI-assisted import",
+      "body": "Let the assistant read an unfamiliar CSV export and propose the column mapping for you to confirm."
+    },
+    "liabilities": {
+      "title": "Loans and liabilities",
+      "body": "Track mortgages and consumer loans to see your net worth after debts."
+    },
+    "brokerSync": {
+      "title": "Direct broker connections",
+      "body": "Refresh positions straight from supported brokers and exchanges, without exporting files."
+    },
+    "jurisdictions": {
+      "title": "New tax jurisdictions",
+      "body": "Extend the modular tax engine beyond France, starting with the countries most requested by users."
+    }
+  },
+  "disclaimer": "Already shipped features are listed in the changelog.",
+  "changelogLink": "See what's new"
+}

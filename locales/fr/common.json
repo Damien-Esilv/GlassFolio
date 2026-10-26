@@ -27,6 +27,7 @@
     "close": "Fermer",
     "error": "Une erreur est survenue",
     "actions": {
+        "title": "Actions",
         "seeAll": "Voir tout",
         "viewReport": "Voir le rapport",
         "viewHistory": "Voir l'historique",
@@ -135,7 +136,11 @@
             "SNAPSHOT_QTY_REQUIRED": "La quantité est obligatoire",
             "SNAPSHOT_PRICE_REQUIRED": "Le prix de revient unitaire (PRU) est obligatoire",
             "LABEL_MISSING": "Libellé recommandé pour la traçabilité",
-            "OVERSELL": "Impossible de vendre {{sell}} {{symbol}} : seulement {{position}} détenu(s)"
+            "OVERSELL": "Impossible de vendre {{sell}} {{symbol}} : seulement {{position}} détenu(s)",
+            "TYPE_INFERRED": "Aucun type dans le fichier : lu comme {{type}} d'après le signe de la quantité ou du montant",
+            "TYPE_UNRECOGNIZED": "Type inconnu « {{label}} » : vérifiez que cette ligne est bien un(e) {{type}}",
+            "CORPORATE_ACTION_UNSUPPORTED": "Les divisions de titres et scissions ne sont pas prises en charge : importez plutôt un instantané de vos positions",
+            "COST_UNKNOWN": "Aucun prix ni montant en espèces dans ce fichier : le coût ou le produit de cession est inconnu (mis à 0)"
         },
         "secrets": {
             "saveFailed": "Le secret n'a pas pu être enregistré. Réessayez."
