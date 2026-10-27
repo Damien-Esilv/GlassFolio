@@ -61,10 +61,16 @@ export const installTrustedTypesDefaultPolicy = (): void => {
     try {
         factory.createPolicy('default', {
             createScriptURL: (url: string) => {
-                if (new URL(url, window.location.href).origin !== window.location.origin) {
-                    throw new TypeError(`Blocked cross-origin script URL: ${url}`);
+                const parsed = new URL(url, window.location.href);
+                // Same-origin script URLs (e.g. /_vercel/insights/script.js, bundled chunks)
+                if (parsed.origin === window.location.origin) {
+                    return url;
                 }
-                return url;
+                // Cloudflare Turnstile anti-bot script (Epic E22)
+                if (parsed.origin === 'https://challenges.cloudflare.com' && parsed.pathname.startsWith('/turnstile/v0/')) {
+                    return url;
+                }
+                throw new TypeError(`Blocked cross-origin script URL: ${url}`);
             },
         });
     } catch {

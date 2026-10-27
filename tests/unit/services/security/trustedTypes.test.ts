@@ -77,6 +77,8 @@ describe('Trusted Types (E31 — CSP hardening)', () => {
       expect(rules.createHTML).toBeUndefined(); // no HTML or eval escape hatch
       expect(rules.createScriptURL?.('/_vercel/insights/script.js')).toBe('/_vercel/insights/script.js');
       expect(rules.createScriptURL?.(`${window.location.origin}/assets/x.js`)).toBe(`${window.location.origin}/assets/x.js`);
+      expect(rules.createScriptURL?.('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit')).toBe('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit');
+      expect(() => rules.createScriptURL?.('https://challenges.cloudflare.com/malicious.js')).toThrow(/cross-origin/);
       expect(() => rules.createScriptURL?.('https://evil.example/x.js')).toThrow(/cross-origin/);
     });
 

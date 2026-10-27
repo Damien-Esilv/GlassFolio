@@ -187,6 +187,7 @@ const Signup: React.FC = () => {
             if (antiBotRef.current) {
                const botRes = await antiBotRef.current.validate();
                if (!botRes.success) {
+                  antiBotRef.current.reset();
                   setError(mapAuthErrorMessage(botRes.error, t, 'common:errors.auth.antiBot'));
                   setIsLoading(false);
                   return;
@@ -205,6 +206,7 @@ const Signup: React.FC = () => {
             navigate('/', { replace: true });
          }
       } catch (err: unknown) {
+         antiBotRef.current?.reset();
          if (err instanceof Error && err.name === 'ExistingVaultError') {
             setShowOverwriteConfirm(true);
          }
@@ -461,7 +463,7 @@ const Signup: React.FC = () => {
                </form>
             )}
 
-            {signupStage === 'form' && <AntiBotShield ref={antiBotRef} />}
+            {!isLocal && signupStage === 'form' && <AntiBotShield ref={antiBotRef} />}
 
             {!isLocal && (
                <div className="mt-4 pt-4 border-t border-subtle">

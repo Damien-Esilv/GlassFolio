@@ -81,6 +81,7 @@
             "accountLocked": "Too many failed attempts. Try again in {{seconds}} seconds.",
             "rateLimited": "Too many attempts. Please wait a moment before trying again.",
             "antiBot": "Security check failed. Please wait a moment and try again.",
+            "captchaRequired": "Please complete the anti-bot verification before continuing.",
             "network": "Network error. Check your connection and try again.",
             "serverUnavailable": "The service is temporarily unavailable. Please try again later.",
             "cryptoUnavailable": "Your browser cannot run the encryption required by GlassFolio (secure context needed).",

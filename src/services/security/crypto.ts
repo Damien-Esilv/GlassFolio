@@ -243,6 +243,8 @@ export const parseRecoveryKey = (input: string): Bytes | null => {
 
 // ── Lightweight WebCrypto SHA-256 Proof-of-Work (Anti-Bot) ───────────────────
 
+export const POW_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes TTL
+
 export const createPowChallenge = (prefix = 'gf-pow'): string => {
     const random = toBase64(randomBytes(16));
     const timestamp = Date.now().toString(36);
@@ -277,9 +279,25 @@ export const verifyProofOfWork = async (
     challenge: string,
     nonce: number,
     claimedHash: string,
-    difficultyZeroNibbles = 3
+    difficultyZeroNibbles = 3,
+    options?: { maxAgeMs?: number; now?: number }
 ): Promise<boolean> => {
     try {
+        if (!challenge || typeof challenge !== 'string') return false;
+        const parts = challenge.split(':');
+        // Validate challenge format: prefix:timestampBase36:randomBytesBase64
+        if (parts.length >= 3) {
+            const timestamp = parseInt(parts[1], 36);
+            if (!Number.isNaN(timestamp)) {
+                const now = options?.now ?? Date.now();
+                const maxAge = options?.maxAgeMs ?? POW_MAX_AGE_MS;
+                // Clock skew allowance: 60s into future, maxAge into past
+                if (timestamp > now + 60_000 || now - timestamp > maxAge) {
+                    return false;
+                }
+            }
+        }
+
         const targetPrefix = '0'.repeat(difficultyZeroNibbles);
         if (!claimedHash.startsWith(targetPrefix)) return false;
 

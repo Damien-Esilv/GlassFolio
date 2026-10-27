@@ -1,6 +1,7 @@
 import { Result, ok, err, ValidationError } from '../../types/result';
 import { createPowChallenge, solveProofOfWork, verifyProofOfWork } from './crypto';
 import { auditLogService } from './auditLogService';
+import { getDeploymentMode, getAppTarget } from '../../config/deployment';
 
 export const MIN_SUBMISSION_DURATION_MS = 1500;
 
@@ -27,7 +28,14 @@ export const getTurnstileSiteKey = (): string | null => {
     return raw || null;
 };
 
-export const isTurnstileEnabled = (): boolean => getTurnstileSiteKey() !== null;
+export const isTurnstileEnabled = (): boolean => {
+    if (getDeploymentMode() === 'local') return false;
+    if (getAppTarget() === 'showcase') return false;
+    return Boolean(getTurnstileSiteKey());
+};
+
+const consumedChallenges = new Set<string>();
+const MAX_CONSUMED_CHALLENGES = 1000;
 
 export const antiBotService = {
     createChallenge(): string {
@@ -38,9 +46,13 @@ export const antiBotService = {
         return solveProofOfWork(challenge, 3);
     },
 
+    clearConsumedChallenges(): void {
+        consumedChallenges.clear();
+    },
+
     async verify(
         params: AntiBotVerificationParams,
-        options?: { minDurationMs?: number; skipPow?: boolean }
+        options?: { minDurationMs?: number; skipPow?: boolean; skipTurnstile?: boolean }
     ): Promise<Result<boolean, ValidationError>> {
         const submittedAt = params.submittedAt ?? Date.now();
         const minDuration = options?.minDurationMs ?? MIN_SUBMISSION_DURATION_MS;
@@ -62,11 +74,16 @@ export const antiBotService = {
             return err(new ValidationError(`Submission too fast (${elapsed}ms). Please take your time.`, 'timing'));
         }
 
-        // 3. Proof-of-Work verification
+        // 3. Proof-of-Work verification & Anti-Replay
         if (!options?.skipPow) {
             if (!params.powChallenge || params.powNonce === undefined || !params.powHash) {
                 await auditLogService.record('antibot_blocked', 'Missing Proof-of-Work telemetry', 'warning');
                 return err(new ValidationError('Missing Proof-of-Work challenge.', 'pow'));
+            }
+
+            if (consumedChallenges.has(params.powChallenge)) {
+                await auditLogService.record('antibot_blocked', 'Replayed Proof-of-Work challenge detected', 'warning');
+                return err(new ValidationError('Proof-of-Work challenge already used. Please refresh.', 'pow'));
             }
 
             const isPowValid = await verifyProofOfWork(
@@ -79,6 +96,20 @@ export const antiBotService = {
             if (!isPowValid) {
                 await auditLogService.record('antibot_blocked', 'Invalid Proof-of-Work solution', 'warning');
                 return err(new ValidationError('Invalid Proof-of-Work solution.', 'pow'));
+            }
+
+            if (consumedChallenges.size >= MAX_CONSUMED_CHALLENGES) {
+                const first = consumedChallenges.values().next().value;
+                if (first) consumedChallenges.delete(first);
+            }
+            consumedChallenges.add(params.powChallenge);
+        }
+
+        // 4. Cloudflare Turnstile token validation when enabled in cloud mode
+        if (isTurnstileEnabled() && !options?.skipTurnstile) {
+            if (!params.captchaToken || params.captchaToken.trim().length === 0) {
+                await auditLogService.record('antibot_blocked', 'Missing or incomplete Turnstile captcha token', 'warning');
+                return err(new ValidationError('Please complete the anti-bot verification.', 'captcha'));
             }
         }
 

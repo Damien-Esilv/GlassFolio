@@ -16,7 +16,7 @@ describe('Production smoke checks (Epic E19 — TGLA-132)', () => {
         expect(expected['strict-transport-security']).toBe('max-age=63072000; includeSubDomains');
         expect(expected['x-content-type-options']).toBe('nosniff');
         expect(expected['x-frame-options']).toBe('DENY');
-        expect(expected['content-security-policy']).toContain("script-src 'self';");
+        expect(expected['content-security-policy']).toContain("script-src 'self'");
         expect(Object.keys(expected).length).toBeGreaterThanOrEqual(5);
     });
 

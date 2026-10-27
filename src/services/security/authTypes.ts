@@ -84,9 +84,9 @@ export interface IAuthProvider {
     cancelSecondFactor?(): Promise<void>;
     changeEmail?(currentPassword: string, newEmail: string): Promise<void>;
     changePassword?(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void>;
-    requestPasswordReset?(email: string, redirectTo?: string): Promise<void>;
+    requestPasswordReset?(email: string, redirectTo?: string, options?: { captchaToken?: string }): Promise<void>;
     recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
-    resendEmailVerification?(email?: string): Promise<void>;
+    resendEmailVerification?(email?: string, options?: { captchaToken?: string }): Promise<void>;
     verifyEmailOtp?(email: string, token: string): Promise<AuthResult>;
     beginSignupVerification?(email: string, password: string, name: string, options?: SignUpOptions): Promise<PendingSignup>;
     /** Creates the vault of a verified sign-up; arguments default to the in-memory sign-up draft. */

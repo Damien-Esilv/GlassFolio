@@ -81,6 +81,7 @@
             "accountLocked": "Trop de tentatives échouées. Réessayez dans {{seconds}} secondes.",
             "rateLimited": "Trop de tentatives. Patientez un instant avant de réessayer.",
             "antiBot": "La vérification de sécurité a échoué. Patientez un instant et réessayez.",
+            "captchaRequired": "Veuillez valider la vérification anti-robot avant de continuer.",
             "network": "Erreur réseau. Vérifiez votre connexion et réessayez.",
             "serverUnavailable": "Le service est momentanément indisponible. Réessayez plus tard.",
             "cryptoUnavailable": "Votre navigateur ne permet pas le chiffrement requis par GlassFolio (contexte sécurisé nécessaire).",
