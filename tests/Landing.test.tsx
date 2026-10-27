@@ -164,29 +164,21 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     });
   });
 
-  it('interactively updates hero metrics when envelope filters and currencies are toggled', () => {
+  it('renders the prominent demo showcase card with feature highlights and centered CTA button', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
 
-    // Initial total net worth contains 148 450
-    expect(screen.getAllByText(/148/).length).toBeGreaterThan(0);
+    // Headline is displayed
+    expect(screen.getByRole('heading', { level: 3, name: /Explore the full GlassFolio experience live/i })).toBeTruthy();
 
-    // Click PEA filter
-    const peaBtns = screen.getAllByRole('button', { name: /PEA/i });
-    fireEvent.click(peaBtns[0]);
+    // Feature highlights are rendered
+    expect(screen.getByText(/anonymous/i)).toBeTruthy();
 
-    // PEA net worth is 68 200
-    expect(screen.getAllByText(/68/).length).toBeGreaterThan(0);
-
-    // Switch currency to USD
-    const usdBtn = screen.getByRole('button', { name: 'USD' });
-    fireEvent.click(usdBtn);
-
-    // USD currency symbol or converted value is displayed
-    expect(screen.getAllByText(/\$|USD/).length).toBeGreaterThan(0);
+    // Centered demo CTA button is rendered
+    expect(screen.getByRole('button', { name: /Try the 1-Click Interactive Demo/i })).toBeTruthy();
   });
 
   it('toggles FAQ accordion questions and answers', () => {

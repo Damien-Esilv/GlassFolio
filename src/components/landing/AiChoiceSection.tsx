@@ -26,8 +26,8 @@ export const AiChoiceSection: React.FC = () => {
 
   return (
     <section id="ai" className="relative py-16 lg:py-24 border-t border-subtle bg-canvas overflow-hidden scroll-mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] gap-10 lg:gap-14 items-center mb-12">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-[minmax(0,4.5fr)_minmax(0,7.5fr)] gap-10 lg:gap-14 items-center mb-14">
           <div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-primary tracking-tight leading-tight mb-4">
               {t('landing:aiChoice.title')}
@@ -39,8 +39,9 @@ export const AiChoiceSection: React.FC = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.6, ease: EASE_OUT }}
+            className="w-full"
           >
-            <BrowserFrame address={t('landing:story.addressBar')}>
+            <BrowserFrame address={t('landing:story.addressBar')} className="w-full shadow-2xl">
               <div style={{ aspectRatio: `${SCREENSHOT_WIDTH} / ${SCREENSHOT_HEIGHT}` }}>
                 <img
                   src="/screenshots/ai-assistant.webp"
@@ -56,7 +57,7 @@ export const AiChoiceSection: React.FC = () => {
           </m.div>
         </div>
 
-        <ul className="grid md:grid-cols-3 gap-6 mb-10">
+        <ul className="grid md:grid-cols-3 gap-6 mb-10 items-stretch">
           {RUNTIMES.map(({ key, icon: Icon }, index) => (
             <m.li
               key={key}
@@ -64,14 +65,19 @@ export const AiChoiceSection: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ delay: index * 0.12, duration: 0.5, ease: EASE_OUT }}
+              className="h-full flex"
             >
-              <TiltCard maxTilt={4} className="h-full rounded-2xl border border-subtle bg-card p-6 hover:border-brand/40 transition-colors">
-                <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-4">
-                  <Icon size={21} />
+              <TiltCard maxTilt={4} className="h-full w-full rounded-2xl border border-subtle bg-card p-6 hover:border-brand/40 transition-colors flex flex-col justify-between">
+                <div>
+                  <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-4">
+                    <Icon size={21} />
+                  </div>
+                  <p className="text-base font-bold text-primary mb-2">{t(`landing:aiChoice.runtimes.${key}.title`)}</p>
+                  <p className="text-sm text-secondary leading-relaxed mb-4">{t(`landing:aiChoice.runtimes.${key}.body`)}</p>
                 </div>
-                <p className="text-base font-bold text-primary mb-2">{t(`landing:aiChoice.runtimes.${key}.title`)}</p>
-                <p className="text-sm text-secondary leading-relaxed mb-4">{t(`landing:aiChoice.runtimes.${key}.body`)}</p>
-                <p className="text-xs font-semibold text-tertiary">{t(`landing:aiChoice.runtimes.${key}.examples`)}</p>
+                <div className="pt-3 border-t border-subtle/60 mt-auto">
+                  <p className="text-xs font-semibold text-tertiary">{t(`landing:aiChoice.runtimes.${key}.examples`)}</p>
+                </div>
               </TiltCard>
             </m.li>
           ))}
@@ -91,6 +97,11 @@ export const AiChoiceSection: React.FC = () => {
             ))}
           </ul>
         </div>
+
+        {/* Legal & Trademark Disclaimer */}
+        <p className="text-[11px] text-tertiary text-center mt-6 leading-relaxed max-w-4xl mx-auto">
+          {t('landing:aiChoice.trademarkNotice')}
+        </p>
       </div>
     </section>
   );

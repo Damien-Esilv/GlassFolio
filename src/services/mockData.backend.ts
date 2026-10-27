@@ -15,6 +15,7 @@ import {
     Instrument
 } from '../types/types.backend';
 import {
+    hoursAgoISO,
     daysAgoISO,
     monthsAgoISO,
     yearsAgoISO,
@@ -559,9 +560,9 @@ export function buildDemoImportBatches(now: Date = new Date()): ImportBatch[] {
             importMode: 'history',
             fileName: `bourso_releve_recent_${yr}.csv`,
             fileHash: 'hash-recent-dca-batch',
-            transactionCount: 3,
+            transactionCount: 4,
             skippedCount: 0,
-            importedAt: daysAgoISO(2, 18, 0, now),
+            importedAt: hoursAgoISO(1, now),
             importedBy: 'default-user',
             status: 'completed',
             engineVersion: '3.0.0'
@@ -1252,6 +1253,32 @@ export function buildDemoUnifiedTransactions(now: Date = new Date()): UnifiedTra
             priceUnit: '3400.00',
             quantity: '2.08',
             feeAmount: '7.00',
+            createdAt: defaultCreated,
+            updatedAt: defaultCreated,
+            version: 1
+        },
+        {
+            id: 'utx-recent-today',
+            ownerId: 'default-user',
+            accountId: 'acc-bourso-pea',
+            instrumentId: 'instr-cw8',
+            batchId: 'batch-recent',
+            rowHash: 'hash-recent-dca-today',
+            sourceOrigin: 'FILE',
+            isSynthetic: false,
+            isFiscal: true,
+            sourceMode: 'history',
+            transactionDate: hoursAgoISO(2, now),
+            type: 'BUY',
+            rawType: 'Buy',
+            label: 'Buy 1 CW8 @ 460.00 EUR',
+            rawLabel: 'Execution Ordre Programme PEA',
+            amountPrimary: '-460.00',
+            assetSymbol: 'CW8',
+            assetIsin: 'LU1681043599',
+            priceUnit: '460.00',
+            quantity: '1.00',
+            feeAmount: '0.00',
             createdAt: defaultCreated,
             updatedAt: defaultCreated,
             version: 1

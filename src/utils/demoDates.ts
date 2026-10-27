@@ -7,6 +7,16 @@
  */
 
 /**
+ * Returns a guaranteed valid ISO 8601 UTC string located `hours` hours in the past from `baseDate`.
+ * Defaults to 2 hours ago, guaranteeing an intraday transaction on the current day.
+ */
+export function hoursAgoISO(hours: number = 2, baseDate: Date = new Date()): string {
+    const safeHours = Math.max(0.01, hours);
+    const targetMs = baseDate.getTime() - safeHours * 3600_000;
+    return new Date(targetMs).toISOString();
+}
+
+/**
  * Returns a guaranteed valid ISO 8601 UTC string located `days` days in the past from `baseDate`.
  * If hours / minutes are specified, they are applied in UTC.
  */

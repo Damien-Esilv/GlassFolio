@@ -33,11 +33,11 @@ export const TiltCard: React.FC<TiltCardProps> = ({ children, className, maxTilt
   };
 
   if (prefersReducedMotion) {
-    return <div className={className}>{children}</div>;
+    return <div className={`h-full w-full ${className ?? ''}`}>{children}</div>;
   }
 
   return (
-    <div className="[perspective:1400px]">
+    <div className="[perspective:1400px] h-full w-full">
       <m.div
         className={className}
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}

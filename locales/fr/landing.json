@@ -46,6 +46,25 @@
     "subtitle": "Suivez PEA, CTO, crypto, assurance-vie et livrets dans un coffre chiffré AES-256-GCM. Préparez votre déclaration, mesurez ce que vous coûtent les frais et interrogez votre portefeuille avec l'IA de votre choix.",
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Synthèse Patrimoniale Multi-Enveloppes",
+    "demoCard": {
+      "badge": "Accès Instantané • Sans inscription",
+      "title": "Explorez l'expérience GlassFolio en direct",
+      "subtitle": "Testez l'application complète sans renseigner d'email ni créer de compte : PEA, CTO, Crypto, aide fiscale Cerfa et assistant IA avec un portefeuille préchargé.",
+      "cta": "Tester la démo interactive en 1 clic",
+      "ctaLoading": "Ouverture du coffre démo...",
+      "perks": {
+        "noAccount": "100% anonyme & sans compte",
+        "realAssets": "Portefeuille complet prérempli",
+        "aiAssistant": "Assistant IA & serveur MCP actifs",
+        "taxEngine": "Simulateur fiscal Cerfa débloqué"
+      },
+      "stats": {
+        "portfolioValue": "148 450 €",
+        "portfolioLabel": "Patrimoine de démo",
+        "unrealizedGain": "+18 420 € (+14,17%)",
+        "envelopes": "6 enveloppes actives"
+      }
+    },
     "envelopeFilterLabel": "Filtrer par Enveloppe",
     "currencySwitchLabel": "Devise de Référence",
     "envelopes": {
@@ -239,7 +258,8 @@
       "redaction": "Les secrets sont retirés avant qu'une requête ne quitte l'application",
       "approval": "Chaque modification de vos données attend votre validation",
       "tools": "{{count}} outils, en lecture seule sauf confirmation"
-    }
+    },
+    "trademarkNotice": "Ollama, OpenAI, Anthropic, Google Gemini, Groq, OpenRouter, Claude Desktop et Cursor sont des marques déposées de leurs propriétaires respectifs. GlassFolio est un projet logiciel indépendant et n'est affilié, associé, sponsorisé ou approuvé par aucune de ces entités."
   },
   "bento": {
     "title": "Et aussi",

@@ -10,6 +10,7 @@ import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
+import { PullToRefresh } from './components/ui/PullToRefresh';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
@@ -55,8 +56,9 @@ export const ShowcaseApp: React.FC = () => {
       <Router>
         <ScrollToTop />
         <LegacyHashRedirect />
-        <React.Suspense fallback={<LoadingScreen />}>
-          <Routes>
+        <PullToRefresh>
+          <React.Suspense fallback={<LoadingScreen />}>
+            <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/welcome" element={<Landing />} />
             <Route path="/self-host" element={<SelfHost />} />
@@ -88,6 +90,7 @@ export const ShowcaseApp: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </React.Suspense>
+        </PullToRefresh>
         <ConsentBanner />
         <ConsentGatedAnalytics />
       </Router>

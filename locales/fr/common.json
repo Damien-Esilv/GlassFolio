@@ -37,7 +37,8 @@
         "fillDemo": "Utiliser le compte démo",
         "save": "Enregistrer",
         "cancel": "Annuler",
-        "close": "Fermer"
+        "close": "Fermer",
+        "refresh": "Actualiser"
     },
     "all": "Tout",
     "labels": {

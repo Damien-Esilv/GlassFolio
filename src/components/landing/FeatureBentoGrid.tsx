@@ -30,7 +30,7 @@ export const FeatureBentoGrid: React.FC = () => {
           <p className="text-base text-secondary leading-relaxed">{t('landing:bento.subtitle')}</p>
         </div>
 
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {CARDS.map(({ key, icon: Icon, wide }, index) => (
             <m.li
               key={key}
@@ -38,19 +38,21 @@ export const FeatureBentoGrid: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
               transition={{ delay: (index % 2) * 0.12, duration: 0.55, ease: EASE_OUT }}
-              className={wide ? 'md:col-span-2' : ''}
+              className={`h-full flex ${wide ? 'md:col-span-2' : ''}`}
             >
-              <TiltCard maxTilt={3} className="h-full rounded-2xl border border-subtle bg-canvas p-6 sm:p-8 hover:border-brand/40 transition-colors flex flex-col">
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
-                    <Icon size={21} />
+              <TiltCard maxTilt={3} className="h-full w-full rounded-2xl border border-subtle bg-canvas p-6 sm:p-8 hover:border-brand/40 transition-colors flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+                      <Icon size={21} />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-subtle text-secondary border border-subtle text-[11px] font-semibold">
+                      {t(`landing:bento.${key}.badge`)}
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-subtle text-secondary border border-subtle text-[11px] font-semibold">
-                    {t(`landing:bento.${key}.badge`)}
-                  </span>
+                  <h3 className="text-lg sm:text-xl font-bold text-primary mb-2">{t(`landing:bento.${key}.title`)}</h3>
+                  <p className="text-sm text-secondary leading-relaxed">{t(`landing:bento.${key}.description`)}</p>
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-primary mb-2">{t(`landing:bento.${key}.title`)}</h3>
-                <p className="text-sm text-secondary leading-relaxed">{t(`landing:bento.${key}.description`)}</p>
               </TiltCard>
             </m.li>
           ))}

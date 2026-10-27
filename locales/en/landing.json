@@ -46,6 +46,25 @@
     "subtitle": "Track PEA, CTO, crypto, life insurance and savings accounts in an AES-256-GCM encrypted vault. Prepare your tax return, measure what fees cost you and ask your portfolio questions with the AI of your choice.",
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Multi-Envelope Wealth Overview",
+    "demoCard": {
+      "badge": "Instant Access • No sign-up required",
+      "title": "Explore the full GlassFolio experience live",
+      "subtitle": "Try the complete application with zero friction — no email, no sign-up: PEA, brokerage, crypto, Cerfa tax helper and AI assistant with a preloaded sample portfolio.",
+      "cta": "Try the 1-Click Interactive Demo",
+      "ctaLoading": "Unlocking demo vault...",
+      "perks": {
+        "noAccount": "100% anonymous & no account needed",
+        "realAssets": "Pre-populated realistic portfolio",
+        "aiAssistant": "Active AI assistant & local MCP server",
+        "taxEngine": "Full French fiscal simulator unlocked"
+      },
+      "stats": {
+        "portfolioValue": "€148,450",
+        "portfolioLabel": "Sample Net Worth",
+        "unrealizedGain": "+€18,420 (+14.17%)",
+        "envelopes": "6 active envelopes"
+      }
+    },
     "envelopeFilterLabel": "Filter Envelope",
     "currencySwitchLabel": "Base Currency",
     "envelopes": {
@@ -239,7 +258,8 @@
       "redaction": "Secrets are removed before a prompt leaves the app",
       "approval": "Every change to your data waits for your approval",
       "tools": "{{count}} tools, read-only unless you confirm"
-    }
+    },
+    "trademarkNotice": "Ollama, OpenAI, Anthropic, Google Gemini, Groq, OpenRouter, Claude Desktop, and Cursor are trademarks of their respective owners. GlassFolio is an independent project and is not affiliated with, sponsored by, or endorsed by any of these entities."
   },
   "bento": {
     "title": "And also",

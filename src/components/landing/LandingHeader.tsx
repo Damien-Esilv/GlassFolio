@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Hexagon, ArrowRight, Menu, X, Github, Download } from 'lucide-react';
+import { Hexagon, ArrowRight, Menu, X, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePublicThemeLang } from '../../hooks/usePublicThemeLang';
 import { ThemeLangDropdowns } from './ThemeLangDropdowns';
 import { getAppUrl, buildAppDestinationUrl, getAppTarget } from '../../config/deployment';
-import { GITHUB_REPO_URL, buildPublicPagePath } from '../../config/project';
+import { buildPublicPagePath } from '../../config/project';
 import { isDemoAccount } from '../../services/security/demoAccount';
 
 /** Scroll anchors, in the exact order the sections appear on the landing page. */
@@ -123,17 +123,6 @@ export const LandingHeader: React.FC = () => {
 
           <ThemeLangDropdowns align="right" />
 
-          <a
-            href={GITHUB_REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t('landing:header.githubAria')}
-            title={t('landing:header.githubAria')}
-            className="hidden sm:inline-flex p-2 rounded-lg text-secondary hover:text-primary hover:bg-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <Github size={17} />
-          </a>
-
           {hasRealAccount && (
             <AppLink
               path="/"
@@ -208,15 +197,6 @@ export const LandingHeader: React.FC = () => {
                 {t(page.labelKey)}
               </Link>
             ))}
-            <a
-              href={GITHUB_REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 rounded-lg text-sm font-semibold text-secondary hover:text-primary hover:bg-subtle transition-colors inline-flex items-center gap-2"
-            >
-              <Github size={16} />
-              <span>{t('landing:header.githubAria')}</span>
-            </a>
           </nav>
           <div className="pt-3 border-t border-subtle flex flex-col gap-2">
             {hasRealAccount && (

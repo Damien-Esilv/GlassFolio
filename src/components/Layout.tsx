@@ -16,6 +16,7 @@ import { NotificationBellDropdown } from './notifications/NotificationBellDropdo
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 import { UserAvatar } from './ui/UserAvatar';
 import { LocalPersistenceNotice } from './security/LocalPersistenceNotice';
+import { PullToRefresh } from './ui/PullToRefresh';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -603,7 +604,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="p-4 md:p-6 lg:p-8">
           <LocalPersistenceNotice />
-          {children}
+          <PullToRefresh>
+            {children}
+          </PullToRefresh>
         </main>
       </div>
 

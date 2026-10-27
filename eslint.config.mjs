@@ -12,6 +12,7 @@ export default [
       'dist/**',
       'node_modules/**',
       'coverage/**',
+      '.claude/**',
       '*.config.js',
       '*.config.ts',
       'vite.config.*',

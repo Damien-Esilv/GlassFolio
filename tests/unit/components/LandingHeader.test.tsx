@@ -122,15 +122,13 @@ describe('<LandingHeader /> self-hosting entry points', () => {
     mockUser = null;
   });
 
-  it('links to the GitHub repository in a new tab', () => {
+  it('does not render the redundant GitHub icon link in header', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <LandingHeader />
       </MemoryRouter>
     );
-    const githubLink = screen.getByRole('link', { name: /View the source code on GitHub/i });
-    expect(githubLink.getAttribute('href')).toBe(GITHUB_REPO_URL);
-    expect(githubLink.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(screen.queryByRole('link', { name: /View the source code on GitHub/i })).toBeNull();
   });
 
   it('scrolls to the #local-cloud section from the nav', () => {

@@ -632,10 +632,10 @@ const Settings: React.FC = () => {
                                                     <button
                                                         type="button"
                                                         onClick={handleToggleToasts}
-                                                        className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.inAppToasts ? 'bg-primary' : 'bg-subtle border border-subtle'}`}
+                                                        className={`w-10 h-5 rounded-full transition-colors relative p-0.5 inline-flex items-center ${notifPrefs.inAppToasts ? 'bg-primary' : 'bg-subtle border border-subtle'}`}
                                                         aria-label={t('notifications:settings.toasts')}
                                                     >
-                                                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.inAppToasts ? 'left-5' : 'left-0.5'}`} />
+                                                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.inAppToasts ? 'translate-x-[20px]' : 'translate-x-0'}`} />
                                                     </button>
                                                 </div>
 
@@ -657,10 +657,10 @@ const Settings: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleToggleCategory('portfolio')}
-                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.portfolio ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 p-0.5 inline-flex items-center ${notifPrefs.categories.portfolio ? 'bg-primary' : 'bg-card border border-subtle'}`}
                                                                 aria-label={t('notifications:settings.categoryPortfolio')}
                                                             >
-                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.portfolio ? 'left-4' : 'left-0.5'}`} />
+                                                                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.portfolio ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                                                             </button>
                                                         </div>
 
@@ -676,10 +676,10 @@ const Settings: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleToggleCategory('fiscal')}
-                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.fiscal ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 p-0.5 inline-flex items-center ${notifPrefs.categories.fiscal ? 'bg-primary' : 'bg-card border border-subtle'}`}
                                                                 aria-label={t('notifications:settings.categoryFiscal')}
                                                             >
-                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.fiscal ? 'left-4' : 'left-0.5'}`} />
+                                                                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.fiscal ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                                                             </button>
                                                         </div>
 
@@ -695,10 +695,10 @@ const Settings: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleToggleCategory('goals')}
-                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.goals ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 p-0.5 inline-flex items-center ${notifPrefs.categories.goals ? 'bg-primary' : 'bg-card border border-subtle'}`}
                                                                 aria-label={t('notifications:settings.categoryGoals')}
                                                             >
-                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.goals ? 'left-4' : 'left-0.5'}`} />
+                                                                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.goals ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                                                             </button>
                                                         </div>
 
@@ -714,10 +714,10 @@ const Settings: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleToggleCategory('security')}
-                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${notifPrefs.categories.security ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 p-0.5 inline-flex items-center ${notifPrefs.categories.security ? 'bg-primary' : 'bg-card border border-subtle'}`}
                                                                 aria-label={t('notifications:settings.categorySecurity')}
                                                             >
-                                                                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.security ? 'left-4' : 'left-0.5'}`} />
+                                                                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.security ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                                                             </button>
                                                         </div>
                                                     </div>
@@ -741,7 +741,10 @@ const Settings: React.FC = () => {
                                                         step={1}
                                                         value={notifPrefs.dormantCashThresholdPercent}
                                                         onChange={(e) => handleDormantCashChange(parseInt(e.target.value, 10))}
-                                                        className="w-full accent-primary bg-subtle h-2 rounded-lg cursor-pointer"
+                                                        className="w-full appearance-none h-2 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                                                        style={{
+                                                            background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${Math.min(100, Math.max(0, ((notifPrefs.dormantCashThresholdPercent - 5) / (50 - 5)) * 100))}%, var(--bg-subtle) ${Math.min(100, Math.max(0, ((notifPrefs.dormantCashThresholdPercent - 5) / (50 - 5)) * 100))}%, var(--bg-subtle) 100%)`
+                                                        }}
                                                     />
                                                     <div className="relative text-[10px] text-tertiary mt-1 h-3.5">
                                                         <span className="absolute left-0">5%</span>

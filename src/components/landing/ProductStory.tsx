@@ -64,7 +64,7 @@ export const ProductStory: React.FC = () => {
 
   return (
     <section id="features" className="relative py-16 lg:py-24 border-t border-subtle bg-canvas scroll-mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-10 lg:mb-4">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-primary tracking-tight leading-tight mb-4">
             {t('landing:story.title')}
@@ -72,7 +72,7 @@ export const ProductStory: React.FC = () => {
           <p className="text-base text-secondary leading-relaxed">{t('landing:story.subtitle')}</p>
         </div>
 
-        <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
+        <div className="lg:grid lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-10 xl:gap-14">
           {/* Explanations: one viewport band per step on desktop */}
           <ol className="space-y-14 lg:space-y-0">
             {STORY_STEPS.map((step, index) => {
@@ -120,8 +120,8 @@ export const ProductStory: React.FC = () => {
 
           {/* Pinned app frame (desktop) */}
           <div className="hidden lg:block">
-            <div className="sticky top-24 flex gap-5 items-center">
-              <BrowserFrame address={t('landing:story.addressBar')} className="flex-1">
+            <div className="sticky top-16 h-[calc(100vh-4rem)] flex gap-5 items-center justify-center">
+              <BrowserFrame address={t('landing:story.addressBar')} className="flex-1 w-full max-h-[85vh]">
                 <div className="relative bg-canvas" style={{ aspectRatio: `${SCREENSHOT_WIDTH} / ${SCREENSHOT_HEIGHT}` }}>
                   <AnimatePresence initial={false} mode="popLayout">
                     <m.div
@@ -139,14 +139,15 @@ export const ProductStory: React.FC = () => {
               </BrowserFrame>
 
               {/* Step dots + progress rail */}
-              <nav aria-label={t('landing:story.stepNavLabel')} className="relative flex flex-col gap-3">
-                <span className="absolute left-1/2 -translate-x-1/2 top-1 bottom-1 w-px bg-subtle" aria-hidden="true" />
-                <m.span
-                  aria-hidden="true"
-                  className="absolute left-1/2 -translate-x-1/2 top-1 w-px bg-brand origin-top"
-                  animate={{ height: `${(active / (STORY_STEPS.length - 1)) * 100}%` }}
-                  transition={{ duration: 0.4 }}
-                />
+              <nav aria-label={t('landing:story.stepNavLabel')} className="relative flex flex-col gap-3 py-0 shrink-0">
+                <div className="absolute left-1/2 -translate-x-1/2 top-1.5 bottom-1.5 w-px overflow-hidden pointer-events-none" aria-hidden="true">
+                  <span className="absolute inset-0 w-px bg-subtle" />
+                  <m.span
+                    className="absolute top-0 left-0 w-px bg-brand origin-top"
+                    animate={{ height: `${(active / (STORY_STEPS.length - 1)) * 100}%` }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
                 {STORY_STEPS.map((step, index) => (
                   <button
                     key={step.key}
@@ -154,7 +155,7 @@ export const ProductStory: React.FC = () => {
                     onClick={() => goTo(index)}
                     aria-label={label(step.key)}
                     aria-current={index === active ? 'step' : undefined}
-                    className={`relative w-3 h-3 rounded-full border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    className={`relative z-10 w-3 h-3 rounded-full border-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       index <= active ? 'bg-brand border-brand' : 'bg-card border-strong'
                     }`}
                   />
