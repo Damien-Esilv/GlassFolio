@@ -270,14 +270,24 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
  * Chronological order used everywhere: date, then creation time for same-day rows. Rows that
  * share a timestamp (date-only broker files, one batch) put acquisitions before disposals, so a
  * same-day buy and sell never read as an oversell.
+ *
+ * BOLT OPTIMIZATION:
+ * Pre-decorates items with parsed timestamps (time) and rank before sorting (Schwartzian transform).
+ * Reduces Date object allocations and string parsing from O(N log N) to O(N).
  */
 export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'> & { type?: string }>(txs: T[]): T[] {
-    const rank = (tx: T): number => (tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0);
-    return [...txs].sort((a, b) =>
-        new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
-        || (a.createdAt || '').localeCompare(b.createdAt || '')
-        || rank(a) - rank(b)
+    const decorated = txs.map(tx => ({
+        tx,
+        time: new Date(tx.transactionDate).getTime(),
+        createdAt: tx.createdAt || '',
+        rank: tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0
+    }));
+    decorated.sort((a, b) =>
+        a.time - b.time
+        || a.createdAt.localeCompare(b.createdAt)
+        || a.rank - b.rank
     );
+    return decorated.map(item => item.tx);
 }
 
 export interface LedgerEntry {

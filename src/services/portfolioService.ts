@@ -291,14 +291,18 @@ export const portfolioService = {
                 const { tx } = unifiedWithTime[unifiedIdx];
                 const key = defaultLedgerKey(tx);
                 if (key) {
+                    const prevQty = ledgerStates.get(key)?.quantity ?? 0;
                     const next = applyTransaction(ledgerStates.get(key) ?? emptyLedgerState(), tx, accountMethods.get(tx.accountId) ?? 'WAC');
                     ledgerStates.set(key, next);
                     const symbol = instrumentSymbols.get(tx.instrumentId) || rowSymbol(tx) || tx.assetSymbol;
                     ledgerSymbols.set(key, symbol);
-                    // Re-aggregate this symbol across accounts
-                    assetQuantities[symbol] = Array.from(ledgerStates.entries())
-                        .filter(([k]) => ledgerSymbols.get(k) === symbol)
-                        .reduce((sum, [, st]) => sum + st.quantity, 0);
+                    // BOLT OPTIMIZATION:
+                    // Incrementally update aggregate symbol quantities in O(1) time
+                    // instead of re-scanning all ledger entries with Array.from().filter().reduce() on every transaction.
+                    const deltaQty = next.quantity - prevQty;
+                    if (deltaQty !== 0) {
+                        assetQuantities[symbol] = Math.max(0, (assetQuantities[symbol] || 0) + deltaQty);
+                    }
                 }
                 unifiedIdx++;
             }
