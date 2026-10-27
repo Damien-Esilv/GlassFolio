@@ -99,6 +99,11 @@ export const AntiBotShield = forwardRef<AntiBotShieldHandle, AntiBotShieldProps>
             let isCancelled = false;
             const promise = (async () => {
                 const challenge = antiBotService.createChallenge();
+                if (!isCancelled) {
+                    const initialPow = { challenge, nonce: 0, hash: '' };
+                    powDataRef.current = initialPow;
+                    setPowData(initialPow);
+                }
                 try {
                     const solution = await antiBotService.solveChallenge(challenge);
                     if (!isCancelled) {
