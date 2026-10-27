@@ -11,7 +11,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://query1.finance.yahoo.com https://api.openai.com https://api.anthropic.com https://api.groq.com https://openrouter.ai https://generativelanguage.googleapis.com https://api.coingecko.com http://localhost:* http://127.0.0.1:*; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types glassfolio-qr default"
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://query1.finance.yahoo.com https://challenges.cloudflare.com https://api.openai.com https://api.anthropic.com https://api.groq.com https://openrouter.ai https://generativelanguage.googleapis.com https://api.coingecko.com http://localhost:* http://127.0.0.1:*; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; frame-src https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types glassfolio-qr default"
         },
         {
           "key": "X-Content-Type-Options",

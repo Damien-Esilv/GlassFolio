@@ -128,8 +128,9 @@ function resolveKey(rawError: unknown): MappedKey | null {
     const error = rawError as { name?: string; message?: string; code?: string; field?: string; status?: number };
 
     // 1. Typed errors (Result-style ValidationError is a plain object, not an Error)
-    if (error.code === 'VALIDATION_ERROR' && error.field && ANTI_BOT_FIELDS.has(error.field)) {
-        return { key: 'common:errors.auth.antiBot' };
+    if (error.code === 'VALIDATION_ERROR') {
+        if (error.field === 'captcha') return { key: 'common:errors.auth.captchaRequired' };
+        if (error.field && ANTI_BOT_FIELDS.has(error.field)) return { key: 'common:errors.auth.antiBot' };
     }
     if (error.name === 'PasskeyError' && error.code) return { key: `common:errors.passkey.${error.code}` };
     if (error.name && ERROR_NAME_KEYS[error.name]) return { key: ERROR_NAME_KEYS[error.name] };

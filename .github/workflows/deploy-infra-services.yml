@@ -1,0 +1,81 @@
+name: Deploy — Infra Services & Integrations (Supabase, Turnstile, Emails)
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'supabase/templates/**'
+      - 'scripts/lib/emailTemplates.mjs'
+      - 'scripts/deploy-email-templates.mjs'
+      - 'scripts/deploy-turnstile-config.mjs'
+      - '.github/workflows/deploy-infra-services.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run only (preview diff without applying changes)'
+        type: boolean
+        required: true
+        default: false
+
+concurrency:
+  group: deploy-infra-services-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-infra:
+    name: 🌐 Deploy Infra Services & Integrations
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify template & script integrity (Tests)
+        run: |
+          npx vitest run tests/unit/scripts/emailTemplates.test.ts
+          npx vitest run tests/unit/scripts/deployTurnstileConfig.test.ts
+
+      - name: Deploy Email Templates to Supabase Auth
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "Running email templates deployment in dry-run mode (manual trigger)..."
+            npm run deploy:emails
+          else
+            echo "Applying email templates and settings to Supabase..."
+            npm run deploy:emails:apply
+          fi
+
+      - name: Deploy Cloudflare Turnstile anti-bot configuration to Supabase Auth
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          if [ -z "$TURNSTILE_SECRET_KEY" ]; then
+            echo "TURNSTILE_SECRET_KEY secret not configured in repo environment. Checking status only..."
+            npm run deploy:turnstile || true
+          elif [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "Running Turnstile deployment in dry-run mode (manual trigger)..."
+            npm run deploy:turnstile
+          else
+            echo "Applying Turnstile anti-bot settings to Supabase Auth..."
+            npm run deploy:turnstile:apply
+          fi

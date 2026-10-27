@@ -37,20 +37,25 @@ export const LOCAL_AI_ORIGINS = Object.freeze(['http://localhost:*', 'http://127
 export const CSP_PROFILES = Object.freeze({
   /** Self-hosted Docker image / `npm run dev`: market data goes through the same-origin /yf proxy. */
   local: Object.freeze({
+    scriptSrc: Object.freeze(["'self'"]),
     connectSrc: Object.freeze(["'self'", ...AI_AND_MARKET_ORIGINS, ...LOCAL_AI_ORIGINS]),
     imgSrc: Object.freeze(["'self'", 'data:', 'blob:']),
+    frameSrc: Object.freeze(["'none'"]),
   }),
-  /** Vercel deployment (glassfolio.dev, app.glassfolio.dev): Supabase auth + direct Yahoo quotes. */
+  /** Vercel deployment (glassfolio.dev, app.glassfolio.dev): Supabase auth + direct Yahoo quotes + Cloudflare Turnstile anti-bot. */
   cloud: Object.freeze({
+    scriptSrc: Object.freeze(["'self'", 'https://challenges.cloudflare.com']),
     connectSrc: Object.freeze([
       "'self'",
       'https://*.supabase.co',
       'https://query1.finance.yahoo.com',
+      'https://challenges.cloudflare.com',
       ...AI_AND_MARKET_ORIGINS,
       ...LOCAL_AI_ORIGINS,
     ]),
     // Google OAuth profile pictures
     imgSrc: Object.freeze(["'self'", 'data:', 'blob:', 'https://*.googleusercontent.com']),
+    frameSrc: Object.freeze(['https://challenges.cloudflare.com']),
   }),
 });
 
@@ -60,10 +65,10 @@ export const CSP_PROFILES = Object.freeze({
  * @returns {string}
  */
 export function buildContentSecurityPolicy(profile, { extraConnectSrc = [] } = {}) {
-  const { connectSrc, imgSrc } = CSP_PROFILES[profile];
+  const { connectSrc, imgSrc, scriptSrc = ["'self'"], frameSrc = ["'none'"] } = CSP_PROFILES[profile];
   const directives = [
     ["default-src", ["'self'"]],
-    ["script-src", ["'self'"]],
+    ["script-src", scriptSrc],
     ["style-src", ["'self'", "'unsafe-inline'"]],
     ["img-src", imgSrc],
     ["font-src", ["'self'", 'data:']],
@@ -71,7 +76,7 @@ export function buildContentSecurityPolicy(profile, { extraConnectSrc = [] } = {
     ["worker-src", ["'self'", 'blob:']],
     ["manifest-src", ["'self'"]],
     ["object-src", ["'none'"]],
-    ["frame-src", ["'none'"]],
+    ["frame-src", frameSrc],
     ["base-uri", ["'self'"]],
     ["form-action", ["'self'"]],
     ["frame-ancestors", ["'none'"]],

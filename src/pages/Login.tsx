@@ -103,6 +103,7 @@ const Login: React.FC = () => {
             if (antiBotRef.current) {
                const botRes = await antiBotRef.current.validate();
                if (!botRes.success) {
+                  antiBotRef.current.reset();
                   setError(mapAuthErrorMessage(botRes.error, t, 'common:errors.auth.antiBot'));
                   setIsLoading(false);
                   return;
@@ -113,6 +114,7 @@ const Login: React.FC = () => {
             await login(email, password, { captchaToken: payload?.captchaToken });
          }
       } catch (err: unknown) {
+         antiBotRef.current?.reset();
          const currentLockout = authService.getLockoutRemainingSeconds();
          if (err instanceof Error && err.name === 'EmailNotConfirmedError') {
             setEmailNotConfirmed(true);

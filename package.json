@@ -36,6 +36,8 @@
     "db:purge-test-accounts": "node scripts/purge-test-accounts.mjs",
     "deploy:emails": "node scripts/deploy-email-templates.mjs",
     "deploy:emails:apply": "node scripts/deploy-email-templates.mjs --apply",
+    "deploy:turnstile": "node scripts/deploy-turnstile-config.mjs",
+    "deploy:turnstile:apply": "node scripts/deploy-turnstile-config.mjs --apply",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",

@@ -47,6 +47,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
         if (antiBotRef.current) {
             const botCheck = await antiBotRef.current.validate();
             if (!botCheck.success) {
+                antiBotRef.current.reset();
                 setError(mapAuthErrorMessage(botCheck.error, t, 'common:errors.auth.antiBot'));
                 return;
             }
@@ -55,10 +56,12 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
         setIsLoading(true);
         try {
             if (authService.requestPasswordReset) {
-                await authService.requestPasswordReset(email.trim());
+                const payload = antiBotRef.current?.getPayload();
+                await authService.requestPasswordReset(email.trim(), undefined, { captchaToken: payload?.captchaToken });
             }
             setRequestSuccess(true);
         } catch {
+            antiBotRef.current?.reset();
             // Anti-enumeration: display success even on silent failure
             setRequestSuccess(true);
         } finally {
@@ -90,8 +93,9 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
 
         // AntiBot validation
         if (antiBotRef.current) {
-            const botCheck = await antiBotRef.current.validate();
+            const botCheck = await antiBotRef.current.validate({ skipTurnstile: true });
             if (!botCheck.success) {
+                antiBotRef.current.reset();
                 setError(mapAuthErrorMessage(botCheck.error, t, 'common:errors.auth.antiBot'));
                 return;
             }
@@ -106,6 +110,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
             // Mandatory Rotation: open dialog with the newly generated recovery key
             setNewRotatedRecoveryKey(res.newRecoveryKey);
         } catch (err: unknown) {
+            antiBotRef.current?.reset();
             setError(mapAuthErrorMessage(err, t, 'auth:recovery.failed'));
         } finally {
             setIsLoading(false);
@@ -121,8 +126,6 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-background">
             <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-card border border-subtle shadow-2xl space-y-6">
-                <AntiBotShield ref={antiBotRef} />
-
                 {/* Header */}
                 <div className="text-center space-y-2">
                     <div className="w-14 h-14 mx-auto rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
@@ -171,6 +174,8 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                                 />
                             </div>
                         </div>
+
+                        <AntiBotShield ref={antiBotRef} />
 
                         <Button
                             type="submit"
@@ -302,6 +307,8 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                                 />
                             </div>
                         </div>
+
+                        <AntiBotShield ref={antiBotRef} skipTurnstile={true} />
 
                         <Button
                             type="submit"

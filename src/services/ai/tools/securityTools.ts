@@ -26,6 +26,7 @@ import { userRepository } from '../../repositories';
 import { authService } from '../../security/authService';
 import { getAuthCapabilities } from '../../security/authCapabilities';
 import { getDeploymentMode } from '../../../config/deployment';
+import { isTurnstileEnabled } from '../../security/antiBotService';
 import { getSessionAssurance } from '../../supabase/supabaseClient';
 import { getLocalVaultProvider } from '../../storage/storageFactory';
 
@@ -57,6 +58,10 @@ export const getSecurityStatusTool: AIToolDefinition<
     hasRecoverySlot?: boolean;
     accountSetupComplete: boolean;
     aal: string;
+    antiBotStatus: {
+      turnstileEnabled: boolean;
+      powEnabled: boolean;
+    };
     recentAuditEvents?: AuditLogEntry[];
   }
 > = {
@@ -131,6 +136,10 @@ export const getSecurityStatusTool: AIToolDefinition<
       hasRecoverySlot: Boolean(header?.wrappedKeys?.recovery || header?.recoverySlot),
       accountSetupComplete,
       aal,
+      antiBotStatus: {
+        turnstileEnabled: isTurnstileEnabled(),
+        powEnabled: true,
+      },
       recentAuditEvents,
     };
   },

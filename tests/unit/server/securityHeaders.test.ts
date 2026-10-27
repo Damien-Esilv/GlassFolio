@@ -29,15 +29,23 @@ describe('Content-Security-Policy (E31 — TGLA-127)', () => {
   describe.each(profiles)('%s profile', (profile) => {
     const csp = buildContentSecurityPolicy(profile);
 
-    it('only lets scripts come from the app itself', () => {
-      expect(directive(csp, 'script-src')).toEqual(["'self'"]);
+    it('restricts script execution to authorized origins and forbids unsafe-eval', () => {
+      if (profile === 'local') {
+        expect(directive(csp, 'script-src')).toEqual(["'self'"]);
+      } else {
+        expect(directive(csp, 'script-src')).toEqual(["'self'", 'https://challenges.cloudflare.com']);
+      }
       expect(csp).not.toMatch(/unsafe-eval/);
       expect(directive(csp, 'default-src')).toEqual(["'self'"]);
     });
 
     it('forbids plugins, framing, base-tag and form hijacking', () => {
       expect(directive(csp, 'object-src')).toEqual(["'none'"]);
-      expect(directive(csp, 'frame-src')).toEqual(["'none'"]);
+      if (profile === 'local') {
+        expect(directive(csp, 'frame-src')).toEqual(["'none'"]);
+      } else {
+        expect(directive(csp, 'frame-src')).toEqual(['https://challenges.cloudflare.com']);
+      }
       expect(directive(csp, 'frame-ancestors')).toEqual(["'none'"]);
       expect(directive(csp, 'base-uri')).toEqual(["'self'"]);
       expect(directive(csp, 'form-action')).toEqual(["'self'"]);
@@ -66,11 +74,12 @@ describe('Content-Security-Policy (E31 — TGLA-127)', () => {
     expect(directive(csp, 'connect-src')).toContain('https://ollama.example.com');
   });
 
-  it('gives only the cloud profile Supabase, direct Yahoo quotes and Google avatars', () => {
+  it('gives only the cloud profile Supabase, direct Yahoo quotes, Turnstile and Google avatars', () => {
     const local = buildContentSecurityPolicy('local');
     const cloud = buildContentSecurityPolicy('cloud');
-    expect(directive(cloud, 'connect-src')).toEqual(expect.arrayContaining(['https://*.supabase.co', 'https://query1.finance.yahoo.com']));
+    expect(directive(cloud, 'connect-src')).toEqual(expect.arrayContaining(['https://*.supabase.co', 'https://query1.finance.yahoo.com', 'https://challenges.cloudflare.com']));
     expect(directive(local, 'connect-src')).not.toContain('https://*.supabase.co');
+    expect(directive(local, 'connect-src')).not.toContain('https://challenges.cloudflare.com');
     expect(directive(cloud, 'img-src')).toContain('https://*.googleusercontent.com');
     expect(directive(local, 'img-src')).not.toContain('https://*.googleusercontent.com');
   });

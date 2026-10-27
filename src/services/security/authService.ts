@@ -504,14 +504,14 @@ export class LocalAuthProvider implements IAuthProvider {
         return { newRecoveryKey: res.value.newRecoveryKey };
     }
 
-    public async requestPasswordReset(email: string): Promise<void> {
+    public async requestPasswordReset(email: string, _redirectTo?: string, _options?: { captchaToken?: string }): Promise<void> {
         await delay(200);
         // Generic response to prevent account enumeration
         await auditLogService.record('password_reset_requested', `Password reset requested for ${email}`);
     }
 
     // Local mode has no email channel: verification calls fail instead of pretending to succeed.
-    public async resendEmailVerification(_email?: string): Promise<void> {
+    public async resendEmailVerification(_email?: string, _options?: { captchaToken?: string }): Promise<void> {
         throw new Error(LOCAL_EMAIL_UNAVAILABLE);
     }
 
@@ -1314,10 +1314,14 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await auditLogService.record('password_changed', 'Account password changed and vault key re-wrapped');
     }
 
-    public override async requestPasswordReset(email: string, redirectTo?: string): Promise<void> {
+    public override async requestPasswordReset(email: string, redirectTo?: string, options?: { captchaToken?: string }): Promise<void> {
         await delay(200);
         try {
-            await supabaseClient.resetPasswordForEmail(email.trim().toLowerCase(), redirectTo);
+            if (options?.captchaToken) {
+                await supabaseClient.resetPasswordForEmail(email.trim().toLowerCase(), redirectTo, options.captchaToken);
+            } else {
+                await supabaseClient.resetPasswordForEmail(email.trim().toLowerCase(), redirectTo);
+            }
         } catch {
             // Anti-enumeration: do not leak whether user exists
         }
@@ -1355,12 +1359,16 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         return { newRecoveryKey: res.value.newRecoveryKey };
     }
 
-    public override async resendEmailVerification(email?: string): Promise<void> {
+    public override async resendEmailVerification(email?: string, options?: { captchaToken?: string }): Promise<void> {
         const targetEmail = email || this.signupDraft?.email || this.supabaseSession?.user.email;
         if (!targetEmail) {
             throw new Error('Email address required to resend verification.');
         }
-        await supabaseClient.resendVerificationEmail(targetEmail);
+        if (options?.captchaToken) {
+            await supabaseClient.resendVerificationEmail(targetEmail, options.captchaToken);
+        } else {
+            await supabaseClient.resendVerificationEmail(targetEmail);
+        }
     }
 
     public override async verifyEmailOtp(email: string, token: string): Promise<AuthResult> {
