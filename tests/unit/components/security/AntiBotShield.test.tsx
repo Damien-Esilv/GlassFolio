@@ -20,10 +20,10 @@ describe('AntiBotShield Component (Epic E22)', () => {
         const ref = createRef<AntiBotShieldHandle>();
         render(<AntiBotShield ref={ref} />);
 
-        const honeypot = screen.getByLabelText(/System Telemetry/i);
-        expect(honeypot).toBeInTheDocument();
-        expect(honeypot).toHaveAttribute('tabIndex', '-1');
-        expect(honeypot).toHaveValue('');
+        const honeypot = screen.getByLabelText(/System Telemetry/i) as HTMLInputElement;
+        expect(honeypot).toBeTruthy();
+        expect(honeypot.getAttribute('tabIndex')).toBe('-1');
+        expect(honeypot.value).toBe('');
     });
 
     it('exposes imperative handle methods getPayload, validate, and reset', () => {
@@ -66,7 +66,7 @@ describe('AntiBotShield Component (Epic E22)', () => {
 
         // Turnstile container is rendered with top margin
         const turnstileDiv = container.querySelector('.min-h-\\[65px\\]');
-        expect(turnstileDiv).toBeInTheDocument();
+        expect(turnstileDiv).toBeTruthy();
         expect(turnstileDiv?.className).toContain('mt-6');
 
         expect(mockTurnstileRender).toHaveBeenCalled();
@@ -87,6 +87,6 @@ describe('AntiBotShield Component (Epic E22)', () => {
         const { container } = render(<AntiBotShield ref={ref} skipTurnstile={true} />);
 
         const turnstileDiv = container.querySelector('.min-h-\\[65px\\]');
-        expect(turnstileDiv).not.toBeInTheDocument();
+        expect(turnstileDiv).toBeNull();
     });
 });
