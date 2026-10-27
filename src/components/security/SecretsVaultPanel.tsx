@@ -175,7 +175,7 @@ export const SecretsVaultPanel: React.FC = () => {
                                     <option value="alphavantage">AlphaVantage</option>
                                     <option value="etherscan">Etherscan</option>
                                     <option value="coingecko">CoinGecko Pro</option>
-                                    <option value="custom">Custom Provider</option>
+                                    <option value="custom">{t('security:secrets.customProvider')}</option>
                                 </select>
                             </div>
 

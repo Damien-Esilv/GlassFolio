@@ -3,15 +3,21 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
 import { buildAppDestinationUrl, getAppUrl } from './config/deployment';
+import { getInitialPublicPreferences } from './hooks/usePublicThemeLang';
 import './i18n';
 
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { ScrollToTop } from './components/ui/ScrollToTop';
 import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
+import { PullToRefresh } from './components/ui/PullToRefresh';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
+const SelfHost = React.lazy(() => import('./pages/SelfHost'));
+const About = React.lazy(() => import('./pages/About'));
+const Roadmap = React.lazy(() => import('./pages/Roadmap'));
+const Changelog = React.lazy(() => import('./pages/Changelog'));
 
 const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
@@ -34,7 +40,8 @@ const AppRedirectHandler: React.FC = () => {
       return;
     }
 
-    const destination = buildAppDestinationUrl(targetPath);
+    const { theme, language } = getInitialPublicPreferences();
+    const destination = buildAppDestinationUrl(targetPath, { theme, lang: language });
     if (typeof window !== 'undefined' && destination && destination !== window.location.href) {
       window.location.assign(destination);
     }
@@ -49,10 +56,19 @@ export const ShowcaseApp: React.FC = () => {
       <Router>
         <ScrollToTop />
         <LegacyHashRedirect />
-        <React.Suspense fallback={<LoadingScreen />}>
-          <Routes>
+        <PullToRefresh>
+          <React.Suspense fallback={<LoadingScreen />}>
+            <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/welcome" element={<Landing />} />
+            <Route path="/self-host" element={<SelfHost />} />
+            <Route path="/welcome/self-host" element={<SelfHost />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/welcome/about" element={<About />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            <Route path="/welcome/roadmap" element={<Roadmap />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/welcome/changelog" element={<Changelog />} />
             <Route path="/legal" element={<LegalCenter />} />
             <Route path="/privacy" element={<LegalCenter />} />
             <Route path="/terms" element={<LegalCenter />} />
@@ -74,6 +90,7 @@ export const ShowcaseApp: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </React.Suspense>
+        </PullToRefresh>
         <ConsentBanner />
         <ConsentGatedAnalytics />
       </Router>

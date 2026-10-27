@@ -148,7 +148,56 @@
             "templateNamePlaceholder": "Nom du template...",
             "notMappedOption": "— Non associé —",
             "preview": "Aperçu (Premières {{rows}} lignes × {{columns}} colonnes)",
-            "identifierRequiredWarning": "Veuillez associer le Code ISIN ou le Symbole de l'actif (au moins l'un des deux) pour continuer."
+            "identifierRequiredWarning": "Veuillez associer le Code ISIN ou le Symbole de l'actif (au moins l'un des deux) pour continuer.",
+            "match": {
+                "title": "Associez vos colonnes",
+                "intro": "Indiquez ce que contient chaque colonne de votre fichier. La plupart sont reconnues automatiquement ; vérifiez celles signalées ci-dessous.",
+                "fileStats": "Colonnes : {{columns}} · Lignes : {{rows}}",
+                "summaryLabel": "Résumé de l'association des colonnes",
+                "summary": {
+                    "matched": "Reconnues",
+                    "attention": "À vérifier",
+                    "ignored": "Non utilisées"
+                },
+                "acceptAll": "Accepter toutes les suggestions ({{count}})",
+                "filter": {
+                    "label": "Colonnes à afficher",
+                    "all": "Toutes les colonnes",
+                    "attention": "À vérifier ({{count}})"
+                },
+                "table": {
+                    "column": "Colonne de votre fichier",
+                    "samples": "Exemples de valeurs",
+                    "field": "Utiliser comme"
+                },
+                "selectLabel": "Utiliser la colonne « {{column}} » comme",
+                "ignoreOption": "Ne pas utiliser cette colonne",
+                "status": {
+                    "matched": "Reconnue",
+                    "attention": "À vérifier",
+                    "ignored": "Non utilisée"
+                },
+                "suggestion": "Suggestion : {{field}}",
+                "useSuggestion": "Utiliser",
+                "useSuggestionFor": "Utiliser la suggestion {{field}} pour la colonne « {{column}} »",
+                "couldBe": "Pourrait être : {{fields}}",
+                "alsoUsedAs": "Sert aussi de : {{field}}",
+                "allSorted": "Toutes les colonnes sont traitées. Vérifiez l'aperçu ci-dessous, puis continuez.",
+                "requiredLegend": "* champ obligatoire",
+                "required": {
+                    "title": "Informations obligatoires",
+                    "amount": "Montant, ou quantité et prix unitaire",
+                    "identifier": "Symbole de l'actif ou code ISIN",
+                    "found": "Trouvé dans « {{column}} »",
+                    "foundDerived": "Calculé à partir de la quantité et du prix unitaire",
+                    "missing": "Pas encore associé"
+                },
+                "pagination": {
+                    "range": "Colonnes {{from}}–{{to}} sur {{total}}",
+                    "previous": "Précédent",
+                    "next": "Suivant"
+                }
+            }
         },
         "fields": {
             "transactionDate": "Date de transaction",
@@ -164,7 +213,9 @@
             "taxAmount": "Taxes",
             "valueDate": "Date de valeur",
             "balanceAfter": "Solde après",
-            "externalId": "ID externe (pour dédoublonnage)"
+            "externalId": "ID externe (pour dédoublonnage)",
+            "assetName": "Nom de l'actif",
+            "currency": "Devise"
         },
         "staging": {
             "stats": {
@@ -198,7 +249,12 @@
             "doneEditing": "Terminer l'édition",
             "importing": "Importé",
             "skipping": "Ignoré",
-            "removeRow": "Supprimer la ligne"
+            "removeRow": "Supprimer la ligne",
+            "pagination": {
+                "range": "Lignes {{from}}–{{to}} sur {{total}}",
+                "previous": "Précédent",
+                "next": "Suivant"
+            }
         },
         "common": {
             "emptyValue": "—"
@@ -242,7 +298,16 @@
             "label": "Méthode de calcul du prix de revient",
             "wac": "Coût moyen pondéré (PRU)",
             "fifo": "FIFO — premier entré, premier sorti",
-            "hint": "Utilisée pour le PRU et les plus-values réalisées de ce compte. La changer recalcule toutes les positions."
+            "hint": "Utilisée pour le PRU et les plus-values réalisées de ce compte. La changer recalcule toutes les positions.",
+            "wacHint": "Tous vos achats sont moyennés en un seul prix (PRU). Chaque vente est valorisée à cette moyenne.",
+            "fifoHint": "Les titres les plus anciens sont vendus en premier : chaque vente utilise leur prix d'achat.",
+            "taxNote": "Votre déclaration fiscale utilise toujours le prix moyen pondéré (PMP), quelle que soit la méthode choisie ici."
+        },
+        "mappedPreview": {
+            "title": "Comment vos premières lignes seront enregistrées",
+            "hint": "C'est exactement ce que l'import conservera. Si une date, un montant ou un actif semble faux, changez sa colonne ci-dessus.",
+            "row": "Ligne {{index}}",
+            "incomplete": "Associez la date, le montant et l'actif pour voir comment vos lignes seront enregistrées."
         }
     },
     "cashWizard": {

@@ -24,6 +24,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { LEGAL_TEXT_VARS, SUBPROCESSOR_IDS } from '../config/legal';
 import { getAppUrl, buildAppDestinationUrl, getAppTarget } from '../config/deployment';
+import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 
 type LegalTab = 'legal' | 'privacy' | 'terms' | 'cookies' | 'accessibility';
 
@@ -133,6 +134,7 @@ const LegalDocument: React.FC<{ docKey: LegalDocKey }> = ({ docKey }) => {
 
 const LegalCenter: React.FC = () => {
   const { t } = useTranslation();
+  const { theme, language } = usePublicThemeLang();
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -140,6 +142,7 @@ const LegalCenter: React.FC = () => {
   const isShowcaseTarget = getAppTarget() === 'showcase';
   const isWelcomeBase = location.pathname.startsWith('/welcome');
   const homeTarget = isWelcomeBase ? '/welcome' : (isShowcaseTarget ? '/' : '/welcome');
+  const appTransition = { theme, lang: language };
 
   const [activeTab, setActiveTab] = useState<LegalTab>(() => resolveActiveTab(location.pathname));
   const [consentState, setConsentState] = useState<ConsentRecord | null>(() => getConsent());
@@ -174,7 +177,7 @@ const LegalCenter: React.FC = () => {
           {user ? (
             isExternalApp ? (
               <a
-                href={buildAppDestinationUrl('/')}
+                href={buildAppDestinationUrl('/', appTransition)}
                 className="inline-flex items-center gap-2 text-xs font-semibold text-secondary hover:text-primary transition-colors"
               >
                 <ArrowLeft size={14} />

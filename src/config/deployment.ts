@@ -153,17 +153,24 @@ export const buildAppDestinationUrl = (
  * Builds the URL to return to the showcase from the financial app.
  */
 export const buildShowcaseDestinationUrl = (
-  path: '/' | '/legal' | '/privacy' | '/terms' | '/cookies' | '/accessibility' = '/'
+  path: '/' | '/legal' | '/privacy' | '/terms' | '/cookies' | '/accessibility' = '/',
+  options: AppTransitionOptions = {}
 ): string => {
   const showcaseBase = getShowcaseUrl();
+  const queryParams = new URLSearchParams();
+  if (options.theme) queryParams.set('theme', options.theme);
+  if (options.lang) queryParams.set('lang', options.lang);
+  const queryString = queryParams.toString();
+  const queryPart = queryString ? `?${queryString}` : '';
+
   if (showcaseBase) {
     const normalizedPath = path === '/' ? '/' : path;
-    return `${showcaseBase}${normalizedPath}`;
+    return `${showcaseBase}${normalizedPath}${queryPart}`;
   }
 
   // In single-origin unified mode, root showcase is on /welcome
   if (path === '/') {
-    return '/welcome';
+    return `/welcome${queryPart}`;
   }
-  return path;
+  return `${path}${queryPart}`;
 };

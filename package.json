@@ -46,6 +46,7 @@
     "docker:logs": "docker compose --env-file docker/docker.env logs -f glassfolio",
     "docker:smoke": "node scripts/smoke-docker.mjs",
     "mcp": "node mcp-server/index.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "ollama:proxy": "node scripts/ollama-proxy.mjs",
     "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434"
   },
@@ -55,6 +56,7 @@
     "@vercel/analytics": "^2.0.1",
     "i18next": "^25.8.4",
     "lucide-react": "^0.554.0",
+    "motion": "14.1.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

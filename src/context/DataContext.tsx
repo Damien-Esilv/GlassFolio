@@ -11,6 +11,7 @@ import { gamificationService } from '../services/gamificationService';
 import { getLastPriceFetchTime, clearPriceCache } from '../services/priceService';
 import { db } from '../services/db';
 import CelebrationModal, { CelebrationData } from '../components/CelebrationModal';
+import { isDemoAccount } from '../services/security/demoAccount';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -161,7 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
         updateProfile({ xp: newXp, level: newLevel });
 
-        const isDemo = currentUser.email?.toLowerCase() === 'demo@glassfolio.com' || currentUser.id === 'demo-123';
+        const isDemo = isDemoAccount(currentUser);
 
         // Do not trigger celebration popup in demo mode upon login/data refresh
         if (!isDemo) {

@@ -1,0 +1,23 @@
+{
+  "title": "Nouveautés",
+  "intro": "Ce qui a changé dans GlassFolio, version après version.",
+  "versionLabel": "Version {{version}}",
+  "kind": {
+    "new": "Nouveau",
+    "improved": "Amélioré"
+  },
+  "roadmapLink": "Voir ce qui arrive",
+  "entries": {
+    "v1-0": {
+      "title": "Lancement officiel de GlassFolio V1",
+      "highlights": {
+        "vault": "Coffre-fort chiffré de bout en bout (AES-256-GCM) avec déverrouillage biométrique par passkey.",
+        "multiAssets": "Agrégation patrimoniale multi-actifs complète : PEA, CTO, Crypto, Assurance-Vie et livrets.",
+        "importEngine": "Moteur d'importation universel avec détection automatique de formats et réconciliation de relevés.",
+        "taxAssistant": "Assistant fiscal français : simulation Cerfa 2042 / 3916-bis, arbitrage PFU vs barème et optimisation.",
+        "aiAssistant": "Assistant IA intégré respectueux de la vie privée (Ollama local, BYOK) et serveur MCP pour Claude Desktop & Cursor.",
+        "selfHostAndCloud": "Édition en ligne sécurisée et conteneur Docker auto-hébergé sur votre propre machine."
+      }
+    }
+  }
+}

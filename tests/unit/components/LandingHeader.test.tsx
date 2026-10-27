@@ -2,9 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { LandingHeader } from '../../../src/components/landing/LandingHeader';
+import { LandingHeader, LANDING_SECTION_ANCHORS } from '../../../src/components/landing/LandingHeader';
 import * as deploymentModule from '../../../src/config/deployment';
 import '../../../src/i18n';
+import { GITHUB_REPO_URL } from '../../../src/config/project';
 
 // Mock contexts
 const mockLogin = vi.fn().mockResolvedValue(undefined);
@@ -61,7 +62,7 @@ describe('<LandingHeader />', () => {
 
     // Create target section element in DOM
     const targetElement = document.createElement('div');
-    targetElement.id = 'tax-simulator';
+    targetElement.id = 'security';
     targetElement.scrollIntoView = vi.fn();
     document.body.appendChild(targetElement);
 
@@ -71,8 +72,8 @@ describe('<LandingHeader />', () => {
       </MemoryRouter>
     );
 
-    const taxLink = screen.getByText(/Tax Simulator|Simulateur Fiscal/i);
-    fireEvent.click(taxLink);
+    const securityLink = screen.getAllByRole('link', { name: 'Security' })[0];
+    fireEvent.click(securityLink);
 
     expect(targetElement.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
 
@@ -83,7 +84,7 @@ describe('<LandingHeader />', () => {
   it('displays "Go to Dashboard" linking to / when user is authenticated in same-app mode', () => {
     vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('unified');
     vi.spyOn(deploymentModule, 'getAppUrl').mockReturnValue('');
-    mockUser = { id: 'demo-user', email: 'demo@glassfolio.com' };
+    mockUser = { id: 'u-42', email: 'investor@example.com' };
 
     render(
       <MemoryRouter initialEntries={['/welcome']}>
@@ -91,7 +92,7 @@ describe('<LandingHeader />', () => {
       </MemoryRouter>
     );
 
-    const dashboardLink = screen.getByText(/Dashboard|Tableau de bord/i);
+    const dashboardLink = screen.getByText(/Go to Dashboard|Tableau de bord/i);
     expect(dashboardLink).toBeTruthy();
     expect(dashboardLink.closest('a')?.getAttribute('href')).toBe('/');
   });
@@ -99,7 +100,7 @@ describe('<LandingHeader />', () => {
   it('displays "Go to Dashboard" with external URL when app is hosted on subdomain', () => {
     vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('showcase');
     vi.stubEnv('VITE_APP_URL', 'https://app.glassfolio.dev');
-    mockUser = { id: 'demo-user', email: 'demo@glassfolio.com' };
+    mockUser = { id: 'u-42', email: 'investor@example.com' };
 
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -107,8 +108,62 @@ describe('<LandingHeader />', () => {
       </MemoryRouter>
     );
 
-    const dashboardLink = screen.getByText(/Dashboard|Tableau de bord/i);
+    const dashboardLink = screen.getByText(/Go to Dashboard|Tableau de bord/i);
     expect(dashboardLink).toBeTruthy();
-    expect(dashboardLink.closest('a')?.getAttribute('href')).toBe('https://app.glassfolio.dev/');
+    const href = dashboardLink.closest('a')?.getAttribute('href');
+    expect(href).toContain('https://app.glassfolio.dev/');
+    expect(href).toMatch(/\?theme=(night|dark|light)&lang=(en|fr)/);
+  });
+});
+
+describe('<LandingHeader /> self-hosting entry points', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mockUser = null;
+  });
+
+  it('does not render the redundant GitHub icon link in header', () => {
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <LandingHeader />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('link', { name: /View the source code on GitHub/i })).toBeNull();
+  });
+
+  it('scrolls to the #local-cloud section from the nav', () => {
+    const section = document.createElement('section');
+    section.id = 'local-cloud';
+    section.scrollIntoView = vi.fn();
+    document.body.appendChild(section);
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <LandingHeader />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getAllByRole('link', { name: 'Local or cloud' })[0]);
+    expect(section.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+    section.remove();
+  });
+
+  it('lists the scroll anchors in page order', () => {
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <LandingHeader />
+      </MemoryRouter>
+    );
+    const nav = screen.getAllByRole('navigation', { name: 'Page sections' })[0];
+    const hrefs = Array.from(nav.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(LANDING_SECTION_ANCHORS.map((id) => `#${id}`));
+  });
+
+  it('links the Install button to the guide page, not to an anchor', () => {
+    vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('showcase');
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <LandingHeader />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByRole('link', { name: 'Install' })[0].getAttribute('href')).toBe('/self-host');
   });
 });

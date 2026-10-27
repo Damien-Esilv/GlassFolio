@@ -8,14 +8,16 @@ import { authService } from '../services/security/authService';
 import { isPasskeySupported, passkeyService } from '../services/security/passkeyService';
 import { getDeploymentMode, isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl } from '../config/deployment';
 import { useDemoAccess } from '../hooks/useDemoAccess';
+import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { isDemoAccount } from '../services/security/demoAccount';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
-   const { login, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
+   const { login, logout, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -36,11 +38,18 @@ const Login: React.FC = () => {
       isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
    }, []);
 
+   const logoutRef = useRef(logout);
+   logoutRef.current = logout;
+
    useEffect(() => {
-      if (user) {
-         navigate(from, { replace: true });
+      if (!user) return;
+      // A demo session left over from the showcase must not block signing in to a real account.
+      if (isDemoAccount(user)) {
+         if (!isLaunchingDemo) logoutRef.current();
+         return;
       }
-   }, [user, navigate, from]);
+      navigate(from, { replace: true });
+   }, [user, navigate, from, isLaunchingDemo]);
 
    // Verified account whose vault was never finalized: finish the sign-up (no secret in router state).
    useEffect(() => {
@@ -156,9 +165,10 @@ const Login: React.FC = () => {
       }
    };
 
+   const { theme, language } = usePublicThemeLang();
    const showcaseAvailable = isShowcaseAvailable();
    const isExternalShowcase = Boolean(getShowcaseUrl());
-   const showcaseDestination = buildShowcaseDestinationUrl('/');
+   const showcaseDestination = buildShowcaseDestinationUrl('/', { theme, lang: language });
 
    return (
       <div className="min-h-screen flex items-center justify-center bg-canvas p-4 relative">
@@ -252,14 +262,28 @@ const Login: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
                {isLocal ? (
                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.masterPasswordLabel')}</label>
+                        {/* Hidden username to anchor password autofill in local mode */}
+                        <input
+                           type="text"
+                           name="username"
+                           id="local-username"
+                           autoComplete="username"
+                           defaultValue="local-user"
+                           className="sr-only"
+                           tabIndex={-1}
+                           aria-hidden="true"
+                        />
+                        <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.masterPasswordLabel')}</label>
                         <div className="relative">
                            <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                            <input
+                              id="login-password"
+                              name="password"
                               type="password"
                               required
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
+                              autoComplete="current-password"
                               className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                               placeholder={t('auth:login.masterPasswordPlaceholder')}
                            />
@@ -268,28 +292,35 @@ const Login: React.FC = () => {
                ) : (
                   <>
                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.emailLabel')}</label>
+                        <label htmlFor="login-email" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.emailLabel')}</label>
                         <div className="relative">
                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                            <input
+                              id="login-email"
+                              name="email"
                               type="email"
                               required
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
+                              autoComplete="username webauthn"
+                              spellCheck={false}
                               className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                               placeholder={t('auth:login.emailPlaceholder')}
                            />
                         </div>
                      </div>
                      <div>
-                        <label className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.passwordLabel')}</label>
+                        <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.passwordLabel')}</label>
                         <div className="relative">
                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                            <input
+                              id="login-password"
+                              name="password"
                               type="password"
                               required
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
+                              autoComplete="current-password"
                               className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
                               placeholder={t('auth:login.passwordPlaceholder')}
                            />

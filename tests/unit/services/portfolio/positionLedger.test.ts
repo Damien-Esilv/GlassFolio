@@ -7,8 +7,10 @@ import { describe, it, expect } from 'vitest';
 import {
   applyTransaction,
   buildLedger,
+  buildRealizedEvents,
   emptyLedgerState,
   quantityDelta,
+  resolveFee,
   resolveQuantity,
   LedgerState,
 } from '../../../../src/services/portfolio/positionLedger';
@@ -173,5 +175,115 @@ describe('buildLedger', () => {
     const ledger = buildLedger([sell, buy, other]);
     expect(ledger.get('acc-1:inst-1')?.state.quantity).toBe(5);
     expect(ledger.get('acc-2:inst-1')?.state.quantity).toBe(1);
+  });
+});
+
+describe('WAC and FIFO on the same lots', () => {
+  const lots = () => [
+    tx({ type: 'BUY', quantity: '10', priceUnit: '100', amountPrimary: '1000', transactionDate: '2024-01-01T00:00:00.000Z' }),
+    tx({ type: 'BUY', quantity: '10', priceUnit: '200', amountPrimary: '2000', transactionDate: '2024-02-01T00:00:00.000Z' }),
+    tx({ type: 'SELL', quantity: '10', priceUnit: '250', amountPrimary: '2500', transactionDate: '2024-03-01T00:00:00.000Z' }),
+  ];
+
+  it('keeps the same quantity but a different PRU and realized gain', () => {
+    const wac = replay(lots(), 'WAC');
+    const fifo = replay(lots(), 'FIFO');
+
+    expect(wac.quantity).toBe(10);
+    expect(fifo.quantity).toBe(10);
+    expect(wac.costBasis / wac.quantity).toBeCloseTo(150);
+    expect(fifo.costBasis / fifo.quantity).toBeCloseTo(200);
+    expect(wac.realizedPL).toBeCloseTo(1000);
+    expect(fifo.realizedPL).toBeCloseTo(1500);
+  });
+});
+
+describe('ledger hardening', () => {
+  it('never lets the cost basis go negative on a cost-only adjustment', () => {
+    const state = replay([
+      tx({ type: 'BUY', quantity: '1', priceUnit: '100', amountPrimary: '100' }),
+      tx({ type: 'SNAPSHOT_ADJUSTMENT', quantity: '0', amountPrimary: '150', metadata: { reconciliationType: 'none', costDelta: -150 } }),
+    ]);
+    expect(state.quantity).toBe(1);
+    expect(state.costBasis).toBe(0);
+    expect(state.lots.reduce((sum, lot) => sum + lot.quantity * lot.unitCost, 0)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('charges only the part of a sell fee that matches the quantity actually sold', () => {
+    const state = replay([
+      tx({ type: 'BUY', quantity: '5', priceUnit: '100', amountPrimary: '500' }),
+      tx({ type: 'SELL', quantity: '10', priceUnit: '250', amountPrimary: '2500', feeAmount: '10' }),
+    ]);
+    expect(state.quantity).toBe(0);
+    expect(state.realizedPL).toBeCloseTo(1250 - 500 - 5);
+  });
+});
+
+describe('resolveFee', () => {
+  const fee = (feeAmount: string, feeAsset?: string) =>
+    resolveFee({ feeAmount, feeAsset, assetSymbol: 'BTC' });
+
+  it('counts a fee with no asset, in a currency or in a stablecoin as a cash cost', () => {
+    expect(fee('2')).toBe(2);
+    expect(fee('2', 'EUR')).toBe(2);
+    expect(fee('0.5', 'USDT')).toBe(0.5);
+    expect(fee('-3', 'USDC')).toBe(3);
+  });
+
+  it('does not count a fee paid in the traded coin or in another crypto', () => {
+    expect(fee('0.001', 'BTC')).toBe(0);
+    expect(fee('0.002', 'BNB')).toBe(0);
+  });
+
+  it('keeps BNB fees out of the cost basis of a purchase', () => {
+    const state = replay([tx({ type: 'BUY', quantity: '1', priceUnit: '100', amountPrimary: '100', assetSymbol: 'BTC', feeAmount: '0.002', feeAsset: 'BNB' })]);
+    expect(state.costBasis).toBe(100);
+  });
+});
+
+describe('buildRealizedEvents', () => {
+  const journal = (): UnifiedTransaction[] => [
+    tx({ type: 'BUY', quantity: '10', priceUnit: '100', amountPrimary: '1000', transactionDate: '2024-01-01T00:00:00.000Z' }),
+    tx({ type: 'SELL', quantity: '4', priceUnit: '150', amountPrimary: '600', transactionDate: '2024-03-10T00:00:00.000Z' }),
+    tx({ type: 'SELL', quantity: '6', priceUnit: '90', amountPrimary: '540', transactionDate: '2024-05-02T00:00:00.000Z' }),
+    tx({ type: 'BUY', quantity: '1', priceUnit: '10', amountPrimary: '10', accountId: 'acc-2', transactionDate: '2024-02-01T00:00:00.000Z' }),
+  ];
+
+  it('returns one dated event per sell with the gain of that sale', () => {
+    const events = buildRealizedEvents(journal());
+
+    expect(events.map(e => [e.date.slice(0, 10), e.key, Math.round(e.realizedPL)])).toEqual([
+      ['2024-03-10', 'acc-1:inst-1', 200],
+      ['2024-05-02', 'acc-1:inst-1', -60],
+    ]);
+  });
+
+  it('adds up to the realized P&L of the ledger, for both methods', () => {
+    (['WAC', 'FIFO'] as const).forEach(method => {
+      const options = { methodFor: () => method };
+      const total = buildRealizedEvents(journal(), options).reduce((sum, e) => sum + e.realizedPL, 0);
+      const ledger = buildLedger(journal(), options).get('acc-1:inst-1');
+      expect(total).toBeCloseTo(ledger?.state.realizedPL ?? NaN);
+    });
+  });
+
+  it('exposes what a tax figure needs: quantity sold, proceeds, removed cost and fees', () => {
+    const [event] = buildRealizedEvents([
+      tx({ type: 'BUY', quantity: '10', priceUnit: '100', amountPrimary: '1000', feeAmount: '10', transactionDate: '2024-01-01T00:00:00.000Z' }),
+      tx({ type: 'SELL', quantity: '4', priceUnit: '150', amountPrimary: '600', feeAmount: '5', transactionDate: '2024-03-10T00:00:00.000Z' }),
+    ]);
+
+    expect(event.quantity).toBeCloseTo(4);
+    expect(event.proceeds).toBeCloseTo(600);
+    expect(event.costRemoved).toBeCloseTo(404); // 4 × 101
+    expect(event.fees).toBeCloseTo(5);
+    expect(event.realizedPL).toBeCloseTo(600 - 404 - 5);
+  });
+
+  it('puts purchases before sales when rows share the same timestamp', () => {
+    const sell = tx({ type: 'SELL', quantity: '10', priceUnit: '110', transactionDate: '2024-03-01', createdAt: '2024-03-01T00:00:00.000Z' });
+    const buy = tx({ type: 'BUY', quantity: '10', priceUnit: '100', transactionDate: '2024-03-01', createdAt: '2024-03-01T00:00:00.000Z' });
+
+    expect(buildLedger([sell, buy]).get('acc-1:inst-1')?.state.realizedPL).toBeCloseTo(100);
   });
 });

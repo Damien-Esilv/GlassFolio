@@ -1,5 +1,5 @@
 import { Position, Transaction, Alert, AlertRule, ReportCard, FinancialGoal, Achievement, AssetGroup } from '../types';
-import { daysAgoISO, monthsAgoISO, yearsAgoISO, toLegacyDateTime } from '../utils/demoDates';
+import { hoursAgoISO, daysAgoISO, monthsAgoISO, yearsAgoISO, toLegacyDateTime } from '../utils/demoDates';
 import { getRolling12MonthsLabels } from '../utils/date';
 
 export const positions: Position[] = [
@@ -506,6 +506,23 @@ export function buildDemoTransactions(now: Date = new Date()): Transaction[] {
       fees: 7.00,
       status: 'Completed',
       assetClass: 'Crypto'
+    },
+    {
+      id: 't-recent-today',
+      date: toLegacyDateTime(hoursAgoISO(2, now)),
+      type: 'Buy',
+      instrument: 'Amundi MSCI World UCITS ETF',
+      symbol: 'CW8',
+      amount: 1,
+      price: 460.00,
+      total: 460.00,
+      currency: 'EUR',
+      source: 'Boursobank',
+      fees: 0.00,
+      status: 'Completed',
+      assetClass: 'ETF',
+      bankName: 'Boursobank',
+      accountName: 'PEA'
     }
   ];
 }

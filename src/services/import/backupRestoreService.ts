@@ -15,13 +15,17 @@ export type BackupErrorCode =
     | 'missing_data'
     | 'prototype_pollution'
     | 'invalid_collection'
-    | 'checksum_mismatch';
+    | 'checksum_mismatch'
+    | 'unsupported_version';
+
+/** Highest backup format version (major) this build can restore. Exports write "1.0". */
+export const SUPPORTED_BACKUP_MAJOR = 1;
 
 export interface BackupValidationResult {
     valid: boolean;
     error?: BackupErrorCode;
     /** Interpolation values for the translated message (e.g. the offending collection). */
-    errorParams?: { collection?: string };
+    errorParams?: { collection?: string; version?: string };
     /** True only when a checksum was present AND matches the data (see `validateBackup`). */
     checksumVerified?: boolean;
     payload?: {
@@ -67,6 +71,16 @@ export function validateBackupContent(fileText: string): BackupValidationResult 
         }
         if (!json.data || typeof json.data !== 'object' || Array.isArray(json.data)) {
             return { valid: false, error: 'missing_data' };
+        }
+
+        // A backup from a newer format may carry collections this build would silently drop.
+        // An export with no version is an old one (1.x) and stays accepted.
+        if (json.version !== undefined) {
+            const version = String(json.version);
+            const major = /^\d+(\.\d+)*$/.test(version) ? parseInt(version, 10) : NaN;
+            if (!(major <= SUPPORTED_BACKUP_MAJOR)) {
+                return { valid: false, error: 'unsupported_version', errorParams: { version } };
+            }
         }
 
         // Validate each data collection is an array

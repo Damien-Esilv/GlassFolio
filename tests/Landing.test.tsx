@@ -1,11 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Landing from '../src/pages/Landing';
 import Login from '../src/pages/Login';
 import Signup from '../src/pages/Signup';
 import * as deploymentModule from '../src/config/deployment';
+import { LANDING_SECTION_ANCHORS } from '../src/components/landing/LandingHeader';
 import '../src/i18n';
 
 // Mock contexts
@@ -44,20 +45,106 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
   });
 
-  it('renders landing page with sticky header, hero, playgrounds, bento, and FAQ', () => {
-    render(
+  it('renders the sections in the same order as the header anchors', () => {
+    const { container } = render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
 
     expect(screen.getByRole('banner')).toBeTruthy();
-    expect(screen.getByText(/E2EE Wealth & French Tax Copilot/i)).toBeTruthy();
-    expect(screen.getByText(/French Tax & Official Cerfa Simulator/i)).toBeTruthy();
-    expect(screen.getByText(/ETF Fee-Drag/i)).toBeTruthy();
-    expect(screen.getByText(/Multi-Broker CSV Inspector/i)).toBeTruthy();
-    expect(screen.getByText(/Client-Side AES-256-GCM Vault/i)).toBeTruthy();
-    expect(screen.getByText(/Frequently Asked Questions/i)).toBeTruthy();
+    const sectionIds = Array.from(container.querySelectorAll('main section[id]')).map((node) => node.id);
+    expect(sectionIds).toEqual([...LANDING_SECTION_ANCHORS]);
+    expect(screen.getByRole('heading', { name: 'The app, screen by screen' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Security and privacy by design' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Choose where your AI runs' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Two ways to use GlassFolio' })).toBeTruthy();
+  });
+
+  it('offers the self-hosted and cloud versions side by side in the hero', () => {
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    const modes = screen.getByRole('list', { name: 'Two ways to use GlassFolio' });
+    expect(within(modes).getAllByRole('listitem').filter((item) => item.parentElement === modes)).toHaveLength(2);
+    expect(within(modes).getByRole('link', { name: /Install it locally/i })).toBeTruthy();
+    expect(within(modes).getByRole('link', { name: /Create a free account/i })).toBeTruthy();
+  });
+
+  it('never advertises unsupported real estate or uses "zero-knowledge" wording', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    expect(container.textContent).not.toMatch(/real estate|immobilier|zero[- ]knowledge/i);
+  });
+
+  it('keeps "Log in" and "Create account" in the header while a demo session is active', () => {
+    mockUser = { id: 'demo-123', email: 'demo@glassfolio.com', name: 'Demo', xp: 0, level: 1 };
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    const header = screen.getByRole('banner');
+    expect(within(header).getAllByRole('link', { name: 'Log in' }).length).toBeGreaterThan(0);
+    expect(within(header).getAllByRole('link', { name: 'Create account' }).length).toBeGreaterThan(0);
+    expect(within(header).queryByRole('link', { name: /Go to Dashboard/i })).toBeNull();
+  });
+
+  it('adds a dashboard link next to "Log in" for a real account', () => {
+    mockUser = { id: 'u-42', email: 'investor@example.com', name: 'Investor', xp: 0, level: 1 };
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    const header = screen.getByRole('banner');
+    expect(within(header).getAllByRole('link', { name: /Go to Dashboard/i }).length).toBeGreaterThan(0);
+    expect(within(header).getAllByRole('link', { name: 'Log in' }).length).toBeGreaterThan(0);
+  });
+
+  it('signs a leftover demo session out on /login instead of redirecting to the demo dashboard', () => {
+    mockUser = { id: 'demo-123', email: 'demo@glassfolio.com', name: 'Demo', xp: 0, level: 1 };
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<p>Dashboard page</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(mockLogout).toHaveBeenCalled();
+    expect(screen.queryByText('Dashboard page')).toBeNull();
+  });
+
+  it('still redirects a real account away from /login', () => {
+    mockUser = { id: 'u-42', email: 'investor@example.com', name: 'Investor', xp: 0, level: 1 };
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<p>Dashboard page</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(screen.getByText('Dashboard page')).toBeTruthy();
+  });
+
+  it('signs a leftover demo session out on /signup', () => {
+    mockUser = { id: 'demo-123', email: 'demo@glassfolio.com', name: 'Demo', xp: 0, level: 1 };
+    render(
+      <MemoryRouter initialEntries={['/signup']}>
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(mockLogout).toHaveBeenCalled();
   });
 
   it('triggers 1-click demo login and navigates to / when Try Live Demo is clicked', async () => {
@@ -77,120 +164,21 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     });
   });
 
-  it('interactively updates hero metrics when envelope filters and currencies are toggled', () => {
+  it('renders the prominent demo showcase card with feature highlights and centered CTA button', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
 
-    // Initial total net worth contains 148 450
-    expect(screen.getAllByText(/148/).length).toBeGreaterThan(0);
+    // Headline is displayed
+    expect(screen.getByRole('heading', { level: 3, name: /Explore the full GlassFolio experience live/i })).toBeTruthy();
 
-    // Click PEA filter
-    const peaBtns = screen.getAllByRole('button', { name: /PEA/i });
-    fireEvent.click(peaBtns[0]);
+    // Feature highlights are rendered
+    expect(screen.getByText(/anonymous/i)).toBeTruthy();
 
-    // PEA net worth is 68 200
-    expect(screen.getAllByText(/68/).length).toBeGreaterThan(0);
-
-    // Switch currency to USD
-    const usdBtn = screen.getByRole('button', { name: 'USD' });
-    fireEvent.click(usdBtn);
-
-    // USD currency symbol or converted value is displayed
-    expect(screen.getAllByText(/\$|USD/).length).toBeGreaterThan(0);
-  });
-
-  it('interactively recalculates tax optimization when TMI brackets and scenarios change', () => {
-    render(
-      <MemoryRouter initialEntries={['/welcome']}>
-        <Landing />
-      </MemoryRouter>
-    );
-
-    // Initial TMI is 11%, dividends scenario (3 500 €)
-    expect(screen.getByText(/PFU — Flat Tax/i)).toBeTruthy();
-    expect(screen.getByText(/Barème Progressif/i)).toBeTruthy();
-
-    // Toggle TMI to 41%
-    const tmi41Btn = screen.getByRole('button', { name: '41%' });
-    fireEvent.click(tmi41Btn);
-
-    // At 41% TMI on dividends, PFU is optimal
-    expect(screen.getByText(/Optimal: PFU/i)).toBeTruthy();
-
-    // Switch scenario to CTO capital gains
-    const ctoBtn = screen.getByRole('button', { name: /CTO Capital Gains/i });
-    fireEvent.click(ctoBtn);
-
-    // Check Cerfa boxes for CTO
-    expect(screen.getByText(/3VG/i)).toBeTruthy();
-  });
-
-  it('interactively updates ETF fee drag projections when horizon or profile is toggled', () => {
-    render(
-      <MemoryRouter initialEntries={['/welcome']}>
-        <Landing />
-      </MemoryRouter>
-    );
-
-    // Toggle horizon to 30 years
-    const y30Btn = screen.getByRole('button', { name: '30 Years' });
-    fireEvent.click(y30Btn);
-
-    // Compounded fee drag lost is updated
-    expect(screen.getByText(/Total Compounded Fees Lost/i)).toBeTruthy();
-
-    // Toggle fee profile to Traditional Bank Fund
-    const bankProfileBtn = screen.getByRole('button', { name: /Traditional Bank Fund/i });
-    fireEvent.click(bankProfileBtn);
-
-    expect(screen.getAllByText(/1.85% TER/i).length).toBeGreaterThan(0);
-  });
-
-  it('interactively switches CSV broker preset and tests 1-click rollback', () => {
-    render(
-      <MemoryRouter initialEntries={['/welcome']}>
-        <Landing />
-      </MemoryRouter>
-    );
-
-    // Switch broker preset to Trade Republic
-    const trBtn = screen.getByRole('button', { name: 'Trade Republic' });
-    fireEvent.click(trBtn);
-
-    expect(screen.getAllByText(/ISIN/i).length).toBeGreaterThan(0);
-
-    // Click 1-Click Rollback test button
-    const rollbackBtn = screen.getByRole('button', { name: /Test 1-Click Rollback/i });
-    fireEvent.click(rollbackBtn);
-
-    expect(screen.getByText(/Rolled back cleanly/i)).toBeTruthy();
-  });
-
-  it('interactively toggles encrypted vault lock state and AI provider preview', () => {
-    render(
-      <MemoryRouter initialEntries={['/welcome']}>
-        <Landing />
-      </MemoryRouter>
-    );
-
-    // Initially unlocked in RAM
-    expect(screen.getAllByText(/UNLOCKED/i).length).toBeGreaterThan(0);
-
-    // Toggle to locked in storage
-    const lockBtn = screen.getByRole('button', { name: /Locked in Storage/i });
-    fireEvent.click(lockBtn);
-
-    expect(screen.getAllByText(/LOCKED/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/ciphertext/i).length).toBeGreaterThan(0);
-
-    // Switch AI runtime to Claude Desktop
-    const claudeBtn = screen.getByRole('button', { name: /Claude Desktop/i });
-    fireEvent.click(claudeBtn);
-
-    expect(screen.getAllByText(/record_transaction/i).length).toBeGreaterThan(0);
+    // Centered demo CTA button is rendered
+    expect(screen.getByRole('button', { name: /Try the 1-Click Interactive Demo/i })).toBeTruthy();
   });
 
   it('toggles FAQ accordion questions and answers', () => {
@@ -204,10 +192,10 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(firstQuestion).toBeTruthy();
 
     // Click question 2
-    const secondQuestion = screen.getByText(/Does the French Tax Simulator replace/i);
+    const secondQuestion = screen.getByText(/Does the tax engine replace an official tax return/i);
     fireEvent.click(secondQuestion);
 
-    expect(screen.getByText(/does not constitute certified tax or AMF investment advice/i)).toBeTruthy();
+    expect(screen.getByText(/the engine is modular so other jurisdictions can be added/i)).toBeTruthy();
   });
 
   it('hides the demo button on /login in cloud mode and shows it in local mode', () => {
@@ -293,14 +281,14 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     fireEvent.click(lightOption);
   });
 
-  it('displays nominative trademark disclaimers in CSV playground and footer', () => {
+  it('displays nominative trademark disclaimers next to the broker list and in the footer', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
 
-    // Both CSV playground and footer contain nominative trademark mentions
+    // The import step of the product story and the footer both name the brokers
     const disclaimers = screen.getAllByText(/BoursoBank, Trade Republic, Binance, Kraken/i);
     expect(disclaimers.length).toBeGreaterThanOrEqual(2);
 

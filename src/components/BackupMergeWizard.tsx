@@ -290,7 +290,7 @@ export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, on
                                                             .map(header => (
                                                                 <th key={header} className="p-2.5 capitalize">{header}</th>
                                                             ))}
-                                                        <th className="p-2.5 text-right w-16">Actions</th>
+                                                        <th className="p-2.5 text-right w-16">{t('common:actions.title')}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border text-primary">

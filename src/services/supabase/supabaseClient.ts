@@ -650,14 +650,19 @@ export const supabaseClient = {
         await passkeyRequest<unknown>(`/passkeys/${encodeURIComponent(passkeyId)}`, { method: 'DELETE' }, accessToken);
     },
 
-    async notifySecurityEvent(accessToken: string, action: 'passkey_added' | 'passkey_removed', passkeyName: string): Promise<void> {
+    async notifySecurityEvent(
+        accessToken: string,
+        action: 'passkey_added' | 'passkey_removed',
+        passkeyName: string,
+        locale?: string
+    ): Promise<void> {
         const config = getSupabaseConfig();
         if (!config) return;
         try {
             await fetch(`${config.url}/functions/v1/security-notify`, {
                 method: 'POST',
                 headers: createHeaders(config, accessToken),
-                body: JSON.stringify({ action, passkeyName }),
+                body: JSON.stringify({ action, passkeyName, locale }),
             });
         } catch {
             // Best-effort notification, does not block security operations

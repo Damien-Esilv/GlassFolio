@@ -8,15 +8,15 @@
     "logIn": "Connexion",
     "signUp": "Créer un compte",
     "learnMore": "Explorer",
-    "InteractivePlayground": "Simulateur Interactif"
+    "InteractivePlayground": "Simulateur Interactif",
+    "copy": "Copier",
+    "copied": "Copié",
+    "demoShort": "Démo",
+    "createAccount": "Créer un compte"
   },
   "header": {
     "brandName": "GlassFolio",
     "navFeatures": "Fonctionnalités",
-    "navTax": "Simulateur Fiscal",
-    "navFees": "Impact des Frais",
-    "navCsv": "Import Courtiers",
-    "navSecurityAi": "Sécurité & IA",
     "navFaq": "FAQ",
     "themeCycleAria": "Changer de thème visuel (Clair, Sombre, Midnight)",
     "themeLight": "Clair",
@@ -27,14 +27,44 @@
     "langFr": "Français",
     "selectLanguage": "Langue de l'interface",
     "selectTheme": "Thème d'affichage",
-    "mobileMenuAria": "Basculer le menu de navigation"
+    "mobileMenuAria": "Basculer le menu de navigation",
+    "githubAria": "Voir le code source sur GitHub",
+    "navSecurity": "Sécurité",
+    "navAi": "IA",
+    "navMore": "Et aussi",
+    "navLocalCloud": "Local ou cloud",
+    "sectionsNavAria": "Sections de la page",
+    "pagesNavAria": "Pages",
+    "installButton": "Installer",
+    "pageAbout": "Le projet",
+    "pageRoadmap": "Feuille de route",
+    "pageChangelog": "Nouveautés"
   },
   "hero": {
-    "badge": "Copilote Patrimonial E2EE & Fiscalité Française",
+    "badge": "Suivi de patrimoine privé et chiffré",
     "title": "Pilotez votre patrimoine multi-actifs avec rigueur mathématique et confidentialité absolue.",
-    "subtitle": "Suivez vos PEA, CTO, Crypto, Assurance-Vie, Livrets et Immobilier dans un coffre local AES-256-GCM. Simulez vos cases Cerfa, analysez l'érosion des frais ETF et interrogez votre portefeuille via IA locale ou MCP.",
-    "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets • Immobilier",
+    "subtitle": "Suivez PEA, CTO, crypto, assurance-vie et livrets dans un coffre chiffré AES-256-GCM. Préparez votre déclaration, mesurez ce que vous coûtent les frais et interrogez votre portefeuille avec l'IA de votre choix.",
+    "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Synthèse Patrimoniale Multi-Enveloppes",
+    "demoCard": {
+      "badge": "Accès Instantané • Sans inscription",
+      "title": "Explorez l'expérience GlassFolio en direct",
+      "subtitle": "Testez l'application complète sans renseigner d'email ni créer de compte : PEA, CTO, Crypto, aide fiscale Cerfa et assistant IA avec un portefeuille préchargé.",
+      "cta": "Tester la démo interactive en 1 clic",
+      "ctaLoading": "Ouverture du coffre démo...",
+      "perks": {
+        "noAccount": "100% anonyme & sans compte",
+        "realAssets": "Portefeuille complet prérempli",
+        "aiAssistant": "Assistant IA & serveur MCP actifs",
+        "taxEngine": "Simulateur fiscal Cerfa débloqué"
+      },
+      "stats": {
+        "portfolioValue": "148 450 €",
+        "portfolioLabel": "Patrimoine de démo",
+        "unrealizedGain": "+18 420 € (+14,17%)",
+        "envelopes": "6 enveloppes actives"
+      }
+    },
     "envelopeFilterLabel": "Filtrer par Enveloppe",
     "currencySwitchLabel": "Devise de Référence",
     "envelopes": {
@@ -48,147 +78,310 @@
       "unrealizedPl": "Plus-Value Latente (P&L)",
       "pruTotal": "Capital Investi (PRU)",
       "allocationTitle": "Répartition Multi-Actifs du Portefeuille",
-      "otherEnvelopesNote": "Prend également en charge Assurance-Vie, Livret A / LDDS & Immobilier"
+      "otherEnvelopesNote": "Prend aussi en charge l'assurance-vie et les Livret A / LDDS"
     },
     "segments": {
       "equitiesEtf": "Actions & ETF Indiciels",
       "techGrowth": "Tech Mondiale & Actions US",
       "cryptoAssets": "Actifs Numériques (BTC / ETH)",
       "cashYield": "Liquidités, Livrets & Assurance-Vie"
+    },
+    "modes": {
+      "ariaLabel": "Deux façons d'utiliser GlassFolio",
+      "local": {
+        "title": "Chez vous",
+        "tagline": "Auto-hébergé avec Docker",
+        "points": {
+          "p1": "Vos données restent sur votre machine",
+          "p2": "Code open source, contrôle total"
+        },
+        "cta": "L'installer en local"
+      },
+      "cloud": {
+        "title": "En ligne",
+        "tagline": "Version cloud gérée",
+        "points": {
+          "p1": "Rien à installer, prêt en une minute",
+          "p2": "Accessible et synchronisé sur tous vos appareils"
+        },
+        "cta": "Créer un compte gratuit"
+      }
     }
   },
-  "tax": {
-    "sectionBadge": "Moteur Fiscal Français • Aide Fiscale",
-    "title": "Simulateur Fiscal & Cases Cerfa Officielles",
-    "subtitle": "Comparez en temps réel la Flat Tax (PFU 30 %) et le Barème Progressif (Case 2OP) et visualisez les cases Cerfa DGFiP exactes avant votre déclaration.",
-    "tmiLabel": "Sélectionnez votre Tranche Marginale d'Imposition (TMI)",
-    "scenarioLabel": "Sélectionnez un Scénario de Gains Financiers",
-    "scenarios": {
-      "dividends": "Dividendes d'Actions (3 500 €)",
-      "ctoGains": "Plus-Values CTO (8 000 €)",
-      "crypto": "Crypto Art. 150 VH bis (5 000 €)"
-    },
-    "pfuCardTitle": "PFU — Flat Tax (30 %)",
-    "pfuBreakdown": "12,8 % Impôt sur le Revenu + 17,2 % Prélèvements Sociaux",
-    "baremeCardTitle": "Barème Progressif (Case 2OP)",
-    "baremeBreakdownDividends": "Abattement de 40 % sur dividendes + 6,8 % CSG déductible",
-    "baremeBreakdownGains": "Tranche marginale + 17,2 % PS (dont 6,8 % CSG déductible)",
-    "baremeBreakdownCrypto": "Flat Tax 30 % ou option Barème (Formulaire 2086)",
-    "optimalBadge": "Régime Optimal",
-    "estimatedTax": "Impôt Estimé",
-    "netAfterTax": "Net Perçu après Impôt",
-    "optimalSummarySave": "Optimal : {{regime}} vous fait économiser {{savings}} € cette année.",
-    "optimalSummaryEqual": "Les deux régimes produisent une imposition équivalente ({{amount}} €).",
-    "cerfaTitle": "Cases Cerfa DGFiP Officielles Activées",
-    "cerfaForms": "Formulaires 2042 • 2042-C • 2074 • 2086",
-    "cerfa3916Badge": "Cerfa 3916 Prêt (Trade Republic, IBKR, Binance, Kraken)",
-    "boxes": {
-      "2DC": "2DC — Dividendes et distributions éligibles à l'abattement de 40 %",
-      "2OP": "2OP — Option globale pour l'imposition au barème progressif",
-      "3VG": "3VG — Plus-values nettes imposables de cession de valeurs mobilières",
-      "3AN": "3AN — Moins-values reportables sur 10 ans",
-      "3AN_crypto": "2086 / 3AN — Plus-value nette imposable sur actifs numériques (Art. 150 VH bis)"
-    },
-    "disclaimer": "Outil d'estimation à titre purement informatif — ne constitue pas un conseil financier AMF ni un avis fiscal DGFiP."
+  "stats": {
+    "ariaLabel": "GlassFolio en chiffres",
+    "aiTools": "outils IA utilisables par l'assistant et les clients MCP",
+    "brokers": "formats CSV de courtiers et plateformes reconnus automatiquement",
+    "kdf": "itérations de dérivation protègent le mot de passe du coffre",
+    "languages": "langues, chaque écran traduit"
   },
-  "fees": {
-    "sectionBadge": "Analytique & Intérêts Composés • Analyseur TER",
-    "title": "Comparateur d'Impact des Frais ETF (Fee Drag)",
-    "subtitle": "Visualisez comment les frais de gestion annuels érodent silencieusement vos intérêts composés sur plusieurs décennies et l'économie permise par les ETF indiciels PEA/CTO.",
-    "profileLabel": "Profil de Frais du Fonds (Capital initial : 50 000 € • 7 % brut/an)",
-    "horizonLabel": "Horizon de Placement",
-    "profiles": {
-      "bank": "Fonds Bancaire Traditionnel (1,85 % TER)",
-      "thematic": "ETF Thématique Actif (0,50 % TER)",
-      "index": "ETF Indiciel PEA/CTO Bas Frais (0,15 % TER)"
-    },
-    "horizons": {
-      "y10": "10 Ans",
-      "y20": "20 Ans",
-      "y30": "30 Ans"
-    },
-    "projectedValue": "Valeur Nette Projetée du Portefeuille",
-    "feeDragLost": "Total des Frais Composés Perdus (Fee Drag)",
-    "netSavingsVsBank": "Capital Préservé vs Fonds Bancaire (1,85 %)",
-    "benchmarkAlpha": "Alpha vs Livret A Sans Risque (3,0 %)",
-    "retentionRate": "Taux de Rétention de la Performance",
-    "comparisonBarTitle": "Capital Net Conservé vs Érosion par les Frais"
+  "story": {
+    "title": "L'application, écran par écran",
+    "subtitle": "De vrais écrans du compte de démonstration. Faites défiler ce que GlassFolio fait au quotidien.",
+    "addressBar": "app.glassfolio.dev",
+    "stepNavLabel": "Étapes de la visite",
+    "steps": {
+      "dashboard": {
+        "title": "Tout votre patrimoine en un coup d'œil",
+        "body": "Un tableau de bord consolide tous vos comptes et enveloppes, les valorise au prix du marché et montre leur évolution.",
+        "points": {
+          "p1": "Patrimoine et performance dans le temps",
+          "p2": "Répartition par classe d'actifs",
+          "p3": "Meilleures et pires performances"
+        },
+        "alt": "Tableau de bord GlassFolio avec le patrimoine sur un an, la répartition et les meilleures et pires performances"
+      },
+      "positions": {
+        "title": "Chaque position, chaque courtier",
+        "body": "Les positions de tous vos courtiers et enveloppes dans un seul tableau, avec prix de revient, valeur de marché et plus-value latente.",
+        "points": {
+          "p1": "PEA, CTO, crypto, assurance-vie, livrets",
+          "p2": "Filtres par classe d'actifs, source et devise",
+          "p3": "Prix moyen pondéré tenu sur un registre partagé"
+        },
+        "alt": "Tableau des positions avec courtier, quantité, prix de revient, valeur de marché et plus-value latente"
+      },
+      "performance": {
+        "title": "La performance et le vrai coût des frais",
+        "body": "Comparez vos rendements à un indice de référence, puis voyez comment les frais de gestion se cumulent au fil des années.",
+        "points": {
+          "p1": "Comparaison à un indice et à un taux sans risque",
+          "p2": "Érosion due aux frais (TER) de chaque fonds sur 10 à 30 ans",
+          "p3": "Plus-values réalisées et latentes"
+        },
+        "alt": "Page d'analyse des frais montrant le coût annuel et cumulé de chaque fonds"
+      },
+      "tax": {
+        "title": "Un moteur fiscal modulaire",
+        "body": "Les règles fiscales françaises sont intégrées nativement, et le moteur est conçu pour accueillir facilement de nouvelles juridictions.",
+        "points": {
+          "p1": "PFU et barème progressif comparés pour vous",
+          "p2": "Cases des Cerfa 2042, 2074 et 3916 préparées",
+          "p3": "Règles isolées par juridiction, prêtes à être étendues"
+        },
+        "alt": "Assistant fiscal avec plus-values imposables, moins-values, comptes à l'étranger et accès à l'assistant de déclaration"
+      },
+      "import": {
+        "title": "Importez depuis votre courtier en quelques clics",
+        "body": "Déposez l'export CSV de votre courtier ou de votre plateforme : le format est reconnu et les colonnes sont associées pour vous.",
+        "points": {
+          "p1": "BoursoBank, Trade Republic, Binance, Kraken, Bitget, Coinbase",
+          "p2": "Doublons ignorés automatiquement",
+          "p3": "Chaque import peut être annulé"
+        },
+        "alt": "Assistant d'import CSV listant les courtiers et plateformes pris en charge"
+      },
+      "progress": {
+        "title": "Des objectifs qui vous gardent sur la bonne voie",
+        "body": "Fixez des objectifs d'épargne, suivez votre régularité d'investissement mensuelle et progressez dans les rangs d'investisseur.",
+        "points": {
+          "p1": "Objectifs d'épargne suivis automatiquement",
+          "p2": "Séries d'investissement mensuel (DCA)",
+          "p3": "Rangs, quêtes et thèmes à débloquer"
+        },
+        "alt": "Page de progression avec les objectifs d'épargne et leur avancement"
+      }
+    }
   },
-  "csv": {
-    "sectionBadge": "Ingestion Idempotente • 6 Courtiers Détectés",
-    "title": "Inspecteur CSV Multi-Courtiers & Rollback 1-Clic",
-    "subtitle": "Détection automatique des relevés des principaux courtiers européens et plateformes crypto. Reconstruisez l'historique complet ou un snapshot avec déduplication SHA-256.",
-    "selectBroker": "Sélectionnez un Courtier / Exchange",
-    "modeHistory": "Mode Historique (Journal de Transactions)",
-    "modeSnapshot": "Mode Snapshot (Réconciliation de Solde)",
-    "detectedHeaders": "Colonnes CSV Détectées Automatiquement",
-    "normalizedSchema": "Schéma Normalisé GlassFolio",
-    "duplicateGuardBadge": "Protection Anti-Doublon Idempotente SHA-256 Active",
-    "formulaSanitizedBadge": "Bouclier Anti-Injection CSV (=, +, -, @)",
-    "testRollbackBtn": "Tester le Rollback 1-Clic",
-    "restoreImportBtn": "Relancer l'Import du Lot",
-    "statusImported": "Importé (+14 transactions • 0 doublon ignoré)",
-    "statusRolledBack": "Annulé proprement (0 effet de bord sur le journal existant)",
-    "fields": {
-      "isinTicker": "ISIN / Ticker",
-      "quantity": "Quantité",
-      "pru": "Prix Unitaire / PRU",
-      "fee": "Frais de Courtage",
-      "currency": "Devise"
+  "security": {
+    "title": "Sécurité et confidentialité dès la conception",
+    "subtitle": "Vos données financières sont chiffrées avant d'être enregistrées, protégées pendant leur transfert et stockées uniquement sous forme chiffrée, dans le cloud comme sur votre propre serveur.",
+    "stages": {
+      "device": {
+        "title": "Sur votre appareil",
+        "points": {
+          "p1": "Chaque enregistrement est chiffré en AES-256-GCM avant d'être sauvegardé.",
+          "p2": "La clé est dérivée de votre mot de passe (PBKDF2-SHA256, 600 000 itérations, puis HKDF).",
+          "p3": "Elle reste en mémoire sous forme non extractible et le coffre se verrouille après inactivité."
+        }
+      },
+      "transit": {
+        "title": "Pendant le transfert",
+        "points": {
+          "p1": "Cloud : HTTPS uniquement, avec HSTS.",
+          "p2": "Une politique de sécurité du contenu stricte et Trusted Types bloquent les scripts injectés.",
+          "p3": "Auto-hébergé : écoute sur 127.0.0.1 par défaut, un jeton d'accès est exigé pour l'ouvrir au réseau."
+        }
+      },
+      "rest": {
+        "title": "Au repos",
+        "points": {
+          "p1": "Cloud : seuls des enregistrements chiffrés sont stockés, isolés par compte grâce à la sécurité au niveau des lignes.",
+          "p2": "Auto-hébergé : le coffre chiffré vit dans un volume sur votre disque.",
+          "p3": "Les exports et sauvegardes conservent le même chiffrement."
+        }
+      }
     },
-    "trademarkDisclaimer": "Notice de Marques : BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase sont des marques déposées de leurs propriétaires respectifs. GlassFolio est un projet logiciel indépendant sans affiliation, parrainage ni approbation. Les noms sont cités exclusivement à titre indicatif pour préciser la compatibilité des formats de fichiers (Art. L.713-6 du CPI / Règlement UE 2017/1001 Art. 14)."
+    "keys": {
+      "title": "Gestion des clés, en local comme en ligne",
+      "derived": {
+        "title": "Les clés restent chez vous",
+        "body": "Les clés de chiffrement sont dérivées et utilisées de votre côté, dans les deux modes. Elles ne sont jamais envoyées à un serveur."
+      },
+      "maintainer": {
+        "title": "Isolation stricte",
+        "body": "Le mainteneur du projet n'a accès ni à vos données financières ni à vos clés privées."
+      },
+      "factors": {
+        "title": "Connexion renforcée",
+        "body": "Codes d'authentification (TOTP) et passkeys protègent l'accès à votre compte ou à votre coffre."
+      },
+      "recovery": {
+        "title": "Une récupération sous votre contrôle",
+        "body": "Une clé de récupération générée pour vous rétablit l'accès en cas de mot de passe perdu."
+      }
+    }
   },
-  "securityAi": {
-    "sectionBadge": "Coffre Chiffré E2EE & Model Context Protocol",
-    "title": "Coffre Client AES-256-GCM & Copilote IA sous Garde-Fous",
-    "subtitle": "Vos données financières sont chiffrées localement avant tout stockage. Connectez Ollama en local ou vos clients MCP (Claude Desktop, Cursor) avec validation humaine obligatoire.",
-    "vaultTitle": "Sous-Widget A — Inspecteur d'État du Coffre Chiffré",
-    "btnUnlocked": "Déverrouillé en RAM (Clé WebCrypto Non-Extractible)",
-    "btnLocked": "Verrouillé en Stockage (Texte Chiffré AES-256-GCM)",
-    "vaultStateLabel": "État Actif de la Mémoire et du Stockage",
-    "kdfPipeline": "PBKDF2-SHA256 (600k itér.) → HKDF-SHA256 → AES-KW → AES-256-GCM (IV 96 bits + AAD)",
-    "protections": {
-      "supabaseRls": "Cloud E2EE (Supabase RLS)",
-      "dockerVault": "Docker Local Vault (100 % Hors-Ligne)",
-      "totp": "2FA TOTP RFC 6238",
-      "passkeys": "Passkeys WebAuthn PRF",
-      "recovery": "Clé de Secours Base32 256 bits"
+  "aiChoice": {
+    "title": "Choisissez où tourne votre IA",
+    "subtitle": "L'assistant répond à vos questions sur votre portefeuille et prépare des opérations pour vous. Vous décidez du modèle qui le fait tourner, du tout local au fournisseur de votre choix.",
+    "screenshotAlt": "Panneau de l'assistant IA ouvert sur le tableau de bord avec des suggestions de questions",
+    "runtimes": {
+      "local": {
+        "title": "Modèle local",
+        "body": "Faites tourner l'assistant avec Ollama sur votre propre machine. Rien ne quitte votre réseau.",
+        "examples": "Ollama"
+      },
+      "api": {
+        "title": "API externe, votre clé",
+        "body": "Connectez le fournisseur de votre choix avec votre propre clé d'API, conservée chiffrée dans votre coffre.",
+        "examples": "OpenAI • Anthropic • Gemini • Groq • OpenRouter"
+      },
+      "mcp": {
+        "title": "Vos outils IA",
+        "body": "Utilisez votre portefeuille depuis les clients IA que vous utilisez déjà, grâce au serveur MCP local.",
+        "examples": "Claude Desktop • Cursor"
+      }
     },
-    "aiTitle": "Sous-Widget B — Sélecteur d'Exécution IA & MCP",
-    "providers": {
-      "ollama": "Ollama Local (100 % Hors-Ligne)",
-      "claude": "Claude Desktop (MCP)",
-      "cursor": "Cursor (MCP)",
-      "byok": "BYOK (OpenAI / Anthropic / Groq)"
+    "guardrailsTitle": "Les mêmes garde-fous partout",
+    "guardrails": {
+      "redaction": "Les secrets sont retirés avant qu'une requête ne quitte l'application",
+      "approval": "Chaque modification de vos données attend votre validation",
+      "tools": "{{count}} outils, en lecture seule sauf confirmation"
     },
-    "guardrailBadge": "guardrailsService : Rédaction des Secrets + Validation Humaine (requiresConfirmation: true)",
-    "toolPreviewTitle": "Aperçu d'Exécution des Outils MCP Enregistrés",
-    "readOnlyTag": "Lecture Seule",
-    "confirmationTag": "Validation Utilisateur Requise"
+    "trademarkNotice": "Ollama, OpenAI, Anthropic, Google Gemini, Groq, OpenRouter, Claude Desktop et Cursor sont des marques déposées de leurs propriétaires respectifs. GlassFolio est un projet logiciel indépendant et n'est affilié, associé, sponsorisé ou approuvé par aucune de ces entités."
   },
   "bento": {
-    "sectionBadge": "Conçu pour les Investisseurs Exigeants",
-    "title": "Tous les outils pour une gestion patrimoniale souveraine",
-    "subtitle": "Bâti avec un système de tokens sémantiques zéro-hardcoding, une autonomie hors-ligne complète et des standards DevSecOps stricts.",
-    "gamification": {
-      "badge": "21 Rangs • Séries DCA • Quêtes",
-      "title": "Objectifs, 21 Rangs d'Investisseur & Suivi DCA",
-      "description": "Progressez à travers 21 rangs d'investisseur (de Novice à Titan des Marchés), maintenez votre série DCA mensuelle, validez des quêtes financières pour gagner de l'XP et débloquez des thèmes visuels exclusifs."
-    },
+    "title": "Et aussi",
+    "subtitle": "Les détails qui rendent GlassFolio agréable au quotidien.",
     "theming": {
-      "badge": "Clair • Sombre • Midnight + FR/EN",
-      "title": "3 Thèmes Sémantiques & Parité Bilingue 100 %",
-      "description": "Basculez instantanément entre les thèmes Clair, Sombre et Midnight avec contraste WCAG AA, interface 100 % FR/EN et couverture multi-actifs complète (PEA, CTO, Crypto, Assurance-Vie, Livrets, Immobilier)."
+      "badge": "Clair • Sombre • Minuit",
+      "title": "Trois thèmes, deux langues",
+      "description": "Passez du thème clair au sombre ou au minuit avec un contraste lisible, et utilisez toute l'application en français ou en anglais."
     },
     "portability": {
-      "badge": "Portabilité RGPD Article 20",
-      "title": "Sauvegarde JSON 1-Clic, Assistant de Fusion & Purge",
-      "description": "Exportez l'intégralité de votre portefeuille à tout moment, fusionnez des sauvegardes historiques sans doublons via BackupMergeWizard ou purgez cryptographiquement votre coffre local en un clic."
+      "badge": "RGPD",
+      "title": "Vos données, toujours portables",
+      "description": "Exportez tout en un clic, fusionnez d'anciennes sauvegardes sans doublons ou supprimez définitivement vos données."
     },
-    "selfHost": {
-      "badge": "Vitrine Cloud ou Docker Local",
-      "title": "Auto-Hébergement en 1 Commande (docker compose up -d)",
-      "description": "Utilisez notre vitrine cloud instantanée ou déployez votre propre conteneur isolé en local avec une seule commande Docker Compose et zéro base de données externe."
+    "currencies": {
+      "badge": "10 devises",
+      "title": "Multi-devises",
+      "description": "Détenez des actifs en euros, dollars, livres, francs suisses et plus, et affichez votre patrimoine dans la devise de votre choix."
+    },
+    "alerts": {
+      "badge": "Alertes",
+      "title": "Des alertes qui veillent pour vous",
+      "description": "Soyez prévenu quand un cours franchit un seuil, qu'une position atteint un objectif de gain ou de perte, ou que votre part de liquidités devient trop élevée."
+    }
+  },
+  "localCloud": {
+    "title": "Deux façons d'utiliser GlassFolio",
+    "subtitle": "La même application, le même chiffrement et les mêmes fonctionnalités. Choisissez où elle tourne, et changez quand vous voulez.",
+    "local": {
+      "title": "Auto-hébergé",
+      "tagline": "Docker sur votre ordinateur ou serveur",
+      "points": {
+        "p1": "Contrôle total : vos données ne quittent jamais votre disque",
+        "p2": "Code open source que vous pouvez auditer",
+        "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
+      },
+      "ctaGithub": "Voir le code sur GitHub",
+      "ctaGuide": "Lire le guide d'installation"
+    },
+    "cloud": {
+      "title": "Cloud",
+      "tagline": "Géré sur app.glassfolio.dev",
+      "points": {
+        "p1": "Zéro configuration : créez un compte et commencez",
+        "p2": "Accessible de partout",
+        "p3": "Synchronisé sur vos appareils"
+      },
+      "panelTitle": "app.glassfolio.dev",
+      "synced": "Synchronisé",
+      "devices": {
+        "laptop": "Ordinateur",
+        "phone": "Téléphone",
+        "tablet": "Tablette"
+      },
+      "ctaSignup": "Créer un compte gratuit",
+      "ctaLogin": "Se connecter"
+    },
+    "compare": {
+      "title": "Côte à côte",
+      "criterion": "Critère",
+      "local": "Auto-hébergé (Docker)",
+      "cloud": "Cloud (app.glassfolio.dev)",
+      "rows": {
+        "data": {
+          "label": "Où vivent vos données",
+          "local": "Coffre chiffré dans un volume sur votre disque",
+          "cloud": "Coffre chiffré dans Supabase, isolé par compte"
+        },
+        "account": {
+          "label": "Compte",
+          "local": "Un mot de passe de coffre, sans adresse e-mail",
+          "cloud": "E-mail et mot de passe, adresse vérifiée"
+        },
+        "internet": {
+          "label": "Connexion Internet",
+          "local": "Seulement pour actualiser les cours",
+          "cloud": "Obligatoire"
+        },
+        "twoFactor": {
+          "label": "Double authentification",
+          "local": "Passkeys et codes d'authentification sur votre coffre",
+          "cloud": "Passkeys et codes d'authentification"
+        },
+        "ai": {
+          "label": "Assistant IA",
+          "local": "Ollama sur votre réseau, rien n'en sort",
+          "cloud": "Votre propre clé d'API ou un Ollama local"
+        },
+        "cost": {
+          "label": "Prix",
+          "local": "Gratuit pour un usage personnel",
+          "cloud": "Gratuit"
+        }
+      }
+    },
+    "shared": {
+      "title": "Quel que soit votre choix",
+      "encrypted": {
+        "title": "Chiffré avant l'enregistrement",
+        "body": "Vos enregistrements sont chiffrés de votre côté dans les deux modes."
+      },
+      "ai": {
+        "title": "L'IA que vous préférez",
+        "body": "Modèle local ou votre propre clé d'API, dans les deux modes."
+      },
+      "export": {
+        "title": "Libre de changer",
+        "body": "Exportez depuis un mode et importez dans l'autre à tout moment."
+      },
+      "source": {
+        "title": "Un seul code ouvert",
+        "body": "Les deux modes exécutent le même code source, public sur GitHub."
+      }
+    },
+    "terminal": {
+      "title": "Installation en trois commandes",
+      "copyLabel": "Copier les commandes d'installation",
+      "replay": "Rejouer l'installation",
+      "outputLabel": "Sortie du conteneur",
+      "built": "Image glassfolio:local construite",
+      "volume": "Volume glassfolio-data prêt",
+      "running": "GlassFolio tourne sur {{url}}"
     }
   },
   "faq": {
@@ -197,27 +390,31 @@
     "items": {
       "q1": {
         "question": "Où sont stockées mes données financières et qui peut y accéder ?",
-        "answer": "Vos données sensibles (positions, transactions, objectifs, clés IA) sont chiffrées directement dans votre navigateur via WebCrypto AES-256-GCM dérivé par PBKDF2-SHA256 (600 000 itérations) et HKDF. Ni notre hébergeur statique ni aucun tiers n'a accès à votre mot de passe maître ou à vos données financières en clair."
+        "answer": "Votre portefeuille (positions, transactions, objectifs, clés d'IA) est chiffré dans votre navigateur en AES-256-GCM avant d'être enregistré, avec une clé dérivée de votre mot de passe par PBKDF2-SHA256 (600 000 itérations) et HKDF. Dans l'édition cloud, seul ce texte chiffré arrive chez Supabase, où la sécurité au niveau des lignes isole chaque compte ; dans l'édition Docker, il est écrit dans un volume sur votre propre disque. Personne d'autre ne détient votre mot de passe, donc personne d'autre ne peut lire vos données."
       },
       "q2": {
-        "question": "Le simulateur fiscal remplace-t-il la déclaration officielle DGFiP ?",
-        "answer": "Non. GlassFolio fournit des simulations mathématiques comparant la Flat Tax (PFU 30 %) et le Barème Progressif (Case 2OP), ainsi qu'un guide pédagogique des cases Cerfa 2042, 2074, 2086 et 3916. Il s'agit strictement d'un outil d'estimation informatif et non d'un conseil fiscal ou financier certifié AMF."
+        "question": "Le moteur fiscal remplace-t-il une déclaration officielle ?",
+        "answer": "Non. GlassFolio prépare des estimations et les cases à remplir, compare le PFU au barème progressif et explique les Cerfa 2042, 2074 et 3916. Les règles françaises sont intégrées aujourd'hui, et le moteur est modulaire pour accueillir d'autres juridictions. C'est un outil d'information qui ne constitue pas un conseil fiscal ou en investissement."
       },
       "q3": {
         "question": "Quels courtiers, enveloppes et formats CSV sont pris en charge ?",
-        "answer": "GlassFolio détecte nativement les exports CSV de BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase en modes Historique et Snapshot, et permet de suivre PEA, CTO, Assurance-Vie, Livrets, portefeuilles Crypto et Immobilier."
+        "answer": "GlassFolio reconnaît les exports CSV de BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase, en mode historique ou instantané, et suit PEA, CTO, assurance-vie, livrets et portefeuilles crypto."
       },
       "q4": {
-        "question": "Comment le copilote IA et le serveur MCP protègent-ils ma vie privée ?",
-        "answer": "Vous pouvez utiliser Ollama 100 % hors-ligne pour qu'aucune donnée ne quitte votre machine, ou connecter Claude Desktop / Cursor via le serveur MCP local. Avant tout envoi, guardrailsService masque les secrets et toute action d'écriture exige votre confirmation explicite."
+        "question": "Comment l'assistant IA protège-t-il ma vie privée ?",
+        "answer": "Vous choisissez où il tourne : un modèle Ollama local pour que rien ne quitte votre machine, votre propre clé d'API chez le fournisseur de votre choix, ou vos outils IA (Claude Desktop, Cursor) via le serveur MCP local. Les secrets sont retirés avant qu'une requête ne quitte l'application, et chaque modification de vos données attend votre validation."
       },
       "q5": {
-        "question": "Quelle est la différence entre le mode Cloud et le mode Docker Local ?",
-        "answer": "En mode Cloud, GlassFolio affiche cette vitrine interactive et conserve votre coffre chiffré dans le stockage de votre navigateur. En mode Local (VITE_DEPLOYMENT_MODE=local sous Docker), l'application ouvre directement l'écran d'authentification de votre coffre auto-hébergé."
+        "question": "Quelle différence entre l'édition cloud et l'édition Docker ?",
+        "answer": "L'édition cloud (app.glassfolio.dev) s'appuie sur Supabase pour la connexion, la vérification de l'e-mail et le stockage de votre coffre chiffré. L'édition Docker fait tourner toute l'application sur votre machine : pas de compte, pas d'e-mail, et le coffre chiffré vit dans le volume glassfolio-data, si bien que vider le navigateur ne fait rien perdre. Les deux offrent les mêmes fonctionnalités, le même chiffrement et les mêmes options de double authentification."
       },
       "q6": {
-        "question": "Comment tester GlassFolio sans créer de compte ?",
-        "answer": "Cliquez sur n'importe quel bouton « Essayer la Démo (1-Clic) » sur cette page. Cela déverrouille instantanément un portefeuille de démonstration complet (PEA, CTO, Crypto, scénarios fiscaux et quêtes) dans votre navigateur."
+        "question": "Comment essayer GlassFolio sans créer de compte ?",
+        "answer": "Utilisez le bouton de démonstration en haut de cette page. Il ouvre un portefeuille de démonstration déjà rempli (PEA, CTO, crypto, scénarios fiscaux et objectifs) dans votre navigateur. Vous pouvez ensuite vous connecter ou créer votre propre compte."
+      },
+      "q7": {
+        "question": "Comment installer l'édition Docker ?",
+        "answer": "Installez Docker et Node.js 22, puis lancez trois commandes : git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio et npm run docker:up. Ouvrez http://localhost:3000 et créez votre coffre. Le guide d'auto-hébergement détaille la configuration, l'accès réseau, les sauvegardes et les mises à jour."
       }
     }
   },
@@ -236,6 +433,15 @@
     "cookiePreferencesBtn": "Préférences Cookies",
     "regulatoryDisclaimer": "Avertissement AMF / DGFiP : GlassFolio est un projet logiciel à code source disponible, à vocation informative. Les simulations et analyses sont fournies à titre purement pédagogique et ne constituent jamais un conseil en investissement financier, juridique ou fiscal personnalisé.",
     "trademarkNotice": "Usage Nominatif des Marques : L'ensemble des noms de banques, courtiers, plateformes d'échange et marques tiers cités sur GlassFolio (notamment BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase) sont la propriété exclusive de leurs titulaires respectifs. Ils sont mentionnés uniquement à des fins d'interopérabilité technique et de référence descriptive (Art. L.713-6 du Code de la Propriété Intellectuelle / Règlement sur la marque de l'UE Art. 14).",
-    "copyright": "© {{year}} GlassFolio — Architecture FinTech E2EE à code source disponible."
+    "copyright": "© {{year}} GlassFolio — Architecture FinTech E2EE à code source disponible.",
+    "sourceHeading": "Code source",
+    "githubRepo": "Dépôt GitHub",
+    "selfHostGuide": "Guide d'auto-hébergement",
+    "license": "Licence (PolyForm Noncommercial)",
+    "deploymentModes": {
+      "local": "Local",
+      "cloud": "Cloud"
+    },
+    "projectHeading": "Le projet"
   }
 }

@@ -20,7 +20,8 @@ import {
     MappingTemplate,
     ENGINE_VERSION,
     FieldError,
-    Instrument
+    Instrument,
+    VALID_FIAT_CURRENCIES
 } from '../../types/types.backend';
 import { db, delay } from '../db';
 import {
@@ -28,13 +29,15 @@ import {
     computeFileHash,
     computeRowHash,
     isFileAlreadyImported,
-    getExistingRowHashes,
+    getExistingRowHashCounts,
     CommitResult
 } from '../core/transactionManager';
 import { validationService, RowData } from '../core/validationService';
 import { instrumentService } from '../instrumentService';
 import { portfolioService } from '../portfolioService';
+import { buildLedger, resolveQuantity, sortChronologically } from '../portfolio/positionLedger';
 import { validateCSVRow } from '../../types/schemas';
+import { buildRowContext, normalizeRow } from './rowNormalizer';
 
 // ============================================================================
 // TYPES
@@ -68,6 +71,8 @@ export interface FieldMappings {
     contractAddress?: string | number;
     /** Asset name from CSV (e.g. "Apple Inc.") */
     assetName?: string | number;
+    /** Currency of the row's amounts (ISO 4217); also the asset of a bank statement line */
+    currency?: string | number;
 }
 
 /**
@@ -144,10 +149,8 @@ export {
 } from './typeNormalizer';
 import {
     normalizeTransactionType,
-    inferTransactionSubType,
     parseDate,
-    parseDecimal,
-    detectDateFormat
+    parseDecimal
 } from './typeNormalizer';
 
 export { parseCSVText } from './csvParser';
@@ -207,16 +210,8 @@ export async function parseFile(
         };
     }
 
-    // Get existing row hashes for deduplication
-    const existingHashes = getExistingRowHashes(config.accountId);
-
-    // Helper to get value from row
-    const getValue = (row: string[], mapping: string | number | undefined): string | undefined => {
-        if (mapping === undefined || mapping === '') return undefined;
-        if (typeof mapping === 'number') return row[mapping];
-        const idx = headers.indexOf(mapping);
-        return idx >= 0 ? row[idx] : undefined;
-    };
+    // Row hashes already stored for this account (a trade can legitimately appear twice in a file)
+    const existingHashCounts = getExistingRowHashCounts(config.accountId);
 
     // Resolve each distinct asset once (rows run concurrently; without this every
     // row re-reads and re-parses the whole instrument store)
@@ -234,8 +229,14 @@ export async function parseFile(
     // New instruments are denominated in the target account currency (EUR for a PEA, not USD)
     const accountCurrency = db.getAccountById(config.accountId)?.defaultCurrency;
 
-    // Resolve day/month ordering once for the whole column (explicit config wins)
-    const dateHint = config.dateFormat || detectDateFormat(rows.map(r => getValue(r, mappings!.transactionDate) || ''));
+    // File-wide conventions (day/month order, decimal separator, amount signs), read once
+    const rowContext = buildRowContext(headers, rows, mappings, {
+        mode: config.mode,
+        dateFormat: config.dateFormat,
+        delimiter,
+        referenceDate: config.referenceDate,
+        accountCurrency
+    });
 
     // Parse each row
     const candidates: StagedTransaction[] = await Promise.all(rows.map(async (row, rowIndex) => {
@@ -243,110 +244,32 @@ export async function parseFile(
         headers.forEach((h, i) => { rawRowObj[h] = row[i] || ''; });
         const { sanitized: originalRow } = validateCSVRow(rawRowObj);
 
-        // Extract values
-        const rawDateStr = getValue(row, mappings!.transactionDate) || '';
-        const rawType = getValue(row, mappings!.type || mappings!.rawType) || '';
-        const rawAmount = getValue(row, mappings!.amountPrimary) || '';
-        const rawSymbol = getValue(row, mappings!.assetSymbol) || '';
-        const rawFees = getValue(row, mappings!.feeAmount);
+        const normalized = normalizeRow(row, rowContext);
+        const { parsed, hashParts } = normalized;
 
-        // Parse date
-        const transactionDate = parseDate(rawDateStr, dateHint) ||
-            (config.mode === 'snapshot' ? (config.referenceDate || new Date().toISOString()) : undefined);
-
-        // Amount: explicit column, otherwise derived from quantity × unit price
-        let amountValue = parseDecimal(rawAmount);
-        if (!amountValue) {
-            const derivedQty = parseDecimal(getValue(row, mappings!.quantity));
-            const derivedPrice = parseDecimal(getValue(row, mappings!.priceUnit));
-            if (derivedQty && derivedPrice) {
-                amountValue = (Math.abs(parseFloat(derivedQty)) * parseFloat(derivedPrice)).toString();
-            }
-        }
-
-        // Compute row hash
         const rowHash = await computeRowHash(
-            transactionDate || '',
-            amountValue || '0',
-            rawSymbol,
-            normalizeTransactionType(rawType),
-            parseDecimal(rawFees)
+            hashParts.date,
+            hashParts.amount,
+            hashParts.symbol,
+            hashParts.type,
+            hashParts.fee
         );
+        parsed.rowHash = rowHash;
 
-        // Build parsed transaction
-        const txType = normalizeTransactionType(rawType);
-        const subType = inferTransactionSubType(rawType);
-
-        const parsed: Partial<UnifiedTransaction> = {
-            transactionDate,
-            type: txType,
-            subType,
-            rawType: rawType || 'Unknown',
-            amountPrimary: amountValue || undefined,
-            assetSymbol: rawSymbol?.toUpperCase().trim() || undefined,
-            rowHash,
-            sourceOrigin: 'FILE' as SourceOrigin,
-            isSynthetic: false,
-            isFiscal: true,
-            sourceMode: config.mode
-        };
-
-        // Optional fields
-        const rawLabel = getValue(row, mappings!.rawLabel);
-        if (rawLabel) parsed.rawLabel = rawLabel;
-
-        const label = getValue(row, mappings!.label);
-        if (label) parsed.label = label;
-
-        const valueDate = getValue(row, mappings!.valueDate);
-        if (valueDate) parsed.valueDate = parseDate(valueDate, dateHint) || undefined;
-
-        const priceUnit = getValue(row, mappings!.priceUnit);
-        if (priceUnit) parsed.priceUnit = parseDecimal(priceUnit) || undefined;
-
-        const quantity = getValue(row, mappings!.quantity);
-        if (quantity) parsed.quantity = parseDecimal(quantity) || undefined;
-        // No quantity column but amount and unit price: quantity = |amount| / price
-        if (!parsed.quantity && parsed.amountPrimary && parsed.priceUnit && parseFloat(parsed.priceUnit) > 0) {
-            parsed.quantity = (Math.abs(parseFloat(parsed.amountPrimary)) / parseFloat(parsed.priceUnit)).toString();
-        }
-
-        const assetIsin = getValue(row, mappings!.assetIsin);
-        if (assetIsin) parsed.assetIsin = assetIsin.trim();
-
-        const feeAmount = getValue(row, mappings!.feeAmount);
-        if (feeAmount) parsed.feeAmount = parseDecimal(feeAmount) || undefined;
-
-        const feeAsset = getValue(row, mappings!.feeAsset);
-        if (feeAsset) parsed.feeAsset = feeAsset.toUpperCase().trim();
-
-        const taxAmount = getValue(row, mappings!.taxAmount);
-        if (taxAmount) parsed.taxAmount = parseDecimal(taxAmount) || undefined;
-
-        const balanceAfter = getValue(row, mappings!.balanceAfter);
-        if (balanceAfter) parsed.balanceAfter = parseDecimal(balanceAfter) || undefined;
-
-        const externalId = getValue(row, mappings!.externalId);
-        if (externalId) parsed.externalId = externalId.trim();
-
-        // Extract instrument-related fields from CSV
-        const exchangeVal = getValue(row, mappings!.exchange);
-        const networkVal = getValue(row, mappings!.network);
-        const contractAddressVal = getValue(row, mappings!.contractAddress);
-        const assetNameVal = getValue(row, mappings!.assetName);
-
-        // Resolve instrument from CSV data (find existing or create new)
+        // Resolve the instrument from the symbol or, failing that, the ISIN
+        const { exchange, network, contractAddress, assetName } = normalized.instrumentHints;
+        const identifier = parsed.assetSymbol || parsed.assetIsin;
         let instrumentId: string | undefined;
-        if (parsed.assetSymbol) {
+        if (identifier) {
             try {
                 const instrument = await resolveInstrument({
-                    denominationCurrency: accountCurrency,
-                    symbol: parsed.assetSymbol,
+                    denominationCurrency: normalized.isCashAsset ? parsed.assetSymbol : (normalized.currencyCode ?? accountCurrency),
+                    symbol: identifier,
                     isin: parsed.assetIsin,
-                    name: assetNameVal?.trim(),
-                    exchange: exchangeVal?.trim(),
-                    network: networkVal?.trim(),
-                    contractAddress: contractAddressVal?.trim()
+                    name: assetName,
+                    exchange,
+                    network,
+                    contractAddress
                 });
                 instrumentId = instrument.id;
                 parsed.instrumentId = instrumentId;
@@ -356,25 +279,15 @@ export async function parseFile(
             }
         }
 
-        // Snapshot mode: calculate invested amount
-        if (config.mode === 'snapshot' && parsed.quantity && parsed.priceUnit) {
-            const qty = parseFloat(parsed.quantity);
-            const price = parseFloat(parsed.priceUnit);
-            if (!isNaN(qty) && !isNaN(price)) {
-                parsed.amountPrimary = (qty * price).toString();
-                parsed.type = 'BUY';
-            }
-        }
-
         // Store raw row in metadata
-        parsed.metadata = { ...originalRow };
+        parsed.metadata = { ...originalRow, ...parsed.metadata };
 
         // Resolve instrument type for validation context
         const resolvedInstrument = instrumentId ? instrumentsById.get(instrumentId) : undefined;
 
         // Validate with instrument context
         const rowData: RowData = {
-            transactionDate: parsed.transactionDate || (rawDateStr.trim() ? rawDateStr : undefined),
+            transactionDate: parsed.transactionDate || (normalized.rawDate.trim() ? normalized.rawDate : undefined),
             valueDate: parsed.valueDate,
             type: parsed.type,
             amountPrimary: parsed.amountPrimary,
@@ -386,20 +299,20 @@ export async function parseFile(
             rawLabel: parsed.rawLabel,
             label: parsed.label,
             instrumentType: resolvedInstrument?.type,
-            exchange: exchangeVal?.trim(),
-            network: networkVal?.trim(),
-            contractAddress: contractAddressVal?.trim()
+            exchange,
+            network,
+            contractAddress
         };
         const validation = validationService.validateRow(rowData, config.mode);
-        const hasErrors = !validation.isValid;
-        const hasWarnings = validation.warnings.length > 0;
 
-        // Check duplicate by hash
-        const isDuplicate = !hasErrors && existingHashes.has(rowHash);
+        // An ISIN-only row takes the symbol of its instrument, so every consumer can group it
+        if (!parsed.assetSymbol && resolvedInstrument) parsed.assetSymbol = resolvedInstrument.marketIdentifier.symbol;
+
+        const hasErrors = !validation.isValid || normalized.issues.some(issue => issue.severity === 'error');
+        const hasWarnings = validation.warnings.length > 0 || normalized.issues.some(issue => issue.severity === 'warning');
 
         let status: StagedTransaction['status'] = 'valid';
         if (hasErrors) status = 'error';
-        else if (isDuplicate) status = 'duplicate';
         else if (hasWarnings) status = 'warning';
 
         return {
@@ -410,10 +323,13 @@ export async function parseFile(
             parsed,
             rowHash,
             status,
-            errors: [...validation.errors, ...validation.warnings],
-            resolution: isDuplicate ? 'skip' : 'pending'
+            errors: [...normalized.issues, ...validation.errors, ...validation.warnings],
+            resolution: 'pending' as const
         };
     }));
+
+    flagDuplicates(candidates, existingHashCounts);
+    flagOversells(candidates, config.accountId);
 
     // Calculate stats
     const stats = {
@@ -434,6 +350,67 @@ export async function parseFile(
         detectedDelimiter: delimiter
     };
 }
+
+/**
+ * A row is a duplicate when the account already stores that many rows with the same hash.
+ * Two identical trades in one file are both real; a file overlapping an earlier import only
+ * loses the rows that are really already there.
+ */
+function flagDuplicates(candidates: StagedTransaction[], storedCounts: Map<string, number>): void {
+    const seenInFile = new Map<string, number>();
+    for (const candidate of candidates) {
+        if (candidate.status === 'error') continue;
+        const occurrence = seenInFile.get(candidate.rowHash) ?? 0;
+        seenInFile.set(candidate.rowHash, occurrence + 1);
+        if (occurrence < (storedCounts.get(candidate.rowHash) ?? 0)) {
+            candidate.status = 'duplicate';
+            candidate.resolution = 'skip';
+        }
+    }
+}
+
+/**
+ * Warn (never reject) when a sell exceeds what the account holds at that date: earlier imports
+ * plus earlier rows of this file. Partial histories are normal, so this stays a warning.
+ */
+function flagOversells(candidates: StagedTransaction[], accountId: string): void {
+    const held = new Map<string, number>();
+    for (const [key, entry] of buildLedger(db.getUnifiedTransactionsByAccount(accountId))) {
+        held.set(key, entry.state.quantity);
+    }
+
+    const importable = sortChronologically(
+        candidates
+            .filter(c => c.status !== 'error' && c.status !== 'duplicate' && c.parsed.transactionDate)
+            .map(c => ({ candidate: c, transactionDate: c.parsed.transactionDate as string, createdAt: String(c.rowIndex).padStart(9, '0'), type: c.parsed.type }))
+    );
+
+    for (const { candidate } of importable) {
+        const { parsed } = candidate;
+        const asset = parsed.instrumentId || parsed.assetIsin || parsed.assetSymbol;
+        if (!asset || !parsed.type) continue;
+        const symbol = parsed.assetSymbol || asset;
+        if (symbol && (VALID_FIAT_CURRENCIES as readonly string[]).includes(symbol) && !parsed.assetIsin) continue;
+
+        const key = `${accountId}:${asset}`;
+        const quantity = resolveQuantity({ quantity: parsed.quantity, amountPrimary: parsed.amountPrimary ?? '0', priceUnit: parsed.priceUnit });
+        const current = held.get(key) ?? 0;
+
+        if (parsed.type === 'BUY' || parsed.type === 'DEPOSIT') {
+            held.set(key, current + quantity);
+        } else if (parsed.type === 'SELL' || parsed.type === 'WITHDRAW') {
+            const problem = validationService.validateSellQuantity(String(quantity), String(current), symbol);
+            if (problem && quantity > current + QTY_TOLERANCE) {
+                candidate.errors.push({ ...problem, severity: 'warning' });
+                if (candidate.status === 'valid') candidate.status = 'warning';
+            }
+            held.set(key, Math.max(0, current - quantity));
+        }
+    }
+}
+
+/** Float noise margin when comparing a sold quantity with the holdings */
+const QTY_TOLERANCE = 1e-9;
 
 // ============================================================================
 // BATCH COMMIT
@@ -524,6 +501,7 @@ export async function commitBatch(
             feeAmount: staged.parsed.feeAmount,
             feeAsset: staged.parsed.feeAsset,
             taxAmount: staged.parsed.taxAmount,
+            originalCurrency: staged.parsed.originalCurrency,
             balanceAfter: staged.parsed.balanceAfter,
             createdAt: now,
             updatedAt: now,

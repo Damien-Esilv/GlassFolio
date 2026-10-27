@@ -16,6 +16,7 @@ import { NotificationBellDropdown } from './notifications/NotificationBellDropdo
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 import { UserAvatar } from './ui/UserAvatar';
 import { LocalPersistenceNotice } from './security/LocalPersistenceNotice';
+import { PullToRefresh } from './ui/PullToRefresh';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -106,6 +107,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     '/terms',
     '/cookies',
     '/accessibility',
+    '/self-host',
+    '/about',
+    '/roadmap',
+    '/changelog',
   ];
   const isFullScreenRoute =
     PUBLIC_FULL_SCREEN_ROUTES.includes(location.pathname) ||
@@ -509,11 +514,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsAIChatOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors text-xs font-semibold"
-              aria-label="Assistant IA"
+              aria-label={t('ai:drawer.openButton')}
               title={t('ai:drawer.title')}
             >
               <Sparkles size={14} className="text-primary" />
-              <span className="hidden sm:inline">Assistant IA</span>
+              <span className="hidden sm:inline">{t('ai:drawer.openButton')}</span>
             </button>
 
             <NotificationBellDropdown />
@@ -599,7 +604,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="p-4 md:p-6 lg:p-8">
           <LocalPersistenceNotice />
-          {children}
+          <PullToRefresh>
+            {children}
+          </PullToRefresh>
         </main>
       </div>
 

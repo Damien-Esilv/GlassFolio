@@ -15,6 +15,7 @@
  *   Legacy adjustments without metadata are treated as increases at |amount|.
  */
 
+import { VALID_FIAT_CURRENCIES } from '../../types/types.backend';
 import type { UnifiedTransaction, CostBasisMethod } from '../../types/types.backend';
 
 export type { CostBasisMethod };
@@ -76,14 +77,23 @@ export function resolveGrossValue(tx: Pick<UnifiedTransaction, 'quantity' | 'amo
     return amount !== null ? Math.abs(amount) : 0;
 }
 
+/** Stablecoins: a fee paid in one is a cash cost, like a fee in a currency */
+const STABLECOINS: ReadonlySet<string> = new Set(['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'FDUSD', 'PYUSD', 'EURC', 'EURT']);
+
+const isCashLikeAsset = (asset: string): boolean => {
+    const code = asset.toUpperCase();
+    return STABLECOINS.has(code) || (VALID_FIAT_CURRENCIES as readonly string[]).includes(code);
+};
+
 /**
- * Fee expressed in the quote currency. A fee paid in the traded asset itself
- * (e.g. Binance BTC fee on a BTC buy) is not a cash cost.
+ * Fee expressed in cash. A fee with no asset, or paid in a currency or a stablecoin, is a cash
+ * cost. A fee paid in the traded coin itself (Binance BTC fee on a BTC buy) or in another
+ * crypto (BNB) has no cash value in the journal, so it never enters the cost basis.
  */
-function resolveFee(tx: Pick<UnifiedTransaction, 'feeAmount' | 'feeAsset' | 'assetSymbol'>): number {
+export function resolveFee(tx: Pick<UnifiedTransaction, 'feeAmount' | 'feeAsset' | 'assetSymbol'>): number {
     const fee = toNumber(tx.feeAmount);
     if (fee === null) return 0;
-    if (tx.feeAsset && tx.assetSymbol && tx.feeAsset.toUpperCase() === tx.assetSymbol.toUpperCase()) return 0;
+    if (tx.feeAsset && !isCashLikeAsset(tx.feeAsset)) return 0;
     return Math.abs(fee);
 }
 
@@ -183,7 +193,8 @@ function normalize(state: LedgerState): LedgerState {
         state.costBasis = 0;
         state.lots = [];
     }
-    if (Math.abs(state.costBasis) < 1e-9) state.costBasis = 0;
+    // A cost basis can be zero (rewards, unknown cost) but never negative
+    if (state.costBasis < 1e-9) state.costBasis = 0;
     return state;
 }
 
@@ -212,7 +223,8 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
         const removedCost = removeQuantity(state, qty, method);
         if (tx.type === 'SELL' && qty > 0) {
             const proceeds = requested > 0 ? resolveGrossValue(tx, requested) * (qty / requested) : 0;
-            state.realizedPL += proceeds - removedCost - resolveFee(tx);
+            // Fee and proceeds are scaled together when the sell is larger than the holding
+            state.realizedPL += proceeds - removedCost - resolveFee(tx) * (requested > 0 ? qty / requested : 0);
         }
         return normalize(state);
     }
@@ -255,12 +267,16 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
 }
 
 /**
- * Chronological order used everywhere (date, then creation time for same-day rows).
+ * Chronological order used everywhere: date, then creation time for same-day rows. Rows that
+ * share a timestamp (date-only broker files, one batch) put acquisitions before disposals, so a
+ * same-day buy and sell never read as an oversell.
  */
-export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'>>(txs: T[]): T[] {
+export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'> & { type?: string }>(txs: T[]): T[] {
+    const rank = (tx: T): number => (tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0);
     return [...txs].sort((a, b) =>
         new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
         || (a.createdAt || '').localeCompare(b.createdAt || '')
+        || rank(a) - rank(b)
     );
 }
 
@@ -280,15 +296,39 @@ export interface BuildLedgerOptions {
     methodFor?: (accountId: string) => CostBasisMethod;
 }
 
+/** Placeholder symbol written by older imports when a row had no usable identity */
+const UNKNOWN_SYMBOL = 'UNKNOWN';
+
+/** Display symbol of a row: its own symbol, else its ISIN (never the UNKNOWN placeholder) */
+export const rowSymbol = (tx: Pick<UnifiedTransaction, 'assetSymbol' | 'assetIsin'>): string | undefined =>
+    (tx.assetSymbol && tx.assetSymbol !== UNKNOWN_SYMBOL ? tx.assetSymbol : undefined) || tx.assetIsin || undefined;
+
 export const defaultLedgerKey = (tx: UnifiedTransaction): string | null => {
-    const asset = tx.instrumentId || tx.assetIsin || tx.assetSymbol;
+    const asset = tx.instrumentId || tx.assetIsin || rowSymbol(tx);
     return asset ? `${tx.accountId}:${asset}` : null;
 };
 
-/**
- * Replay a journal into positions, grouped by key.
- */
-export function buildLedger(transactions: UnifiedTransaction[], options: BuildLedgerOptions = {}): Map<string, LedgerEntry> {
+export interface RealizedEvent {
+    txId: string;
+    accountId: string;
+    /** Ledger key of the position the sale came from */
+    key: string;
+    date: string;
+    /** Gain (or loss) of this sale alone: proceeds − removed cost − fees */
+    realizedPL: number;
+    /** Quantity actually removed (an oversell is clamped to the holding) */
+    quantity: number;
+    /** Cash proceeds of that quantity, fees excluded */
+    proceeds: number;
+    /** Cost basis removed from the position */
+    costRemoved: number;
+    /** Cash fees charged to this sale */
+    fees: number;
+}
+
+type ReplayStep = (tx: UnifiedTransaction, key: string, before: LedgerState, after: LedgerState) => void;
+
+function replayJournal(transactions: UnifiedTransaction[], options: BuildLedgerOptions, onStep?: ReplayStep): Map<string, LedgerEntry> {
     const keyOf = options.keyOf ?? defaultLedgerKey;
     const methodFor = options.methodFor ?? (() => 'WAC' as CostBasisMethod);
     const entries = new Map<string, LedgerEntry>();
@@ -297,14 +337,52 @@ export function buildLedger(transactions: UnifiedTransaction[], options: BuildLe
         const key = keyOf(tx);
         if (!key) continue;
         const current = entries.get(key);
-        const nextState = applyTransaction(current?.state ?? emptyLedgerState(), tx, methodFor(tx.accountId));
+        const before = current?.state ?? emptyLedgerState();
+        const nextState = applyTransaction(before, tx, methodFor(tx.accountId));
         entries.set(key, {
             key,
             state: nextState,
             lastTx: tx,
             firstTx: current?.firstTx ?? tx
         });
+        onStep?.(tx, key, before, nextState);
     }
 
     return entries;
+}
+
+/**
+ * Replay a journal into positions, grouped by key.
+ */
+export function buildLedger(transactions: UnifiedTransaction[], options: BuildLedgerOptions = {}): Map<string, LedgerEntry> {
+    return replayJournal(transactions, options);
+}
+
+/**
+ * One dated event per sale, in chronological order. The events of a position add up to the
+ * `realizedPL` of its ledger entry, so a screen can show gains per month or per year without
+ * recomputing cost basis.
+ */
+export function buildRealizedEvents(transactions: UnifiedTransaction[], options: BuildLedgerOptions = {}): RealizedEvent[] {
+    const events: RealizedEvent[] = [];
+    replayJournal(transactions, options, (tx, key, before, after) => {
+        if (tx.type !== 'SELL') return;
+        const requested = resolveQuantity(tx);
+        const quantity = before.quantity - after.quantity;
+        const costRemoved = before.costBasis - after.costBasis;
+        const fees = requested > 0 ? resolveFee(tx) * (quantity / requested) : 0;
+        const realizedPL = after.realizedPL - before.realizedPL;
+        events.push({
+            txId: tx.id,
+            accountId: tx.accountId,
+            key,
+            date: tx.transactionDate,
+            realizedPL,
+            quantity,
+            proceeds: realizedPL + costRemoved + fees,
+            costRemoved,
+            fees
+        });
+    });
+    return events;
 }

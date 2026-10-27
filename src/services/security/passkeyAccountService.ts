@@ -15,6 +15,7 @@ import { auditLogService } from './auditLogService';
 import { passkeyService, PasskeyRecord } from './passkeyService';
 import { vaultService } from './vaultService';
 import { supabaseClient } from '../supabase/supabaseClient';
+import { getSyncedPublicLanguage } from '../storage/publicPreferencesSync';
 
 export interface AccountPasskey {
     /** Stable key for lists: the credential id when known, else the Supabase id. */
@@ -165,7 +166,8 @@ export const passkeyAccountService = {
         if (usesSupabasePasskeys()) {
             const token = await authService.getActiveAccessToken?.();
             if (token) {
-                void supabaseClient.notifySecurityEvent(token, 'passkey_added', params.label);
+                const locale = getSyncedPublicLanguage();
+                void supabaseClient.notifySecurityEvent(token, 'passkey_added', params.label, locale);
             }
         }
         return { unlocksVault: Boolean(prfSecret), pendingVaultUnlock };
@@ -183,7 +185,8 @@ export const passkeyAccountService = {
         if (usesSupabasePasskeys()) {
             const token = await authService.getActiveAccessToken?.();
             if (token) {
-                void supabaseClient.notifySecurityEvent(token, 'passkey_removed', passkey.name);
+                const locale = getSyncedPublicLanguage();
+                void supabaseClient.notifySecurityEvent(token, 'passkey_removed', passkey.name, locale);
             }
         }
     },

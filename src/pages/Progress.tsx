@@ -500,7 +500,7 @@ const Progress: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <p className="text-xs font-bold text-secondary mb-2 uppercase">COLOR</p>
+                                    <p className="text-xs font-bold text-secondary mb-2 uppercase">{t('progress:goals.color')}</p>
                                     <div className="flex gap-2">
                                         {Object.keys(GOAL_COLOR_TOKENS).map((c) => {
                                             const isSelected = editingGoal.color === c;
@@ -572,15 +572,15 @@ const Progress: React.FC = () => {
                                                     linkTab === 'group' ? 'border-brand text-brand' : 'border-transparent text-secondary'
                                                 }`}
                                             >
-                                                GROUPS
+                                                {t('progress:goals.groups')}
                                             </button>
                                         </div>
 
                                         {editingGroupId ? (
                                             <div className="p-3 bg-card rounded-lg border border-subtle space-y-3">
                                                 <div className="flex justify-between items-center pb-2 border-b border-subtle">
-                                                    <span className="text-xs font-bold text-primary">Edit Group Assets</span>
-                                                    <button onClick={() => setEditingGroupId(null)} className="text-xs text-brand hover:underline font-bold">Done</button>
+                                                    <span className="text-xs font-bold text-primary">{t('progress:goals.editGroupAssets')}</span>
+                                                    <button onClick={() => setEditingGroupId(null)} className="text-xs text-brand hover:underline font-bold">{t('progress:goals.done')}</button>
                                                 </div>
                                                 <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
                                                     {Array.from(new Set(positions.map(p => p.symbol))).map(symbol => {

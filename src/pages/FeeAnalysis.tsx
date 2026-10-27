@@ -215,7 +215,7 @@ const FeeAnalysis: React.FC = () => {
                </div>
                <div className="text-3xl font-extrabold text-primary">
                   <AnimatedCounter value={feeAnalysis.currentAnnualFees} currency={currency} locale={locale} />
-                  <span className="text-sm font-semibold text-tertiary"> / {t('reports:feeAnalysis.years').toLowerCase()}</span>
+                  <span className="text-sm font-semibold text-tertiary"> {t('reports:feeAnalysis.perYear')}</span>
                </div>
                <p className="text-tertiary text-xs mt-1">{t('reports:feeAnalysis.currentFeesDesc')}</p>
             </div>
@@ -228,7 +228,7 @@ const FeeAnalysis: React.FC = () => {
                </div>
                <div className="text-3xl font-extrabold text-brand">
                   <AnimatedCounter value={feeAnalysis.alternativeAnnualFees} currency={currency} locale={locale} />
-                  <span className="text-sm font-semibold text-tertiary"> / {t('reports:feeAnalysis.years').toLowerCase()}</span>
+                  <span className="text-sm font-semibold text-tertiary"> {t('reports:feeAnalysis.perYear')}</span>
                </div>
                <p className="text-tertiary text-xs mt-1">{t('reports:feeAnalysis.alternativeFeesDesc')}</p>
             </div>
@@ -241,7 +241,7 @@ const FeeAnalysis: React.FC = () => {
                </div>
                <div className="text-3xl font-extrabold text-accent-green">
                   <AnimatedCounter value={feeAnalysis.potentialAnnualSavings} currency={currency} locale={locale} />
-                  <span className="text-sm font-semibold text-tertiary"> / {t('reports:feeAnalysis.years').toLowerCase()}</span>
+                  <span className="text-sm font-semibold text-tertiary"> {t('reports:feeAnalysis.perYear')}</span>
                </div>
                <p className="text-tertiary text-xs mt-1">{t('reports:feeAnalysis.potentialSavingsDesc')}</p>
             </div>
@@ -268,7 +268,7 @@ const FeeAnalysis: React.FC = () => {
                         <h3 className="text-xl font-bold text-primary">{t('reports:feeAnalysis.allOptimizedTitle')}</h3>
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-accent-green/10 text-accent-green text-xs font-bold">
                            <CheckCircle2 size={12} />
-                           100% TER Optimal
+                           {t('reports:feeAnalysis.fullyOptimal')}
                         </span>
                      </div>
                      <p className="text-secondary text-sm mt-1">{t('reports:feeAnalysis.allOptimizedDesc')}</p>
@@ -293,7 +293,7 @@ const FeeAnalysis: React.FC = () => {
                               </div>
                               <div className="text-right">
                                  <span className="text-xs font-bold text-accent-green bg-accent-green/10 px-2.5 py-1 rounded-lg">
-                                    TER: {rec.currentTer.toFixed(2)}%
+                                    {t('reports:feeAnalysis.terPrefix', { value: rec.currentTer.toFixed(2) })}
                                  </span>
                               </div>
                            </div>
@@ -311,7 +311,7 @@ const FeeAnalysis: React.FC = () => {
                      <p className="text-tertiary text-xs">{t('reports:feeAnalysis.optimizationsFoundSubtitle')}</p>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-bold">
-                     {optimizableRecs.length} {optimizableRecs.length === 1 ? 'actif à optimiser' : 'actifs à optimiser'}
+                     {t('reports:feeAnalysis.assetsToOptimize', { count: optimizableRecs.length })}
                   </span>
                </div>
 
@@ -340,11 +340,11 @@ const FeeAnalysis: React.FC = () => {
                                     </span>
                                     <div className="flex items-baseline justify-between">
                                        <span className="font-extrabold text-primary text-base">{rec.heldPosition.symbol}</span>
-                                       <span className="text-xs font-bold text-secondary">{rec.currentTer.toFixed(2)}% TER</span>
+                                       <span className="text-xs font-bold text-secondary">{t('reports:feeAnalysis.terSuffix', { value: rec.currentTer.toFixed(2) })}</span>
                                     </div>
                                     <p className="text-xs text-tertiary truncate mt-0.5">{rec.heldPosition.instrument}</p>
                                     <p className="text-xs font-semibold text-primary mt-1">
-                                       {formatCurrency(rec.currentAnnualCost, currency, locale)} / {t('reports:feeAnalysis.years').toLowerCase()}
+                                       {formatCurrency(rec.currentAnnualCost, currency, locale)} {t('reports:feeAnalysis.perYear')}
                                     </p>
                                  </div>
 
@@ -360,11 +360,11 @@ const FeeAnalysis: React.FC = () => {
                                     </span>
                                     <div className="flex items-baseline justify-between">
                                        <span className="font-extrabold text-brand text-base">{rec.cheapestSimilar.symbol}</span>
-                                       <span className="text-xs font-bold text-accent-green">{rec.cheapestSimilar.ter.toFixed(2)}% TER</span>
+                                       <span className="text-xs font-bold text-accent-green">{t('reports:feeAnalysis.terSuffix', { value: rec.cheapestSimilar.ter.toFixed(2) })}</span>
                                     </div>
                                     <p className="text-xs text-tertiary truncate mt-0.5">{rec.cheapestSimilar.name}</p>
                                     <p className="text-xs font-semibold text-accent-green mt-1">
-                                       {formatCurrency(rec.cheapestAnnualCost, currency, locale)} / {t('reports:feeAnalysis.years').toLowerCase()}
+                                       {formatCurrency(rec.cheapestAnnualCost, currency, locale)} {t('reports:feeAnalysis.perYear')}
                                     </p>
                                  </div>
                               </div>
@@ -377,7 +377,7 @@ const FeeAnalysis: React.FC = () => {
                                     </span>
                                     <span className="text-lg font-extrabold text-accent-green">
                                        +{formatCurrency(rec.annualSavings, currency, locale)}
-                                       <span className="text-xs font-semibold text-tertiary"> / an</span>
+                                       <span className="text-xs font-semibold text-tertiary"> {t('reports:feeAnalysis.perYear')}</span>
                                     </span>
                                  </div>
 
@@ -496,10 +496,10 @@ const FeeAnalysis: React.FC = () => {
             <div className="mb-8">
                <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-bold text-primary">
-                     Performance Net TER Drag ({comparePeriod}) — Base 100
+                     {t('reports:feeAnalysis.performanceChartTitle', { period: comparePeriod })}
                   </h4>
                   <span className="text-xs text-tertiary font-medium">
-                     {compareScaleMode === 'zoomed' ? 'Zoom actif (Échelle dynamique)' : 'Vue globale (0 - max)'}
+                     {compareScaleMode === 'zoomed' ? t('reports:feeAnalysis.zoomActiveCaption') : t('reports:feeAnalysis.globalViewCaption')}
                   </span>
                </div>
                <div className="h-[320px] w-full">
@@ -568,10 +568,10 @@ const FeeAnalysis: React.FC = () => {
                   <table className="w-full text-left text-sm">
                      <thead>
                         <tr className="border-b border-subtle text-tertiary text-xs font-bold uppercase">
-                           <th className="pb-3 px-3">ETF</th>
+                           <th className="pb-3 px-3">{t('reports:feeAnalysis.etfHeader')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.category')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.isin')}</th>
-                           <th className="pb-3 px-3">TER (%)</th>
+                           <th className="pb-3 px-3">{t('reports:feeAnalysis.terHeader')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.viewOnYahoo')}</th>
                         </tr>
                      </thead>
@@ -587,7 +587,7 @@ const FeeAnalysis: React.FC = () => {
                                     </div>
                                  </td>
                                  <td className="py-3 px-3 font-semibold text-secondary">{info.category}</td>
-                                 <td className="py-3 px-3 text-xs text-tertiary font-mono">{info.isin || 'N/A'}</td>
+                                 <td className="py-3 px-3 text-xs text-tertiary font-mono">{info.isin || t('reports:feeAnalysis.notAvailable')}</td>
                                  <td className="py-3 px-3 font-bold">
                                     <span className={`px-2 py-0.5 rounded text-xs ${
                                        info.ter <= 0.20 ? 'bg-accent-green/10 text-accent-green' : 'bg-subtle text-primary'
@@ -602,7 +602,7 @@ const FeeAnalysis: React.FC = () => {
                                        rel="noopener noreferrer"
                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-subtle hover:bg-subtle/80 text-secondary text-xs font-medium transition-colors"
                                     >
-                                       <span>Yahoo</span>
+                                       <span>{t('reports:feeAnalysis.yahooLink')}</span>
                                        <ExternalLink size={12} />
                                     </a>
                                  </td>
@@ -790,9 +790,7 @@ const FeeAnalysis: React.FC = () => {
                               ? 'bg-card text-primary shadow-sm border border-subtle'
                               : 'text-secondary hover:text-primary'
                         }`}
-                     >
-                        Global
-                     </button>
+                     >{t('reports:feeAnalysis.global')}</button>
                      <button
                         onClick={() => setScaleMode('zoomed')}
                         className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
@@ -800,9 +798,7 @@ const FeeAnalysis: React.FC = () => {
                               ? 'bg-card text-primary shadow-sm border border-subtle'
                               : 'text-secondary hover:text-primary'
                         }`}
-                     >
-                        Zoom
-                     </button>
+                     >{t('reports:feeAnalysis.zoom')}</button>
                   </div>
 
                   <div className="flex items-center gap-2 bg-subtle p-1 rounded-xl border border-subtle">
@@ -842,7 +838,7 @@ const FeeAnalysis: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-                        tickFormatter={(val) => `Yr ${val}`}
+                        tickFormatter={(val) => t('reports:feeAnalysis.yearTick', { value: val })}
                         dy={10}
                      />
                      <YAxis

@@ -12,7 +12,8 @@
     "clearHistory": "Clear conversation",
     "close": "Close assistant",
     "openSettings": "AI & MCP Settings",
-    "emptyConversation": "Ask any question about your assets, allocations, taxes, or performance."
+    "emptyConversation": "Ask any question about your assets, allocations, taxes, or performance.",
+    "openButton": "AI Assistant"
   },
   "chips": {
     "portfolioSummary": "📊 Portfolio Summary",
@@ -44,6 +45,7 @@
   "actionCard": {
     "title": "Action Confirmation Required",
     "subtitle": "The assistant requests your authorization to record this change:",
+    "actionType": "Action Type",
     "confirm": "Approve & Execute",
     "reject": "Decline",
     "confirmed": "Action Approved & Executed",
@@ -210,5 +212,91 @@
     "cloudModelInvalidTitle": "AI Model Not Found or Unsupported",
     "cloudModelInvalidBody": "The configured model was not recognized by your provider or has been discontinued.\n\nProvider error details: `{{error}}`\n\n**How to fix:**\n- Go to **Settings > AI & MCP**.\n- Enter an active, maintained model identifier for your provider.",
     "generalError": "An error occurred while communicating with the assistant: {{error}}"
+  },
+  "prompt": {
+    "system": "You are GlassFolio's personal and private financial assistant.\nAlways answer in English, clearly, precisely and concisely, to the user's financial questions.\nYou have tools to look up the portfolio, asset allocation, positions, transactions and taxes.\nGOLDEN RULE: for any operation that changes the portfolio (recording a transaction, creating a goal), call the matching tool. The user must approve the operation through an interactive card.\nNever give speculative investment advice without reminding the user that your answers are for information only."
+  },
+  "service": {
+    "readOnlyBlocked": "Strict read-only mode is on. The **{{tool}}** action was blocked according to your security settings.",
+    "actionApproved": "✅ The operation was approved and saved to your portfolio.",
+    "actionRejected": "❌ The operation was declined and cancelled. Nothing was changed."
+  },
+  "mock": {
+    "greeting": "Hello! How can I help you with your wealth today?",
+    "thinking": {
+      "toolResult": {
+        "step1": "Analysing the raw data returned by the \"{{tool}}\" tool.",
+        "step2": "Computing the financial ratios and aggregates for the summary.",
+        "step3": "Formatting the answer in Markdown with the key metrics."
+      },
+      "transaction": {
+        "step1": "Analysing the requested order: buy {{amount}} {{symbol}} ({{instrument}}) at {{price}} EUR.",
+        "step2": "Security and human-in-the-loop check: a financial change requires explicit confirmation.",
+        "step3": "Preparing the action approval card."
+      },
+      "goal": {
+        "step1": "Analysing the savings or emergency-fund goal.",
+        "step2": "Computing a 6-month deadline and a 10,000 EUR target.",
+        "step3": "Preparing the action proposal with human-in-the-loop approval."
+      },
+      "default": {
+        "step1": "Analysing the user's conversational message.",
+        "step2": "Identifying the available wealth, tax and portfolio modules.",
+        "step3": "Writing personalised guidance with example commands."
+      }
+    },
+    "transactionProposal": "I have prepared the buy order for **{{instrument}} ({{symbol}})**. Since it changes your portfolio, please approve the operation below:",
+    "goalTitle": "Emergency fund",
+    "goalProposal": "I suggest creating a new financial goal. Please confirm below to save it in GlassFolio:",
+    "intro": "I am GlassFolio, your private financial assistant. I can analyse your portfolio, check your asset allocation, compute your taxable capital gains or help you record transactions safely.",
+    "examplesTitle": "A few example questions:",
+    "examples": {
+      "q1": "Give me a summary of my net worth and gains.",
+      "q2": "What is my asset allocation?",
+      "q3": "Which positions do I hold, with their cost basis?",
+      "q4": "Analyse my taxable capital gains.",
+      "q5": "Record a purchase of 10 Apple shares."
+    },
+    "summary": {
+      "title": "📊 Your portfolio summary",
+      "netWorth": "Total net worth",
+      "invested": "Amount invested",
+      "unrealized": "Unrealised gain",
+      "positions": "Active positions",
+      "followUp": "Your portfolio is well diversified. Would you like a detailed allocation analysis or a tax review?"
+    },
+    "allocation": {
+      "title": "🥧 Your asset allocation",
+      "tip": "Tip: keeping a balance between cash and productive assets lowers overall volatility."
+    },
+    "positions": {
+      "title": "💼 Your main positions",
+      "asset": "Asset",
+      "quantity": "Quantity",
+      "price": "Price",
+      "value": "Value",
+      "pl": "Unrealised P&L",
+      "count": "{{count}} position(s) held in total."
+    },
+    "tax": {
+      "title": "💡 Tax summary ({{year}})",
+      "grossGains": "Gross capital gains",
+      "carriedLosses": "Carried-forward losses",
+      "netTaxable": "Net taxable gain",
+      "estimatedTax": "Estimated tax (flat tax)",
+      "regime": "Recommended regime",
+      "defaultRegime": "PFU (30% flat tax)",
+      "savings": "Potential savings: {{amount}} €"
+    },
+    "goals": {
+      "title": "🎯 Your goals progress",
+      "empty": "No active goals yet."
+    },
+    "transactions": {
+      "title": "📝 Latest transactions",
+      "empty": "No recent transactions."
+    },
+    "rawData": "Data retrieved successfully:",
+    "rawResult": "Result received from the {{tool}} tool: {{content}}"
   }
 }

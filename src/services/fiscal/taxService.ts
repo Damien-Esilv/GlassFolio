@@ -36,35 +36,88 @@ import {
 } from './taxCalendarService';
 
 // ============================================================================
+// IN-MEMORY CACHE & DEDUPLICATION (PREVENTS REDUNDANT DOUBLE-LOADING)
+// ============================================================================
+
+interface CachedTaxSummary {
+    summary: TaxSummaryResult;
+    txCount: number;
+    cachedAt: number;
+}
+
+const taxSummaryCache = new Map<string, CachedTaxSummary>();
+const inFlightSummaries = new Map<string, Promise<TaxSummaryResult>>();
+
+export const clearTaxSummaryCache = (): void => {
+    taxSummaryCache.clear();
+    inFlightSummaries.clear();
+};
+
+// ============================================================================
 // PUBLIC API
 // ============================================================================
 
 export const taxService = {
+    /** Clear in-memory tax summary cache (e.g. after import or transaction edit). */
+    clearCache: clearTaxSummaryCache,
+
     /**
      * Get the complete tax summary for a fiscal year.
      * This is the main entry point for the Declaration Assistant page.
+     * Caches in memory to eliminate double loading screens during tab navigation.
      */
     getTaxSummary: async (
         fiscalYear: string,
         profile: FiscalProfile,
         country: string = DEFAULT_TAX_COUNTRY
     ): Promise<TaxSummaryResult> => {
-        await delay(500);
-
         const allTransactions = db.getUnifiedTransactions();
-        const accounts = db.getAccounts();
-        const institutes = db.getInstitutes();
-        const instruments = db.getInstruments();
+        const cacheKey = `${fiscalYear}:${country}:${JSON.stringify(profile)}`;
 
-        return buildTaxSummary(
-            allTransactions,
-            accounts,
-            institutes,
-            instruments,
-            fiscalYear,
-            profile,
-            country
-        );
+        // Fast return from memory cache if transactions count has not changed
+        const cached = taxSummaryCache.get(cacheKey);
+        if (cached && cached.txCount === allTransactions.length) {
+            return cached.summary;
+        }
+
+        // Return active in-flight request if identical query is already pending
+        const existingPromise = inFlightSummaries.get(cacheKey);
+        if (existingPromise) {
+            return existingPromise;
+        }
+
+        const fetchPromise = (async () => {
+            try {
+                await delay(500);
+
+                const accounts = db.getAccounts();
+                const institutes = db.getInstitutes();
+                const instruments = db.getInstruments();
+
+                const summary = buildTaxSummary(
+                    allTransactions,
+                    accounts,
+                    institutes,
+                    instruments,
+                    fiscalYear,
+                    profile,
+                    country
+                );
+
+                taxSummaryCache.set(cacheKey, {
+                    summary,
+                    txCount: allTransactions.length,
+                    cachedAt: Date.now(),
+                });
+
+                return summary;
+            } finally {
+                inFlightSummaries.delete(cacheKey);
+            }
+        })();
+
+        inFlightSummaries.set(cacheKey, fetchPromise);
+        return fetchPromise;
     },
 
     /**

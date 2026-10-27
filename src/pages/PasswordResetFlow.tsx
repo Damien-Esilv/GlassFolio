@@ -151,13 +151,17 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                 {mode === 'request' && !requestSuccess && (
                     <form onSubmit={handleRequestReset} className="space-y-4">
                         <div>
-                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                            <label htmlFor="reset-email" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {t('auth:login.emailLabel', 'Email address')}
                             </label>
                             <div className="relative">
                                 <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
                                 <input
+                                    id="reset-email"
+                                    name="email"
                                     type="email"
+                                    autoComplete="username"
+                                    spellCheck={false}
                                     required
                                     autoFocus
                                     placeholder="alex@example.com"
@@ -227,14 +231,28 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                 {/* Mode 2: Emergency Recovery Key Unlock + New Password */}
                 {mode === 'recover' && (
                     <form onSubmit={handleRecoverVault} className="space-y-4">
+                        {/* Hidden username to anchor password manager identification */}
+                        <input
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            defaultValue={email || 'user'}
+                            className="sr-only"
+                            tabIndex={-1}
+                            aria-hidden="true"
+                        />
                         <div>
-                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                            <label htmlFor="recovery-key" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {t('auth:recovery.keyInputLabel', 'Emergency Recovery Key')}
                             </label>
                             <div className="relative">
                                 <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
                                 <input
+                                    id="recovery-key"
+                                    name="recovery-key"
                                     type="text"
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     required
                                     autoFocus
                                     placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
@@ -246,13 +264,16 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                            <label htmlFor="reset-new-password" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {t('auth:recovery.newPasswordLabel', 'New Master Password (min 12 chars)')}
                             </label>
                             <div className="relative">
                                 <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
                                 <input
+                                    id="reset-new-password"
+                                    name="password"
                                     type="password"
+                                    autoComplete="new-password"
                                     required
                                     placeholder="••••••••••••"
                                     value={newPassword}
@@ -263,13 +284,16 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                            <label htmlFor="reset-confirm-password" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {t('auth:recovery.confirmPasswordLabel', 'Confirm New Master Password')}
                             </label>
                             <div className="relative">
                                 <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
                                 <input
+                                    id="reset-confirm-password"
+                                    name="confirm-password"
                                     type="password"
+                                    autoComplete="new-password"
                                     required
                                     placeholder="••••••••••••"
                                     value={confirmPassword}

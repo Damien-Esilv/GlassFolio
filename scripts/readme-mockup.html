@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  README hero composition, rendered by scripts/capture-screenshots.mjs (headless Chrome) into
+  .github/assets/readme-hero.webp. Static file, never served by the app.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>GlassFolio README mockup</title>
+<style>
+  :root { --bg: #020617; --frame: #0f172a; --line: #1e293b; --brand: #137fec; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1600px; height: 900px; overflow: hidden; background: var(--bg); }
+  body {
+    position: relative;
+    background:
+      radial-gradient(40% 55% at 22% 30%, color-mix(in srgb, var(--brand) 35%, transparent), transparent 70%),
+      radial-gradient(35% 45% at 82% 75%, color-mix(in srgb, #6366f1 25%, transparent), transparent 70%),
+      var(--bg);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
+  }
+  .frame {
+    position: absolute; border-radius: 18px; overflow: hidden; background: var(--frame);
+    border: 1px solid #334155; box-shadow: 0 40px 90px -20px rgba(0, 0, 0, 0.75);
+  }
+  .bar { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--line); background: #111c33; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; opacity: 0.8; }
+  .url { margin: 0 auto; width: 46%; height: 18px; border-radius: 6px; background: var(--frame); }
+  .frame img { display: block; width: 100%; }
+  .back-left { width: 760px; left: 70px; top: 120px; transform: perspective(1800px) rotateY(16deg) scale(0.92); opacity: 0.85; }
+  .back-right { width: 760px; right: 70px; top: 120px; transform: perspective(1800px) rotateY(-16deg) scale(0.92); opacity: 0.85; }
+  .front { width: 1040px; left: 280px; top: 140px; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="frame back-left"><div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span><span class="url"></span></div><img src="../public/screenshots/tax.webp" alt="" /></div>
+  <div class="frame back-right"><div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span><span class="url"></span></div><img src="../public/screenshots/positions.webp" alt="" /></div>
+  <div class="frame front"><div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span><span class="url"></span></div><img src="../public/screenshots/dashboard.webp" alt="" /></div>
+</body>
+</html>

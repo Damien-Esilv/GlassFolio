@@ -23,6 +23,7 @@ const SRC_DIRS = [join(ROOT, 'src')];
 
 const SUPPORTED_LOCALES = ['en', 'fr'];
 const REPORT_MODE = process.argv.includes('--report');
+const PLURAL_SUFFIX_RE = /_(zero|one|two|few|many|other)$/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,12 @@ function loadLocaleKeys(locale) {
         allKeys.add(`${namespace}:${key}`);
         // Also add without namespace prefix for backward compat
         allKeys.add(key);
+        // i18next plural variants (key_one, key_other...) satisfy the base key used with { count }
+        const base = key.replace(PLURAL_SUFFIX_RE, '');
+        if (base !== key) {
+          allKeys.add(`${namespace}:${base}`);
+          allKeys.add(base);
+        }
       }
     }
   } catch (e) {

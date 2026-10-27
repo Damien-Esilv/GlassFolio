@@ -7,6 +7,10 @@
     "goals": {
         "title": "Financial Goals",
         "createNew": "Create New Goal",
+        "groups": "Groups",
+        "editGroupAssets": "Edit Group Assets",
+        "color": "Color",
+        "done": "Done",
         "editGoal": "Edit Goal",
         "deleteGoal": "Delete Goal",
         "noGoals": "No goals created yet",

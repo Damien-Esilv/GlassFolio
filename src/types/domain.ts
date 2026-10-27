@@ -218,6 +218,20 @@ export interface DashboardSummary {
   chartData: { name: string; value: number; invested?: number }[];
 }
 
+/** Gain or loss of one sale, in the base currency */
+export interface RealizedPLEntry {
+  date: string;
+  symbol: string;
+  assetType: Position['type'];
+  value: number;
+}
+
+export interface RealizedPLSummary {
+  total: number;
+  byMonth: { month: string; value: number }[];
+  entries: RealizedPLEntry[];
+}
+
 export interface TransactionFilter {
   searchQuery?: string;
   dateRange?: string;

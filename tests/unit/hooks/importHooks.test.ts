@@ -150,6 +150,29 @@ const GENERIC_CSV = [
 
 const MALFORMED_CSV = 'not,valid\ncsv,content';
 
+// Headers that say little: the date, the type and the ticker are found, the rest needs the user
+const OPAQUE_CSV = [
+    'when,what,how many,unit cost,ticker,cash',
+    '2024-01-05,buy,5,185.50,AAPL,927.50',
+    '2024-02-12,sell,2,400.00,MSFT,800.00',
+].join('\n');
+
+// 'quantitydelta' only prefix-matches quantity: suggested, not certain
+const SUGGESTION_CSV = [
+    'Date,quantitydelta,Symbol,Amount',
+    '2024-01-15,5,AAPL,100.00',
+    '2024-01-16,3,MSFT,50.00',
+].join('\n');
+
+function bigCsv(rows: number): string {
+    const lines = ['Date,Amount,Symbol,Type,Shares,Price'];
+    for (let i = 0; i < rows; i++) {
+        const day = String((i % 28) + 1).padStart(2, '0');
+        lines.push(`2024-01-${day},${100 + i},AAPL,BUY,${i + 1},${(100 + i) / (i + 1)}`);
+    }
+    return lines.join('\n');
+}
+
 function makeFile(content: string, name = 'test.csv'): File {
     return new File([content], name, { type: 'text/csv' });
 }
@@ -398,6 +421,109 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
             expect(result.current.stats.total).toBe(3);
             expect(result.current.stats.valid).toBe(1);
             expect(result.current.stats.errors).toBe(1);
+        });
+    });
+
+    describe('Step 3 -- Column-first mapping', () => {
+        async function upload(csv: string, account = true) {
+            const { importService } = await import('../../../src/services/importService');
+            vi.mocked(importService.detectPreset).mockReturnValueOnce(null);
+            const hook = renderHook(() => useImportWizard());
+            await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+            if (account) {
+                act(() => { hook.result.current.selectInstitute('inst-1'); });
+                await waitFor(() => expect(hook.result.current.accounts.length).toBeGreaterThan(0));
+                act(() => { hook.result.current.selectAccount('acc-2'); });
+            }
+            await act(async () => { await hook.result.current.handleFileUpload(makeFile(csv)); });
+            return hook.result;
+        }
+
+        it('proposes a field per column and only applies the confident ones', async () => {
+            const result = await upload(OPAQUE_CSV);
+
+            expect(result.current.columnProposals).toHaveLength(6);
+            expect(result.current.mappings).toMatchObject({ transactionDate: 'when', type: 'what', assetSymbol: 'ticker' });
+            expect(result.current.mappings.quantity).toBeUndefined();
+            expect(result.current.mappingSummary).toEqual({ total: 6, matched: 3, ambiguous: 0, unmatched: 3 });
+        });
+
+        it('lists unmatched and ambiguous columns before matched ones, with samples', async () => {
+            const result = await upload(SUGGESTION_CSV);
+
+            const order = result.current.mappingColumns.map(c => [c.header, c.status]);
+            expect(order[0]).toEqual(['quantitydelta', 'ambiguous']);
+            expect(order.slice(1).every(([, status]) => status === 'matched')).toBe(true);
+            expect(result.current.mappingColumns[0].samples).toEqual(['5', '3']);
+            expect(result.current.mappingColumns[0].suggestion).toBe('quantity');
+        });
+
+        it('accepts every pending suggestion in one call without overriding existing choices', async () => {
+            const result = await upload(SUGGESTION_CSV);
+            expect(result.current.mappings.quantity).toBeUndefined();
+            expect(result.current.pendingSuggestionCount).toBe(1);
+
+            act(() => { result.current.acceptAllProposals(); });
+
+            expect(result.current.mappings.quantity).toBe('quantitydelta');
+            expect(result.current.mappings.amountPrimary).toBe('Amount');
+            expect(result.current.mappingSummary).toMatchObject({ ambiguous: 0, unmatched: 0, matched: 4 });
+            expect(result.current.pendingSuggestionCount).toBe(0);
+        });
+
+        it('moves a column to another field and frees the field it had', async () => {
+            const result = await upload(SUGGESTION_CSV);
+
+            act(() => { result.current.setColumnField('Amount', 'feeAmount'); });
+            expect(result.current.mappings.feeAmount).toBe('Amount');
+            expect(result.current.mappings.amountPrimary).toBeUndefined();
+
+            act(() => { result.current.setColumnField('Amount', null); });
+            expect(result.current.mappings.feeAmount).toBeUndefined();
+            expect(result.current.mappingColumns.find(c => c.header === 'Amount')?.status).toBe('unmatched');
+        });
+
+        it('assigning a field to a second column removes it from the first', async () => {
+            const result = await upload(SUGGESTION_CSV);
+
+            act(() => { result.current.setColumnField('quantitydelta', 'amountPrimary'); });
+
+            expect(result.current.mappings.amountPrimary).toBe('quantitydelta');
+            expect(result.current.mappingColumns.find(c => c.header === 'Amount')?.field).toBeNull();
+        });
+
+        it('shows a column used for two fields once, with the other field listed', async () => {
+            const { result } = renderHook(() => useImportWizard());
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
+            await act(async () => { await result.current.handleFileUpload(makeFile(BINANCE_CSV)); });
+            // The real Binance preset maps the statement's "Change" to quantity and amount alike
+            act(() => { result.current.setMapping('quantity', 'Change'); });
+
+            const change = result.current.mappingColumns.find(c => c.header === 'Change');
+            expect(change?.field).toBe('amountPrimary');
+            expect(change?.extraFields).toEqual(['quantity']);
+        });
+
+        it('previews at most 2 rows as they will be stored, on a file of 2,500 rows', async () => {
+            const result = await upload(bigCsv(2500));
+
+            expect(result.current.rowCount).toBe(2500);
+            expect(result.current.sampleRows).toHaveLength(200);
+            expect(result.current.mappedPreview).toHaveLength(2);
+            const first = Object.fromEntries(result.current.mappedPreview[0].map(e => [e.field, e.value]));
+            expect(first.transactionDate).toBe('2024-01-01T00:00:00.000Z');
+            expect(first.type).toBe('BUY');
+            expect(first.assetSymbol).toBe('AAPL');
+            expect(first.amountPrimary).toBe('100');
+        });
+
+        it('keeps a saved profile working: its mappings apply as they are', async () => {
+            const result = await upload(GENERIC_CSV);
+
+            act(() => { result.current.applyTemplate('tpl-1'); });
+
+            expect(result.current.mappings).toEqual(mockTemplates[0].mappings);
+            expect(result.current.selectedTemplateId).toBe('tpl-1');
         });
     });
 

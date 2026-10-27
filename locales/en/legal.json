@@ -377,7 +377,7 @@
       "themeLang": {
         "key": "gf_public_theme / gf_public_lang",
         "category": "Strictly Necessary (Preferences)",
-        "purpose": "Stores your chosen UI theme (Light, Dark, Midnight) and language preference (EN, FR) across sessions.",
+        "purpose": "Stores your chosen UI theme (Light, Dark, Midnight) and language preference (EN, FR) across sessions and between glassfolio.dev and app.glassfolio.dev.",
         "lifespan": "Persistent until browser cache clear"
       },
       "consent": {

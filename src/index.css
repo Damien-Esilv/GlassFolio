@@ -280,6 +280,15 @@ body {
 }
 
 /* Custom Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -348,6 +357,70 @@ body {
 }
 
 /* Custom Scrollbar */
+/* Public showcase surfaces (landing + self-host guide). Colors come from theme tokens only. */
+@keyframes auroraDrift {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, 2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-2%, 4%, 0) scale(0.98);
+  }
+}
+
+.landing-aurora {
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 120%;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 46% at 22% 32%, color-mix(in srgb, var(--color-brand) 30%, transparent), transparent 70%),
+    radial-gradient(32% 40% at 78% 22%, color-mix(in srgb, var(--color-accent-cyan) 18%, transparent), transparent 70%),
+    radial-gradient(30% 36% at 60% 70%, color-mix(in srgb, var(--color-accent-indigo) 16%, transparent), transparent 70%);
+  filter: blur(48px);
+  animation: auroraDrift 22s ease-in-out infinite alternate;
+}
+
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border-strong) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border-strong) 45%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 20%, transparent 75%);
+}
+
+.landing-header-glass {
+  background-color: color-mix(in srgb, var(--bg-card) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+.landing-terminal {
+  background-color: color-mix(in srgb, var(--bg-canvas) 88%, var(--text-primary) 4%);
+}
+
+.landing-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background-color: var(--color-brand);
+  animation: caretBlink 1s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -425,3 +498,32 @@ textarea::selection {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Clean range slider styling without WebKit native borders */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  border: none;
+}

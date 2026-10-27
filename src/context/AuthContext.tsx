@@ -6,6 +6,12 @@ import { authService } from '../services/security/authService';
 import { AuthResult, SecondFactorMethod, SignUpOptions } from '../services/security/authTypes';
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
+import {
+  getSyncedPublicTheme,
+  setSyncedPublicTheme,
+  setSyncedPublicLanguage,
+  applyPublicDomTheme,
+} from '../services/storage/publicPreferencesSync';
 
 import { consumeUrlBootstrapParams } from '../config/urlBootstrap';
 
@@ -167,11 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Theme Effect
   useEffect(() => {
     const root = document.documentElement;
-    const storedPublicTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
-    const fallbackTheme =
-      storedPublicTheme === 'light' || storedPublicTheme === 'dark' || storedPublicTheme === 'night' || storedPublicTheme === 'emerald' || storedPublicTheme === 'cyber'
-        ? storedPublicTheme
-        : 'night';
+    const fallbackTheme = getSyncedPublicTheme();
 
     // Determine theme preference
     let theme = user?.preferences?.theme || fallbackTheme;
@@ -303,14 +305,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     authService.signOut().catch(err => console.error('Error locking vault on logout', err));
-    // Preserve stored public theme instead of forcing hardcoded 'night'
-    const storedPublicTheme = appStorage.getItem(PUBLIC_THEME_STORAGE_KEY) || 'night';
-    document.documentElement.setAttribute('data-theme', storedPublicTheme);
-    if (storedPublicTheme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
+    // Apply synced public base theme
+    const storedPublicTheme = getSyncedPublicTheme();
+    applyPublicDomTheme(storedPublicTheme);
   };
 
   const lockVault = async () => {
@@ -347,10 +344,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               dateFormat: data.preferences.dateFormat ?? user.preferences?.dateFormat ?? 'DD/MM/YYYY'
             };
             if (updatedUser.preferences.theme) {
-              appStorage.setItem(PUBLIC_THEME_STORAGE_KEY, updatedUser.preferences.theme);
+              setSyncedPublicTheme(updatedUser.preferences.theme);
             }
             if (updatedUser.preferences.language) {
-              appStorage.setItem(PUBLIC_LANG_STORAGE_KEY, updatedUser.preferences.language);
+              setSyncedPublicLanguage(updatedUser.preferences.language);
               if (updatedUser.preferences.language !== user.preferences?.language) {
                 // Keep branded auth emails in the user's language (Epic E25); best effort.
                 authService.syncEmailLocale?.(updatedUser.preferences.language).catch(() => undefined);

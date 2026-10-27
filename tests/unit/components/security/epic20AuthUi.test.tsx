@@ -127,7 +127,7 @@ describe('Epic 20 — Auth & Security UI Components', () => {
 
             expect(screen.getByText('verify@example.com')).toBeDefined();
 
-            const input = screen.getByPlaceholderText('123456');
+            const input = screen.getByLabelText(/Verification Code|Code de vérification/i);
             fireEvent.change(input, { target: { value: '654321' } });
 
             const confirmBtn = screen.getByRole('button', { name: /Confirm Code|Confirmer le code/i });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { buildThemeColors } from '../../../src/config/tailwindTheme.mjs';
+import { buildThemeColors, colorValue } from '../../../src/config/tailwindTheme.mjs';
 import {
   THEME_INTENT,
   getTrendTokens,
@@ -166,7 +166,7 @@ describe('Theme Tokens Contract & HTML Synchronization (Critique 4 SSOT)', () =>
     it('should expose the semantic intent colors through the Tailwind theme derived from src/index.css', () => {
       const { colors } = buildThemeColors(indexContent);
       for (const name of ['positive', 'negative', 'positive-subtle', 'negative-subtle', 'warning-subtle', 'brand-static']) {
-        expect(colors[name], `${name} must be derived from --color-${name}`).toBe(`var(--color-${name})`);
+        expect(colors[name], `${name} must be derived from --color-${name}`).toBe(colorValue(`--color-${name}`));
       }
       // tailwind.config.ts must stay free of hand-written colors (declared once, in the stylesheet)
       expect(tailwindConfigContent).toContain('buildThemeColors');

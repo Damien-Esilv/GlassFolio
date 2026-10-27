@@ -113,7 +113,7 @@ export const AIMarkdownRenderer: React.FC<AIMarkdownRendererProps> = ({
 
           {/* Inline Expanded Thoughts Body */}
           {isThoughtOpen && (
-            <div className="px-3 pb-3 pt-1 border-t border-subtle/50 text-[11px] text-secondary font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto bg-canvas/40 select-text">
+            <div className="px-3 pb-3 pt-1 border-t border-subtle text-[11px] text-secondary font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto bg-canvas/40 select-text">
               {thoughtText}
               {isLiveThinking && (
                 <span className="inline-block w-1.5 h-3 ml-1 bg-brand animate-pulse align-middle" />

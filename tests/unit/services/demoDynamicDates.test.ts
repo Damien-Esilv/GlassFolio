@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+    hoursAgoISO,
     daysAgoISO,
     monthsAgoISO,
     yearsAgoISO,
@@ -37,6 +38,17 @@ describe('E32: Dynamic Dates Generation for Demo Mode', () => {
     });
 
     describe('demoDates utility functions', () => {
+        it('calculates hoursAgoISO correctly and ensures intraday relative timestamp', () => {
+            const date2h = hoursAgoISO(2, fixedNow);
+            const d = new Date(date2h);
+            expect(d.getTime()).toBeLessThan(fixedNow.getTime());
+            expect(date2h).toBe('2026-10-26T10:00:00.000Z');
+
+            // Default parameter (2 hours)
+            const defaultHours = hoursAgoISO(undefined, fixedNow);
+            expect(defaultHours).toBe('2026-10-26T10:00:00.000Z');
+        });
+
         it('calculates daysAgoISO correctly and never returns a date in the future', () => {
             const date7d = daysAgoISO(7, 10, 0, fixedNow);
             const d = new Date(date7d);
@@ -175,6 +187,17 @@ describe('E32: Dynamic Dates Generation for Demo Mode', () => {
                 });
             });
         });
+
+        it('includes an intraday transaction on the current day', () => {
+            const txs = buildDemoUnifiedTransactions(fixedNow);
+            const todayTx = txs.find(t => t.id === 'utx-recent-today');
+            expect(todayTx).toBeDefined();
+            const txDate = new Date(todayTx!.transactionDate);
+            expect(txDate.getUTCFullYear()).toBe(fixedNow.getUTCFullYear());
+            expect(txDate.getUTCMonth()).toBe(fixedNow.getUTCMonth());
+            expect(txDate.getUTCDate()).toBe(fixedNow.getUTCDate());
+            expect(txDate.getTime()).toBeLessThan(fixedNow.getTime());
+        });
     });
 
     describe('Legacy Mock Data Timeline', () => {
@@ -187,6 +210,13 @@ describe('E32: Dynamic Dates Generation for Demo Mode', () => {
                 const txMs = new Date(t.date).getTime();
                 expect(txMs).toBeLessThanOrEqual(fixedNow.getTime());
             });
+
+            const todayTx = legacyTxs.find(t => t.id === 't-recent-today');
+            expect(todayTx).toBeDefined();
+            const txDate = new Date(todayTx!.date);
+            expect(txDate.getUTCFullYear()).toBe(fixedNow.getUTCFullYear());
+            expect(txDate.getUTCMonth()).toBe(fixedNow.getUTCMonth());
+            expect(txDate.getUTCDate()).toBe(fixedNow.getUTCDate());
 
             // Recent transactions between J-7 and J-1
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;

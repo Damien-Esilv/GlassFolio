@@ -152,9 +152,20 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
               </p>
             )}
 
+            {/* Hidden username to anchor password manager identification */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              defaultValue={user?.email || 'user'}
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+
             {requirements.password && (
               <div>
-                <label className="block text-xs font-medium text-secondary mb-1">
+                <label htmlFor="step-up-password" className="block text-xs font-medium text-secondary mb-1">
                   {t('security:stepUp.passwordLabel')}
                 </label>
                 <div className="relative">
@@ -162,9 +173,12 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
                     <Lock size={16} />
                   </div>
                   <input
+                    id="step-up-password"
+                    name="password"
                     type="password"
                     required
                     autoFocus
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-9 bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
@@ -177,7 +191,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
             {hasTotp && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-secondary">
+                  <label htmlFor="step-up-totp" className="block text-xs font-medium text-secondary">
                     {t('security:stepUp.totpLabel')}
                   </label>
                   {hasPasskey && (
@@ -197,6 +211,8 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
                     <KeyRound size={16} />
                   </div>
                   <input
+                    id="step-up-totp"
+                    name="otp"
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"

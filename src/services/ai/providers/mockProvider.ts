@@ -1,9 +1,14 @@
+import i18n from '../../../i18n';
 import { AIProvider } from './types';
-import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
+import { AILanguage, ChatMessage, LLMResponse, ToolCallRequest } from '../types';
+
+const THINKING_STEPS = ['step1', 'step2', 'step3'] as const;
+const EXAMPLE_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5'] as const;
 
 /**
  * MockProvider - Intelligent offline rule-based financial assistant.
  * Allows instant, zero-config testing and offline demos without requiring an external API key.
+ * Every sentence comes from the `ai:mock` translations, in the language of the interface.
  */
 export class MockProvider implements AIProvider {
   constructor(private enableThinking: boolean = true) {}
@@ -11,38 +16,40 @@ export class MockProvider implements AIProvider {
   public async sendMessage(
     messages: ChatMessage[],
     _tools: unknown[],
-    _systemPrompt: string
+    _systemPrompt: string,
+    language: AILanguage = 'fr'
   ): Promise<LLMResponse> {
     // Artificial slight latency to match realistic conversational feel
     await new Promise((res) => setTimeout(res, 250));
 
+    const t = (key: string, options: Record<string, unknown> = {}): string =>
+      i18n.t(key, { lng: language, ...options });
+    const thinking = (group: 'toolResult' | 'transaction' | 'goal' | 'default', options: Record<string, unknown> = {}): string =>
+      this.enableThinking
+        ? `<think>\n${THINKING_STEPS.map((step, index) => `${index + 1}. ${t(`ai:mock.thinking.${group}.${step}`, options)}`).join('\n')}\n</think>\n\n`
+        : '';
+
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage) {
-      return { content: 'Bonjour ! Comment puis-je vous aider avec votre patrimoine aujourd’hui ?' };
+      return { content: t('ai:mock.greeting') };
     }
 
     // 1. If previous step was a tool execution response, synthesize the answer
     if (lastMessage.role === 'tool') {
-      const res = this.synthesizeToolResult(lastMessage);
+      const res = this.synthesizeToolResult(lastMessage, t, language);
       if (this.enableThinking && !res.content.startsWith('<think>')) {
-        const thought =
-          `<think>\n` +
-          `1. Analyse des données brutes renvoyées par l'outil "${lastMessage.toolName}".\n` +
-          `2. Calcul des ratios et agrégations financières pour la synthèse.\n` +
-          `3. Formatage de la réponse en Markdown avec métriques clés.\n` +
-          `</think>\n\n`;
-        return { ...res, content: `${thought}${res.content}` };
+        return { ...res, content: `${thinking('toolResult', { tool: lastMessage.toolName })}${res.content}` };
       }
       return res;
     }
 
-    // 2. Analyze user intent to trigger relevant tools
+    // 2. Analyze user intent to trigger relevant tools (French and English keywords)
     const text = lastMessage.content.toLowerCase();
 
     // Check for transaction recording request
     if (
       (text.includes('enregistre') || text.includes('ajoute') || text.includes('achète') || text.includes('record') || text.includes('buy')) &&
-      (text.includes('action') || text.includes('aapl') || text.includes('apple') || text.includes('btc') || text.includes('eth'))
+      (text.includes('action') || text.includes('share') || text.includes('aapl') || text.includes('apple') || text.includes('btc') || text.includes('eth'))
     ) {
       const isApple = text.includes('aapl') || text.includes('apple');
       const symbol = isApple ? 'AAPL' : 'BTC';
@@ -65,45 +72,29 @@ export class MockProvider implements AIProvider {
         },
       };
 
-      const thought = this.enableThinking
-        ? `<think>\n` +
-          `1. Analyse de l'ordre financier demandé : achat de ${amount} ${symbol} (${instrument}) à ${price} EUR.\n` +
-          `2. Contrôle de sécurité et Human-in-the-Loop : une modification financière nécessite une confirmation explicite.\n` +
-          `3. Préparation de la carte d'approbation d'action.\n` +
-          `</think>\n\n`
-        : '';
-
       return {
-        content: `${thought}J'ai préparé l'ordre d'achat pour **${instrument} (${symbol})**. S'agissant d'une modification financière de votre portefeuille, veuillez valider l'opération ci-dessous :`,
+        content: `${thinking('transaction', { amount, symbol, instrument, price })}${t('ai:mock.transactionProposal', { instrument, symbol })}`,
         toolCalls: [toolCall],
       };
     }
 
     // Check for goal creation request
     if (
-      (text.includes('crée') || text.includes('nouvel') || text.includes('create')) &&
+      (text.includes('crée') || text.includes('nouvel') || text.includes('create') || text.includes('new')) &&
       (text.includes('objectif') || text.includes('goal'))
     ) {
       const toolCall: ToolCallRequest = {
         id: `call_${Date.now()}`,
         name: 'create_goal',
         arguments: {
-          title: 'Fonds d’urgence',
+          title: t('ai:mock.goalTitle'),
           targetAmount: 10000,
           deadline: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split('T')[0],
         },
       };
 
-      const thought = this.enableThinking
-        ? `<think>\n` +
-          `1. Analyse de l'objectif financier d'épargne ou fonds de précaution.\n` +
-          `2. Calcul de l'échéance prévisionnelle à 6 mois et du montant cible de 10 000 EUR.\n` +
-          `3. Préparation de la proposition d'action avec validation Human-in-the-Loop.\n` +
-          `</think>\n\n`
-        : '';
-
       return {
-        content: `${thought}Je vous propose de créer un nouvel objectif financier. Veuillez confirmer ci-dessous pour l'enregistrer dans GlassFolio :`,
+        content: `${thinking('goal')}${t('ai:mock.goalProposal')}`,
         toolCalls: [toolCall],
       };
     }
@@ -115,6 +106,7 @@ export class MockProvider implements AIProvider {
       text.includes('patrimoine') ||
       text.includes('summary') ||
       text.includes('wealth') ||
+      text.includes('net worth') ||
       text.includes('gains') ||
       text.includes('valeur')
     ) {
@@ -129,6 +121,7 @@ export class MockProvider implements AIProvider {
       text.includes('allocation') ||
       text.includes('répartition') ||
       text.includes('classe') ||
+      text.includes('breakdown') ||
       text.includes('pie') ||
       text.includes('camembert')
     ) {
@@ -144,7 +137,8 @@ export class MockProvider implements AIProvider {
       text.includes('ligne') ||
       text.includes('holding') ||
       text.includes('titre') ||
-      text.includes('pru')
+      text.includes('pru') ||
+      text.includes('cost basis')
     ) {
       return {
         content: '',
@@ -153,7 +147,14 @@ export class MockProvider implements AIProvider {
     }
 
     // Check for recent transactions
-    if (text.includes('transaction') || text.includes('historique') || text.includes('ordre') || text.includes('achat') || text.includes('vente')) {
+    if (
+      text.includes('transaction') ||
+      text.includes('historique') ||
+      text.includes('history') ||
+      text.includes('ordre') ||
+      text.includes('achat') ||
+      text.includes('vente')
+    ) {
       return {
         content: '',
         toolCalls: [{ id: `call_${Date.now()}`, name: 'list_transactions', arguments: { limit: 5 } }],
@@ -161,7 +162,7 @@ export class MockProvider implements AIProvider {
     }
 
     // Check for tax / fiscalite
-    if (text.includes('impôt') || text.includes('fisc') || text.includes('tax') || text.includes('plus-value') || text.includes('pfu')) {
+    if (text.includes('impôt') || text.includes('fisc') || text.includes('tax') || text.includes('plus-value') || text.includes('capital gain') || text.includes('pfu')) {
       return {
         content: '',
         toolCalls: [{ id: `call_${Date.now()}`, name: 'get_tax_summary', arguments: {} }],
@@ -177,28 +178,22 @@ export class MockProvider implements AIProvider {
     }
 
     // Default conversational response
-    const thought = this.enableThinking
-      ? `<think>\n` +
-        `1. Analyse du message conversationnel de l'utilisateur.\n` +
-        `2. Identification des modules d'analyse patrimoniale, fiscale et de gestion de portefeuille disponibles.\n` +
-        `3. Formulation d'un guidage personnalisé avec exemples de commandes guidées.\n` +
-        `</think>\n\n`
-      : '';
-
     return {
       content:
-        `${thought}` +
-        `Je suis votre assistant financier privé GlassFolio. Je peux analyser votre portefeuille, vérifier vos allocations d'actifs, calculer vos plus-values imposables ou vous aider à enregistrer des transactions en toute sécurité.\n\n` +
-        `**Quelques exemples de questions :**\n` +
-        `- *"Fais le bilan de mon patrimoine net et de mes gains."*\n` +
-        `- *"Quelle est mon allocation d'actifs ?"*\n` +
-        `- *"Quelles sont mes positions avec leur PRU ?"*\n` +
-        `- *"Analyse mes plus-values imposables."*\n` +
-        `- *"Enregistre un achat de 10 actions Apple."*`,
+        `${thinking('default')}${t('ai:mock.intro')}\n\n` +
+        `**${t('ai:mock.examplesTitle')}**\n` +
+        EXAMPLE_KEYS.map((key) => `- *"${t(`ai:mock.examples.${key}`)}"*`).join('\n'),
     };
   }
 
-  private synthesizeToolResult(toolMsg: ChatMessage): LLMResponse {
+  private synthesizeToolResult(
+    toolMsg: ChatMessage,
+    t: (key: string, options?: Record<string, unknown>) => string,
+    language: AILanguage
+  ): LLMResponse {
+    const locale = language === 'en' ? 'en-US' : 'fr-FR';
+    const num = (value: number | undefined): string => (value ?? 0).toLocaleString(locale);
+
     try {
       const data = JSON.parse(toolMsg.content);
 
@@ -206,12 +201,12 @@ export class MockProvider implements AIProvider {
         const sign = data.totalPL >= 0 ? '+' : '';
         return {
           content:
-            `### 📊 Synthèse de votre Portefeuille\n\n` +
-            `- **Patrimoine Net Total :** **${data.totalValue?.toLocaleString('fr-FR')} ${data.currency}**\n` +
-            `- **Montant Investi :** ${data.totalInvested?.toLocaleString('fr-FR')} ${data.currency}\n` +
-            `- **Plus-Value Latente :** **${sign}${data.totalPL?.toLocaleString('fr-FR')} ${data.currency}** (${sign}${data.totalPLPercent}%)\n` +
-            `- **Nombre de positions actives :** ${data.positionsCount}\n\n` +
-            `Votre portefeuille est bien diversifié. Souhaitez-vous une analyse détaillée de l'allocation d'actifs ou un point sur la fiscalité ?`,
+            `### ${t('ai:mock.summary.title')}\n\n` +
+            `- **${t('ai:mock.summary.netWorth')}:** **${num(data.totalValue)} ${data.currency}**\n` +
+            `- **${t('ai:mock.summary.invested')}:** ${num(data.totalInvested)} ${data.currency}\n` +
+            `- **${t('ai:mock.summary.unrealized')}:** **${sign}${num(data.totalPL)} ${data.currency}** (${sign}${data.totalPLPercent}%)\n` +
+            `- **${t('ai:mock.summary.positions')}:** ${data.positionsCount}\n\n` +
+            t('ai:mock.summary.followUp'),
         };
       }
 
@@ -219,15 +214,12 @@ export class MockProvider implements AIProvider {
         const list = Array.isArray(data) ? data : [];
         const rows = list
           .map((item: { assetClass: string; value: number; percentage: number }) =>
-            `- **${item.assetClass}** : ${item.value.toLocaleString('fr-FR')} € (${item.percentage}%)`
+            `- **${item.assetClass}**: ${num(item.value)} € (${item.percentage}%)`
           )
           .join('\n');
 
         return {
-          content:
-            `### 🥧 Répartition de vos Actifs\n\n` +
-            rows +
-            `\n\n*Conseil : Conserver un équilibre entre liquidités et actifs productifs permet de réduire la volatilité globale.*`,
+          content: `### ${t('ai:mock.allocation.title')}\n\n${rows}\n\n*${t('ai:mock.allocation.tip')}*`,
         };
       }
 
@@ -237,30 +229,30 @@ export class MockProvider implements AIProvider {
           .slice(0, 5)
           .map((p: { symbol: string; quantity: number; lastPrice: number; marketValue: number; unrealizedPL: number }) => {
             const sign = p.unrealizedPL >= 0 ? '+' : '';
-            return `| **${p.symbol}** | ${p.quantity} | ${p.lastPrice}€ | **${p.marketValue.toLocaleString('fr-FR')}€** | ${sign}${p.unrealizedPL}€ |`;
+            return `| **${p.symbol}** | ${p.quantity} | ${p.lastPrice}€ | **${num(p.marketValue)}€** | ${sign}${p.unrealizedPL}€ |`;
           })
           .join('\n');
 
         return {
           content:
-            `### 💼 Vos Principales Positions\n\n` +
-            `| Actif | Quantité | Cours | Valorisation | PnL Latent |\n` +
+            `### ${t('ai:mock.positions.title')}\n\n` +
+            `| ${t('ai:mock.positions.asset')} | ${t('ai:mock.positions.quantity')} | ${t('ai:mock.positions.price')} | ${t('ai:mock.positions.value')} | ${t('ai:mock.positions.pl')} |\n` +
             `| :--- | :--- | :--- | :--- | :--- |\n` +
             rows +
-            `\n\n*${positions.length} position(s) détenue(s) au total.*`,
+            `\n\n*${t('ai:mock.positions.count', { count: positions.length })}*`,
         };
       }
 
       if (toolMsg.toolName === 'get_tax_summary') {
         return {
           content:
-            `### 💡 Bilan Fiscal (Année ${data.fiscalYear})\n\n` +
-            `- **Plus-values brutes :** +${data.totalGrossCapitalGains?.toLocaleString('fr-FR')} €\n` +
-            `- **Moins-values reportables :** -${data.totalGrossCapitalLosses?.toLocaleString('fr-FR')} €\n` +
-            `- **Plus-value nette imposable :** **${data.netTaxableGain?.toLocaleString('fr-FR')} €**\n` +
-            `- **Estimation d'impôt (PFU) :** ${data.totalTaxDue?.toLocaleString('fr-FR')} €\n` +
-            `- **Régime recommandé :** **${data.recommendedRegime || 'PFU (Flat-tax 30%)'}**\n\n` +
-            `*(Économie potentielle : ${data.taxSavingsWithOptimalRegime || 0} €)*`,
+            `### ${t('ai:mock.tax.title', { year: data.fiscalYear })}\n\n` +
+            `- **${t('ai:mock.tax.grossGains')}:** +${num(data.totalGrossCapitalGains)} €\n` +
+            `- **${t('ai:mock.tax.carriedLosses')}:** -${num(data.totalGrossCapitalLosses)} €\n` +
+            `- **${t('ai:mock.tax.netTaxable')}:** **${num(data.netTaxableGain)} €**\n` +
+            `- **${t('ai:mock.tax.estimatedTax')}:** ${num(data.totalTaxDue)} €\n` +
+            `- **${t('ai:mock.tax.regime')}:** **${data.recommendedRegime || t('ai:mock.tax.defaultRegime')}**\n\n` +
+            `*(${t('ai:mock.tax.savings', { amount: num(data.taxSavingsWithOptimalRegime) })})*`,
         };
       }
 
@@ -268,33 +260,33 @@ export class MockProvider implements AIProvider {
         const goals = Array.isArray(data) ? data : [];
         const rows = goals
           .map((g: { title: string; currentAmount: number; targetAmount: number; progressPercentage: number }) =>
-            `- **${g.title}** : ${g.currentAmount.toLocaleString('fr-FR')}€ / ${g.targetAmount.toLocaleString('fr-FR')}€ (**${g.progressPercentage}%**)`
+            `- **${g.title}**: ${num(g.currentAmount)}€ / ${num(g.targetAmount)}€ (**${g.progressPercentage}%**)`
           )
           .join('\n');
 
         return {
-          content: `### 🎯 Avancement de vos Objectifs\n\n` + (rows || 'Aucun objectif actif pour le moment.'),
+          content: `### ${t('ai:mock.goals.title')}\n\n${rows || t('ai:mock.goals.empty')}`,
         };
       }
 
       if (toolMsg.toolName === 'list_transactions') {
         const txs = Array.isArray(data) ? data : [];
         const rows = txs
-          .map((t: { date: string; type: string; symbol: string; amount: number; total: number }) =>
-            `- *${t.date}* — **${t.type}** ${t.amount} ${t.symbol} (Total: ${t.total?.toLocaleString('fr-FR')}€)`
+          .map((tx: { date: string; type: string; symbol: string; amount: number; total: number }) =>
+            `- *${tx.date}* — **${tx.type}** ${tx.amount} ${tx.symbol} (Total: ${num(tx.total)}€)`
           )
           .join('\n');
 
         return {
-          content: `### 📝 Dernières Transactions\n\n` + (rows || 'Aucune transaction récente.'),
+          content: `### ${t('ai:mock.transactions.title')}\n\n${rows || t('ai:mock.transactions.empty')}`,
         };
       }
 
       return {
-        content: `Données obtenues avec succès :\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``,
+        content: `${t('ai:mock.rawData')}\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``,
       };
     } catch {
-      return { content: `Résultat reçu de l'outil ${toolMsg.toolName} : ${toolMsg.content}` };
+      return { content: t('ai:mock.rawResult', { tool: toolMsg.toolName, content: toolMsg.content }) };
     }
   }
 }

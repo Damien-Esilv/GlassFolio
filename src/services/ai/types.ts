@@ -15,9 +15,12 @@ export interface AIToolParametersSchema {
   required?: string[];
 }
 
+/** Language the assistant answers in: always the language of the interface. */
+export type AILanguage = 'en' | 'fr';
+
 export interface AIExecutionContext {
   userId?: string;
-  language?: 'en' | 'fr';
+  language?: AILanguage;
   currency?: string;
 }
 

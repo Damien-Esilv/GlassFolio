@@ -7,7 +7,9 @@
  *   --text-<name>    ->  <name>   in `textColor`        (text-<name>)
  *   --bg-<name>      ->  <name>   in `backgroundColor`  (bg-<name>)
  *   --border-<name>  ->  <name>   in `borderColor`      (border-<name>)
- * Each entry resolves to `var(--...)`, so the active theme (data-theme) decides the actual value.
+ * Each entry resolves to `color-mix(in srgb, var(--...) calc(<alpha-value> * 100%), transparent)`: the single
+ * parent variable decides the color (active theme via data-theme) and Tailwind fills `<alpha-value>`, so opacity
+ * modifiers (`bg-brand/10`, `border-subtle/60`) work. Without a modifier Tailwind substitutes 1 (100% = the exact variable).
  * Pure functions on a string: no file access here (tailwind.config.ts reads the file).
  */
 
@@ -15,6 +17,11 @@
 export const BORDER_COLOR_ALIASES = Object.freeze({
   border: '--border-subtle', // `border-border`
 });
+
+/** @param {string} variable e.g. '--color-brand' */
+export function colorValue(variable) {
+  return `color-mix(in srgb, var(${variable}) calc(<alpha-value> * 100%), transparent)`;
+}
 
 const GROUPS = Object.freeze({
   color: 'colors',
@@ -44,10 +51,10 @@ export function buildThemeColors(css) {
   for (const variable of extractCssVariableNames(css)) {
     const match = variable.match(/^--([a-z]+)-(.+)$/);
     const table = match ? GROUPS[match[1]] : undefined;
-    if (table) tables[table][match[2]] = `var(${variable})`;
+    if (table) tables[table][match[2]] = colorValue(variable);
   }
   for (const [name, variable] of Object.entries(BORDER_COLOR_ALIASES)) {
-    tables.borderColor[name] = `var(${variable})`;
+    tables.borderColor[name] = colorValue(variable);
   }
   return tables;
 }

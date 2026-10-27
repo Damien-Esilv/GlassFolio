@@ -44,6 +44,10 @@ const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
 
 const Landing = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Landing'));
 const LegalCenter = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/LegalCenter'));
+const SelfHost = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/SelfHost'));
+const About = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/About'));
+const Roadmap = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Roadmap'));
+const Changelog = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Changelog'));
 
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -109,6 +113,26 @@ const LazyLegalCenter: React.FC = () => {
   );
 };
 
+/** Public showcase page, excluded from the app-only (Docker) build like the landing. */
+const lazyPublicPage = (Page: React.ComponentType): React.FC => {
+  const LazyPublicPage: React.FC = () => {
+    if (isShowcaseExcluded) {
+      return <Navigate to="/login" replace />;
+    }
+    return (
+      <React.Suspense fallback={<LoadingScreen />}>
+        <Page />
+      </React.Suspense>
+    );
+  };
+  return LazyPublicPage;
+};
+
+const LazySelfHost = lazyPublicPage(SelfHost);
+const LazyAbout = lazyPublicPage(About);
+const LazyRoadmap = lazyPublicPage(Roadmap);
+const LazyChangelog = lazyPublicPage(Changelog);
+
 const App: React.FC = () => {
   if (getAuthCapabilities().misconfigured) {
     return <CloudMisconfiguredScreen />;
@@ -130,6 +154,14 @@ const App: React.FC = () => {
               <Route path="/terms" element={<LazyLegalCenter />} />
               <Route path="/cookies" element={<LazyLegalCenter />} />
               <Route path="/accessibility" element={<LazyLegalCenter />} />
+              <Route path="/self-host" element={<LazySelfHost />} />
+              <Route path="/welcome/self-host" element={<LazySelfHost />} />
+              <Route path="/about" element={<LazyAbout />} />
+              <Route path="/welcome/about" element={<LazyAbout />} />
+              <Route path="/roadmap" element={<LazyRoadmap />} />
+              <Route path="/welcome/roadmap" element={<LazyRoadmap />} />
+              <Route path="/changelog" element={<LazyChangelog />} />
+              <Route path="/welcome/changelog" element={<LazyChangelog />} />
               <Route path="/welcome/legal" element={<LazyLegalCenter />} />
               <Route path="/welcome/privacy" element={<LazyLegalCenter />} />
               <Route path="/welcome/terms" element={<LazyLegalCenter />} />

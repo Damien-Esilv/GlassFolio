@@ -8,14 +8,17 @@
  * so the browser's Back button points directly to the referring Showcase.
  */
 
-import { appStorage } from '../services/storage/appStorage';
 import {
-  PUBLIC_LANG_STORAGE_KEY,
-  PUBLIC_THEME_STORAGE_KEY,
-} from '../services/storage/storageKeys';
+  setSyncedPublicTheme,
+  setSyncedPublicLanguage,
+  isPublicBaseTheme,
+  isSupportedLanguage,
+  type PublicBaseTheme,
+  type SupportedLanguage,
+} from '../services/storage/publicPreferencesSync';
 
-export type HandoffTheme = 'light' | 'dark' | 'night';
-export type HandoffLanguage = 'en' | 'fr';
+export type HandoffTheme = PublicBaseTheme;
+export type HandoffLanguage = SupportedLanguage;
 
 export interface BootstrapHandoffResult {
   demoRequested: boolean;
@@ -59,9 +62,9 @@ export function consumeUrlBootstrapParams(): BootstrapHandoffResult {
   }
 
   const rawTheme = (searchParams.get('theme') || hashSearchParams?.get('theme'))?.toLowerCase();
-  if (rawTheme === 'light' || rawTheme === 'dark' || rawTheme === 'night') {
+  if (isPublicBaseTheme(rawTheme)) {
     handoffTheme = rawTheme;
-    appStorage.setItem(PUBLIC_THEME_STORAGE_KEY, rawTheme);
+    setSyncedPublicTheme(rawTheme);
     const root = document.documentElement;
     root.setAttribute('data-theme', rawTheme);
     if (rawTheme === 'light') {
@@ -72,9 +75,9 @@ export function consumeUrlBootstrapParams(): BootstrapHandoffResult {
   }
 
   const rawLang = (searchParams.get('lang') || hashSearchParams?.get('lang'))?.toLowerCase();
-  if (rawLang === 'en' || rawLang === 'fr') {
+  if (isSupportedLanguage(rawLang)) {
     handoffLang = rawLang;
-    appStorage.setItem(PUBLIC_LANG_STORAGE_KEY, rawLang);
+    setSyncedPublicLanguage(rawLang);
   }
 
   // 3. Clean the URL in-place without adding an extra history entry

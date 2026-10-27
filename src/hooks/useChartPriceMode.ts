@@ -7,7 +7,7 @@ import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { ChartPriceMode, UserPreferences } from '../types/domain';
 
-export const DEFAULT_CHART_PRICE_MODE: ChartPriceMode = 'historical';
+export const DEFAULT_CHART_PRICE_MODE: ChartPriceMode = 'simulated';
 
 export const useChartPriceMode = (): [ChartPriceMode, (mode: ChartPriceMode) => Promise<void>] => {
     const { user, updateProfile } = useAuth();

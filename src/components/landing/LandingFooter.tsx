@@ -1,13 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Hexagon, Sparkles, Lock, ArrowRight, ShieldCheck, Cookie } from 'lucide-react';
+import { Hexagon, Sparkles, Lock, ArrowRight, ShieldCheck, Cookie, Github } from 'lucide-react';
 import { useDemoAccess } from '../../hooks/useDemoAccess';
 import { openConsentPreferences } from '../../services/consentService';
 import { getDeploymentMode, getAppUrl, buildAppDestinationUrl, getAppTarget } from '../../config/deployment';
+import { usePublicThemeLang } from '../../hooks/usePublicThemeLang';
+import { GITHUB_REPO_URL, GITHUB_LICENSE_URL, buildPublicPagePath } from '../../config/project';
 
 export const LandingFooter: React.FC = () => {
   const { t } = useTranslation();
+  const { theme, language } = usePublicThemeLang();
   const { launchDemo, isLaunchingDemo } = useDemoAccess();
   const currentYear = new Date().getFullYear();
   const deploymentMode = getDeploymentMode();
@@ -15,6 +18,7 @@ export const LandingFooter: React.FC = () => {
   const isShowcaseTarget = getAppTarget() === 'showcase';
   const showcaseHome = isShowcaseTarget ? '/' : '/welcome';
   const legalBasePath = isShowcaseTarget ? '' : '/welcome';
+  const appTransition = { theme, lang: language };
 
   return (
     <footer className="border-t border-subtle bg-canvas transition-colors">
@@ -47,7 +51,7 @@ export const LandingFooter: React.FC = () => {
 
             {isExternalApp ? (
               <a
-                href={buildAppDestinationUrl('/signup')}
+                href={buildAppDestinationUrl('/signup', appTransition)}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-subtle hover:bg-card-hover border border-subtle text-primary text-xs sm:text-sm font-bold px-6 py-3 rounded-xl transition-all"
               >
                 <Lock size={15} className="text-secondary" />
@@ -87,13 +91,63 @@ export const LandingFooter: React.FC = () => {
               {t('landing:footer.brandDescription')}
             </p>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-subtle text-tertiary border border-subtle text-[11px] font-mono font-semibold">
-              {t('landing:footer.deploymentBadge', { mode: deploymentMode })}
+              {t('landing:footer.deploymentBadge', { mode: t(`landing:footer.deploymentModes.${deploymentMode}`) })}
             </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-10 sm:gap-16">
+          {/* The Project Column (public pages) */}
+          <div>
+            <h4 className="text-xs font-bold text-primary mb-3">
+              {t('landing:footer.projectHeading')}
+            </h4>
+            <ul className="space-y-2 text-xs text-secondary font-medium">
+              <li>
+                <Link to={buildPublicPagePath('/about')} className="hover:text-primary transition-colors">
+                  {t('landing:header.pageAbout')}
+                </Link>
+              </li>
+              <li>
+                <Link to={buildPublicPagePath('/roadmap')} className="hover:text-primary transition-colors">
+                  {t('landing:header.pageRoadmap')}
+                </Link>
+              </li>
+              <li>
+                <Link to={buildPublicPagePath('/changelog')} className="hover:text-primary transition-colors">
+                  {t('landing:header.pageChangelog')}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Source Code Column */}
+          <div>
+            <h4 className="text-xs font-bold text-primary mb-3">
+              {t('landing:footer.sourceHeading')}
+            </h4>
+            <ul className="space-y-2 text-xs text-secondary font-medium">
+              <li>
+                <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Github size={13} />
+                  <span>{t('landing:footer.githubRepo')}</span>
+                </a>
+              </li>
+              <li>
+                <Link to={buildPublicPagePath('/self-host')} className="hover:text-primary transition-colors">
+                  {t('landing:footer.selfHostGuide')}
+                </Link>
+              </li>
+              <li>
+                <a href={GITHUB_LICENSE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  {t('landing:footer.license')}
+                </a>
+              </li>
+            </ul>
           </div>
 
           {/* Legal Center Column */}
           <div>
-            <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
+            <h4 className="text-xs font-bold text-primary mb-3">
               {t('landing:footer.legalHeading')}
             </h4>
             <ul className="space-y-2 text-xs text-secondary font-medium">
@@ -133,6 +187,7 @@ export const LandingFooter: React.FC = () => {
                 </button>
               </li>
             </ul>
+          </div>
           </div>
         </div>
 

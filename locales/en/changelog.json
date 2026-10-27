@@ -1,0 +1,23 @@
+{
+  "title": "Changelog",
+  "intro": "What changed in GlassFolio, release after release.",
+  "versionLabel": "Version {{version}}",
+  "kind": {
+    "new": "New",
+    "improved": "Improved"
+  },
+  "roadmapLink": "See what's coming next",
+  "entries": {
+    "v1-0": {
+      "title": "Official Launch of GlassFolio V1",
+      "highlights": {
+        "vault": "End-to-end client-side encrypted vault (AES-256-GCM) with passkey biometric unlock.",
+        "multiAssets": "Complete multi-asset wealth tracking: PEA, brokerage, crypto, life insurance, and savings accounts.",
+        "importEngine": "Universal import engine with smart format detection, column mapping, and statement reconciliation.",
+        "taxAssistant": "French tax assistant: Cerfa 2042 / 3916-bis simulation, flat-tax vs progressive bracket comparison, and tax-loss harvesting.",
+        "aiAssistant": "Private built-in AI copilot (local Ollama or BYOK API) with local MCP server for Claude Desktop & Cursor.",
+        "selfHostAndCloud": "Secure cloud edition and self-hosted Docker container running entirely on your machine."
+      }
+    }
+  }
+}

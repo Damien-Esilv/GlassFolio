@@ -40,7 +40,7 @@ describe('aiService', () => {
     const lastMsg = messages[messages.length - 1];
     const proposalId = lastMsg.pendingAction!.id;
 
-    await aiService.approveAction(proposalId);
+    await aiService.approveAction(proposalId, { language: 'fr' });
 
     const updatedMessages = aiService.getMessages();
     const finalMsg = updatedMessages[updatedMessages.length - 1];

@@ -1,0 +1,14 @@
+{
+  "passkey_added": {
+    "subject": "Une nouvelle passkey a été ajoutée à votre compte GlassFolio",
+    "heading": "Nouvelle passkey configurée",
+    "body": "La clé d'accès biométrique ou de sécurité <strong>« {{passkeyName}} »</strong> vient d'être ajoutée à votre compte GlassFolio (<code>{{email}}</code>)."
+  },
+  "passkey_removed": {
+    "subject": "Une passkey a été supprimée de votre compte GlassFolio",
+    "heading": "Passkey supprimée",
+    "body": "La clé d'accès biométrique ou de sécurité <strong>« {{passkeyName}} »</strong> a été révoquée de votre compte GlassFolio (<code>{{email}}</code>)."
+  },
+  "alertNote": "Si vous n'êtes pas à l'origine de cette action, votre compte est peut-être compromis. Rendez-vous immédiatement dans Paramètres > Sécurité pour verrouiller votre coffre et modifier votre mot de passe maître.",
+  "footerText": "Notification de sécurité automatique • GlassFolio • Chiffrement de bout en bout (E2EE)"
+}
