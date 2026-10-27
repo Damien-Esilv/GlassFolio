@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '../../../src/i18n';
 import FeeAnalysis from '../../../src/pages/FeeAnalysis';
+import { etfFeeService } from '../../../src/services/etfFeeService';
 
 const mockState = vi.hoisted(() => ({
   language: 'en' as 'en' | 'fr',
@@ -83,5 +84,29 @@ describe('<FeeAnalysis /> i18n', () => {
     expect(text).not.toContain('asset to optimise');
     expect(text).not.toContain('/ year');
     expect(text).not.toContain('Global view');
+  });
+});
+
+describe('etfFeeService security & URL encoding', () => {
+  it('safely URL-encodes ETF symbols with special characters when constructing Yahoo Finance links', () => {
+    const info = etfFeeService.getEtfInfo('CUSTOM TICKER?param=1#fragment');
+    expect(info.yahooUrl).toBe('https://finance.yahoo.com/quote/CUSTOM%20TICKER%3Fparam%3D1%23fragment');
+
+    const result = etfFeeService.analyzeEtfFees([
+      {
+        id: 'unsafe-1',
+        instrument: 'Unsafe Symbol ETF',
+        symbol: 'MAL/TRD?foo=bar#baz',
+        quantity: 1,
+        avgCost: 10,
+        lastPrice: 10,
+        marketValue: 1000,
+        unrealizedPL: 0,
+        unrealizedPLPercent: 0,
+        currency: 'EUR',
+        type: 'ETF',
+      },
+    ]);
+    expect(result.recommendations).toHaveLength(1);
   });
 });

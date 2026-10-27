@@ -126,12 +126,13 @@ export const etfFeeService = {
         const baseSymbol = symbolUpper.split('.')[0];
         if (KNOWN_ETF_DB[baseSymbol]) return KNOWN_ETF_DB[baseSymbol];
 
+        const safeSymbol = encodeURIComponent(symbol.trim());
         return {
             symbol: symbol,
             name: fallbackName || symbol,
             ter: 0.35,
             category: 'Equity ETF',
-            yahooUrl: `https://finance.yahoo.com/quote/${symbol}`
+            yahooUrl: `https://finance.yahoo.com/quote/${safeSymbol}`
         };
     },
 
@@ -152,12 +153,13 @@ export const etfFeeService = {
 
             // Lookup known ETF info or default to standard TER
             const symbolUpper = pos.symbol.toUpperCase();
+            const safeSymbol = encodeURIComponent(pos.symbol.trim());
             const knownInfo = KNOWN_ETF_DB[symbolUpper] || {
                 symbol: pos.symbol,
                 name: pos.instrument,
                 ter: 0.35, // Default estimated TER
                 category: 'MSCI World',
-                yahooUrl: `https://finance.yahoo.com/quote/${pos.symbol}`
+                yahooUrl: `https://finance.yahoo.com/quote/${safeSymbol}`
             };
 
             const currentTer = knownInfo.ter;
