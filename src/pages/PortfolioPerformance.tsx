@@ -227,21 +227,13 @@ const PortfolioPerformance: React.FC = () => {
          });
       }
 
-      // Helper to compute curve value for any asset category or ticker at index i
-      const getItemVal = (itemKey: string, index: number): number => {
-         if (itemKey === 'All' || itemKey === 'Global Portfolio') {
-            // "All" is the aggregate average of all portfolio asset classes
-            let sum = 0;
-            ASSET_CLASSES.forEach((cls) => {
-               sum += getItemVal(cls, index);
-            });
-            return Math.round((sum / ASSET_CLASSES.length) * 100) / 100;
-         }
+      // Bolt Optimization: Precompute synthetic curve parameters once per itemKey
+      // to avoid re-hashing string keys and re-evaluating trig parameters on every point iteration.
+      const itemParamsMap = new Map<string, { scale: number; drift: number; freq1: number; freq2: number; phase1: number; phase2: number; startOffset: number }>();
 
-         // Use live historical API data if available for reference ticker
-         if (!isAssetCategory(itemKey) && referenceHistoryMap[itemKey] && referenceHistoryMap[itemKey][index] !== undefined) {
-            return referenceHistoryMap[itemKey][index];
-         }
+      const getItemParams = (itemKey: string) => {
+         let params = itemParamsMap.get(itemKey);
+         if (params) return params;
 
          let seed1 = 0;
          let seed2 = 0;
@@ -251,8 +243,6 @@ const PortfolioPerformance: React.FC = () => {
          }
          seed1 = Math.abs(seed1 % 1000) + 1;
          seed2 = Math.abs(seed2 % 1000) + 1;
-
-         if (index === 0) return 0;
 
          let scale = 2.5;
          let drift = 0.02;
@@ -284,12 +274,37 @@ const PortfolioPerformance: React.FC = () => {
          const freq2 = 0.45 + (seed2 % 9) * 0.04;
          const phase1 = (seed1 % 11) * 0.5;
          const phase2 = (seed2 % 7) * 0.7;
+         const startOffset = (Math.sin(phase1) * 1.5 + Math.cos(phase2 * 0.4) * 0.8) * scale;
+
+         params = { scale, drift, freq1, freq2, phase1, phase2, startOffset };
+         itemParamsMap.set(itemKey, params);
+         return params;
+      };
+
+      // Helper to compute curve value for any asset category or ticker at index i
+      const getItemVal = (itemKey: string, index: number): number => {
+         if (index === 0) return 0;
+
+         if (itemKey === 'All' || itemKey === 'Global Portfolio') {
+            // "All" is the aggregate average of all portfolio asset classes
+            let sum = 0;
+            ASSET_CLASSES.forEach((cls) => {
+               sum += getItemVal(cls, index);
+            });
+            return Math.round((sum / ASSET_CLASSES.length) * 100) / 100;
+         }
+
+         // Use live historical API data if available for reference ticker
+         if (!isAssetCategory(itemKey) && referenceHistoryMap[itemKey] && referenceHistoryMap[itemKey][index] !== undefined) {
+            return referenceHistoryMap[itemKey][index];
+         }
+
+         const { scale, drift, freq1, freq2, phase1, phase2, startOffset } = getItemParams(itemKey);
 
          const cycle1 = Math.sin(index * freq1 + phase1);
          const cycle2 = Math.cos(index * freq2 + phase2 * 0.4);
 
          const rawReturn = (cycle1 * 1.5 + cycle2 * 0.8) * scale + (index * drift);
-         const startOffset = (Math.sin(phase1) * 1.5 + Math.cos(phase2 * 0.4) * 0.8) * scale;
          const relativeReturn = rawReturn - startOffset;
 
          return Math.round(relativeReturn * 100) / 100;

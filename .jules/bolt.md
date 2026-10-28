@@ -1,0 +1,3 @@
+## 2025-05-18 - Precompute Invariant Parameters in Chart Synthetic Curve Loops
+**Learning:** In `PortfolioPerformance.tsx`, synthetic curve values (`getItemVal`) re-computed string hashes, conditional logic, and trigonometric start offsets for every data point index along chart timelines. Since these parameters depend solely on the item ticker/key and not on the time index, caching item parameters (`getItemParams`) once per `itemKey` avoids redundant string hashing and trig computations inside point iteration loops.
+**Action:** When generating series data points for charts with synthetic or fallback curves, precompute invariant curve parameters (scale, drift, frequencies, phases, start offsets) once per series item before or during point iteration.
