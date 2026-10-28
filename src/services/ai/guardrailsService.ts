@@ -16,7 +16,7 @@ class GuardrailsService {
     params: Record<string, unknown>,
     previewData: Record<string, unknown>
   ): PendingActionProposal {
-    const id = `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const id = `act_${Date.now()}_${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
     const proposal: PendingActionProposal = {
       id,
       toolName,

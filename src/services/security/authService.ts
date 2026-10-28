@@ -73,7 +73,7 @@ export class EmailNotConfirmedError extends Error {
 // Helper to create in-memory session record
 function createSessionRecord(userId: string): AuthSession {
     return {
-        id: `sess-${Math.random().toString(36).substr(2, 9)}`,
+        id: `sess-${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`,
         userId,
         createdAt: new Date().toISOString(),
         lastSeenAt: new Date().toISOString(),

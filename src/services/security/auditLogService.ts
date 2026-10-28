@@ -68,7 +68,7 @@ export const auditLogService = {
         severity: AuditSeverity = 'info'
     ): Promise<AuditLogEntry> {
         const entry: AuditLogEntry = {
-            id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            id: `audit-${Date.now()}-${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`,
             timestamp: new Date().toISOString(),
             event,
             details,
