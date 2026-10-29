@@ -936,6 +936,18 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             throw new Error('An active session already exists for another user.');
         }
 
+        // An account with a verified TOTP must reach AAL2 BEFORE its vault is read or written: the MFA
+        // row-level policy hides the vault from an AAL1 session, so pulling now would look like "no vault
+        // yet" and the new-vault path would then try (and fail) to create one over the real vault.
+        return this.continueAfterPrimaryAuth(session, 'google', (verified) =>
+            this.completeGoogleSignIn(verified, callbackResult)
+        );
+    }
+
+    private async completeGoogleSignIn(
+        session: SupabaseAuthSession,
+        callbackResult: GoogleCallbackResult
+    ): Promise<AuthResult & { recoveryKey?: string }> {
         // 2. Clear any leftover demo vault if present so demo data never mixes with Google account
         if (vaultService.isDemoVault()) {
             await vaultService.resetVault();
@@ -1001,6 +1013,13 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 await vaultService.unlockGoogleDriveVault(existingKey.driveSecret, session.user.id);
             }
         } else {
+            // The server holds no vault for this account. Whatever this device still caches is a
+            // leftover, never the only copy (cloud mode): a first attempt that failed before its header
+            // was published, or another account's cache. A new vault must not be blocked by it.
+            if (vaultService.isInitialized()) {
+                this.assertVaultReplaceable();
+                await vaultService.resetVault();
+            }
             const driveKey = await googleDriveVaultKeyService.getOrCreateRootSecret(
                 callbackResult.accessToken,
                 session.user.id

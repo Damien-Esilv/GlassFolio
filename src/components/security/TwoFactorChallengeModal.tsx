@@ -4,7 +4,7 @@ import { ShieldCheck, Smartphone, KeyRound, Fingerprint, AlertCircle, Loader2 } 
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { getAuthCapabilities } from '../../services/security/authCapabilities';
-import { SecondFactorMethod } from '../../services/security/authTypes';
+import { AuthResult, SecondFactorMethod } from '../../services/security/authTypes';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
 
 interface TwoFactorChallengeModalProps {
@@ -12,12 +12,15 @@ interface TwoFactorChallengeModalProps {
     /** Second factors this account can use; the sign-in completes in AuthContext. */
     methods: SecondFactorMethod[];
     onCancel: () => void;
+    /** Called with the completed sign-in (e.g. to show a recovery key); optional. */
+    onVerified?: (result: AuthResult) => void;
 }
 
 export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = ({
     isOpen,
     methods,
     onCancel,
+    onVerified,
 }) => {
     const { t } = useTranslation(['security', 'auth']);
     const { completeSecondFactor, completeSecondFactorWithPasskey } = useAuth();
@@ -38,7 +41,9 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
         setError(null);
         setIsLoading(true);
         try {
-            await completeSecondFactor(cleanCode);
+            // Awaited first: `onVerified?.(await …)` would skip the verification when no callback is given.
+            const result = await completeSecondFactor(cleanCode);
+            onVerified?.(result);
         } catch (err: unknown) {
             setError(mapAuthErrorMessage(err, t, 'security:totp.invalidCode'));
         } finally {
@@ -50,7 +55,8 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
         setError(null);
         setIsLoading(true);
         try {
-            await completeSecondFactorWithPasskey();
+            const result = await completeSecondFactorWithPasskey();
+            onVerified?.(result);
         } catch (err: unknown) {
             setError(mapAuthErrorMessage(err, t, 'common:errors.passkey.FAILED'));
         } finally {
