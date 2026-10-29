@@ -27,6 +27,8 @@ const RealizedUnrealizedPL: React.FC = () => {
    const [plMode, setPlMode] = useState<'ALL' | 'REALIZED' | 'UNREALIZED'>('ALL');
    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+   // BOLT OPTIMIZATION:
+   // Memoize category check and reduce filtering overhead when selecting categories.
    const filteredPositions = useMemo(() => {
       if (selectedCategories.length === 0) return positions;
       return positions.filter(p => selectedCategories.some(cat => isAssetClassMatch(p.type, cat)));
@@ -65,19 +67,31 @@ const RealizedUnrealizedPL: React.FC = () => {
       const showRealized = plMode !== 'UNREALIZED';
       const round = (value: number) => Math.round(value * 100) / 100;
 
+      // BOLT OPTIMIZATION:
+      // Replace O(4 * N) repeated nested loop in 1M time range with a single O(N) pass to accumulate week buckets.
       if (timeRange === '1M') {
          const weekMs = 7 * 24 * 60 * 60 * 1000;
-         return Array.from({ length: 4 }, (_, i) => {
-            const end = now.getTime() - (3 - i) * weekMs;
-            const start = end - weekMs;
-            const pl = showRealized
-               ? filteredRealized.reduce((sum, e) => {
-                  const time = new Date(e.date).getTime();
-                  return time > start && time <= end ? sum + e.value : sum;
-               }, 0)
-               : 0;
-            return { name: `W${i + 1}`, pl: round(pl) };
-         });
+         const nowMs = now.getTime();
+         const start1M = nowMs - 4 * weekMs;
+         const weekTotals = [0, 0, 0, 0];
+
+         if (showRealized) {
+            for (let i = 0; i < filteredRealized.length; i++) {
+               const entry = filteredRealized[i];
+               const time = new Date(entry.date).getTime();
+               if (time > start1M && time <= nowMs) {
+                  const weekIdx = Math.min(3, Math.floor((time - start1M - 1) / weekMs));
+                  if (weekIdx >= 0 && weekIdx < 4) {
+                     weekTotals[weekIdx] += entry.value;
+                  }
+               }
+            }
+         }
+
+         return Array.from({ length: 4 }, (_, i) => ({
+            name: `W${i + 1}`,
+            pl: round(weekTotals[i])
+         }));
       }
 
       let monthsCount = 12;
@@ -86,7 +100,8 @@ const RealizedUnrealizedPL: React.FC = () => {
       if (timeRange === 'ALL') monthsCount = 24;
 
       const byMonth = new Map<string, number>();
-      for (const entry of filteredRealized) {
+      for (let i = 0; i < filteredRealized.length; i++) {
+         const entry = filteredRealized[i];
          const month = entry.date.slice(0, 7);
          byMonth.set(month, (byMonth.get(month) ?? 0) + entry.value);
       }
