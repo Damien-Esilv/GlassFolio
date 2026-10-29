@@ -8,10 +8,19 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-2": {
+      "title": "Une connexion Google plus fluide",
+      "highlights": {
+        "googleNoKey": "Se connecter avec Google ne vous demande plus de gérer une clé de secours. Vous pouvez en créer une quand vous le souhaitez, dans Paramètres, Sécurité.",
+        "googleSmoother": "La connexion avec Google est plus fiable : votre code à deux facteurs est demandé avant l’ouverture de votre coffre, et un reste d’ancienne connexion sur cet appareil ne bloque plus rien.",
+        "googleDeletion": "Supprimer un compte Google supprime aussi votre fichier de clé de votre Google Drive.",
+        "spheres": "Les écrans de chargement utilisent partout la sphère animée, et le tirage pour rafraîchir ne s’affiche que sur les écrans tactiles."
+      }
+    },
     "v1-1": {
       "title": "Connexion Google, clés IA et confidentialité",
       "highlights": {
-        "googleVault": "Connexion avec Google : la clé de votre coffre est conservée dans l'espace d'application de votre propre Google Drive, avec une clé de secours pour ne jamais perdre l'accès.",
+        "googleVault": "Connexion avec Google : la clé de votre coffre est conservée dans l’espace d’application de votre propre Google Drive, sans rien à saisir ni à retenir.",
         "manualPrices": "Les prix saisis à la main sont maintenant stockés dans votre coffre chiffré, y compris sur votre serveur auto-hébergé.",
         "aiKeys": "Chaque fournisseur d'IA garde sa propre clé API, et la conversation avec l'assistant s'efface dès que vous verrouillez le coffre.",
         "privacyNotice": "Une notice de confidentialité plus claire sur les fournisseurs de données de marché qui voient les tickers que vous suivez."
