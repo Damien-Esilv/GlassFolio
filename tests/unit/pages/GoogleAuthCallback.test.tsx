@@ -32,6 +32,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 }));
 
 import { GoogleAuthCallback } from '../../../src/pages/GoogleAuthCallback';
+import { resetGoogleCallbackRun } from '../../../src/services/security/googleCallbackRun';
 
 const renderPage = () =>
     render(
@@ -45,6 +46,7 @@ const renderPage = () =>
 describe('GoogleAuthCallback', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        resetGoogleCallbackRun();
         mocks.pendingSecondFactor = null;
         mocks.parseCallbackHash.mockReturnValue({ idToken: 'idt', accessToken: 'at', rawNonce: 'n', state: 's' });
         mocks.loadUserFromRepo.mockResolvedValue(undefined);
@@ -62,6 +64,19 @@ describe('GoogleAuthCallback', () => {
         await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/', { replace: true }));
         expect(mocks.parseCallbackHash).toHaveBeenCalledTimes(1);
         expect(mocks.handleGoogleCallback).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes the sign-in on the remounted page when the app shell swaps layout mid-flight', async () => {
+        let resolveCallback: (value: unknown) => void = () => undefined;
+        mocks.handleGoogleCallback.mockReturnValue(new Promise((resolve) => { resolveCallback = resolve; }));
+        const first = renderPage();
+        first.unmount();
+        renderPage();
+        resolveCallback({ user: {}, session: {}, recoveryKey: undefined });
+        await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/', { replace: true }));
+        expect(mocks.parseCallbackHash).toHaveBeenCalledTimes(1);
+        expect(mocks.handleGoogleCallback).toHaveBeenCalledTimes(1);
+        expect(screen.queryByText(/MISSING_OAUTH_TOKENS/)).toBeNull();
     });
 
     it('waits for the second factor instead of loading the vault', async () => {
