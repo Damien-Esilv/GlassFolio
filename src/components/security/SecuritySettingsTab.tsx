@@ -44,6 +44,18 @@ export const SecuritySettingsTab: React.FC = () => {
     const [stepUpAction, setStepUpAction] = useState<'enableTotp' | 'disableTotp' | 'regenerateRecoveryKey' | null>(null);
 
     const isGoogleAccount = user?.authProvider === 'google';
+    const hasRecoveryKey = vaultService.hasRecoveryKey();
+    const [googleReauthError, setGoogleReauthError] = useState('');
+
+    /** A Google vault is created without a recovery key; this goes through Google to create or replace it. */
+    const handleGoogleRecoveryKey = async () => {
+        setGoogleReauthError('');
+        try {
+            await authService.startGoogleReauth?.('recovery-key');
+        } catch (err: unknown) {
+            setGoogleReauthError(mapAuthErrorMessage(err, t, 'common:errors.auth.googleNotConfigured'));
+        }
+    };
 
     const refreshTotpStatus = async () => {
         try {
@@ -159,10 +171,24 @@ export const SecuritySettingsTab: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-2.5 pt-1">
                         {isGoogleAccount ? (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-subtle border border-subtle text-xs text-subtle">
-                                <Info size={14} className="text-brand shrink-0" />
-                                <span>{t('security:vaultSection.managedByGoogle', 'Authentication & Vault managed by Google OAuth')}</span>
-                            </div>
+                            <>
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-subtle border border-subtle text-xs text-subtle">
+                                    <Info size={14} className="text-brand shrink-0" />
+                                    <span>{t('security:vaultSection.managedByGoogle', 'Authentication & Vault managed by Google OAuth')}</span>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => void handleGoogleRecoveryKey()}
+                                    className="text-xs whitespace-nowrap"
+                                >
+                                    <RefreshCw size={14} className="mr-1.5 shrink-0" />
+                                    {hasRecoveryKey
+                                        ? t('security:vaultSection.googleRecoveryRegenerate')
+                                        : t('security:vaultSection.googleRecoveryCreate')}
+                                </Button>
+                            </>
                         ) : (
                             <>
                                 <Button
@@ -198,6 +224,17 @@ export const SecuritySettingsTab: React.FC = () => {
                             {t('security:vaultSection.lockNow')}
                         </Button>
                     </div>
+                    {isGoogleAccount && (
+                        <div className="space-y-1 pt-1">
+                            <p className={`text-xs leading-relaxed ${hasRecoveryKey ? 'text-secondary' : 'text-warning'}`}>
+                                {hasRecoveryKey
+                                    ? t('security:vaultSection.googleRecoveryPresent')
+                                    : t('security:vaultSection.googleRecoveryMissing')}
+                            </p>
+                            <p className="text-[11px] text-tertiary">{t('security:vaultSection.googleRecoveryRedirectNote')}</p>
+                            {googleReauthError && <p className="text-xs text-error">{googleReauthError}</p>}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -122,4 +122,10 @@ export interface IAuthProvider {
     isRecentlyAuthenticated?(maxAgeSeconds: number): boolean;
     /** Direct Google OIDC callback handling (Epic E25 / TGLA-170). */
     handleGoogleOidcCallback?(params: GoogleCallbackResult): Promise<AuthResult & { recoveryKey?: string }>;
+    /** Goes through Google again for an action that needs the Drive key file (delete it, create a recovery key). */
+    startGoogleReauth?(intent: 'delete-account' | 'recovery-key'): Promise<void>;
+    /** After the Google round trip: removes the Drive key file, then deletes the account. */
+    completeGoogleAccountDeletion?(params: GoogleCallbackResult): Promise<void>;
+    /** After the Google round trip: creates the emergency recovery key of a Google vault and returns it once. */
+    createGoogleRecoveryKey?(params: GoogleCallbackResult): Promise<string>;
 }

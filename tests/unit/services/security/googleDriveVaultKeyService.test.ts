@@ -88,6 +88,30 @@ describe('googleDriveVaultKeyService', () => {
         await expect(drive.getOrCreateRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_WRITE_FAILED_403');
     });
 
+    it('refuses a key file of another account by default', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('deleted-user') } });
+        await expect(drive.getOrCreateRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_KEY_FILE_USER_MISMATCH');
+        expect(calls.some((c) => c.method === 'POST' || c.method === 'PATCH')).toBe(false);
+    });
+
+    it('replaces the key file of a deleted account (PATCH) when the account has no vault yet', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('deleted-user') } });
+        const key = await drive.getOrCreateRootSecret('tok', 'u1', { replaceForeignKey: true });
+        const write = calls.find((c) => c.method === 'PATCH')!;
+        expect(write.url).toContain('/files/f1?uploadType=multipart');
+        // Drive rejects `parents` on an update (403 fieldNotWritable)
+        expect(write.body).not.toContain('parents');
+        expect(write.body).toContain('"userId":"u1"');
+        expect(write.body).toContain(btoa(String.fromCharCode(...key.driveSecret)));
+        expect(key.keyId).not.toBe('key-1');
+    });
+
+    it('still refuses an unreadable key file, even when replacing foreign ones is allowed', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('u1', 16) } });
+        await expect(drive.getOrCreateRootSecret('tok', 'u1', { replaceForeignKey: true })).rejects.toThrow('DRIVE_KEY_FILE_UNREADABLE');
+        expect(calls.some((c) => c.method === 'POST' || c.method === 'PATCH')).toBe(false);
+    });
+
     it('returns an existing key from getOrCreate without writing', async () => {
         const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile() } });
         const key = await drive.getOrCreateRootSecret('tok', 'u1');
@@ -103,5 +127,35 @@ describe('googleDriveVaultKeyService', () => {
         const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }] });
         expect(await drive.deleteRootSecret('tok')).toBe(true);
         expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/files/f1'))).toBe(true);
+    });
+
+    describe('deleteOwnedRootSecret', () => {
+        it('deletes the key file of this account', async () => {
+            const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('u1') } });
+            expect(await drive.deleteOwnedRootSecret('tok', 'u1')).toBe(true);
+            expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/files/f1'))).toBe(true);
+        });
+
+        it('leaves a key file that names another account, or cannot be read, alone', async () => {
+            let calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('other-user') } });
+            expect(await drive.deleteOwnedRootSecret('tok', 'u1')).toBe(false);
+            expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+            calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('u1', 16) } });
+            expect(await drive.deleteOwnedRootSecret('tok', 'u1')).toBe(false);
+            expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+        });
+
+        it('does nothing when there is no key file', async () => {
+            const calls = stubDrive({ files: [] });
+            expect(await drive.deleteOwnedRootSecret('tok', 'u1')).toBe(false);
+            expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+        });
+
+        it('reports a Drive failure instead of pretending the file is gone', async () => {
+            stubDrive({ listStatus: 403 });
+            await expect(drive.deleteOwnedRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_DELETE_FAILED');
+            stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('u1') }, deleteStatus: 500 });
+            await expect(drive.deleteOwnedRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_DELETE_FAILED');
+        });
     });
 });

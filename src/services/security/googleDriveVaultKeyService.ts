@@ -29,9 +29,25 @@ export interface DriveKeyResult {
 export const googleDriveVaultKeyService = {
     /**
      * Retrieves existing drive root secret from appDataFolder, or generates and stores a new one.
+     *
+     * `replaceForeignKey` is only for an account that has NO vault on the server yet: a key file that
+     * names another account is then the leftover of an account that was deleted (or never finished
+     * its first sign-in), so nothing can be locked out by replacing it. A file that cannot be read
+     * at all is still refused, since it may hold the key of a vault we cannot see.
      */
-    async getOrCreateRootSecret(accessToken: string, userId: string): Promise<DriveKeyResult> {
-        const existing = await this.readRootSecret(accessToken, userId);
+    async getOrCreateRootSecret(
+        accessToken: string,
+        userId: string,
+        options?: { replaceForeignKey?: boolean }
+    ): Promise<DriveKeyResult> {
+        let existing: DriveKeyResult | null;
+        try {
+            existing = await this.readRootSecret(accessToken, userId);
+        } catch (err) {
+            const isForeign = err instanceof Error && err.message === 'DRIVE_KEY_FILE_USER_MISMATCH';
+            if (!(options?.replaceForeignKey && isForeign)) throw err;
+            existing = null;
+        }
         if (existing) {
             return existing;
         }
@@ -112,10 +128,13 @@ export const googleDriveVaultKeyService = {
         };
 
         const boundary = `----GlassFolioMultipart${crypto.randomUUID()}`;
-        const metadata = JSON.stringify({
-            name: VAULT_KEY_FILENAME,
-            parents: ['appDataFolder'],
-        });
+        // `parents` is only writable when creating the file: sending it on a PATCH makes Drive answer
+        // 403 (fieldNotWritable), which broke the replacement of an existing key file.
+        const metadata = JSON.stringify(
+            existingFileId
+                ? { name: VAULT_KEY_FILENAME }
+                : { name: VAULT_KEY_FILENAME, parents: ['appDataFolder'] }
+        );
         const content = JSON.stringify(payload);
 
         const multipartBody =
@@ -164,6 +183,25 @@ export const googleDriveVaultKeyService = {
         });
 
         return response.ok;
+    },
+
+    /**
+     * Deletes the key file on account deletion, but only the file that belongs to `userId`: a file
+     * naming another account, or one that cannot be read, is left alone. Returns true when a file was removed.
+     */
+    async deleteOwnedRootSecret(accessToken: string, userId: string): Promise<boolean> {
+        try {
+            const existing = await this.readRootSecret(accessToken, userId);
+            if (!existing) return false;
+        } catch (err) {
+            // Not ours (another account) or unreadable: leave it. A failing Drive API call is reported.
+            if (err instanceof Error && err.message.startsWith('DRIVE_KEY_FILE_')) return false;
+            throw new Error('DRIVE_DELETE_FAILED');
+        }
+        if (!(await this.deleteRootSecret(accessToken))) {
+            throw new Error('DRIVE_DELETE_FAILED');
+        }
+        return true;
     },
 
     /**

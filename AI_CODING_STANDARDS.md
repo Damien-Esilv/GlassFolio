@@ -285,7 +285,7 @@ push/PR sur main|develop|feat/**|fix/**|refactor/**|chore/**|ci/**|test/**
                 └── CI — Required ← seul check exigé par Vercel Deployment Checks
 ```
 
-**CD (Vercel)** : Vercel construit chaque push, mais un déploiement de production (`main`) n'est attribué aux domaines `glassfolio.dev` / `app.glassfolio.dev` qu'une fois `CI — Required` au vert (Deployment Checks, fournisseur GitHub). Après promotion, `cd-smoke.yml` vérifie HTTP 200, le repli SPA et les en-têtes de `vercel.json` (non bloquant ; en cas d'échec, `vercel rollback`).
+**CD (Vercel)** : la branche `develop` est déployée sur son domaine de branche stable (environnement de test réel, URL fixe) ; les autres branches ont des URLs de preview éphémères, non déclarées chez Google/Cloudflare/Supabase. Vercel construit chaque push, mais un déploiement de production (`main`) n'est attribué aux domaines `glassfolio.dev` / `app.glassfolio.dev` qu'une fois `CI — Required` au vert (Deployment Checks, fournisseur GitHub). Après promotion, `cd-smoke.yml` vérifie HTTP 200, le repli SPA et les en-têtes de `vercel.json` (non bloquant ; en cas d'échec, `vercel rollback`).
 
 **Règles** :
 - Ne jamais renommer le job `CI — Required` : cela désactiverait silencieusement la garde de production.
@@ -338,11 +338,14 @@ Tout outil doit comporter :
 ## 9. Git Workflow, Branching & DevSecOps Standards (Pilier Recruiter-Grade)
 > **Version:** 1.0 | **Ajouté:** 2026-10-15
 
-**Règle absolue : Aucun commit direct sur `main`. L'historique Git doit refléter une rigueur logicielle exemplaire.**
+**Règle absolue : Aucun commit direct sur `main` ni sur `develop`. L'historique Git doit refléter une rigueur logicielle exemplaire.**
 
 ### 9.1. Règle de Branching Systématique
-- **Interdiction formelle de commiter directement sur `main`** : `main` est strictement réservé aux livraisons testées, validées et prêtes pour le déploiement Azure et l'exposition publique.
-- **Convention de nommage des branches** : Chaque nouvelle tâche (`TGLA-XXX`) ou sprint doit faire l'objet d'une branche dédiée créée depuis `main` à jour :
+- **Deux branches permanentes, jamais supprimées** :
+  - `develop` : branche d'intégration et de test en conditions réelles. Elle est rattachée sur Vercel à un domaine de branche stable (`develop.glassfolio.dev`, à confirmer) dont l'URL ne change jamais : les URI de redirection Google, les hôtes autorisés Turnstile et les URL Supabase n'ont donc à être déclarés qu'une fois.
+  - `main` : production uniquement (`glassfolio.dev` / `app.glassfolio.dev`), alimentée exclusivement depuis `develop` (cf. 9.4).
+- **Interdiction formelle de commiter directement sur `main` ou `develop`** : `main` est strictement réservé aux livraisons testées, validées sur `develop` et prêtes pour la production ; `develop` ne reçoit que des branches de travail intégrées (cf. 9.4).
+- **Convention de nommage des branches** : Chaque nouvelle tâche (`TGLA-XXX`) ou sprint doit faire l'objet d'une branche dédiée créée depuis `develop` à jour (depuis `main` uniquement pour un hotfix de production) :
   - Fonctionnalités : `feat/tgla-XXX-<short-slug>`
   - Corrections : `fix/tgla-XXX-<short-slug>`
   - Maintenance & Outillage : `chore/tgla-XXX-<short-slug>`
@@ -360,5 +363,14 @@ Tout outil doit comporter :
   - Des chemins de système de fichiers personnels absolus (`/Users/`).
   - Des contournements directs de stockage (`localStorage.`) ou des codes hex bruts dans les `.tsx`.
 - **Zéro chemin personnel dans le code tracé** : Tout chemin vers des ressources locales doit obligatoirement utiliser des variables d'environnement (`BRAIN_PATH`, `HOME`), des chemins relatifs ou des alias.
+
+### 9.4. Intégration dans `develop` et promotion vers `main`
+- **Branche de travail → `develop`** (sur demande explicite de l'utilisateur) : les commits de la branche sont **squashés en un seul commit atomique** (feature comme micro-correction), puis fusionnés avec `git merge --no-ff`. Le commit squashé cite tous les `TGLA-xxx` / `BUG-xxx` (lignes `Closes`). La branche de travail est ensuite supprimée (locale et distante).
+- **`develop` → `main`** (sur demande explicite uniquement) : on promeut des fonctionnalités **déjà validées sur `develop`**.
+  - Toute la file `develop` est prête : `git merge --no-ff develop -m "merge: promote develop into main"`. **Jamais de squash de `develop`** : il ferait diverger les deux branches durablement.
+  - Une partie seulement est prête : `git cherry-pick -x <commit squashé>` sur une branche issue de `main`, puis merge `--no-ff` dans `main` (chaque feature étant un commit unique, elle se déplace seule).
+- **Resynchronisation** : après chaque promotion ou hotfix sur `main`, `main` est fusionné dans `develop` (`git merge --no-ff main`) pour qu'elles ne divergent pas.
+- **Gates** : les 6 gates locales passent avant tout merge dans `develop` ; la CI distante doit être verte avant de promouvoir.
+- **Effets de bord à `main`** : changelog public, Notion (`notion-sync`) et vitrine publique sont traités à la promotion vers `main`, pas à l'intégration dans `develop`.
 
 

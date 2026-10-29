@@ -16,10 +16,17 @@ const CEREMONY_TTL_MS = 10 * 60 * 1000; // 10 minutes
 export const GOOGLE_DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const GOOGLE_OIDC_SCOPES = `openid email profile ${GOOGLE_DRIVE_APPDATA_SCOPE}`;
 
+/**
+ * What the Google round trip is for. A Drive access token is never kept, so an action that must touch the
+ * Drive key file after sign-in (delete it with the account, create a recovery key) goes through Google again.
+ */
+export type GoogleCeremonyIntent = 'sign-in' | 'delete-account' | 'recovery-key';
+
 export interface GoogleOidcCeremonyState {
     state: string;
     rawNonce: string;
     createdAt: number;
+    intent?: GoogleCeremonyIntent;
 }
 
 export interface GoogleCallbackResult {
@@ -27,6 +34,21 @@ export interface GoogleCallbackResult {
     accessToken: string;
     rawNonce: string;
     state: string;
+    /** Absent means a regular sign-in. */
+    intent?: GoogleCeremonyIntent;
+}
+
+/** Reads the e-mail claim of an id_token (not verified here: only used to spot a wrong account choice). */
+export function readIdTokenEmail(idToken: string): string | null {
+    try {
+        const payload = idToken.split('.')[1];
+        if (!payload) return null;
+        const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
+        const email = (JSON.parse(json) as { email?: unknown }).email;
+        return typeof email === 'string' ? email.trim().toLowerCase() : null;
+    } catch {
+        return null;
+    }
 }
 
 /** Computes SHA-256 in hexadecimal string format for OpenID Connect nonces. */
@@ -60,7 +82,8 @@ export const googleOidcService = {
      * Prepares and starts the Google OIDC + Drive OAuth flow.
      * Redirects the browser directly to accounts.google.com.
      */
-    async startCeremony(): Promise<void> {
+    async startCeremony(options?: { intent?: GoogleCeremonyIntent; loginHint?: string }): Promise<void> {
+        const intent = options?.intent ?? 'sign-in';
         const clientId = this.getClientId();
         if (!clientId) {
             throw new Error('GOOGLE_CLIENT_ID_NOT_CONFIGURED');
@@ -76,6 +99,7 @@ export const googleOidcService = {
             state,
             rawNonce,
             createdAt: Date.now(),
+            intent,
         };
 
         try {
@@ -92,10 +116,26 @@ export const googleOidcService = {
             state,
             nonce: hashedNonce,
             include_granted_scopes: 'true',
-            prompt: 'select_account',
         });
+        if (intent === 'sign-in') {
+            params.set('prompt', 'select_account');
+        } else if (options?.loginHint) {
+            // Re-authentication: pre-select the signed-in account so the round trip is nearly invisible.
+            params.set('login_hint', options.loginHint);
+        }
 
         window.location.assign(`${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`);
+    },
+
+    /** What the pending Google round trip is for, without consuming it (the page shows matching wording). */
+    peekCeremonyIntent(): GoogleCeremonyIntent {
+        try {
+            const raw = sessionStorage.getItem(CEREMONY_STORAGE_KEY);
+            if (raw) return (JSON.parse(raw) as GoogleOidcCeremonyState).intent ?? 'sign-in';
+        } catch {
+            // Storage disabled or corrupted: treated as a regular sign-in
+        }
+        return 'sign-in';
     },
 
     /**
@@ -160,6 +200,7 @@ export const googleOidcService = {
             accessToken,
             rawNonce: storedCeremony.rawNonce,
             state,
+            intent: storedCeremony.intent ?? 'sign-in',
         };
     },
 };

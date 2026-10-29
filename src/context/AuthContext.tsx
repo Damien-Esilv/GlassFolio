@@ -4,6 +4,7 @@ import { userRepository } from '../services/repositories';
 import { vaultService } from '../services/security/vaultService';
 import { authService } from '../services/security/authService';
 import { AuthResult, SecondFactorMethod, SignUpOptions } from '../services/security/authTypes';
+import type { GoogleCallbackResult } from '../services/security/googleOidcService';
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
 import {
@@ -30,9 +31,19 @@ interface AuthContextType {
   unlockLocalVault: (password: string) => Promise<AuthResult>;
   /** Methods offered while a sign-in waits for its second factor; null when none is pending. */
   pendingSecondFactor: SecondFactorMethod[] | null;
-  completeSecondFactor: (code: string) => Promise<void>;
-  completeSecondFactorWithPasskey: () => Promise<void>;
+  completeSecondFactor: (code: string) => Promise<AuthResult>;
+  completeSecondFactorWithPasskey: () => Promise<AuthResult>;
+  /** Direct Google OIDC callback: may leave a second factor pending, like a password sign-in. */
+  handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
   cancelSecondFactor: () => Promise<void>;
+  /** Google account: goes through Google again for an action that needs the Drive key file. */
+  startGoogleReauth: (intent: 'delete-account' | 'recovery-key') => Promise<void>;
+  /** After that round trip: removes the Drive key file, then deletes the account. */
+  handleGoogleAccountDeletion: (params: GoogleCallbackResult) => Promise<void>;
+  /** After that round trip: creates the emergency recovery key and returns it once. */
+  createGoogleRecoveryKey: (params: GoogleCallbackResult) => Promise<string>;
+  /** Reloads the profile from the unlocked vault (used once a sign-in flow finished outside the context). */
+  loadUserFromRepo: () => Promise<void>;
   /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
   signInWithPasskey: () => Promise<AuthResult>;
   setupLocalVault: (name: string, password: string, options?: { overwriteExisting?: boolean }) => Promise<string | undefined>;
@@ -242,14 +253,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return applyAuthResult(await authService.unlockLocalVault(password));
   };
 
-  const completeSecondFactor = async (code: string): Promise<void> => {
+  const completeSecondFactor = async (code: string): Promise<AuthResult> => {
     if (!authService.verifySecondFactor) throw new Error('Second factor verification is unavailable.');
-    applyAuthResult(await authService.verifySecondFactor(code));
+    return applyAuthResult(await authService.verifySecondFactor(code));
   };
 
-  const completeSecondFactorWithPasskey = async (): Promise<void> => {
+  const completeSecondFactorWithPasskey = async (): Promise<AuthResult> => {
     if (!authService.verifySecondFactorWithPasskey) throw new Error('Passkey verification is unavailable.');
-    applyAuthResult(await authService.verifySecondFactorWithPasskey());
+    return applyAuthResult(await authService.verifySecondFactorWithPasskey());
+  };
+
+  const handleGoogleCallback = async (params: GoogleCallbackResult): Promise<AuthResult> => {
+    if (!authService.handleGoogleOidcCallback) throw new Error('Google authentication is not supported in this deployment mode.');
+    return applyAuthResult(await authService.handleGoogleOidcCallback(params));
+  };
+
+  const startGoogleReauth = async (intent: 'delete-account' | 'recovery-key'): Promise<void> => {
+    if (!authService.startGoogleReauth) throw new Error('Google authentication is not supported in this deployment mode.');
+    await authService.startGoogleReauth(intent);
+  };
+
+  const handleGoogleAccountDeletion = async (params: GoogleCallbackResult): Promise<void> => {
+    if (!authService.completeGoogleAccountDeletion) throw new Error('Google authentication is not supported in this deployment mode.');
+    await authService.completeGoogleAccountDeletion(params);
+    setUser(null);
+  };
+
+  const createGoogleRecoveryKey = async (params: GoogleCallbackResult): Promise<string> => {
+    if (!authService.createGoogleRecoveryKey) throw new Error('Google authentication is not supported in this deployment mode.');
+    return authService.createGoogleRecoveryKey(params);
   };
 
   const signInWithPasskey = async (): Promise<AuthResult> => {
@@ -390,8 +422,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unlockLocalVault,
       pendingSecondFactor,
       completeSecondFactor,
+      handleGoogleCallback,
       completeSecondFactorWithPasskey,
       cancelSecondFactor,
+      startGoogleReauth,
+      handleGoogleAccountDeletion,
+      createGoogleRecoveryKey,
+      loadUserFromRepo,
       signInWithPasskey,
       setupLocalVault,
       logout,

@@ -172,11 +172,12 @@ Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doi
 
 Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et des auditeurs :
 
-1. **Interdiction formelle de commiter ou fusionner sur `main` sans demande explicite de l'utilisateur** :
-   - `main` est une branche protégée réservée exclusivement aux versions de production validées par l'utilisateur.
-   - **L'agent IA ne doit JAMAIS fusionner (merge ou squash merge) sur `main` de sa propre initiative**, même si tous les tests et la CI passent au vert.
-   - Le merge sur `main` s'effectue **UNIQUEMENT lorsque l'utilisateur le demande de manière claire et explicite** dans le fil de discussion.
-   - Toute tâche (`TGLA-XXX`), refactorisation ou correction **doit obligatoirement démarrer par la création et la bascule sur une branche dédiée** :
+1. **Deux branches permanentes : `develop` (test) et `main` (production)** :
+   - `develop` est rattachée sur Vercel à un domaine de branche **stable** (`develop.glassfolio.dev`, à confirmer) : c'est l'environnement de test en conditions réelles (Google OAuth, Turnstile, Supabase y sont déclarés une seule fois). **Elle n'est jamais supprimée.**
+   - `main` est une branche protégée réservée exclusivement aux versions de production, alimentée uniquement depuis `develop`.
+   - **Interdiction formelle de commiter directement sur `develop` ou `main`** : on y entre uniquement par merge d'une branche de travail (vers `develop`) ou par promotion de `develop` (vers `main`).
+   - **L'agent IA ne doit JAMAIS fusionner sur `develop` ni sur `main` de sa propre initiative**, même si tous les tests et la CI passent au vert. Le merge vers `develop`, puis la promotion vers `main`, s'effectuent **UNIQUEMENT lorsque l'utilisateur le demande de manière claire et explicite** dans le fil de discussion. Le push d'une branche de travail sur `origin` reste libre.
+   - Toute tâche (`TGLA-XXX`), refactorisation ou correction **doit obligatoirement démarrer par la création et la bascule sur une branche dédiée, créée depuis `develop` à jour** (depuis `main` seulement pour un hotfix de production) :
      - `feat/tgla-XXX-<short-slug>`
      - `fix/tgla-XXX-<short-slug>`
      - `chore/tgla-XXX-<short-slug>`
@@ -184,8 +185,9 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
 2. **Gestion des Branches, Consolidation des Commits & Zéro Pollution Distante** :
    - Tout commit sur la branche de travail doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
    - **Cycle d'itération sur la branche** : L'IA a l'entière liberté de créer des commits intermédiaires ou correctifs sur la branche dédiée afin de valider localement et déclencher les workflows CI GitHub Actions.
-   - **Consolidation obligatoire avant merge (Squash en 1 seul commit avec traçabilité Notion complète)** :
-     - Lorsque l'utilisateur demande explicitement le merge sur `main`, l'ensemble des commits intermédiaires, micro-ajustements cosmétiques ou essais de la branche de feature doivent impérativement être **consolidés / squashe en un seul commit atomique et auto-suffisant** représentant la livraison complète et fonctionnelle.
+   - **Consolidation obligatoire avant merge dans `develop` (Squash en 1 seul commit avec traçabilité Notion complète)** :
+     - Le squash vaut pour **toutes** les branches de travail, grosses features comme micro-corrections : chacune entre dans `develop` sous la forme d'un seul commit. C'est ce qui rend ensuite une feature promouvable seule vers `main` (cf. point 6).
+     - Lorsque l'utilisateur demande explicitement le merge dans `develop`, l'ensemble des commits intermédiaires, micro-ajustements cosmétiques ou essais de la branche de feature doivent impérativement être **consolidés / squashe en un seul commit atomique et auto-suffisant** représentant la livraison complète et fonctionnelle.
      - **Préservation intégrale des identifiants Notion dans le message de commit consolidé** :
        - Le titre et le corps du commit squashed unique **DOIVENT impérativement citer TOUS les identifiants de tâches (`TGLA-xxx`) et bugs (`BUG-xxx`)** concernés par la branche :
          ```gitcommit
@@ -199,9 +201,9 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
        - Le workflow CI GitHub Actions `notion-sync` (`scripts/notion-sync.mjs`) extrait automatiquement l'ensemble de ces clés `TGLA-*`, passe chacune de ces tâches à `Fait` dans Notion et lie directement l'URL et le hash du commit squashed final.
        - Ainsi, **l'historique Git sur `main` reste 100% linéaire et propre**, et **100% de la traçabilité Notion est préservée** vers ce commit de livraison unique.
      - **Nouveautés publiques (changelog) à chaque merge** : le commit squashé ajoute une entrée en tête de `src/constants/changelog.ts` (version, date ISO, points forts typés `new`/`improved`) et ses textes dans `locales/{en,fr}/changelog.json`, rédigés pour l'utilisateur (bénéfices, pas de détail technique ni de correctif de sécurité). `tests/unit/constants/changelog.test.ts` vérifie l'ordre, l'unicité des versions et la parité EN/FR. La page `/roadmap` (`src/constants/roadmap.ts`) se met à jour quand un epic produit change de statut, sans jamais y lister de sujet sécurité.
-     - **Forme du merge (comme les Epics précédents)** : lorsque l'utilisateur demande de « merger », l'agent **squashe d'abord les commits de la branche en un seul commit**, puis fusionne cette branche dans `main` avec un **commit de merge explicite** : `git merge --no-ff <branche> -m "merge: integrate <branche> into main"`. **Jamais de fast-forward** (`--ff-only`) : l'historique GitHub doit montrer la branche qui part de `main` puis y revient, avec le commit squashé de feature et le commit de merge.
-     - Résultat attendu sur `main` : un commit de merge `merge: integrate <branche> into main` dont le second parent est l'unique commit de la feature (message contenant tous les `TGLA-xxx` / `BUG-xxx` et les lignes `Closes`).
-   - **Nettoyage drastique des branches distantes** : Dès qu'une branche est fusionnée dans `main`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
+     - **Forme du merge** : lorsque l'utilisateur demande de « merger », l'agent **squashe d'abord les commits de la branche en un seul commit**, puis fusionne cette branche dans `develop` avec un **commit de merge explicite** : `git merge --no-ff <branche> -m "merge: integrate <branche> into develop"`. **Jamais de fast-forward** (`--ff-only`) : l'historique GitHub doit montrer la branche qui part de `develop` puis y revient, avec le commit squashé et le commit de merge.
+     - Résultat attendu sur `develop` : un commit de merge `merge: integrate <branche> into develop` dont le second parent est l'unique commit de la feature (message contenant tous les `TGLA-xxx` / `BUG-xxx` et les lignes `Closes`).
+   - **Nettoyage drastique des branches distantes** : Dès qu'une branche de travail est fusionnée dans `develop`, la branche distante associée doit obligatoirement être supprimée de GitHub (`git push origin --delete <branch>`). Seules `main` et `develop` sont permanentes ; aucune branche orpheline ou obsolète ne doit polluer le dépôt distant.
 
 3. **Garantie 6-Gates Pré-Merge (Local)** :
    - Avant de fusionner toute branche ou d'ouvrir une PR, les 6 gates doivent impérativement passer à 100% en local :
@@ -226,6 +228,13 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
      npm run check:standards && npm test
      git push public main:main --tags
      ```
+
+6. **Promotion `develop` → `main` (production)** :
+   - Uniquement sur demande explicite de l'utilisateur, et uniquement pour du travail **déjà testé sur `develop.glassfolio.dev`**.
+   - **Tout `develop` est prêt** : `git merge --no-ff develop -m "merge: promote develop into main"`. **Jamais de squash de `develop`** (les deux branches divergeraient durablement).
+   - **Seulement certaines features sont prêtes** : chaque feature étant un commit unique sur `develop`, la reprendre avec `git cherry-pick -x <hash>` sur une branche issue de `main`, puis merge `--no-ff` dans `main`. Citer les `TGLA-xxx` / `BUG-xxx` correspondants.
+   - **Resynchronisation obligatoire** : juste après, fusionner `main` dans `develop` (`git merge --no-ff main`) pour éviter toute dérive ; un hotfix fait sur `main` suit le même chemin.
+   - Les 6 gates locales et la CI distante doivent être vertes avant la promotion ; la synchro Notion, le changelog public et la vitrine (`public`) se font à ce moment-là.
 
 ### Règles tokens / latence
 

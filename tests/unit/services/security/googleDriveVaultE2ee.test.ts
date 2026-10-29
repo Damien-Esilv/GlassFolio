@@ -241,4 +241,36 @@ describe('Google Drive E2EE Split-Trust Architecture (Lot 1)', () => {
             expect(vaultService.isUnlocked()).toBe(true);
         });
     });
+
+    describe('optional recovery key', () => {
+        const userId = 'u-opt';
+
+        it('creates a vault without a recovery key when asked, then adds one that opens the vault', async () => {
+            const driveSecret = crypto.getRandomValues(new Uint8Array(32));
+            const res = await vaultService.setupGoogleDriveVault(driveSecret, 'k1', userId, { withRecoveryKey: false });
+            expect(res.recoveryKey).toBeUndefined();
+            expect(vaultService.hasRecoveryKey()).toBe(false);
+            expect(vaultService.getVaultHeader()?.wrappedKeys.recovery).toBeNull();
+
+            const recoveryKey = await vaultService.createRecoveryKeyFromDriveSecret(driveSecret);
+            expect(recoveryKey).toMatch(/^[A-Z2-7-]{20,}$/);
+            expect(vaultService.hasRecoveryKey()).toBe(true);
+
+            await vaultService.lock();
+            await vaultService.unlockWithRecoveryKey(recoveryKey);
+            expect(vaultService.isUnlocked()).toBe(true);
+        });
+
+        it('keeps creating the recovery key by default', async () => {
+            const res = await vaultService.setupGoogleDriveVault(crypto.getRandomValues(new Uint8Array(32)), 'k1', userId);
+            expect(res.recoveryKey).toBeTruthy();
+            expect(vaultService.hasRecoveryKey()).toBe(true);
+        });
+
+        it('refuses to add a recovery key with a secret that does not open the vault', async () => {
+            await vaultService.setupGoogleDriveVault(crypto.getRandomValues(new Uint8Array(32)), 'k1', userId, { withRecoveryKey: false });
+            await expect(vaultService.createRecoveryKeyFromDriveSecret(crypto.getRandomValues(new Uint8Array(32)))).rejects.toThrow();
+            expect(vaultService.hasRecoveryKey()).toBe(false);
+        });
+    });
 });

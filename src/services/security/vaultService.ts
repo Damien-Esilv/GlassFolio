@@ -581,14 +581,18 @@ export class VaultService {
 
     /**
      * Initializes an E2EE Split-Trust vault for Google OAuth users (0-Password flow).
-     * The root key is stored in the user's hidden Google Drive appDataFolder, and an emergency
-     * 256-bit recovery key is returned (shown once to the user).
+     * The root key is stored in the user's hidden Google Drive appDataFolder. An emergency 256-bit
+     * recovery key is returned (shown once) only when `withRecoveryKey` is true (the default): the
+     * sign-in flow leaves it out so the user is not asked to manage a key, and offers to create it later
+     * (`createRecoveryKeyFromDriveSecret`).
      */
     public async setupGoogleDriveVault(
         driveSecret: Uint8Array,
         keyId: string,
-        userId: string
-    ): Promise<VaultSetupResult> {
+        userId: string,
+        options?: { withRecoveryKey?: boolean }
+    ): Promise<Omit<VaultSetupResult, 'recoveryKey'> & { recoveryKey?: string }> {
+        const withRecoveryKey = options?.withRecoveryKey ?? true;
         await delay(250);
         if (this.isInitialized()) {
             throw new VaultAlreadyInitializedError();
@@ -600,11 +604,12 @@ export class VaultService {
         const driveKek = await deriveDriveVaultKek(driveSecret, driveSalt);
         const wrappedDriveDek = await wrapDek(dek, driveKek);
 
-        // Generate 256-bit emergency recovery key
-        const recoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+        // Generate the 256-bit emergency recovery key (optional, see above)
+        const recoveryBytes = withRecoveryKey ? randomBytes(RECOVERY_KEY_256_BYTES) : null;
         const recoverySalt = toBase64(randomBytes(SALT_BYTES));
-        const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
-        const wrappedRecoveryDek = await wrapDek(dek, recoveryKek);
+        const wrappedRecoveryDek = recoveryBytes
+            ? await wrapDek(dek, await deriveRecoveryKek(recoveryBytes, recoverySalt))
+            : null;
 
         const nowIso = new Date().toISOString();
         const driveEntry: GoogleDriveWrappedKeyEntry = {
@@ -614,12 +619,14 @@ export class VaultService {
             salt: driveSalt,
             createdAt: nowIso,
         };
-        const recoveryEntry = {
-            alg: 'AES-KW' as const,
-            wrapped: wrappedRecoveryDek,
-            salt: recoverySalt,
-            createdAt: nowIso,
-        };
+        const recoveryEntry = wrappedRecoveryDek
+            ? {
+                alg: 'AES-KW' as const,
+                wrapped: wrappedRecoveryDek,
+                salt: recoverySalt,
+                createdAt: nowIso,
+            }
+            : null;
 
         const header: VaultHeader = {
             version: 1,
@@ -673,8 +680,8 @@ export class VaultService {
             }
         }
 
-        const recoveryKeyFormatted = formatRecoveryKey(recoveryBytes);
-        wipe(recoveryBytes);
+        const recoveryKeyFormatted = recoveryBytes ? formatRecoveryKey(recoveryBytes) : undefined;
+        if (recoveryBytes) wipe(recoveryBytes);
 
         this.setStatus('unlocked');
         this.resetAutoLockTimer();
@@ -683,6 +690,58 @@ export class VaultService {
             recoveryKey: recoveryKeyFormatted,
             authKey: new Uint8Array(32),
         };
+    }
+
+    /** True when an emergency recovery key exists for this vault (it can then unlock it without Google Drive). */
+    public hasRecoveryKey(): boolean {
+        try {
+            const header = this.getVaultHeader();
+            return Boolean(header?.wrappedKeys?.recovery || header?.recoverySlot);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Creates (or replaces) the emergency recovery key of a Google Drive vault, which was created
+     * without one. The DEK is unwrapped from the Drive slot with the root secret read back from Google
+     * Drive, so this proves the caller currently controls that Drive. The new key is returned once.
+     */
+    public async createRecoveryKeyFromDriveSecret(driveSecret: Uint8Array): Promise<string> {
+        await delay(250);
+        const header = this.getVaultHeader();
+        const driveEntry = header?.wrappedKeys.googleDrive;
+        if (!header || !driveEntry) throw new VaultNotInitializedError();
+
+        let dek: CryptoKey;
+        try {
+            const driveKek = await deriveDriveVaultKek(driveSecret, driveEntry.salt);
+            dek = await unwrapDek(driveEntry.wrapped, driveKek, true);
+        } catch {
+            throw new InvalidVaultCredentialsError();
+        }
+
+        const recoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+        const recoverySalt = toBase64(randomBytes(SALT_BYTES));
+        const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
+        const recoveryEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: await wrapDek(dek, recoveryKek),
+            salt: recoverySalt,
+            createdAt: new Date().toISOString(),
+        };
+
+        const updatedHeader: VaultHeader = {
+            ...header,
+            wrappedKeys: { ...header.wrappedKeys, recovery: recoveryEntry },
+            recoverySlot: recoveryEntry,
+            updatedAt: new Date().toISOString(),
+        };
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+
+        const formatted = formatRecoveryKey(recoveryBytes);
+        wipe(recoveryBytes);
+        return formatted;
     }
 
     /**
