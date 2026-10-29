@@ -186,6 +186,25 @@ export const googleDriveVaultKeyService = {
     },
 
     /**
+     * Deletes the key file on account deletion, but only the file that belongs to `userId`: a file
+     * naming another account, or one that cannot be read, is left alone. Returns true when a file was removed.
+     */
+    async deleteOwnedRootSecret(accessToken: string, userId: string): Promise<boolean> {
+        try {
+            const existing = await this.readRootSecret(accessToken, userId);
+            if (!existing) return false;
+        } catch (err) {
+            // Not ours (another account) or unreadable: leave it. A failing Drive API call is reported.
+            if (err instanceof Error && err.message.startsWith('DRIVE_KEY_FILE_')) return false;
+            throw new Error('DRIVE_DELETE_FAILED');
+        }
+        if (!(await this.deleteRootSecret(accessToken))) {
+            throw new Error('DRIVE_DELETE_FAILED');
+        }
+        return true;
+    },
+
+    /**
      * Finds the ID of the vault key file inside spaces=appDataFolder.
      */
     async findKeyFileId(accessToken: string): Promise<string | null> {

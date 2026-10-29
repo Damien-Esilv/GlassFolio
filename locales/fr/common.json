@@ -101,7 +101,9 @@
             "passkeyOtherAccount": "Cette passkey appartient à un autre compte.",
             "passkeyRequired": "Confirmez avec l'une de vos passkeys.",
             "passwordRequired": "Votre mot de passe est requis.",
-            "deleteConfirmationMismatch": "Saisissez SUPPRIMER pour confirmer."
+            "deleteConfirmationMismatch": "Saisissez SUPPRIMER pour confirmer.",
+            "googleAccountMismatch": "Ce n’est pas le compte Google utilisé par ce compte GlassFolio. Choisissez le bon compte Google et réessayez.",
+            "driveCleanupFailed": "Le fichier de clé n’a pas pu être supprimé de votre Google Drive. Rien n’a été supprimé."
         },
         "passkey": {
             "UNSUPPORTED": "Les passkeys ne sont pas prises en charge par ce navigateur.",

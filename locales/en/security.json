@@ -53,7 +53,12 @@
         "regenerateTitle": "Regenerate Emergency Recovery Key",
         "regenerateSubtitle": "Confirm your master password to derive a fresh 256-bit recovery key.",
         "masterPasswordConfirm": "Master Password",
-        "confirmRegenerate": "Regenerate"
+        "confirmRegenerate": "Regenerate",
+        "googleRecoveryMissing": "No recovery key yet. Your vault opens with your Google account only: create a key to open it if you ever lose access to that account.",
+        "googleRecoveryPresent": "A recovery key exists for this vault.",
+        "googleRecoveryCreate": "Create a recovery key",
+        "googleRecoveryRegenerate": "Replace the recovery key",
+        "googleRecoveryRedirectNote": "You will be sent to Google to confirm it is you, then brought back here."
     },
     "totp": {
         "title": "Two-Factor Authentication (2FA / TOTP)",
