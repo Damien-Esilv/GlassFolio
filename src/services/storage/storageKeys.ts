@@ -11,8 +11,9 @@ export const VAULT_HEADER_KEY = 'gf_vault_header';
 export const CONSENT_STORAGE_KEY = 'gf_consent_v1';
 export const PUBLIC_THEME_STORAGE_KEY = 'gf_public_theme';
 export const PUBLIC_LANG_STORAGE_KEY = 'gf_public_lang';
-/** Manually entered prices (user data kept in clear, like market caches but not re-fetchable). */
-export const MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
+/** Manually entered prices (encrypted sensitive user data). */
+export const MANUAL_PRICE_HISTORY_KEY = 'glassfolio_manual_price_history';
+export const LEGACY_MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
 /** RP ID of the server passkeys (cloud mode). Public deployment metadata, read while locked. */
 export const PASSKEY_RP_ID_STORAGE_KEY = 'gf_passkey_rp_id';
 
@@ -51,4 +52,4 @@ export const isVaultScopedKey = (key: string): boolean =>
  * The server enforces the same list (server/localVault.mjs KEY_PATTERN).
  */
 export const isServerPersistedKey = (key: string): boolean =>
-    isVaultScopedKey(key) || key === MANUAL_PRICE_HISTORY_KEY;
+    isVaultScopedKey(key) || key === MANUAL_PRICE_HISTORY_KEY || key === LEGACY_MANUAL_PRICE_HISTORY_KEY;

@@ -82,6 +82,8 @@ export interface AISettings {
   apiKey: string;
   cloudModel: string;
   enableThinking: boolean;
+  providerApiKeys?: Partial<Record<AIProviderType, string>>;
+  providerModels?: Partial<Record<AIProviderType, string>>;
 }
 
 export interface LLMResponse {

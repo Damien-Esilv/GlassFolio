@@ -1,11 +1,20 @@
 import { PendingActionProposal, PendingActionType, AIExecutionContext } from './types';
 import { aiToolRegistry } from './aiToolRegistry';
+import { vaultService } from '../security/vaultService';
 
 /**
  * GuardrailsService - Manages permissions, read-only mode, and Human-in-the-loop action approvals.
  */
 class GuardrailsService {
   private pendingActions: Map<string, PendingActionProposal> = new Map();
+
+  constructor() {
+    vaultService.subscribeStatus((status) => {
+      if (status === 'locked') {
+        this.clear();
+      }
+    });
+  }
 
   /**
    * Generates a pending action proposal when a tool requires human approval.
@@ -16,7 +25,7 @@ class GuardrailsService {
     params: Record<string, unknown>,
     previewData: Record<string, unknown>
   ): PendingActionProposal {
-    const id = `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const id = `act_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
     const proposal: PendingActionProposal = {
       id,
       toolName,

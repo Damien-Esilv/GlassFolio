@@ -8,6 +8,15 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-1": {
+      "title": "Google sign-in, AI keys and privacy",
+      "highlights": {
+        "googleVault": "Sign in with Google: your vault key is kept in your own Google Drive app storage, with a recovery key so you never lose access.",
+        "manualPrices": "Prices you enter by hand are now stored inside your encrypted vault, including on your self-hosted server.",
+        "aiKeys": "Each AI provider keeps its own API key, and the assistant conversation clears as soon as you lock the vault.",
+        "privacyNotice": "A clearer privacy notice about the market data providers that see the tickers you follow."
+      }
+    },
     "v1-0": {
       "title": "Official Launch of GlassFolio V1",
       "highlights": {

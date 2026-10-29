@@ -61,7 +61,6 @@ describe('Epic 26 Security Coverage — MFA Bridge, PRF Passkeys & Vault Keyslot
             expect(enrollResult).toEqual({
                 id: 'factor-totp-1',
                 secret: 'MFASECRET123',
-                qrCodeSvg: '<svg>qr</svg>',
                 uri: 'otpauth://totp/GlassFolio',
             });
             expect(listSpy).toHaveBeenCalledWith('test-access-token-mfa', { includeUnverified: true });

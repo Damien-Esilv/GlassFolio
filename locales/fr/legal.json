@@ -145,9 +145,9 @@
           "Afin de fournir des valorisations de portefeuille en direct et des capacités d'IA, votre navigateur peut établir des connexions réseau directes vers les points de terminaison suivants :"
         ],
         "items": [
-          "Yahoo Finance & CoinGecko : Requêtes HTTP directes depuis votre navigateur pour les cours de marché en temps réel et les taux de change de devises (mis en cache locale avec un TTL de 15 minutes). Ces services reçoivent votre adresse IP, pas vos positions.",
+          "Yahoo Finance & CoinGecko : Requêtes HTTP depuis votre navigateur (ou via le proxy local) pour les cours de marché en temps réel et les taux de change (mis en cache locale avec un TTL de 15 minutes). Ces services reçoivent votre adresse IP et les symboles boursiers (tickers) consultés, sans aucune information sur vos montants, soldes ou transactions.",
           "Fournisseurs d'IA configurés par l'utilisateur : Si vous configurez une clé d'API personnelle (OpenAI, Anthropic, Groq, OpenRouter), les requêtes sont envoyées directement depuis votre navigateur au fournisseur sélectionné, selon ses propres conditions. Alternativement, vous pouvez utiliser Ollama en local pour une assistance IA 100 % hors-ligne, sans aucune fuite de données.",
-          "Ressources statiques : Tailwind CSS est chargé depuis cdn.tailwindcss.com, ce qui transmet votre adresse IP et votre navigateur à ce CDN. Aucune donnée de portefeuille n'est partagée. La police Inter est hébergée par GlassFolio et n'appelle aucun service Google."
+          "Ressources statiques : Tailwind CSS et l'ensemble des dépendances sont compilés au build et servis directement par GlassFolio ('self'). Aucun CDN tiers n'est appelé pour le CSS. La police Inter est hébergée localement et n'appelle aucun service Google."
         ]
       },
       {
@@ -393,10 +393,10 @@
         "lifespan": "Jusqu'à la déconnexion ou l'expiration de la session"
       },
       "oauthVerifier": {
-        "key": "gf_oauth_pkce_verifier",
+        "key": "gf_oauth_pkce_verifier / gf_oauth_pending / gf_google_oidc_ceremony",
         "category": "Strictement Nécessaire (Sécurité)",
-        "purpose": "Valeur temporaire de sécurité (PKCE) lors de la connexion avec Google.",
-        "lifespan": "Supprimée à la fin de la connexion"
+        "purpose": "Valeurs temporaires de sécurité (vérificateur PKCE, état de cérémonie OIDC, marqueur anti-CSRF) lors de la connexion Google.",
+        "lifespan": "Supprimées à la fin de la connexion"
       },
       "marketCaches": {
         "key": "gf_price_cache / gf_fx_rates_cache / gf_historical_price_cache / glassfolio_price_cache",
@@ -405,9 +405,9 @@
         "lifespan": "Quelques minutes à quelques heures, puis renouvelé"
       },
       "uiState": {
-        "key": "gf_sidebar_collapsed / gf_manual_price_history",
-        "category": "Strictement Nécessaire (Préférences)",
-        "purpose": "État du menu latéral et historique des prix que vous saisissez manuellement.",
+        "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
+        "category": "Strictement Nécessaire (Préférences & Données)",
+        "purpose": "État du menu latéral (local) et historique des cours saisis manuellement (chiffré de bout en bout dans votre coffre).",
         "lifespan": "Persistant jusqu'à la suppression du compte ou l'effacement du cache"
       },
       "passkeyRpId": {

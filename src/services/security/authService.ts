@@ -25,6 +25,8 @@ import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import { getSyncedStorageProvider, requireLocalPersistence } from '../storage/storageFactory';
 import { purgeLocalAccountFootprint } from '../storage/accountErasure';
+import { googleOidcService, GoogleCallbackResult } from './googleOidcService';
+import { googleDriveVaultKeyService } from './googleDriveVaultKeyService';
 import {
     isSupabaseConfigured,
     SupabaseAuthSession,
@@ -73,7 +75,7 @@ export class EmailNotConfirmedError extends Error {
 // Helper to create in-memory session record
 function createSessionRecord(userId: string): AuthSession {
     return {
-        id: `sess-${Math.random().toString(36).substr(2, 9)}`,
+        id: `sess-${crypto.randomUUID()}`,
         userId,
         createdAt: new Date().toISOString(),
         lastSeenAt: new Date().toISOString(),
@@ -865,23 +867,26 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             }
         }
 
-        // Check 2: Hash fragment (#access_token=...)
+        // Check 2: Hash fragment (#access_token=...) — only accepted if a flow was initiated by this tab (Finding #2).
         if (!accessToken) {
-            const hash = consumeInitialOAuthHash() || window.location.hash;
-            if (hash && hash.includes('access_token=')) {
-                const cleanFragment = hash.replace(/^[#/?]+/, '');
-                const hashParams = new URLSearchParams(cleanFragment);
-                const hashType = hashParams.get('type');
-                // When Supabase sends links for email flows (recovery, email_change, signup),
-                // the hash contains type != 'oauth'. Do not consume or treat these as OAuth logins.
-                if (hashType && hashType !== 'oauth' && hashType !== 'bearer') {
-                    return null;
+            const pending = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gf_oauth_pending') : null;
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('gf_oauth_pending');
+            }
+            const isAuthorizedFlow = pending === '1';
+            if (isAuthorizedFlow) {
+                const hash = consumeInitialOAuthHash() || window.location.hash;
+                if (hash && hash.includes('access_token=')) {
+                    const cleanFragment = hash.replace(/^[#/?]+/, '');
+                    const hashParams = new URLSearchParams(cleanFragment);
+                    const hashType = hashParams.get('type');
+                    if (!hashType || hashType === 'oauth' || hashType === 'bearer') {
+                        accessToken = hashParams.get('access_token');
+                        refreshToken = hashParams.get('refresh_token');
+                        expiresIn = hashParams.get('expires_in');
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                    }
                 }
-                accessToken = hashParams.get('access_token');
-                refreshToken = hashParams.get('refresh_token');
-                expiresIn = hashParams.get('expires_in');
-                // Clean URL hash without reload
-                window.history.replaceState(null, '', window.location.pathname + window.location.search);
             }
         }
 
@@ -896,6 +901,10 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             return null;
         }
 
+        if (this.currentSession && this.currentSession.userId !== sbUser.id) {
+            throw new Error('An active session already exists for another user.');
+        }
+
         const session: SupabaseAuthSession = {
             accessToken,
             refreshToken: refreshToken || '',
@@ -908,6 +917,144 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         };
 
         return this.continueAfterPrimaryAuth(session, 'google', (verified) => this.finishOAuthSignIn(verified, sbUser));
+    }
+
+    /**
+     * Handles direct Google OIDC callback from /auth/google-callback.
+     * Authenticates with Supabase using id_token (grant_type=id_token) and sets up or unlocks
+     * the Google Drive appDataFolder E2EE vault without sending the Drive access_token to Supabase.
+     */
+    public async handleGoogleOidcCallback(callbackResult: GoogleCallbackResult): Promise<AuthResult & { recoveryKey?: string }> {
+        // 1. Authenticate id_token with Supabase GoTrue
+        const session = await supabaseClient.signInWithIdToken({
+            provider: 'google',
+            token: callbackResult.idToken,
+            nonce: callbackResult.rawNonce,
+        });
+
+        if (this.currentSession && this.currentSession.userId !== session.user.id) {
+            throw new Error('An active session already exists for another user.');
+        }
+
+        // 2. Clear any leftover demo vault if present so demo data never mixes with Google account
+        if (vaultService.isDemoVault()) {
+            await vaultService.resetVault();
+        }
+
+        this.persistSession(session);
+
+        // 3. Pull user's encrypted vault from Supabase PostgREST. This comes BEFORE touching the Drive
+        //    key: a new root secret may only be created when no vault exists on the server yet.
+        const synced = getSyncedStorageProvider();
+        const pull = synced ? await synced.pullFromRemote() : { ok: true, hasRemoteHeader: false };
+        if (!pull.ok) {
+            throw new Error('Your encrypted vault could not be reached. Check your connection and try again.');
+        }
+
+        let recoveryKey: string | undefined;
+
+        if (pull.hasRemoteHeader) {
+            const header = vaultService.getVaultHeader();
+            if (header && (header.authProvider === 'email' || header.authProvider === 'local')) {
+                await auditLogService.record('account_conflict_blocked', `Account conflict for ${session.user.email}: user has password vault`, 'warning').catch(() => undefined); // best effort: the vault is locked at sign-in, and this must not hide the conflict error
+                throw new Error('An account already exists with this email address using password authentication. Please log in with your master password.');
+            }
+
+            // Check if legacy identity-derived Google vault exists and needs DEK rotation
+            if (vaultService.isLegacyIdentityGoogleVault()) {
+                const driveKey = await googleDriveVaultKeyService.getOrCreateRootSecret(
+                    callbackResult.accessToken,
+                    session.user.id
+                );
+                const legacyOAuthSecret = `gf-oauth-e2ee-v1:${session.user.id}:${session.user.email.trim().toLowerCase()}`;
+                const migrateRes = await vaultService.migrateLegacyGoogleVault(
+                    legacyOAuthSecret,
+                    driveKey.driveSecret,
+                    driveKey.keyId,
+                    session.user.id
+                );
+                recoveryKey = migrateRes.recoveryKey;
+                // The rotation re-sealed every record under a new DEK. Header and records go to the
+                // server in ONE transaction: a network cut can never leave a new header over old-DEK
+                // records. If it fails nothing changed server-side and the next login simply retries
+                // (the pull restores the legacy header and records).
+                const migratedHeader = vaultService.getVaultHeader();
+                const migratedSynced = getSyncedStorageProvider();
+                if (!migratedHeader || !migratedSynced) throw new Error('Vault header is missing.');
+                await supabaseClient.commitVaultMigration(
+                    session.accessToken,
+                    migratedHeader as unknown as Record<string, unknown>,
+                    migratedSynced.collectSensitiveEnvelopes()
+                );
+                migratedSynced.enableReplication(session.user.id);
+                await auditLogService.record('vault_migrated', 'Legacy Google OAuth vault migrated to Google Drive appDataFolder E2EE');
+            } else {
+                // An existing Drive vault: only READ the key. A missing key must never be replaced by
+                // a fresh one, it would make the vault unreadable (recovery key only).
+                const existingKey = await googleDriveVaultKeyService.readRootSecret(
+                    callbackResult.accessToken,
+                    session.user.id
+                );
+                if (!existingKey) {
+                    throw new Error('DRIVE_KEY_MISSING: the vault key file is not in your Google Drive app data. Use your recovery key.');
+                }
+                await vaultService.unlockGoogleDriveVault(existingKey.driveSecret, session.user.id);
+            }
+        } else {
+            const driveKey = await googleDriveVaultKeyService.getOrCreateRootSecret(
+                callbackResult.accessToken,
+                session.user.id
+            );
+            const setupRes = await vaultService.setupGoogleDriveVault(
+                driveKey.driveSecret,
+                driveKey.keyId,
+                session.user.id
+            );
+            recoveryKey = setupRes.recoveryKey;
+            await this.publishNewVault(session);
+            await auditLogService.record('vault_created', 'E2EE Google Drive Split-Trust vault initialized');
+        }
+
+        getSyncedStorageProvider()?.enableReplication(session.user.id);
+
+        // 5. Construct or retrieve user profile
+        let user = await userRepository.getUser();
+        const metadata = (session.user.user_metadata || {}) as Record<string, unknown>;
+        const googleName = (typeof metadata.full_name === 'string' && metadata.full_name)
+            || (typeof metadata.name === 'string' && metadata.name)
+            || session.user.email.split('@')[0]
+            || 'Investor';
+        const googleAvatar = (typeof metadata.avatar_url === 'string' && metadata.avatar_url)
+            || (typeof metadata.picture === 'string' && metadata.picture)
+            || '';
+
+        if (user && (user.id === 'u1' || user.email.toLowerCase() === 'demo@glassfolio.com' || (user.id !== session.user.id && user.email.toLowerCase() !== session.user.email.toLowerCase()))) {
+            user = null;
+        }
+
+        if (!user) {
+            user = {
+                id: session.user.id,
+                email: session.user.email,
+                name: googleName,
+                avatar: googleAvatar,
+                authProvider: 'google',
+                preferences: getInitialAuthPreferences(),
+                xp: 0,
+                level: 1,
+                emailVerified: true,
+            };
+            await userRepository.saveUser(user);
+        }
+
+        const authSession = createSessionRecord(session.user.id);
+        this.currentSession = authSession;
+
+        return {
+            user,
+            session: authSession,
+            recoveryKey,
+        };
     }
 
     private async finishOAuthSignIn(session: SupabaseAuthSession, sbUser: SupabaseUserData): Promise<AuthResult> {
@@ -933,7 +1080,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         if (pull.hasRemoteHeader) {
             const header = vaultService.getVaultHeader();
             if (header && (header.authProvider === 'email' || header.authProvider === 'local')) {
-                await auditLogService.record('account_conflict_blocked', `Account conflict for ${oauthEmail}: user already has password vault`, 'warning');
+                await auditLogService.record('account_conflict_blocked', `Account conflict for ${oauthEmail}: user already has password vault`, 'warning').catch(() => undefined); // best effort: the vault is locked at sign-in, and this must not hide the conflict error
                 throw new Error('An account already exists with this email address using password authentication. Please log in with your master password.');
             }
 
@@ -944,16 +1091,13 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 getSyncedStorageProvider()?.enableReplication(sbUser.id);
             } catch (err) {
                 // The server copy itself cannot be opened with this account's secret: it is unrecoverable.
-                console.error('[authService] E2EE vault OAuth unlock error, recreating clean OAuth vault', err);
-                await vaultService.resetVault();
-                await vaultService.setupOAuthVault(oauthVaultSecret);
-                await this.publishNewVault(session);
-                await auditLogService.record('vault_reset', `Unreadable OAuth vault recreated for ${oauthEmail}`, 'warning');
+                // Never recreate (and overwrite) a vault from here: sign in again with Google to retry.
+                console.error('[authService] Legacy Google vault could not be unlocked', err);
+                throw new Error('GOOGLE_VAULT_UNLOCK_FAILED: sign in with Google again, or use your recovery key.');
             }
         } else {
-            await vaultService.resetVault();
-            await vaultService.setupOAuthVault(oauthVaultSecret);
-            await this.publishNewVault(session);
+            // Identity-derived vaults are legacy: new Google vaults only exist through the Drive flow.
+            throw new Error('GOOGLE_CLIENT_ID_NOT_CONFIGURED: new Google vaults require the Google Drive flow.');
         }
 
         // 5. Construct or retrieve user profile
@@ -1274,22 +1418,29 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
 
         // In cloud mode, ensure we have an active session with proper AAL assurance
         if (user?.email) {
+            let freshSession: SupabaseAuthSession = active;
             try {
-                let freshSession = await supabaseClient.signInWithPassword(user.email, oldPassword);
-                const factors = await supabaseClient.listMfaFactors(freshSession.accessToken).catch(() => []);
-                const hasTotp = factors.some(f => f.factor_type === 'totp' && f.status === 'verified');
-                if (hasTotp) {
-                    if (options?.totpCode) {
-                        freshSession = await this.verifyTotpForSession(freshSession, options.totpCode);
-                    } else if (getSessionAssurance(active.accessToken).aal === 'aal2') {
-                        freshSession = active;
-                    }
-                }
-                active = freshSession;
-                this.persistSession(active);
+                freshSession = await supabaseClient.signInWithPassword(user.email, oldPassword);
             } catch {
-                // If re-authenticating with oldPassword fails, proceed with active session
+                // If re-authenticating with oldPassword network call fails or isn't stubbed, proceed with active session
             }
+            const factors = await supabaseClient.listMfaFactors(freshSession.accessToken).catch(() => []);
+            const hasTotp = factors.some(f => f.factor_type === 'totp' && f.status === 'verified');
+            if (hasTotp) {
+                if (options?.totpCode) {
+                    freshSession = await this.verifyTotpForSession(freshSession, options.totpCode);
+                } else if (getSessionAssurance(active.accessToken).aal === 'aal2') {
+                    freshSession = active;
+                } else {
+                    throw new Error('Two-factor authentication code is required.');
+                }
+            }
+            active = freshSession;
+            this.persistSession(active);
+        }
+
+        if (active.user.id !== user.id) {
+            throw new Error('Session principal mismatch.');
         }
 
         // Supabase first: the account and vault passwords are the same secret, so if the server
@@ -1305,6 +1456,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                     Boolean(header.totpEnabled)
                 );
             }
+            // Revoke other active sessions on password change
+            await supabaseClient.signOut(active.accessToken, 'others').catch(() => undefined);
         } catch (err) {
             await supabaseClient.updateUser(active.accessToken, { password: oldPassword }).catch(() => undefined);
             throw err;
@@ -1347,6 +1500,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         if (active) {
             try {
                 await supabaseClient.updateUser(active.accessToken, { password: newPassword });
+                await supabaseClient.signOut(active.accessToken, 'others').catch(() => undefined);
             } catch {
                 // If token expired, user will log in with new password
             }
@@ -1391,6 +1545,10 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         const session = await supabaseClient.verifyTokenHash(tokenHash.trim(), type);
         const email = (session.user?.email || '').toLowerCase();
         const pendingEmail = session.user?.user_metadata?.new_email || session.user?.email;
+
+        if (this.currentSession && session.user?.id && this.currentSession.userId !== session.user.id) {
+            throw new Error('Email verification link belongs to another user account.');
+        }
 
         if (type === 'recovery') {
             // Keep the active session in memory so the recovery/reset flow can call updateUser({ password })
@@ -1500,7 +1658,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         return this.supabaseSession?.accessToken;
     }
 
-    public async enrollMfaTotp(friendlyName?: string): Promise<{ id: string; secret: string; qrCodeSvg?: string; uri?: string } | null> {
+    public async enrollMfaTotp(friendlyName?: string): Promise<{ id: string; secret: string; uri?: string } | null> {
         const active = await this.getActiveSession();
         if (!active) return null;
         const accessToken = active.accessToken;
@@ -1511,11 +1669,10 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             .map(factor => supabaseClient.unenrollMfaFactor(accessToken, factor.id).catch(() => undefined)));
         const name = friendlyName || `Authenticator ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
         const res = await supabaseClient.enrollMfaFactor(accessToken, 'totp', name);
-        const totpData = res.totp as { secret?: string; qr_code?: string; uri?: string } | undefined;
+        const totpData = res.totp as { secret?: string; uri?: string } | undefined;
         return {
             id: res.id as string,
             secret: totpData?.secret || '',
-            qrCodeSvg: totpData?.qr_code,
             uri: totpData?.uri,
         };
     }
@@ -1570,10 +1727,20 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             return super.signInWithOAuth(provider);
         }
 
-        const redirectUrl = await supabaseClient.prepareOAuthPkceUrl(provider);
-        this.redirectToUrl(redirectUrl);
-        // Returns promise that never resolves as browser is redirecting
-        return new Promise(() => {});
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('gf_oauth_pending', '1');
+        }
+
+        if (provider === 'google' && googleOidcService.isConfigured()) {
+            await googleOidcService.startCeremony();
+            // Returns promise that never resolves as browser is redirecting to accounts.google.com
+            return new Promise(() => {});
+        }
+
+        // No silent fallback: the Supabase-hosted Google flow only knows the account identity, which
+        // the server also holds, so a vault created through it would not be end-to-end encrypted.
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gf_oauth_pending');
+        throw new Error('GOOGLE_CLIENT_ID_NOT_CONFIGURED: Google sign-in needs VITE_GOOGLE_CLIENT_ID.');
     }
 
     public override async signOut(): Promise<void> {

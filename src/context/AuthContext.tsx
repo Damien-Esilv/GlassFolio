@@ -49,6 +49,16 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const useAuth = () => useContext(AuthContext);
 
+const isValidAvatar = (avatar: string): boolean => {
+  if (!avatar) return true;
+  if (avatar.length > 2 * 1024 * 1024) return false;
+  return (
+    avatar.startsWith('/avatars/') ||
+    avatar.startsWith('https://') ||
+    avatar.startsWith('data:image/')
+  );
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -331,6 +341,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return new Promise((resolve) => {
       setTimeout(async () => {
         if (user) {
+          if (data.avatar && !isValidAvatar(data.avatar)) {
+            resolve();
+            return;
+          }
           const updatedUser = { ...user, ...data };
           // If preferences are partial, merge them
           if (data.preferences) {

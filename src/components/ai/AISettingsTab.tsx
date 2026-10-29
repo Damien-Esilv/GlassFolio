@@ -113,11 +113,41 @@ export const AISettingsTab: React.FC = () => {
     } else {
       nextProvider = isCloudProvider(settings.activeProvider) ? settings.activeProvider : 'groq';
     }
-    updateAISettings({ ...settings, activeProvider: nextProvider });
+    const currentKeys = {
+      ...(settings.providerApiKeys || {}),
+      [settings.activeProvider]: settings.apiKey,
+    };
+    const currentModels = {
+      ...(settings.providerModels || {}),
+      [settings.activeProvider]: settings.cloudModel,
+    };
+    updateAISettings({
+      ...settings,
+      activeProvider: nextProvider,
+      apiKey: currentKeys[nextProvider] || '',
+      cloudModel: currentModels[nextProvider] || '',
+      providerApiKeys: currentKeys,
+      providerModels: currentModels,
+    });
   };
 
   const handleCloudProviderChange = (newProvider: AIProviderType) => {
-    updateAISettings({ ...settings, activeProvider: newProvider });
+    const currentKeys = {
+      ...(settings.providerApiKeys || {}),
+      [settings.activeProvider]: settings.apiKey,
+    };
+    const currentModels = {
+      ...(settings.providerModels || {}),
+      [settings.activeProvider]: settings.cloudModel,
+    };
+    updateAISettings({
+      ...settings,
+      activeProvider: newProvider,
+      apiKey: currentKeys[newProvider] || '',
+      cloudModel: currentModels[newProvider] || '',
+      providerApiKeys: currentKeys,
+      providerModels: currentModels,
+    });
     setCloudResult(null);
   };
 
@@ -383,7 +413,14 @@ export const AISettingsTab: React.FC = () => {
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={settings.apiKey}
-                  onChange={(e) => updateAISettings({ ...settings, apiKey: e.target.value })}
+                  onChange={(e) => {
+                    const newKey = e.target.value;
+                    const updatedKeys = {
+                      ...(settings.providerApiKeys || {}),
+                      [settings.activeProvider]: newKey,
+                    };
+                    updateAISettings({ ...settings, apiKey: newKey, providerApiKeys: updatedKeys });
+                  }}
                   placeholder={currentCloudOption.keyPlaceholder}
                   className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs pr-9"
                 />
@@ -420,7 +457,14 @@ export const AISettingsTab: React.FC = () => {
             <input
               type="text"
               value={settings.cloudModel}
-              onChange={(e) => updateAISettings({ ...settings, cloudModel: e.target.value })}
+              onChange={(e) => {
+                const newModel = e.target.value;
+                const updatedModels = {
+                  ...(settings.providerModels || {}),
+                  [settings.activeProvider]: newModel,
+                };
+                updateAISettings({ ...settings, cloudModel: newModel, providerModels: updatedModels });
+              }}
               placeholder={currentCloudOption.modelPlaceholder || t('ai:settings.cloud.modelPlaceholder')}
               className="w-full bg-subtle text-primary border border-subtle focus:ring-1 focus:ring-primary focus:border-primary rounded-xl px-3 py-2 text-xs"
             />

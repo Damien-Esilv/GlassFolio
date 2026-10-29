@@ -50,6 +50,7 @@ export const CSP_PROFILES = Object.freeze({
       'https://*.supabase.co',
       'https://query1.finance.yahoo.com',
       'https://challenges.cloudflare.com',
+      'https://www.googleapis.com',
       ...AI_AND_MARKET_ORIGINS,
       ...LOCAL_AI_ORIGINS,
     ]),

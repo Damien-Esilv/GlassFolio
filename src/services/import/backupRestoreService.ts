@@ -146,17 +146,27 @@ export async function mergeTransactionsOnly(data: Record<string, any[]>): Promis
     return mergeBackupData(pickTransactionEntities(data));
 }
 
-/** Keeps the API keys already stored locally: exports never contain them. */
+/**
+ * Restores AI settings from a backup WITHOUT letting the file steer where data goes. A backup is
+ * untrusted input: only harmless preferences (execution mode, thinking) are taken from it.
+ * The provider, models, endpoints and every API key always stay what this device already has,
+ * otherwise a crafted backup could plant its own key/provider and receive the assistant's prompts.
+ */
 function mergeAiSettingsKeepingKeys(incoming: Record<string, any>): Record<string, any> {
+    let current: Record<string, any> = {};
     try {
-        const current = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}') as Record<string, any>;
-        const keys: Record<string, any> = {};
-        if (current.apiKey) keys.apiKey = current.apiKey;
-        if (current.customApiKey) keys.customApiKey = current.customApiKey;
-        return { ...incoming, ...keys };
+        current = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}') as Record<string, any>;
     } catch {
-        return incoming;
+        current = {};
     }
+    const next = { ...current };
+    if (incoming.executionMode === 'supervised' || incoming.executionMode === 'read_only') {
+        next.executionMode = incoming.executionMode;
+    }
+    if (typeof incoming.enableThinking === 'boolean') {
+        next.enableThinking = incoming.enableThinking;
+    }
+    return next;
 }
 
 export async function restoreBackupReset(backupData: Record<string, any[]>): Promise<void> {

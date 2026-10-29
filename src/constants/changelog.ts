@@ -26,6 +26,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-1',
+    version: '1.1',
+    date: '2026-10-29',
+    highlights: [
+      { key: 'googleVault', kind: 'new' },
+      { key: 'manualPrices', kind: 'improved' },
+      { key: 'aiKeys', kind: 'improved' },
+      { key: 'privacyNotice', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-0',
     version: '1.0',
     date: '2026-10-27',

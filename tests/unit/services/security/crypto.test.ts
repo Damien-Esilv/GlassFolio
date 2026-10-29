@@ -21,7 +21,7 @@ import { fromBase64, toBase64 } from '../../../../src/services/security/encoding
 describe('Crypto Primitives & Adversarial Security (TGLA-041)', () => {
     describe('Dual-Key Domain Separation (PBKDF2 + HKDF)', () => {
         it('derives two mathematically independent keys (KEK !== AuthKey)', async () => {
-            const kdf = createKdfParams(1000); // 1k iterations for fast unit test
+            const kdf = createKdfParams();
             const derived = await deriveMasterKeys('TestPassword123!', kdf);
 
             expect(derived.kek).toBeDefined();
@@ -48,12 +48,19 @@ describe('Crypto Primitives & Adversarial Security (TGLA-041)', () => {
         });
 
         it('derives completely different keys for different passwords and salts', async () => {
-            const kdfA = createKdfParams(1000);
-            const kdfB = createKdfParams(1000);
+            const kdfA = createKdfParams();
+            const kdfB = createKdfParams();
             const derivedA = await deriveMasterKeys('PasswordA', kdfA);
             const derivedB = await deriveMasterKeys('PasswordB', kdfB);
 
             expect(Array.from(derivedA.authKey)).not.toEqual(Array.from(derivedB.authKey));
+        });
+
+        it('strictly rejects KDF iterations below 600,000 security floor (Finding #5)', async () => {
+            const weakKdf = { ...createKdfParams(), iterations: 1000 };
+            await expect(deriveMasterKeys('Password123!', weakKdf)).rejects.toThrow(
+                /below security floor/i
+            );
         });
     });
 
@@ -145,7 +152,7 @@ describe('Crypto Primitives & Adversarial Security (TGLA-041)', () => {
 
     describe('XSS Memory Protection (extractable: false)', () => {
         it('unwraps DEK as non-extractable and blocks exportKey with InvalidAccessError', async () => {
-            const kdf = createKdfParams(1000);
+            const kdf = createKdfParams();
             const { kek } = await deriveMasterKeys('VaultMasterKey2026!', kdf);
             const extractableDek = await generateExtractableDek();
             const wrappedB64 = await wrapDek(extractableDek, kek);

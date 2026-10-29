@@ -43,7 +43,7 @@ import {
     buildDemoInstruments
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
-import { VAULT_HEADER_KEY } from './storage/storageKeys';
+import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY, VAULT_HEADER_KEY } from './storage/storageKeys';
 
 const STORAGE_KEYS = {
     // Legacy keys (existing functionality)
@@ -485,6 +485,7 @@ class MockDB {
                     const safeSettings = { ...parsedSettings };
                     delete safeSettings.apiKey;
                     delete safeSettings.customApiKey;
+                    delete safeSettings.providerApiKeys;
                     aiSettings = [safeSettings];
                 }
             } catch {
@@ -548,7 +549,8 @@ class MockDB {
     resetToInitialData(): void {
         Object.values(STORAGE_KEYS).forEach(key => appStorage.removeItem(key));
         appStorage.removeItem('glassfolio_price_cache');
-        appStorage.removeItem('gf_manual_price_history');
+        appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
+        appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
     }
 
     /**
@@ -573,7 +575,8 @@ class MockDB {
         ];
         zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
         appStorage.removeItem('glassfolio_price_cache');
-        appStorage.removeItem('gf_manual_price_history');
+        appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
+        appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
     }
 }
 

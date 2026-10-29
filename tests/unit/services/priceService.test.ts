@@ -16,7 +16,13 @@ import {
   refreshPositionPrices,
   clearPriceCache,
   getLastPriceFetchTime,
+  getManualPriceHistory,
+  saveManualPrice,
 } from '../../../src/services/priceService';
+import {
+  MANUAL_PRICE_HISTORY_KEY,
+  LEGACY_MANUAL_PRICE_HISTORY_KEY,
+} from '../../../src/services/storage/storageKeys';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const makePosition = (overrides: Partial<Position> = {}): Position => ({
@@ -174,5 +180,42 @@ describe('priceService.refreshPositionPrices', () => {
     await refreshPositionPrices(original);
     // Original object reference should not have been mutated
     expect(original[0]).toBe(originalRef);
+  });
+});
+
+describe('priceService manual price encryption & migration (Finding #8)', () => {
+  beforeEach(() => {
+    localStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
+    localStorage.removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+  });
+
+  it('stores manual prices under the encrypted glassfolio_manual_price_history key', () => {
+    saveManualPrice('TEST.PA', 123.45);
+    const history = getManualPriceHistory('TEST.PA');
+    expect(history).toHaveLength(1);
+    expect(history[0].price).toBe(123.45);
+    expect(localStorage.getItem(MANUAL_PRICE_HISTORY_KEY)).toBeTruthy();
+  });
+
+  it('transparently migrates legacy gf_manual_price_history into glassfolio_manual_price_history and deletes plaintext', () => {
+    const legacyData = { 'AIR.PA': [{ date: '2026-01-01T00:00:00.000Z', price: 140 }] };
+    localStorage.setItem(LEGACY_MANUAL_PRICE_HISTORY_KEY, JSON.stringify(legacyData));
+
+    const history = getManualPriceHistory('AIR.PA');
+    expect(history).toHaveLength(1);
+    expect(history[0].price).toBe(140);
+
+    // Legacy plaintext key was purged from storage
+    expect(localStorage.getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY)).toBeNull();
+    // New key holds the data
+    expect(localStorage.getItem(MANUAL_PRICE_HISTORY_KEY)).toBeTruthy();
+  });
+
+  it('clearPriceCache purges both modern and legacy manual price keys', () => {
+    localStorage.setItem(MANUAL_PRICE_HISTORY_KEY, '{"X":[]}');
+    localStorage.setItem(LEGACY_MANUAL_PRICE_HISTORY_KEY, '{"Y":[]}');
+    clearPriceCache();
+    expect(localStorage.getItem(MANUAL_PRICE_HISTORY_KEY)).toBeNull();
+    expect(localStorage.getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY)).toBeNull();
   });
 });

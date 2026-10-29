@@ -14,7 +14,7 @@ import { authService } from './authService';
 import { auditLogService } from './auditLogService';
 import { passkeyService, PasskeyRecord } from './passkeyService';
 import { vaultService } from './vaultService';
-import { supabaseClient } from '../supabase/supabaseClient';
+import { getSessionAssurance, supabaseClient } from '../supabase/supabaseClient';
 import { getSyncedPublicLanguage } from '../storage/publicPreferencesSync';
 
 export interface AccountPasskey {
@@ -120,6 +120,23 @@ export const passkeyAccountService = {
         let attestation;
         if (usesSupabasePasskeys()) {
             const token = await requireAccessToken();
+            // If the account has an active, verified TOTP factor, passkey enrollment requires aal2 step-up
+            // Fail closed: if the factors cannot be read we cannot tell whether TOTP protects the account,
+            // so enrolling a passkey (which the database treats as MFA-equivalent) must not go ahead.
+            let factors;
+            try {
+                factors = await supabaseClient.listMfaFactors(token);
+            } catch {
+                throw new Error('MFA_STEP_UP_REQUIRED: Could not verify the account two-factor status. Try again.');
+            }
+            const hasVerifiedTotp = factors.some(f => f.factor_type === 'totp' && f.status === 'verified');
+            if (hasVerifiedTotp) {
+                const assurance = getSessionAssurance(token);
+                if (assurance.aal !== 'aal2') {
+                    throw new Error('MFA_STEP_UP_REQUIRED: Two-factor authentication (TOTP) is required to register a new passkey.');
+                }
+            }
+
             const ceremony = await supabaseClient.startPasskeyRegistration(token);
             attestation = await passkeyService.create({ user: params.user, serverOptions: ceremony.options });
             serverId = (await supabaseClient.verifyPasskeyRegistration(token, ceremony.challenge_id, attestation.credentialJson)).id;

@@ -6,6 +6,9 @@
 
 import path from 'node:path';
 import { createLocalVaultHandler, createLocalVaultStore, isLocalVaultPath } from './localVault.mjs';
+import { createAccessControl } from './accessControl.mjs';
+import { buildSecurityHeaders } from './securityHeaders.mjs';
+import { evaluateNetworkExposure } from './networkExposure.mjs';
 
 export function localVaultPlugin({ dataDir } = {}) {
   const mode = (process.env.VITE_DEPLOYMENT_MODE || 'local').trim().toLowerCase();
@@ -13,16 +16,34 @@ export function localVaultPlugin({ dataDir } = {}) {
   if (mode !== 'local') return { name };
 
   const resolvedDir = path.resolve(process.cwd(), dataDir || process.env.DATA_DIR || 'glassfolio-data');
+  const token = process.env.GLASSFOLIO_ACCESS_TOKEN || process.env.ACCESS_TOKEN || '';
+  const access = createAccessControl({ token });
+  const securityHeaders = buildSecurityHeaders('local');
   let handler = null;
 
+  // Same rule as `npm run docker:up`: the vault API must not be reachable from the network without a token.
+  const assertSafeExposure = () => {
+    for (const bind of [process.env.GLASSFOLIO_DEV_HOST, process.env.GLASSFOLIO_PREVIEW_HOST]) {
+      if (bind === undefined) continue;
+      const problem = evaluateNetworkExposure({ bind, token });
+      if (problem) throw new Error(problem.replace('GLASSFOLIO_BIND', 'GLASSFOLIO_DEV_HOST / GLASSFOLIO_PREVIEW_HOST'));
+    }
+  };
+
   const attach = (server) => {
-    server.middlewares.use((req, res, next) => {
+    assertSafeExposure();
+    server.middlewares.use(async (req, res, next) => {
       const url = new URL(req.url || '/', 'http://localhost');
       if (!isLocalVaultPath(url.pathname)) {
         next();
         return;
       }
+      if (access.enabled) {
+        const ok = await access.authorize(req, res, securityHeaders);
+        if (!ok) return;
+      }
       handler ??= createLocalVaultHandler(createLocalVaultStore({ dataDir: resolvedDir }), {
+        securityHeaders,
         allowedHosts: (process.env.ALLOWED_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
       });
       handler(req, res, url).catch(next);

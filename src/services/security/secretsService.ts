@@ -101,7 +101,7 @@ export const secretsService = {
             items[existingIdx] = savedItem;
         } else {
             savedItem = {
-                id: `sec-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                id: `sec-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 provider,
                 label: label.trim() || provider.toUpperCase(),
                 value: cleanValue,

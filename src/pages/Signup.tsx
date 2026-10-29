@@ -14,6 +14,7 @@ import { isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl, getDe
 import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { authService } from '../services/security/authService';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
+import { GoogleDrivePrivacyTooltip } from '../components/security/GoogleDrivePrivacyTooltip';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 
 const Signup: React.FC = () => {
@@ -480,6 +481,7 @@ const Signup: React.FC = () => {
                      </svg>
                      {t('auth:signup.signUpWithGoogle', 'Continue with Google')}
                   </button>
+                  <GoogleDrivePrivacyTooltip />
                   <p className="text-xs text-tertiary mt-3 text-center">
                      <Trans
                         i18nKey="auth:signup.googleLegalNotice"

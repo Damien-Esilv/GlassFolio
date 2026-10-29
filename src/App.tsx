@@ -39,6 +39,8 @@ import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 // @ts-expect-error import.meta.env is injected by Vite at compile time
 const isShowcaseExcluded = import.meta.env.VITE_APP_TARGET === 'app';
 // Import tooling is only needed on /import: keep it out of the main bundle
+// Only used on the return from Google sign-in: keep it (and the recovery-key modal) out of the main bundle.
+const GoogleAuthCallback = React.lazy(() => import('./pages/GoogleAuthCallback').then((m) => ({ default: m.GoogleAuthCallback })));
 const ImportWizard = React.lazy(() => import('./pages/ImportWizard'));
 const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
 
@@ -171,6 +173,7 @@ const App: React.FC = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/confirm" element={<AuthConfirm />} />
+              <Route path="/auth/google-callback" element={<GoogleAuthCallback />} />
               <Route path="/forgot-password" element={<PasswordResetFlow initialMode="request" />} />
               <Route path="/reset-password" element={<PasswordResetFlow initialMode="recover" />} />
               <Route path="/portfolio" element={<ProtectedRoute><PortfolioHub /></ProtectedRoute>} />

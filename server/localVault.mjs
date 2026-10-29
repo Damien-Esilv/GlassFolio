@@ -17,6 +17,12 @@ import path from 'node:path';
 export const LOCAL_VAULT_PATH = '/api/local-vault';
 export const LOCAL_VAULT_BATCH_PATH = '/api/local-vault/batch';
 export const STORE_SCHEMA = 1;
+/**
+ * Every call must carry this header (the app client always does). A cross-site page cannot add a
+ * custom header without a CORS preflight, which this API never grants: a second CSRF barrier next to
+ * the Sec-Fetch-Site / Origin check, effective even for browsers that omit those.
+ */
+export const CLIENT_HEADER = 'x-glassfolio-local';
 export const MAX_BODY_BYTES = 20 * 1024 * 1024;
 export const MAX_VALUE_BYTES = 5 * 1024 * 1024;
 
@@ -209,6 +215,11 @@ export function createLocalVaultHandler(store, { securityHeaders = {}, allowedHo
 
   return async function handle(req, res, url) {
     if (!isAllowedHost(req.headers.host, allowedHosts) || !isSameOrigin(req)) {
+      send(res, 403, { error: 'Forbidden' });
+      return true;
+    }
+
+    if (req.headers[CLIENT_HEADER] !== '1') {
       send(res, 403, { error: 'Forbidden' });
       return true;
     }

@@ -9,6 +9,7 @@
  */
 
 import { db, delay } from '../db';
+import { vaultService } from '../security/vaultService';
 import {
     TaxSummaryResult,
     ForeignAccountObligation,
@@ -52,6 +53,12 @@ export const clearTaxSummaryCache = (): void => {
     taxSummaryCache.clear();
     inFlightSummaries.clear();
 };
+
+vaultService.subscribeStatus((status) => {
+    if (status === 'locked') {
+        clearTaxSummaryCache();
+    }
+});
 
 // ============================================================================
 // PUBLIC API

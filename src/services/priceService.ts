@@ -15,7 +15,7 @@
 import { yahooFinanceUrl } from '../config/marketData';
 import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
-import { MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
+import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
@@ -155,7 +155,14 @@ export function saveManualPrice(symbol: string, price: number): void {
 
     // 2. Record historical price point
     try {
-        const rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        let rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        if (!rawHistory) {
+            const legacy = appStorage.getBacking().getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+            if (legacy) {
+                rawHistory = legacy;
+                appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+            }
+        }
         const historyMap: Record<string, ManualPricePoint[]> = rawHistory ? JSON.parse(rawHistory) : {};
         const symbolHistory = historyMap[cleanSymbol] ?? [];
 
@@ -166,6 +173,7 @@ export function saveManualPrice(symbol: string, price: number): void {
 
         historyMap[cleanSymbol] = symbolHistory;
         appStorage.setItem(MANUAL_PRICE_HISTORY_KEY, JSON.stringify(historyMap));
+        appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
     } catch {
         // Storage fallback
     }
@@ -174,7 +182,19 @@ export function saveManualPrice(symbol: string, price: number): void {
 export function getManualPriceHistory(symbol: string): ManualPricePoint[] {
     try {
         const cleanSymbol = symbol.trim().toUpperCase();
-        const rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        let rawHistory = appStorage.getItem(MANUAL_PRICE_HISTORY_KEY);
+        if (!rawHistory) {
+            const legacy = appStorage.getBacking().getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+            if (legacy) {
+                rawHistory = legacy;
+                try {
+                    appStorage.setItem(MANUAL_PRICE_HISTORY_KEY, legacy);
+                    appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+                } catch {
+                    // Ignore storage error
+                }
+            }
+        }
         if (!rawHistory) return [];
         const historyMap: Record<string, ManualPricePoint[]> = JSON.parse(rawHistory);
         return historyMap[cleanSymbol] ?? [];
@@ -213,6 +233,7 @@ function writeCache(data: Record<string, number>): void {
 export function clearPriceCache(): void {
     appStorage.removeItem(CACHE_KEY);
     appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
+    appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
 }
 
 export function getLastPriceFetchTime(): string | null {

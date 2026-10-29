@@ -179,7 +179,7 @@ export class OllamaProvider implements AIProvider {
           }
 
           toolCalls.push({
-            id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            id: tc.id || `call_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
             name: tc.function.name,
             arguments: parsedArgs,
           });

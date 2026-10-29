@@ -152,10 +152,14 @@ const Settings: React.FC = () => {
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (!file.type.startsWith('image/')) return;
+            if (file.size > 2 * 1024 * 1024) return;
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64String = reader.result as string;
-                updateProfile({ avatar: base64String });
+                if (typeof base64String === 'string' && base64String.startsWith('data:image/')) {
+                    updateProfile({ avatar: base64String });
+                }
             };
             reader.readAsDataURL(file);
         }

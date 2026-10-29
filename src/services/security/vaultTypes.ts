@@ -42,18 +42,27 @@ export interface PasskeySlotInfo {
     transports?: string[];
 }
 
+export interface GoogleDriveWrappedKeyEntry {
+    alg: 'AES-KW';
+    keyId: string;
+    wrapped: string;
+    salt: string;
+    createdAt: string;
+}
+
 /** Single serializable record stored under `gf_vault_header`. */
 export interface VaultHeader {
     version: 1;
     kdf: KdfParams;
     dekAlgorithm: 'AES-256-GCM';
     wrappedKeys: {
-        password: WrappedKeyEntry;
+        password: WrappedKeyEntry | null;
         recovery: WrappedKeyEntry | null;
         passkeys: PasskeyWrappedKeyEntry[];
+        googleDrive?: GoogleDriveWrappedKeyEntry | null;
     };
     /** Aliases maintained in sync for multi-slot clarity */
-    passwordSlot?: WrappedKeyEntry;
+    passwordSlot?: WrappedKeyEntry | null;
     recoverySlot?: WrappedKeyEntry | null;
     createdAt: string;
     updatedAt: string;

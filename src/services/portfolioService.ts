@@ -72,7 +72,7 @@ export const portfolioService = {
             const lastPrice = isCash ? 1 : parseFloat(lastTx.priceUnit || '0') || (state.quantity > 0 ? state.costBasis / state.quantity : 0);
 
             positionMap.set(key, {
-                id: `pos-${Math.random().toString(36).substr(2, 9)}`,
+                id: `pos-${crypto.randomUUID()}`,
                 instrument: instrument?.name || firstTx.label || symbol,
                 symbol,
                 quantity: state.quantity,

@@ -180,7 +180,7 @@ const Progress: React.FC = () => {
     const handleCreateGroup = () => {
         if (!newGroupname) return;
         const newGrp: AssetGroup = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             name: newGroupname,
             symbols: [],
             color: 'blue'

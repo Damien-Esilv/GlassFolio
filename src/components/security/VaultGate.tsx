@@ -32,9 +32,14 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
 
         if (status === 'locked') {
             if (!hasAutoUnlockedRef.current && vaultService.isInitialized()) {
-                const oauthEmail = user.email.trim().toLowerCase();
-                const oauthVaultSecret = `gf-oauth-e2ee-v1:${user.id}:${oauthEmail}`;
-                vaultService.unlockOAuthVault(oauthVaultSecret).then(() => {
+                const unlock = vaultService.isGoogleDriveVault()
+                    // Drive vaults: reopen with the non-extractable device key kept in IndexedDB. If it is
+                    // gone (new device, inactivity lock) the user signs in with Google again.
+                    ? vaultService.unlockWithDeviceKey(user.id).then((opened) => {
+                        if (!opened) throw new Error('DEVICE_KEY_UNAVAILABLE');
+                    })
+                    : vaultService.unlockOAuthVault(`gf-oauth-e2ee-v1:${user.id}:${user.email.trim().toLowerCase()}`);
+                unlock.then(() => {
                     hasAutoUnlockedRef.current = true;
                 }).catch((err) => {
                     // Never recreate a vault here: a fresh sign-in re-checks the server copy first.

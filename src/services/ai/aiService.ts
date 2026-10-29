@@ -13,6 +13,7 @@ import {
 } from './providers/ollamaProvider';
 import { OpenAICompatibleProvider } from './providers/openAICompatibleProvider';
 import { AnthropicProvider } from './providers/anthropicProvider';
+import { vaultService } from '../security/vaultService';
 // Ensure all standard tools are registered
 import './tools';
 
@@ -45,6 +46,14 @@ export class CloudApiKeyMissingError extends Error {
  */
 class AIService {
   private messages: ChatMessage[] = [];
+
+  constructor() {
+    vaultService.subscribeStatus((status) => {
+      if (status === 'locked') {
+        this.clearMessages();
+      }
+    });
+  }
 
   public getMessages(): ChatMessage[] {
     return [...this.messages];

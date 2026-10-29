@@ -94,7 +94,12 @@ describe('Content-Security-Policy (E31 — TGLA-127)', () => {
       }
     };
     walk(join(root, 'src/services/ai'));
-    files.push(join(root, 'src/services/priceService.ts'), join(root, 'src/services/assetSearchService.ts'), join(root, 'src/config/marketData.ts'));
+    files.push(
+      join(root, 'src/services/priceService.ts'),
+      join(root, 'src/services/assetSearchService.ts'),
+      join(root, 'src/config/marketData.ts'),
+      join(root, 'src/services/security/googleDriveVaultKeyService.ts')
+    );
 
     const origins = new Set<string>();
     for (const file of files) {
