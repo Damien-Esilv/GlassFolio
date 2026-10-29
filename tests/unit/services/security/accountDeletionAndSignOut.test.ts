@@ -17,7 +17,7 @@ const profile = {
     email: 'cloud@example.test',
     name: 'Cloud User',
     authProvider: 'email' as const,
-    preferences: { theme: 'night' as const, currency: 'EUR', notifications: true, language: 'en' as const, dateFormat: 'DD/MM/YYYY' },
+    preferences: { theme: 'night' as const, currency: 'EUR', notifications: true, language: 'en' as const, dateFormat: 'DD/MM/YYYY' as const },
     xp: 0,
     level: 1,
 };
