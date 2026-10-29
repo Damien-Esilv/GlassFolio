@@ -8,10 +8,19 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-2": {
+      "title": "A smoother Google sign-in",
+      "highlights": {
+        "googleNoKey": "Signing in with Google no longer asks you to look after a recovery key. You can create one whenever you want, from Settings, Security.",
+        "googleSmoother": "Signing in with Google is more reliable: your two-factor code is asked before your vault opens, and a leftover from an old sign-in on this device no longer gets in the way.",
+        "googleDeletion": "Deleting a Google account now also removes your key file from your Google Drive.",
+        "spheres": "Loading screens use the animated sphere everywhere, and pull-to-refresh only shows on touch screens."
+      }
+    },
     "v1-1": {
       "title": "Google sign-in, AI keys and privacy",
       "highlights": {
-        "googleVault": "Sign in with Google: your vault key is kept in your own Google Drive app storage, with a recovery key so you never lose access.",
+        "googleVault": "Sign in with Google: your vault key is kept in your own Google Drive app storage, so there is nothing to type or keep track of.",
         "manualPrices": "Prices you enter by hand are now stored inside your encrypted vault, including on your self-hosted server.",
         "aiKeys": "Each AI provider keeps its own API key, and the assistant conversation clears as soon as you lock the vault.",
         "privacyNotice": "A clearer privacy notice about the market data providers that see the tickers you follow."
