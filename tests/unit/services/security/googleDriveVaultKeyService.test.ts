@@ -99,6 +99,8 @@ describe('googleDriveVaultKeyService', () => {
         const key = await drive.getOrCreateRootSecret('tok', 'u1', { replaceForeignKey: true });
         const write = calls.find((c) => c.method === 'PATCH')!;
         expect(write.url).toContain('/files/f1?uploadType=multipart');
+        // Drive rejects `parents` on an update (403 fieldNotWritable)
+        expect(write.body).not.toContain('parents');
         expect(write.body).toContain('"userId":"u1"');
         expect(write.body).toContain(btoa(String.fromCharCode(...key.driveSecret)));
         expect(key.keyId).not.toBe('key-1');
