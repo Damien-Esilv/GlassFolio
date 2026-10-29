@@ -24,18 +24,20 @@ interface ColumnMappingTableProps {
     onAcceptAll: () => void;
 }
 
-const STATUS_STYLES: Record<MappingColumn['status'], { icon: LucideIcon; classes: string; labelKey: string }> = {
-    matched: { icon: CheckCircle2, classes: 'bg-positive-subtle text-positive', labelKey: 'importWizard.mapping.match.status.matched' },
-    ambiguous: { icon: AlertTriangle, classes: 'bg-warning-subtle text-warning', labelKey: 'importWizard.mapping.match.status.attention' },
-    unmatched: { icon: MinusCircle, classes: 'bg-subtle text-secondary', labelKey: 'importWizard.mapping.match.status.ignored' },
+// Text stays text-primary on a tinted background (it keeps its contrast in every theme); the
+// colour lives on the icon, and the label says the same thing in words.
+const STATUS_STYLES: Record<MappingColumn['status'], { icon: LucideIcon; classes: string; iconClass: string; labelKey: string }> = {
+    matched: { icon: CheckCircle2, classes: 'bg-positive-subtle', iconClass: 'text-positive', labelKey: 'importWizard.mapping.match.status.matched' },
+    ambiguous: { icon: AlertTriangle, classes: 'bg-warning-subtle', iconClass: 'text-warning', labelKey: 'importWizard.mapping.match.status.attention' },
+    unmatched: { icon: MinusCircle, classes: 'bg-subtle', iconClass: 'text-secondary', labelKey: 'importWizard.mapping.match.status.ignored' },
 };
 
 const fieldLabelKey = (field: MappableField): string =>
     MAPPABLE_FIELDS.find(f => f.key === field)?.labelKey ?? 'importWizard.fields.transactionDate';
 
-const SummaryChip: React.FC<{ icon: LucideIcon; classes: string; count: number; label: string }> = ({ icon: Icon, classes, count, label }) => (
-    <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${classes}`}>
-        <Icon size={16} aria-hidden="true" />
+const SummaryChip: React.FC<{ icon: LucideIcon; classes: string; iconClass: string; count: number; label: string }> = ({ icon: Icon, classes, iconClass, count, label }) => (
+    <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-primary ${classes}`}>
+        <Icon size={16} aria-hidden="true" className={iconClass} />
         <span className="font-bold">{count}</span>
         <span>{label}</span>
     </span>
@@ -45,7 +47,7 @@ const RequiredFields: React.FC<{ mappings: Partial<FieldMappings> }> = ({ mappin
     const { t } = useTranslation('transactions');
     const amountColumn = mappings.amountPrimary;
     const derivedAmount = !amountColumn && !!mappings.quantity && !!mappings.priceUnit;
-    const identifier = mappings.assetSymbol || mappings.assetIsin;
+    const identifier = mappings.assetSymbol || mappings.assetIsin || mappings.currency;
 
     const items: { key: string; label: string; state: string | null }[] = [
         {
@@ -69,14 +71,14 @@ const RequiredFields: React.FC<{ mappings: Partial<FieldMappings> }> = ({ mappin
 
     return (
         <div role="status" aria-label={t('importWizard.mapping.match.required.title')} className="rounded-xl border border-subtle bg-subtle p-4 space-y-2">
-            <p className="text-xs font-bold text-secondary uppercase">{t('importWizard.mapping.match.required.title')}</p>
+            <p className="text-xs font-bold text-primary uppercase">{t('importWizard.mapping.match.required.title')}</p>
             {items.map(item => {
                 const Icon = item.state ? CheckCircle2 : AlertTriangle;
                 return (
                     <div key={item.key} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                         <Icon size={16} aria-hidden="true" className={item.state ? 'text-positive' : 'text-warning'} />
                         <span className="font-medium text-primary">{item.label}</span>
-                        <span className={item.state ? 'text-secondary' : 'text-warning'}>
+                        <span className={item.state ? 'text-primary' : 'font-semibold text-primary'}>
                             {item.state ?? t('importWizard.mapping.match.required.missing')}
                         </span>
                     </div>
@@ -102,17 +104,17 @@ const ColumnRow: React.FC<{
         >
             <div className="min-w-0 space-y-1.5">
                 <p className="font-semibold text-primary truncate" title={column.header}>{column.header}</p>
-                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${style.classes}`}>
-                    <StatusIcon size={12} aria-hidden="true" />
+                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium text-primary ${style.classes}`}>
+                    <StatusIcon size={12} aria-hidden="true" className={style.iconClass} />
                     {t(style.labelKey)}
                 </span>
             </div>
 
             <div className="flex flex-wrap gap-1.5 min-w-0" aria-label={t('importWizard.mapping.match.table.samples')} role="group">
                 {column.samples.length === 0 ? (
-                    <span className="text-xs text-tertiary">{t('importWizard.common.emptyValue')}</span>
+                    <span className="text-xs text-secondary">{t('importWizard.common.emptyValue')}</span>
                 ) : column.samples.map((value, index) => (
-                    <span key={index} className="max-w-[10rem] truncate rounded bg-subtle px-2 py-1 font-mono text-xs text-secondary" title={value}>
+                    <span key={index} className="max-w-[10rem] truncate rounded bg-subtle px-2 py-1 font-mono text-xs text-primary" title={value}>
                         {value}
                     </span>
                 ))}
@@ -154,7 +156,7 @@ const ColumnRow: React.FC<{
                 )}
 
                 {!column.suggestion && column.status === 'unmatched' && alternatives && (
-                    <p className="text-xs text-tertiary">{t('importWizard.mapping.match.couldBe', { fields: alternatives })}</p>
+                    <p className="text-xs text-secondary">{t('importWizard.mapping.match.couldBe', { fields: alternatives })}</p>
                 )}
             </div>
         </li>
@@ -203,13 +205,13 @@ const ColumnMappingTable: React.FC<ColumnMappingTableProps> = ({
             <header>
                 <h2 id={headingId} className="text-lg font-bold text-primary">{t('importWizard.mapping.match.title')}</h2>
                 <p className="text-secondary text-sm mt-1">{t('importWizard.mapping.match.intro')}</p>
-                <p className="text-tertiary text-xs mt-1">{t('importWizard.mapping.match.fileStats', { columns: summary.total, rows: rowCount })}</p>
+                <p className="text-secondary text-xs mt-1">{t('importWizard.mapping.match.fileStats', { columns: summary.total, rows: rowCount })}</p>
             </header>
 
             <div role="status" aria-label={t('importWizard.mapping.match.summaryLabel')} className="flex flex-wrap gap-2">
-                <SummaryChip icon={CheckCircle2} classes="bg-positive-subtle text-positive" count={summary.matched} label={t('importWizard.mapping.match.summary.matched')} />
-                <SummaryChip icon={AlertTriangle} classes="bg-warning-subtle text-warning" count={summary.ambiguous} label={t('importWizard.mapping.match.summary.attention')} />
-                <SummaryChip icon={MinusCircle} classes="bg-subtle text-secondary" count={summary.unmatched} label={t('importWizard.mapping.match.summary.ignored')} />
+                <SummaryChip icon={CheckCircle2} classes="bg-positive-subtle" iconClass="text-positive" count={summary.matched} label={t('importWizard.mapping.match.summary.matched')} />
+                <SummaryChip icon={AlertTriangle} classes="bg-warning-subtle" iconClass="text-warning" count={summary.ambiguous} label={t('importWizard.mapping.match.summary.attention')} />
+                <SummaryChip icon={MinusCircle} classes="bg-subtle" iconClass="text-secondary" count={summary.unmatched} label={t('importWizard.mapping.match.summary.ignored')} />
             </div>
 
             <RequiredFields mappings={mappings} />
@@ -253,7 +255,7 @@ const ColumnMappingTable: React.FC<ColumnMappingTableProps> = ({
                 </div>
             )}
 
-            <p className="text-xs text-tertiary">{t('importWizard.mapping.match.requiredLegend')}</p>
+            <p className="text-xs text-secondary">{t('importWizard.mapping.match.requiredLegend')}</p>
         </section>
     );
 };

@@ -2,7 +2,15 @@ import { AIToolDefinition } from '../types';
 import { parseCSVText } from '../../import/csvParser';
 import { detectDateFormat } from '../../import/typeNormalizer';
 import { detectPreset } from '../../import/presetDetector';
-import { matchHistoryColumns, matchSnapshotColumns } from '../../import/columnMatcher';
+import {
+  matchHistoryColumns,
+  matchSnapshotColumns,
+  proposeColumnMapping,
+  proposalsToMappings,
+  HISTORY_COLUMN_SPECS,
+  SNAPSHOT_COLUMN_SPECS,
+  ColumnStatus,
+} from '../../import/columnMatcher';
 import {
   parseSnapshotFile,
   getExistingPositions,
@@ -85,6 +93,70 @@ export const previewCsvImportTool: AIToolDefinition<{ csvText: string; mode?: Cs
       dateFormat: dateIdx >= 0 ? detectDateFormat(rows.map(r => r[dateIdx] || '')) ?? null : null,
       mapping,
       unmappedHeaders: headers.filter(h => !used.has(h)),
+    };
+  },
+};
+
+interface CsvMappingProposalResult {
+  delimiter: string;
+  headerRowIndex: number;
+  rowCount: number;
+  detectedPreset: string | null;
+  columns: Array<{
+    header: string;
+    samples: string[];
+    field: string | null;
+    status: ColumnStatus;
+    alternatives: string[];
+  }>;
+  summary: { matched: number; ambiguous: number; unmatched: number };
+  /** Field -> header, for the matched and ambiguous columns */
+  mapping: Record<string, string>;
+}
+
+export const proposeCsvMappingTool: AIToolDefinition<{ csvText: string; mode?: CsvImportMode }, CsvMappingProposalResult> = {
+  name: 'propose_csv_mapping',
+  description:
+    'Read-only. Propose which GlassFolio field each column of any broker/bank CSV should feed, from its header and its cells (works on unknown layouts and foreign languages). Every column is reported as matched, ambiguous (a weak or contested guess) or unmatched, with example values and alternatives, so the user only has to decide the doubtful ones. Nothing is saved.',
+  parameters: {
+    type: 'object',
+    properties: {
+      csvText: { type: 'string', description: 'Raw CSV content' },
+      mode: { type: 'string', description: 'history (transactions) or snapshot (current positions)', enum: ['history', 'snapshot'] },
+    },
+    required: ['csvText'],
+  },
+  execute: async ({ csvText, mode = 'history' }) => {
+    const { headers, rows, delimiter, headerRowIndex } = parseCSVText(csvText);
+    const preset = mode === 'history' ? detectPreset(headers) : null;
+    const proposals = mode === 'snapshot'
+      ? proposeColumnMapping(headers, rows, SNAPSHOT_COLUMN_SPECS)
+      : proposeColumnMapping(headers, rows, HISTORY_COLUMN_SPECS);
+
+    // A known broker format knows better than the generic guess (GlassFolio's own export calls the quantity "amount")
+    const presetMapping: Record<string, string | number> = preset ? toMapping(preset.mappings) : {};
+    const presetFieldOf = (header: string): string | undefined => Object.keys(presetMapping).find(field => presetMapping[field] === header);
+    const columns = proposals.map(p => {
+      const presetField = presetFieldOf(p.header);
+      return presetField
+        ? { header: p.header, samples: p.samples, field: presetField, status: 'matched' as ColumnStatus, alternatives: [] as string[] }
+        : { header: p.header, samples: p.samples, field: p.field as string | null, status: p.status, alternatives: p.alternatives as string[] };
+    });
+
+    return {
+      delimiter,
+      headerRowIndex: headerRowIndex ?? 0,
+      rowCount: rows.length,
+      detectedPreset: preset?.presetName ?? null,
+      columns,
+      summary: {
+        matched: columns.filter(c => c.status === 'matched').length,
+        ambiguous: columns.filter(c => c.status === 'ambiguous').length,
+        unmatched: columns.filter(c => c.status === 'unmatched').length,
+      },
+      mapping: preset
+        ? Object.fromEntries(Object.entries(presetMapping).map(([field, header]) => [field, String(header)]))
+        : (toMapping(proposalsToMappings(proposals)) as Record<string, string>),
     };
   },
 };

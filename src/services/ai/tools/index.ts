@@ -28,6 +28,7 @@ import {
 } from './notificationTools';
 import {
   previewCsvImportTool,
+  proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
   getCostBasisMethodTool,
@@ -66,6 +67,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getPrivacyStatusTool);
   aiToolRegistry.registerTool(exportGdprArchiveTool);
   aiToolRegistry.registerTool(previewCsvImportTool);
+  aiToolRegistry.registerTool(proposeCsvMappingTool);
   aiToolRegistry.registerTool(previewSnapshotImportTool);
   aiToolRegistry.registerTool(importSnapshotTool);
   aiToolRegistry.registerTool(getCostBasisMethodTool);
@@ -103,6 +105,7 @@ export {
   getPrivacyStatusTool,
   exportGdprArchiveTool,
   previewCsvImportTool,
+  proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
   getCostBasisMethodTool,

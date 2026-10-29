@@ -156,14 +156,14 @@
                 "summaryLabel": "Column matching summary",
                 "summary": {
                     "matched": "Matched",
-                    "attention": "To check",
-                    "ignored": "Not used"
+                    "attention": "To confirm",
+                    "ignored": "Not matched"
                 },
                 "acceptAll": "Accept all suggestions ({{count}})",
                 "filter": {
                     "label": "Columns to show",
                     "all": "All columns",
-                    "attention": "To check ({{count}})"
+                    "attention": "Needs attention ({{count}})"
                 },
                 "table": {
                     "column": "Column in your file",
@@ -174,8 +174,8 @@
                 "ignoreOption": "Don't use this column",
                 "status": {
                     "matched": "Matched",
-                    "attention": "To check",
-                    "ignored": "Not used"
+                    "attention": "To confirm",
+                    "ignored": "Not matched"
                 },
                 "suggestion": "Suggested: {{field}}",
                 "useSuggestion": "Use",
@@ -187,7 +187,7 @@
                 "required": {
                     "title": "Required information",
                     "amount": "Amount, or quantity and unit price",
-                    "identifier": "Asset symbol or ISIN",
+                    "identifier": "Asset: symbol, ISIN or currency",
                     "found": "Found in \"{{column}}\"",
                     "foundDerived": "Computed from quantity and unit price",
                     "missing": "Not matched yet"
