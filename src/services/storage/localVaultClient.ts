@@ -38,7 +38,10 @@ const isRecordMap = (value: unknown): value is Record<string, string> =>
 export async function fetchSnapshot(fetchImpl: FetchLike = fetch): Promise<SnapshotOutcome> {
     let response: Response;
     try {
-        response = await fetchImpl(LOCAL_VAULT_ENDPOINT, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+        response = await fetchImpl(LOCAL_VAULT_ENDPOINT, {
+            headers: { Accept: 'application/json', 'X-GlassFolio-Local': '1' },
+            cache: 'no-store'
+        });
     } catch (err) {
         return { status: 'error', message: err instanceof Error ? err.message : 'Network error' };
     }
@@ -95,7 +98,10 @@ export async function commitBatch(
     try {
         const response = await fetchImpl(BATCH_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-GlassFolio-Local': '1',
+            },
             body: JSON.stringify(batch),
             keepalive: options.keepalive === true,
         });

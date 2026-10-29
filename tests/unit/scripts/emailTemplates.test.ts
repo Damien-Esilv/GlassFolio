@@ -25,7 +25,9 @@ describe('Email template builder (Epic E25 — TGLA-084)', () => {
         expect(payload.mailer_otp_length).toBe(6);
         expect(payload.mailer_secure_email_change_enabled).toBe(true);
         expect(payload.passkey_enabled).toBe(true);
-        expect(payload.webauthn_rp_id).toBe('glassfolio.dev');
+        expect(payload.site_url).toBe('https://app.glassfolio.dev');
+        expect(payload.webauthn_rp_id).toBe('glassfolio.dev'); // existing passkeys are bound to this RP ID
+        expect(String(payload.uri_allow_list)).not.toContain('localhost');
         expect(payload.mfa_totp_enroll_enabled).toBe(true);
     });
 

@@ -3,7 +3,7 @@ name: Deploy — Infra Services & Integrations (Supabase, Turnstile, Emails)
 on:
   push:
     branches:
-      - '**'
+      - main
     paths:
       - 'supabase/templates/**'
       - 'scripts/lib/emailTemplates.mjs'

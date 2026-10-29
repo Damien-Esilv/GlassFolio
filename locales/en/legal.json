@@ -145,9 +145,9 @@
           "To provide live portfolio valuations and AI capabilities, your browser may establish direct network connections to the following endpoints:"
         ],
         "items": [
-          "Yahoo Finance & CoinGecko: Direct HTTP requests from your browser for real-time market prices and currency exchange rates (locally cached with a 15-minute TTL). These services receive your IP address, not your positions.",
+          "Yahoo Finance & CoinGecko: HTTP requests from your browser (or via the local proxy) for real-time market prices and currency exchange rates (locally cached with a 15-minute TTL). These services receive your IP address and the requested ticker symbols, but no information about your balances, quantities, or transactions.",
           "User-Configured AI Providers: If you configure a personal API key (OpenAI, Anthropic, Groq, OpenRouter), requests are sent directly from your browser to the selected provider, under its own terms. Alternatively, you can use Ollama locally for 100% offline AI assistance with no data leakage.",
-          "Static resources: Tailwind CSS is loaded from cdn.tailwindcss.com, which transmits your IP address and browser to that CDN. No portfolio data is shared. The Inter font is hosted by GlassFolio and calls no Google service."
+          "Static resources: Tailwind CSS and all bundle assets are compiled at build time and served strictly from GlassFolio ('self'). No third-party CDN is used for CSS. The Inter font is self-hosted by GlassFolio and calls no Google service."
         ]
       },
       {
@@ -393,9 +393,9 @@
         "lifespan": "Until sign-out or session expiry"
       },
       "oauthVerifier": {
-        "key": "gf_oauth_pkce_verifier",
+        "key": "gf_oauth_pkce_verifier / gf_oauth_pending / gf_google_oidc_ceremony",
         "category": "Strictly Necessary (Security)",
-        "purpose": "Temporary security value (PKCE) during Google sign-in.",
+        "purpose": "Temporary security values (PKCE verifier, OIDC ceremony state, CSRF marker) during Google sign-in.",
         "lifespan": "Removed when sign-in completes"
       },
       "marketCaches": {
@@ -405,9 +405,9 @@
         "lifespan": "Minutes to hours, then refreshed"
       },
       "uiState": {
-        "key": "gf_sidebar_collapsed / gf_manual_price_history",
-        "category": "Strictly Necessary (Preferences)",
-        "purpose": "Sidebar state and the price history you enter manually.",
+        "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
+        "category": "Strictly Necessary (Preferences & Data)",
+        "purpose": "Sidebar state (local) and manual price history (end-to-end encrypted inside your vault).",
         "lifespan": "Persistent until account deletion or cache clearing"
       },
       "passkeyRpId": {

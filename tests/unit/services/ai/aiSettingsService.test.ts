@@ -76,4 +76,44 @@ describe('aiSettingsService', () => {
       expect(isLoaded).toBe(false);
     });
   });
+
+  describe('BYOK Provider Isolation & Cloud Connection (Finding #7)', () => {
+    it('scopes API keys per provider in providerApiKeys and synchronizes them', () => {
+      aiSettingsService.saveSettings({
+        activeProvider: 'openai',
+        apiKey: 'sk-proj-openai-key',
+        cloudModel: 'gpt-4o',
+      });
+
+      const s1 = aiSettingsService.getSettings();
+      expect(s1.providerApiKeys?.openai).toBe('sk-proj-openai-key');
+      expect(s1.providerModels?.openai).toBe('gpt-4o');
+
+      aiSettingsService.saveSettings({
+        activeProvider: 'anthropic',
+        apiKey: 'sk-ant-claude-key',
+        cloudModel: 'claude-3-5-sonnet-20241022',
+      });
+
+      const s2 = aiSettingsService.getSettings();
+      expect(s2.providerApiKeys?.anthropic).toBe('sk-ant-claude-key');
+      expect(s2.providerApiKeys?.openai).toBe('sk-proj-openai-key');
+    });
+
+    it('sends Gemini API key via x-goog-api-key header and not URL query parameter', async () => {
+      let requestUrl = '';
+      let requestHeaders: Record<string, string> = {};
+
+      vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (input, init) => {
+        requestUrl = String(input);
+        requestHeaders = (init?.headers || {}) as Record<string, string>;
+        return new Response(JSON.stringify({ models: [] }), { status: 200 });
+      });
+
+      const res = await aiSettingsService.testCloudConnection('gemini', 'test-gemini-key');
+      expect(res.ok).toBe(true);
+      expect(requestUrl).not.toContain('key=test-gemini-key');
+      expect(requestHeaders['x-goog-api-key']).toBe('test-gemini-key');
+    });
+  });
 });

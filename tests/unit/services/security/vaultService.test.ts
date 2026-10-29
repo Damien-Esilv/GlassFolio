@@ -267,7 +267,7 @@ describe('VaultService Lifecycle, Migration & Key Rotation (TGLA-041)', () => {
         it('migrates legacy pre-Epic 20 PBKDF2 OAuth vault to HKDF on unlock', async () => {
             const oauthSecret = 'legacy-oauth-user-secret-999';
             // Setup a legacy header where wrappedKey is wrapped with PBKDF2 kek
-            const kdf = createKdfParams(1000);
+            const kdf = createKdfParams();
             const { kek: legacyKek } = await deriveMasterKeys(oauthSecret, kdf);
             const dek = await generateExtractableDek();
             const wrappedKey = await wrapDek(dek, legacyKek);

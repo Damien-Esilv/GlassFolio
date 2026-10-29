@@ -376,6 +376,8 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
 
         it('registers a Supabase passkey with a PRF slot, lists it merged with the server and removes it', async () => {
             await vaultService.setup(PASSWORD);
+            // An account without TOTP: no step-up needed (the guard fails closed when this call errors)
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue([]);
             vi.spyOn(supabaseClient, 'startPasskeyRegistration').mockResolvedValue({
                 challenge_id: 'reg-1',
                 options: { challenge: 'AQID', rp: { name: 'GlassFolio', id: 'glassfolio.dev' }, user: { id: 'AQ', name: 'u', displayName: 'U' }, pubKeyCredParams: [] },

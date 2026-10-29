@@ -11,7 +11,7 @@
 import { DeploymentMode } from '../../config/deployment';
 import { IStorageProvider } from '../../types/storage';
 import { SupabaseAuthSession, supabaseClient, isSupabaseConfigured } from '../supabase/supabaseClient';
-import { parseEnvelope } from '../security/crypto';
+import { parseEnvelope, PBKDF2_ITERATIONS } from '../security/crypto';
 import { isSensitiveKey, VAULT_HEADER_KEY } from './storageKeys';
 
 export interface PullResult {
@@ -83,12 +83,24 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                 ]);
 
                 if (headerRow) {
-                    this.local.setItem(VAULT_HEADER_KEY, JSON.stringify(headerRow.header_json));
-                    result = { ok: true, hasRemoteHeader: true };
+                    const parsed = headerRow.header_json as { kdf?: { iterations?: number } } | null;
+                    if (parsed && typeof parsed === 'object' && typeof parsed.kdf?.iterations === 'number' && parsed.kdf.iterations < PBKDF2_ITERATIONS) {
+                        // A downgraded header is a tamper signal, never "this account has no vault":
+                        // callers would otherwise offer to create a new vault over the real one.
+                        console.error('[storage] Rejected remote vault header: iteration count below floor', parsed.kdf.iterations);
+                        this.lastSyncError = new Error('VAULT_HEADER_REJECTED');
+                        return { ok: false, hasRemoteHeader: false };
+                    } else {
+                        this.local.setItem(VAULT_HEADER_KEY, JSON.stringify(headerRow.header_json));
+                        result = { ok: true, hasRemoteHeader: true };
+                    }
                 }
 
                 for (const row of records) {
-                    this.local.setItem(row.record_key, row.ciphertext);
+                    // Only adopt records that are valid sensitive keys and carry valid ciphertext envelopes
+                    if (isSensitiveKey(row.record_key) && parseEnvelope(row.ciphertext) !== null) {
+                        this.local.setItem(row.record_key, row.ciphertext);
+                    }
                 }
             } else if (this.mode === 'local') {
                 // Local mode: the server snapshot was loaded into memory at startup (LocalVaultStorageProvider).
@@ -102,6 +114,22 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             this.isPulling = false;
         }
         return result;
+    }
+
+    /**
+     * Every local ciphertext record, ready to be sent in one atomic server transaction
+     * (supabaseClient.commitVaultMigration). Needed after a DEK rotation: normal replication only
+     * sends records written later, so the server would keep old-DEK records next to the new header.
+     */
+    public collectSensitiveEnvelopes(): Array<{ record_key: string; ciphertext: string }> {
+        const out: Array<{ record_key: string; ciphertext: string }> = [];
+        for (const key of this.local.keys()) {
+            if (!isSensitiveKey(key)) continue;
+            const value = this.local.getItem(key);
+            if (value === null || parseEnvelope(value) === null) continue;
+            out.push({ record_key: key, ciphertext: value });
+        }
+        return out;
     }
 
     /**

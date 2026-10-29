@@ -95,12 +95,12 @@ export const transactionService = {
             const type: TransactionType = typeMap[tx.type] || 'BUY';
 
             return {
-                id: tx.id || `utx-manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: tx.id || `utx-manual-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 ownerId: 'default-user',
                 accountId: defaultAccount,
                 instrumentId: instrument.id,
                 batchId: 'batch-manual',
-                rowHash: `hash-manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                rowHash: `hash-manual-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 sourceOrigin: 'MANUAL',
                 isSynthetic: false,
                 isFiscal: true,

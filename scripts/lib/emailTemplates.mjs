@@ -182,14 +182,16 @@ export function buildAuthConfigPayload(templatesDir) {
     const payload = {
         mailer_otp_length: 6,
         mailer_secure_email_change_enabled: true,
-        site_url: 'https://glassfolio.dev',
-        uri_allow_list: 'https://glassfolio.dev/*,https://app.glassfolio.dev/*,http://localhost:3000/*,http://localhost:5173/*',
+        site_url: 'https://app.glassfolio.dev',
+        uri_allow_list: 'https://app.glassfolio.dev/*,https://glassfolio.dev/*',
         mfa_totp_enroll_enabled: true,
         mfa_totp_verify_enabled: true,
         passkey_enabled: true,
+        // Do NOT change the RP ID: every registered passkey (and the PRF vault slot built on it) is bound
+        // to it. Narrowing it to app.glassfolio.dev would silently disable all existing passkeys.
         webauthn_rp_id: 'glassfolio.dev',
         webauthn_rp_name: 'GlassFolio',
-        webauthn_rp_origins: 'https://glassfolio.dev,https://app.glassfolio.dev',
+        webauthn_rp_origins: 'https://app.glassfolio.dev,https://glassfolio.dev',
     };
     for (const event of Object.keys(EMAIL_EVENTS)) {
         const fields = apiFieldNames(event);

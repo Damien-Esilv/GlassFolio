@@ -17,6 +17,11 @@ import { IStorageProvider } from '../../types/storage';
 import { decryptString, encryptString, parseEnvelope, serializeEnvelope } from '../security/crypto';
 import { isSensitiveKey } from './storageKeys';
 
+export interface EncryptedStorageOptions {
+    /** Only true during first-time local setup to migrate pre-vault local storage. */
+    adoptLegacyPlaintext?: boolean;
+}
+
 export class EncryptedStorageProvider implements IStorageProvider {
     private readonly cache = new Map<string, string>();
     /** Pending writes: value to encrypt, or `null` for a deletion. */
@@ -26,14 +31,24 @@ export class EncryptedStorageProvider implements IStorageProvider {
     private dek: CryptoKey | null;
     private readonly corruptedKeys: string[] = [];
     private lastWriteError: unknown = null;
+    private readonly options: EncryptedStorageOptions;
 
-    private constructor(private readonly backing: IStorageProvider, dek: CryptoKey) {
+    private constructor(
+        private readonly backing: IStorageProvider,
+        dek: CryptoKey,
+        options: EncryptedStorageOptions = {}
+    ) {
         this.dek = dek;
+        this.options = options;
     }
 
     /** Decrypts all sensitive records from `backing` and returns a ready provider. */
-    static async open(backing: IStorageProvider, dek: CryptoKey): Promise<EncryptedStorageProvider> {
-        const provider = new EncryptedStorageProvider(backing, dek);
+    static async open(
+        backing: IStorageProvider,
+        dek: CryptoKey,
+        options: EncryptedStorageOptions = {}
+    ): Promise<EncryptedStorageProvider> {
+        const provider = new EncryptedStorageProvider(backing, dek, options);
         await provider.hydrate();
         return provider;
     }
@@ -46,9 +61,15 @@ export class EncryptedStorageProvider implements IStorageProvider {
             if (raw === null) continue;
             const envelope = parseEnvelope(raw);
             if (!envelope) {
-                // Legacy plaintext → adopt and schedule encryption.
-                this.cache.set(key, raw);
-                this.dirty.set(key, raw);
+                if (this.options.adoptLegacyPlaintext) {
+                    // Legacy plaintext during initial local setup only → adopt and schedule encryption.
+                    this.cache.set(key, raw);
+                    this.dirty.set(key, raw);
+                } else {
+                    // Untrusted plaintext injected into storage → reject as corrupted, do not adopt or re-encrypt.
+                    this.corruptedKeys.push(key);
+                    console.error(`[vault] Non-envelope plaintext found for sensitive key "${key}" — record ignored.`);
+                }
                 continue;
             }
             try {

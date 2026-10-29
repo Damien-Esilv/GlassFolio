@@ -7,6 +7,8 @@ import { userRepository } from '../../../../src/services/repositories';
 import { supabaseClient } from '../../../../src/services/supabase/supabaseClient';
 import type { User } from '../../../../src/types/domain';
 import { mockRemoteVault } from '../../helpers/remoteVault';
+import { seedLegacyGoogleVault, startOAuthFlow } from '../../helpers/legacyGoogleVault';
+import { googleOidcService } from '../../../../src/services/security/googleOidcService';
 
 describe('authService & Access Control Security (TGLA-047)', () => {
     let auth: LocalAuthProvider;
@@ -153,9 +155,12 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         };
 
         vi.spyOn(supabaseClient, 'getUser').mockResolvedValue(mockSbUser);
+        // A returning user of the legacy Google vault (new ones are no longer created here).
+        await seedLegacyGoogleVault(mockSbUser.id, mockSbUser.email);
         mockRemoteVault();
 
-        // Mock window.location.hash with OAuth tokens
+        // This tab started the sign-in, then the provider returns tokens in the fragment
+        startOAuthFlow();
         window.location.hash = '#access_token=mock-token-abc&expires_in=3600';
 
         const result = await sbAuth.handleOAuthCallback();
@@ -171,10 +176,33 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         await vaultService.lock();
         expect(vaultService.isUnlocked()).toBe(false);
 
+        startOAuthFlow();
         window.location.hash = '#access_token=mock-token-abc&expires_in=3600';
         const secondResult = await sbAuth.handleOAuthCallback();
         expect(secondResult).not.toBeNull();
         expect(vaultService.isUnlocked()).toBe(true);
+    });
+
+    it('refuses to create a new identity-derived Google vault from the Supabase-hosted callback', async () => {
+        const sbAuth = new SupabaseAuthProvider();
+        await vaultService.resetVault();
+        vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({ id: 'sb-new-user', email: 'new@gmail.com', user_metadata: {} });
+        mockRemoteVault();
+        startOAuthFlow();
+        window.location.hash = '#access_token=tok&expires_in=3600';
+
+        await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/GOOGLE_CLIENT_ID_NOT_CONFIGURED/);
+        expect(vaultService.isInitialized()).toBe(false);
+    });
+
+    it('ignores an unsolicited #access_token when this tab did not start a sign-in', async () => {
+        const sbAuth = new SupabaseAuthProvider();
+        const getUserSpy = vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({ id: 'attacker', email: 'a@b.c', user_metadata: {} });
+        sessionStorage.clear();
+        window.location.hash = '#access_token=attacker-tok&refresh_token=attacker-ref&expires_in=3600';
+
+        await expect(sbAuth.handleOAuthCallback()).resolves.toBeNull();
+        expect(getUserSpy).not.toHaveBeenCalled();
     });
 
     it('signOut locks vault and clears stored session', async () => {
@@ -287,16 +315,29 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await expect(sbAuth.signIn('wrong@glassfolio.com', 'badpass')).rejects.toThrow('Invalid login credentials');
         });
 
-        it('redirects to OAuth URL when Supabase is configured', async () => {
-            vi.spyOn(supabaseClient, 'prepareOAuthPkceUrl').mockResolvedValue('https://supabase.example.com/oauth/google');
-            const redirectSpy = vi.spyOn(sbAuth as any, 'redirectToUrl').mockImplementation(() => {});
-
+        it('starts the Google Drive ceremony when the Google client is configured', async () => {
             const supabaseConfigModule = await import('../../../../src/services/supabase/supabaseClient');
             vi.spyOn(supabaseConfigModule, 'isSupabaseConfigured').mockReturnValue(true);
+            vi.spyOn(googleOidcService, 'isConfigured').mockReturnValue(true);
+            const ceremony = vi.spyOn(googleOidcService, 'startCeremony').mockResolvedValue();
+            const pkce = vi.spyOn(supabaseClient, 'prepareOAuthPkceUrl');
 
             sbAuth.signInWithOAuth('google');
             await new Promise((r) => setTimeout(r, 0));
-            expect(redirectSpy).toHaveBeenCalledWith('https://supabase.example.com/oauth/google');
+            expect(ceremony).toHaveBeenCalled();
+            expect(pkce).not.toHaveBeenCalled();
+        });
+
+        it('fails closed instead of falling back to the Supabase-hosted flow when the Google client is missing', async () => {
+            const supabaseConfigModule = await import('../../../../src/services/supabase/supabaseClient');
+            vi.spyOn(supabaseConfigModule, 'isSupabaseConfigured').mockReturnValue(true);
+            vi.spyOn(googleOidcService, 'isConfigured').mockReturnValue(false);
+            const pkce = vi.spyOn(supabaseClient, 'prepareOAuthPkceUrl');
+            const redirectSpy = vi.spyOn(sbAuth as any, 'redirectToUrl').mockImplementation(() => {});
+
+            await expect(sbAuth.signInWithOAuth('google')).rejects.toThrow(/GOOGLE_CLIENT_ID_NOT_CONFIGURED/);
+            expect(pkce).not.toHaveBeenCalled();
+            expect(redirectSpy).not.toHaveBeenCalled();
         });
 
         it('rejects apple signInWithOAuth', async () => {
@@ -362,6 +403,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         });
 
         it('returns null from handleOAuthCallback if getUser fails', async () => {
+            startOAuthFlow();
             window.location.hash = '#access_token=invalid-tok&expires_in=3600';
             vi.spyOn(supabaseClient, 'getUser').mockRejectedValue(new Error('Invalid token'));
 
@@ -369,7 +411,8 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             expect(res).toBeNull();
         });
 
-        it('handles successful handleOAuthCallback with demo vault cleanup', async () => {
+        it('clears a leftover demo vault before refusing to create an identity-derived vault', async () => {
+            startOAuthFlow();
             window.location.hash = '#access_token=valid-tok&refresh_token=valid-ref&expires_in=3600';
             vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
                 id: 'sb-google-1',
@@ -379,9 +422,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             vi.spyOn(vaultService, 'isDemoVault').mockReturnValue(true);
             const resetVaultSpy = vi.spyOn(vaultService, 'resetVault');
 
-            const res = await sbAuth.handleOAuthCallback();
-            expect(res).not.toBeNull();
-            expect(res?.user.email).toBe('oauth@gmail.com');
+            await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/GOOGLE_CLIENT_ID_NOT_CONFIGURED/);
             expect(resetVaultSpy).toHaveBeenCalled();
         });
 
@@ -400,6 +441,8 @@ describe('authService & Access Control Security (TGLA-047)', () => {
                 email: 'pkce@gmail.com',
                 user_metadata: { name: 'PKCE User' },
             });
+            await seedLegacyGoogleVault('sb-pkce-1', 'pkce@gmail.com');
+            mockRemoteVault();
 
             const res = await sbAuth.handleOAuthCallback();
             expect(res).not.toBeNull();
@@ -422,6 +465,8 @@ describe('authService & Access Control Security (TGLA-047)', () => {
                 email: 'hash@gmail.com',
                 user_metadata: { name: 'Hash User' },
             });
+            await seedLegacyGoogleVault('sb-pkce-2', 'hash@gmail.com');
+            mockRemoteVault();
 
             const res = await sbAuth.handleOAuthCallback();
             expect(res).not.toBeNull();
@@ -439,6 +484,7 @@ describe('authService & Access Control Security (TGLA-047)', () => {
         });
 
         it('blocks OAuth login and prevents account conflict if vault has password auth', async () => {
+            startOAuthFlow();
             window.location.hash = '#access_token=conflict-tok&refresh_token=conflict-ref&expires_in=3600';
             vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
                 id: 'sb-conflict-1',
@@ -466,7 +512,8 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/already exists with this email address/i);
         });
 
-        it('handles handleOAuthCallback when unlockOAuthVault fails by recreating a clean OAuth vault', async () => {
+        it('never recreates or overwrites the vault when the legacy unlock fails', async () => {
+            startOAuthFlow();
             window.location.hash = '#access_token=oauth-tok-recover&refresh_token=oauth-ref-recover&expires_in=3600';
             vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
                 id: 'sb-recover-1',
@@ -495,14 +542,14 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             const resetSpy = vi.spyOn(vaultService, 'resetVault').mockResolvedValue();
             const setupSpy = vi.spyOn(vaultService, 'setupOAuthVault').mockResolvedValue();
 
-            const res = await sbAuth.handleOAuthCallback();
+            await expect(sbAuth.handleOAuthCallback()).rejects.toThrow(/GOOGLE_VAULT_UNLOCK_FAILED/);
             expect(unlockSpy).toHaveBeenCalled();
-            expect(resetSpy).toHaveBeenCalled();
-            expect(setupSpy).toHaveBeenCalled();
-            expect(res?.user.email).toBe('recover@gmail.com');
+            expect(resetSpy).not.toHaveBeenCalled();
+            expect(setupSpy).not.toHaveBeenCalled();
         });
 
         it('updates user avatar if Google OAuth returns an updated avatar', async () => {
+            startOAuthFlow();
             window.location.hash = '#access_token=oauth-avatar-tok&refresh_token=oauth-avatar-ref&expires_in=3600';
             vi.spyOn(supabaseClient, 'getUser').mockResolvedValue({
                 id: 'sb-avatar-1',

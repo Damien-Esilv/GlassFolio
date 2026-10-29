@@ -6,7 +6,9 @@ function generateId(prefix: string = 'alrt'): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `${prefix}-${crypto.randomUUID()}`;
   }
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const bytes = new Uint8Array(8);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  return `${prefix}-${Date.now().toString(36)}-${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 export interface EvaluateAlertsParams {

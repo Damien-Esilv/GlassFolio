@@ -173,7 +173,7 @@ describe('backupRestoreService', () => {
                     fiscalProfile: { familyStatus: 'married', fiscalShares: 2.5 }
                 }],
                 gamification: [{ xp: 1200, level: 5, streaks: 10 }],
-                aiSettings: [{ model: 'gpt-4o' }],
+                aiSettings: [{ executionMode: 'read_only' }],
                 aiConversations: [{ id: 'chat-backup-1', title: 'Fiscalité' }],
                 securityAuditLogs: [{ id: 'audit-1', action: 'login' }],
                 quests: [{ id: 'q1', title: 'Premier trade' } as any],
@@ -194,7 +194,7 @@ describe('backupRestoreService', () => {
             expect(gamification.xp).toBe(1200);
 
             const aiSettings = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}');
-            expect(aiSettings.model).toBe('gpt-4o');
+            expect(aiSettings.executionMode).toBe('read_only');
 
             const aiChats = JSON.parse(appStorage.getItem('glassfolio_ai_chats_v1') || '[]');
             expect(aiChats[0].id).toBe('chat-backup-1');

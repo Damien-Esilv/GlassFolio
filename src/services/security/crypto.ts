@@ -14,6 +14,8 @@
 import { Bytes, fromBase32, fromBase64, toBase32, toBase64, utf8Decode, utf8Encode } from './encoding';
 import { EncryptedEnvelope, KdfParams } from './vaultTypes';
 
+export { toBase64, fromBase64, toBase32, fromBase32, utf8Encode, utf8Decode };
+
 export const PBKDF2_ITERATIONS = 600_000;
 export const SALT_BYTES = 16;
 export const IV_BYTES = 12;
@@ -28,6 +30,7 @@ export const HKDF_INFO = {
     RECOVERY_KEK: 'gf-vault-recovery-kek-v1',
     PASSKEY_KEK: 'gf-vault-passkey-kek-v1',
     OAUTH_KEK: 'gf-vault-oauth-kek-v1',
+    DRIVE_KEK: 'gf-vault-gdrive-kek-v1',
 } as const;
 
 export class CryptoUnavailableError extends Error {
@@ -83,8 +86,8 @@ export const deriveMasterKeys = async (password: string, params: KdfParams): Pro
     if (params.algorithm !== 'pbkdf2-sha256') {
         throw new Error(`Unsupported KDF: ${String(params.algorithm)}`);
     }
-    if (!Number.isInteger(params.iterations) || params.iterations < 1 || params.iterations > MAX_ITERATIONS) {
-        throw new Error('Invalid KDF iteration count');
+    if (!Number.isInteger(params.iterations) || params.iterations < PBKDF2_ITERATIONS || params.iterations > MAX_ITERATIONS) {
+        throw new Error('Invalid KDF iteration count: below security floor');
     }
     const s = subtle();
     const passwordBytes = utf8Encode(password.normalize('NFKC'));
@@ -131,6 +134,19 @@ export const derivePasskeyKek = async (prfSecret: Bytes, saltB64: string): Promi
     const base = await s.importKey('raw', prfSecret, 'HKDF', false, ['deriveKey']);
     return s.deriveKey(
         hkdfParams(HKDF_INFO.PASSKEY_KEK, fromBase64(saltB64)),
+        base,
+        { name: 'AES-KW', length: KEY_BITS },
+        false,
+        ['wrapKey', 'unwrapKey']
+    );
+};
+
+/** Derives the Google Drive vault KEK from the 256-bit root secret stored in appDataFolder. */
+export const deriveDriveVaultKek = async (driveSecret: Uint8Array, saltB64: string): Promise<CryptoKey> => {
+    const s = subtle();
+    const base = await s.importKey('raw', driveSecret, 'HKDF', false, ['deriveKey']);
+    return s.deriveKey(
+        hkdfParams(HKDF_INFO.DRIVE_KEK, fromBase64(saltB64)),
         base,
         { name: 'AES-KW', length: KEY_BITS },
         false,

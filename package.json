@@ -25,6 +25,7 @@
     "test:coverage:shard": "VITEST_PARTIAL_COVERAGE=1 vitest run --coverage --reporter=blob",
     "test:coverage:merge": "vitest run --merge-reports=.vitest-reports --coverage",
     "test:security": "vitest run tests/unit/services/security tests/unit/services/ai/tools/securityTools.test.ts",
+    "test:sql": "node scripts/test-sql.mjs",
     "check:types": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
     "check:theming": "vitest run tests/unit/standards tests/unit/components/theming",

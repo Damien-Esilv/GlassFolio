@@ -1,7 +1,8 @@
 import { AISettings } from './types';
 import { appStorage } from '../storage/appStorage';
 
-const STORAGE_KEY = 'glassfolio_ai_settings';
+export const AI_SETTINGS_STORAGE_KEY = 'glassfolio_ai_settings_v1';
+const LEGACY_AI_SETTINGS_STORAGE_KEY = 'glassfolio_ai_settings';
 
 const DEFAULT_SETTINGS: AISettings = {
   activeProvider: 'mock',
@@ -11,6 +12,8 @@ const DEFAULT_SETTINGS: AISettings = {
   apiKey: '',
   cloudModel: '',
   enableThinking: true,
+  providerApiKeys: {},
+  providerModels: {},
 };
 
 /**
@@ -22,10 +25,27 @@ class AISettingsService {
    */
   public getSettings(): AISettings {
     try {
-      const raw = appStorage.getItem(STORAGE_KEY);
+      let raw = appStorage.getItem(AI_SETTINGS_STORAGE_KEY);
+      if (!raw) {
+        const legacy = appStorage.getItem(LEGACY_AI_SETTINGS_STORAGE_KEY);
+        if (legacy) {
+          raw = legacy;
+          appStorage.setItem(AI_SETTINGS_STORAGE_KEY, legacy);
+          appStorage.removeItem(LEGACY_AI_SETTINGS_STORAGE_KEY);
+        }
+      }
       if (!raw) return { ...DEFAULT_SETTINGS };
       const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      const settings: AISettings = { ...DEFAULT_SETTINGS, ...parsed };
+      if (!settings.providerApiKeys) settings.providerApiKeys = {};
+      if (!settings.providerModels) settings.providerModels = {};
+      if (settings.apiKey && settings.activeProvider && !settings.providerApiKeys[settings.activeProvider]) {
+        settings.providerApiKeys[settings.activeProvider] = settings.apiKey;
+      }
+      if (settings.cloudModel && settings.activeProvider && !settings.providerModels[settings.activeProvider]) {
+        settings.providerModels[settings.activeProvider] = settings.cloudModel;
+      }
+      return settings;
     } catch {
       return { ...DEFAULT_SETTINGS };
     }
@@ -37,8 +57,18 @@ class AISettingsService {
   public saveSettings(settings: Partial<AISettings>): AISettings {
     const current = this.getSettings();
     const updated: AISettings = { ...current, ...settings };
+    if (updated.activeProvider) {
+      updated.providerApiKeys = {
+        ...(updated.providerApiKeys || {}),
+        [updated.activeProvider]: updated.apiKey,
+      };
+      updated.providerModels = {
+        ...(updated.providerModels || {}),
+        [updated.activeProvider]: updated.cloudModel,
+      };
+    }
     try {
-      appStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      appStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(updated));
     } catch {
       // Ignore storage quotas / private browsing errors
     }
@@ -143,7 +173,8 @@ class AISettingsService {
         url = 'https://openrouter.ai/api/v1/models';
         headers['Authorization'] = `Bearer ${apiKey.trim()}`;
       } else if (provider === 'gemini') {
-        url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`;
+        url = 'https://generativelanguage.googleapis.com/v1beta/models';
+        headers['x-goog-api-key'] = apiKey.trim();
       } else if (provider === 'anthropic') {
         url = 'https://api.anthropic.com/v1/messages';
         headers['x-api-key'] = apiKey.trim();

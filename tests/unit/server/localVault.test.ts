@@ -138,10 +138,11 @@ describe('local vault HTTP API (E33 — TGLA-138)', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  const call = (method: string, urlPath: string, opts: { headers?: Record<string, string>; body?: string } = {}) =>
+  const call = (method: string, urlPath: string, opts: { headers?: Record<string, string>; body?: string; noClientHeader?: boolean } = {}) =>
     new Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }>((resolve, reject) => {
+      const clientHeader: Record<string, string> = opts.noClientHeader ? {} : { 'X-GlassFolio-Local': '1' };
       const req = http.request(
-        { host: '127.0.0.1', port, method, path: urlPath, headers: opts.headers },
+        { host: '127.0.0.1', port, method, path: urlPath, headers: { ...clientHeader, ...opts.headers } },
         (res) => {
           let body = '';
           res.on('data', (c) => (body += c));
@@ -167,6 +168,19 @@ describe('local vault HTTP API (E33 — TGLA-138)', () => {
     expect(get.status).toBe(200);
     expect(get.headers['cache-control']).toBe('no-store');
     expect(JSON.parse(get.body).records).toEqual({ glassfolio_user: 'cipher' });
+  });
+
+  it('refuses requests without the app client header (second CSRF barrier)', async () => {
+    const read = await call('GET', '/api/local-vault', { noClientHeader: true });
+    expect(read.status).toBe(403);
+    const write = await call('POST', '/api/local-vault/batch', {
+      noClientHeader: true,
+      headers: json,
+      body: JSON.stringify({ clear: true }),
+    });
+    expect(write.status).toBe(403);
+    // Nothing was changed by the refused write.
+    expect(JSON.parse((await call('GET', '/api/local-vault')).body).revision).toBe(0);
   });
 
   it('refuses cross-site and cross-origin requests', async () => {

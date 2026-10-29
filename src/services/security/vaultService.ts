@@ -13,11 +13,11 @@
 import { delay } from '../db';
 import { appStorage } from '../storage/appStorage';
 import { EncryptedStorageProvider } from '../storage/EncryptedStorageProvider';
-import { isVaultScopedKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import { requireLocalPersistence } from '../storage/storageFactory';
 import { SyncedBackingStorageProvider } from '../storage/SyncedBackingStorageProvider';
 import {
     createKdfParams,
+    deriveDriveVaultKek,
     deriveMasterKeys,
     deriveOAuthKek,
     derivePasskeyKek,
@@ -25,6 +25,7 @@ import {
     formatRecoveryKey,
     generateExtractableDek,
     parseRecoveryKey,
+    PBKDF2_ITERATIONS,
     randomBytes,
     RECOVERY_KEY_BYTES,
     RECOVERY_KEY_256_BYTES,
@@ -34,8 +35,11 @@ import {
     wrapDek,
 } from './crypto';
 import { toBase64 } from './encoding';
+import { deviceVaultKeyStore } from './deviceVaultKeyStore';
+import { isSensitiveKey, isVaultScopedKey, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import { Result, ok, err, ValidationError } from '../../types/result';
 import {
+    GoogleDriveWrappedKeyEntry,
     InvalidVaultCredentialsError,
     PasskeySlotInfo,
     VaultAlreadyInitializedError,
@@ -126,9 +130,13 @@ export class VaultService {
         try {
             const header = JSON.parse(raw) as VaultHeader;
             if (header.version === 1 && header.kdf && header.wrappedKeys) {
+                if (typeof header.kdf.iterations === 'number' && header.kdf.iterations < PBKDF2_ITERATIONS) {
+                    throw new VaultHeaderCorruptedError();
+                }
                 return header;
             }
-        } catch {
+        } catch (err) {
+            if (err instanceof VaultHeaderCorruptedError) throw err;
             // malformed
         }
         throw new VaultHeaderCorruptedError();
@@ -205,7 +213,7 @@ export class VaultService {
         const runtimeDek = await unwrapDek(wrappedPasswordDek, passwordKek, false);
 
         // 7. Initialize EncryptedStorageProvider (which also encrypts any existing plaintext)
-        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: true });
         await encrypted.flush();
         appStorage.attachEncrypted(encrypted);
 
@@ -491,6 +499,7 @@ export class VaultService {
             await encrypted.flush();
             encrypted.dispose();
         }
+        void deviceVaultKeyStore.clearAll().catch(() => undefined);
         this.setStatus('locked');
     }
 
@@ -514,7 +523,7 @@ export class VaultService {
         }
 
         // 2. Derive new Master KEK
-        const newKdf = createKdfParams(header.kdf.iterations);
+        const newKdf = createKdfParams(Math.max(PBKDF2_ITERATIONS, header.kdf.iterations));
         const newDerived = await deriveMasterKeys(newPassword, newKdf);
 
         // 3. Wrap DEK with new KEK
@@ -571,7 +580,304 @@ export class VaultService {
     }
 
     /**
-     * Initializes a seamless E2EE vault for Google OAuth users (0-Password flow).
+     * Initializes an E2EE Split-Trust vault for Google OAuth users (0-Password flow).
+     * The root key is stored in the user's hidden Google Drive appDataFolder, and an emergency
+     * 256-bit recovery key is returned (shown once to the user).
+     */
+    public async setupGoogleDriveVault(
+        driveSecret: Uint8Array,
+        keyId: string,
+        userId: string
+    ): Promise<VaultSetupResult> {
+        await delay(250);
+        if (this.isInitialized()) {
+            throw new VaultAlreadyInitializedError();
+        }
+
+        const dek = await generateExtractableDek();
+        const kdf = createKdfParams();
+        const driveSalt = toBase64(randomBytes(SALT_BYTES));
+        const driveKek = await deriveDriveVaultKek(driveSecret, driveSalt);
+        const wrappedDriveDek = await wrapDek(dek, driveKek);
+
+        // Generate 256-bit emergency recovery key
+        const recoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+        const recoverySalt = toBase64(randomBytes(SALT_BYTES));
+        const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
+        const wrappedRecoveryDek = await wrapDek(dek, recoveryKek);
+
+        const nowIso = new Date().toISOString();
+        const driveEntry: GoogleDriveWrappedKeyEntry = {
+            alg: 'AES-KW',
+            keyId,
+            wrapped: wrappedDriveDek,
+            salt: driveSalt,
+            createdAt: nowIso,
+        };
+        const recoveryEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: wrappedRecoveryDek,
+            salt: recoverySalt,
+            createdAt: nowIso,
+        };
+
+        const header: VaultHeader = {
+            version: 1,
+            kdf,
+            dekAlgorithm: 'AES-256-GCM',
+            wrappedKeys: {
+                password: null,
+                recovery: recoveryEntry,
+                passkeys: [],
+                googleDrive: driveEntry,
+            },
+            passwordSlot: null,
+            recoverySlot: recoveryEntry,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            dekCreatedAt: nowIso,
+            isDemo: false,
+            authProvider: 'google',
+            totpEnabled: false,
+        };
+
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
+
+        const runtimeDek = await unwrapDek(wrappedDriveDek, driveKek, false);
+        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
+        await encrypted.flush();
+        appStorage.attachEncrypted(encrypted);
+
+        // Cache device key for instant page reloads
+        await deviceVaultKeyStore.saveDeviceWrappedDek(userId, dek);
+
+        const EMPTY_KEYS = [
+            'glassfolio_transactions',
+            'glassfolio_positions',
+            'glassfolio_alerts',
+            'glassfolio_alert_rules',
+            'glassfolio_goals',
+            'glassfolio_accounts',
+            'glassfolio_institutes',
+            'glassfolio_unified_transactions',
+            'glassfolio_import_batches',
+            'glassfolio_asset_positions',
+            'glassfolio_achievements',
+            'glassfolio_quests',
+            'glassfolio_pinned_badges',
+            'glassfolio_asset_groups',
+        ];
+        for (const k of EMPTY_KEYS) {
+            if (appStorage.getItem(k) === null) {
+                appStorage.setItem(k, '[]');
+            }
+        }
+
+        const recoveryKeyFormatted = formatRecoveryKey(recoveryBytes);
+        wipe(recoveryBytes);
+
+        this.setStatus('unlocked');
+        this.resetAutoLockTimer();
+
+        return {
+            recoveryKey: recoveryKeyFormatted,
+            authKey: new Uint8Array(32),
+        };
+    }
+
+    /**
+     * Unlocks a Google Drive Split-Trust vault.
+     */
+    public async unlockGoogleDriveVault(driveSecret: Uint8Array, userId?: string): Promise<VaultUnlockResult> {
+        await delay(200);
+        const header = this.getVaultHeader();
+        if (!header) throw new VaultNotInitializedError();
+
+        const driveEntry = header.wrappedKeys.googleDrive;
+        if (!driveEntry) {
+            throw new InvalidVaultCredentialsError();
+        }
+
+        try {
+            const driveKek = await deriveDriveVaultKek(driveSecret, driveEntry.salt);
+            if (userId) {
+                const extractableDek = await unwrapDek(driveEntry.wrapped, driveKek, true);
+                await deviceVaultKeyStore.saveDeviceWrappedDek(userId, extractableDek);
+            }
+            const runtimeDek = await unwrapDek(driveEntry.wrapped, driveKek, false);
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
+            await encrypted.flush();
+            appStorage.attachEncrypted(encrypted);
+
+            this.setStatus('unlocked');
+            this.resetAutoLockTimer();
+            return { authKey: new Uint8Array(32) };
+        } catch {
+            throw new InvalidVaultCredentialsError();
+        }
+    }
+
+    /**
+     * Unlocks the vault using the local device key stored in IndexedDB (extractable: false).
+     */
+    public async unlockWithDeviceKey(userId: string): Promise<boolean> {
+        if (!this.isInitialized() || this.isUnlocked()) return false;
+        try {
+            const runtimeDek = await deviceVaultKeyStore.loadDeviceWrappedDek(userId);
+            if (!runtimeDek) return false;
+
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
+            await encrypted.flush();
+            appStorage.attachEncrypted(encrypted);
+
+            this.setStatus('unlocked');
+            this.resetAutoLockTimer();
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /** True when the vault header carries a Google Drive split-trust slot (no password, no identity key). */
+    public isGoogleDriveVault(): boolean {
+        try {
+            const header = this.getVaultHeader();
+            return Boolean(header && header.authProvider === 'google' && header.wrappedKeys.googleDrive);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Checks if the current vault is a legacy identity-derived Google vault that needs migration.
+     */
+    public isLegacyIdentityGoogleVault(): boolean {
+        try {
+            const header = this.getVaultHeader();
+            return Boolean(
+                header &&
+                header.authProvider === 'google' &&
+                !header.wrappedKeys.googleDrive &&
+                header.wrappedKeys.password !== null
+            );
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Migrates a legacy identity-wrapped Google vault to Google Drive appDataFolder E2EE:
+     * - Unwraps old DEK one last time in memory using legacy secret
+     * - Rotates DEK (generates fresh 256-bit DEK)
+     * - Re-encrypts all sensitive records under the new DEK
+     * - Generates 256-bit emergency recovery key
+     * - Overwrites vault_headers with wrappedKeys.googleDrive and wrappedKeys.recovery (password: null)
+     */
+    public async migrateLegacyGoogleVault(
+        legacyOAuthSecret: string,
+        driveSecret: Uint8Array,
+        keyId: string,
+        userId: string
+    ): Promise<VaultSetupResult> {
+        await delay(300);
+        const header = this.getVaultHeader();
+        if (!header || !header.wrappedKeys.password) {
+            throw new VaultNotInitializedError();
+        }
+
+        // 1. Unwrap old DEK in memory
+        let oldDek: CryptoKey;
+        try {
+            const oauthKek = await deriveOAuthKek(legacyOAuthSecret, header.kdf.salt);
+            oldDek = await unwrapDek(header.wrappedKeys.password.wrapped, oauthKek, true);
+        } catch {
+            const { kek: legacyKek } = await deriveMasterKeys(legacyOAuthSecret, header.kdf);
+            oldDek = await unwrapDek(header.wrappedKeys.password.wrapped, legacyKek, true);
+        }
+
+        // 2. Open temporary encrypted provider to decrypt existing records in memory
+        const tempProvider = await EncryptedStorageProvider.open(appStorage.getBacking(), oldDek, { adoptLegacyPlaintext: false });
+        const decryptedRecords = new Map<string, string>();
+        for (const key of appStorage.getBacking().keys()) {
+            if (isSensitiveKey(key)) {
+                const val = tempProvider.getItem(key);
+                if (val !== null) decryptedRecords.set(key, val);
+            }
+        }
+
+        // 3. Generate BRAND NEW DEK (DEK Rotation!)
+        const newDek = await generateExtractableDek();
+
+        // 4. Wrap new DEK under new Drive KEK
+        const driveSalt = toBase64(randomBytes(SALT_BYTES));
+        const driveKek = await deriveDriveVaultKek(driveSecret, driveSalt);
+        const wrappedDriveDek = await wrapDek(newDek, driveKek);
+
+        // 5. Wrap new DEK under fresh 256-bit Recovery Key
+        const recoveryBytes = randomBytes(RECOVERY_KEY_256_BYTES);
+        const recoverySalt = toBase64(randomBytes(SALT_BYTES));
+        const recoveryKek = await deriveRecoveryKek(recoveryBytes, recoverySalt);
+        const wrappedRecoveryDek = await wrapDek(newDek, recoveryKek);
+
+        const nowIso = new Date().toISOString();
+        const driveEntry: GoogleDriveWrappedKeyEntry = {
+            alg: 'AES-KW',
+            keyId,
+            wrapped: wrappedDriveDek,
+            salt: driveSalt,
+            createdAt: nowIso,
+        };
+        const recoveryEntry = {
+            alg: 'AES-KW' as const,
+            wrapped: wrappedRecoveryDek,
+            salt: recoverySalt,
+            createdAt: nowIso,
+        };
+
+        const updatedHeader: VaultHeader = {
+            ...header,
+            wrappedKeys: {
+                password: null,
+                recovery: recoveryEntry,
+                passkeys: [],
+                googleDrive: driveEntry,
+            },
+            passwordSlot: null,
+            recoverySlot: recoveryEntry,
+            authProvider: 'google',
+            updatedAt: nowIso,
+            dekCreatedAt: nowIso,
+        };
+
+        appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(updatedHeader));
+
+        // 6. Open fresh EncryptedStorageProvider with newDek and re-encrypt all records
+        const newRuntimeDek = await unwrapDek(wrappedDriveDek, driveKek, false);
+        const newEncrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), newRuntimeDek, { adoptLegacyPlaintext: false });
+
+        for (const [key, value] of decryptedRecords.entries()) {
+            newEncrypted.setItem(key, value);
+        }
+        await newEncrypted.flush();
+        appStorage.attachEncrypted(newEncrypted);
+
+        // 7. Save to device store
+        await deviceVaultKeyStore.saveDeviceWrappedDek(userId, newDek);
+
+        const recoveryKeyFormatted = formatRecoveryKey(recoveryBytes);
+        wipe(recoveryBytes);
+
+        this.setStatus('unlocked');
+        this.resetAutoLockTimer();
+
+        return {
+            recoveryKey: recoveryKeyFormatted,
+            authKey: new Uint8Array(32),
+        };
+    }
+
+    /**
+     * Legacy backward-compatibility method (for unit tests / mock setups).
      */
     public async setupOAuthVault(oauthSecret: string): Promise<void> {
         await delay(250);
@@ -614,7 +920,7 @@ export class VaultService {
         appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify(header));
 
         const runtimeDek = await unwrapDek(wrappedDek, oauthKek, false);
-        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+        const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
         await encrypted.flush();
         appStorage.attachEncrypted(encrypted);
 
@@ -644,17 +950,17 @@ export class VaultService {
     }
 
     /**
-     * Unlocks a Google OAuth 0-Password vault automatically.
+     * Legacy backward-compatibility method (for existing unit tests).
      */
     public async unlockOAuthVault(oauthSecret: string): Promise<void> {
         await delay(200);
         const header = this.getVaultHeader();
-        if (!header) throw new VaultNotInitializedError();
+        if (!header || !header.wrappedKeys.password) throw new VaultNotInitializedError();
 
         try {
             const oauthKek = await deriveOAuthKek(oauthSecret, header.kdf.salt);
             const runtimeDek = await unwrapDek(header.wrappedKeys.password.wrapped, oauthKek, false);
-            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+            const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
             await encrypted.flush();
             appStorage.attachEncrypted(encrypted);
 
@@ -665,7 +971,7 @@ export class VaultService {
             try {
                 const { kek: legacyKek } = await deriveMasterKeys(oauthSecret, header.kdf);
                 const runtimeDek = await unwrapDek(header.wrappedKeys.password.wrapped, legacyKek, true);
-                const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek);
+                const encrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), runtimeDek, { adoptLegacyPlaintext: false });
                 await encrypted.flush();
                 appStorage.attachEncrypted(encrypted);
 
@@ -764,7 +1070,7 @@ export class VaultService {
             const extractableDek = await unwrapDek(recoveryEntry.wrapped, recoveryKek, true);
 
             // 2. Derive new password KEK
-            const newKdf = createKdfParams(header.kdf.iterations);
+            const newKdf = createKdfParams(Math.max(PBKDF2_ITERATIONS, header.kdf.iterations));
             const newDerived = await deriveMasterKeys(newPassword, newKdf);
             const newWrappedPassword = await wrapDek(extractableDek, newDerived.kek);
 

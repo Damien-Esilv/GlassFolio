@@ -36,8 +36,9 @@ const check = (label, problems) => {
   else list.forEach((problem) => { failures.push(`${label}: ${problem}`); console.log(`  ✗ ${label}: ${problem}`); });
 };
 
-const get = async (path, init) => {
-  const res = await fetch(`${base}${path}`, init);
+const get = async (path, init = {}) => {
+  // The local vault API requires the app client header (server/localVault.mjs CLIENT_HEADER).
+  const res = await fetch(`${base}${path}`, { ...init, headers: { 'X-GlassFolio-Local': '1', ...(init.headers ?? {}) } });
   return { path, status: res.status, contentType: res.headers.get('content-type') ?? '', headers: Object.fromEntries(res.headers), body: await res.text() };
 };
 

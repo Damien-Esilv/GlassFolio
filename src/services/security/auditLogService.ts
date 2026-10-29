@@ -16,6 +16,8 @@ export type AuditEventType =
     | 'auth_login'
     | 'vault_unlocked'
     | 'vault_locked'
+    | 'vault_created'
+    | 'vault_migrated'
     | 'password_changed'
     | 'dek_rotated'
     | 'vault_reset'
@@ -68,7 +70,7 @@ export const auditLogService = {
         severity: AuditSeverity = 'info'
     ): Promise<AuditLogEntry> {
         const entry: AuditLogEntry = {
-            id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            id: `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             timestamp: new Date().toISOString(),
             event,
             details,

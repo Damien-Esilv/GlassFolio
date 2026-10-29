@@ -5,6 +5,8 @@
  * et définition du catalogue d'actifs de référence curaté pour GlassFolio.
  */
 
+import { yahooFinanceUrl } from '../config/marketData';
+
 export interface SearchResultItem {
   symbol: string;
   name: string;
@@ -131,7 +133,7 @@ export async function searchLiveAssets(query: string): Promise<SearchResultItem[
 
   // 1. Interroger le proxy Yahoo Finance dev (/yf/v1/finance/search)
   try {
-    const yfUrl = `/yf/v1/finance/search?q=${encodeURIComponent(cleanQuery)}&quotesCount=8`;
+    const yfUrl = yahooFinanceUrl(`/v1/finance/search?q=${encodeURIComponent(cleanQuery)}&quotesCount=8`);
     const response = await fetch(yfUrl, {
       headers: {
         'Accept': 'application/json'
@@ -290,7 +292,7 @@ export async function fetchAssetHistory(
   }
 
   try {
-    const yfChartUrl = `/yf/v8/finance/chart/${encodeURIComponent(cleanTicker)}?range=${rangeParam}&interval=${intervalParam}`;
+    const yfChartUrl = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(cleanTicker)}?range=${rangeParam}&interval=${intervalParam}`);
     const res = await fetch(yfChartUrl);
     if (res.ok) {
       const data: YahooChartAPIResponse = await res.json();

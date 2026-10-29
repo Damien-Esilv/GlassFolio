@@ -4,6 +4,7 @@
 
 import { User } from '../../types/domain';
 import type { LegalAcceptance } from '../../config/legal';
+import type { GoogleCallbackResult } from './googleOidcService';
 
 /** Options shared by the sign-up entry points: anti-bot proof and the accepted legal documents version. */
 export interface SignUpOptions {
@@ -105,7 +106,7 @@ export interface IAuthProvider {
     signInWithPasskey?(): Promise<AuthResult>;
     /** Completes a pending sign-in with a passkey as second factor. */
     verifySecondFactorWithPasskey?(): Promise<AuthResult>;
-    enrollMfaTotp?(friendlyName?: string): Promise<{ id: string; secret: string; qrCodeSvg?: string; uri?: string } | null>;
+    enrollMfaTotp?(friendlyName?: string): Promise<{ id: string; secret: string; uri?: string } | null>;
     verifyMfaEnrollment?(factorId: string, code: string): Promise<void>;
     /** Cloud: verifies a TOTP code against the Supabase factor and upgrades the session to AAL2. */
     verifyTotpCode?(code: string): Promise<void>;
@@ -119,4 +120,6 @@ export interface IAuthProvider {
     reauthenticate?(proof: StepUpProof): Promise<void>;
     /** Cloud: whether the session's newest authentication is younger than `maxAgeSeconds`. */
     isRecentlyAuthenticated?(maxAgeSeconds: number): boolean;
+    /** Direct Google OIDC callback handling (Epic E25 / TGLA-170). */
+    handleGoogleOidcCallback?(params: GoogleCallbackResult): Promise<AuthResult & { recoveryKey?: string }>;
 }

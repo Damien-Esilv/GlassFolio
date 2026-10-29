@@ -140,7 +140,7 @@ describe('EncryptedStorageProvider — Zero-Plaintext Leakage & Sync Queue (TGLA
             expect(backing.getItem(publicCacheKey)).toBe(publicPayload);
         });
 
-        it('migrates pre-existing legacy plaintext into encrypted envelopes on open', async () => {
+        it('rejects injected legacy plaintext by default to prevent storage tampering (Finding #4)', async () => {
             const backing = new InMemoryStorageProvider();
             const dek = await generateExtractableDek();
 
@@ -148,7 +148,20 @@ describe('EncryptedStorageProvider — Zero-Plaintext Leakage & Sync Queue (TGLA
             const legacyPlaintext = JSON.stringify([{ symbol: 'BTC', quantity: 1.5 }]);
             backing.setItem(sensitiveKey, legacyPlaintext);
 
+            // Default open rejects unencrypted plaintext for sensitive keys
             const provider = await EncryptedStorageProvider.open(backing, dek);
+            expect(provider.getItem(sensitiveKey)).toBeNull();
+        });
+
+        it('migrates pre-existing legacy plaintext into encrypted envelopes when adoptLegacyPlaintext is explicitly true', async () => {
+            const backing = new InMemoryStorageProvider();
+            const dek = await generateExtractableDek();
+
+            const sensitiveKey = 'glassfolio_positions';
+            const legacyPlaintext = JSON.stringify([{ symbol: 'BTC', quantity: 1.5 }]);
+            backing.setItem(sensitiveKey, legacyPlaintext);
+
+            const provider = await EncryptedStorageProvider.open(backing, dek, { adoptLegacyPlaintext: true });
             expect(provider.getItem(sensitiveKey)).toBe(legacyPlaintext);
 
             await provider.flush();

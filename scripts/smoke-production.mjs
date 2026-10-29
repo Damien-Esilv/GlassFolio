@@ -28,7 +28,11 @@ const expectedHeaders = expectedHeadersFromVercelConfig(
 
 const hosts = (process.env.SMOKE_HOSTS ?? '')
   .split(',')
-  .map((host) => host.trim().replace(/\/+$/, ''))
+  .map((host) => {
+    let clean = host.trim();
+    while (clean.endsWith('/')) clean = clean.slice(0, -1);
+    return clean;
+  })
   .filter(Boolean);
 const targets = hosts.length > 0 ? hosts : DEFAULT_SMOKE_HOSTS;
 const attempts = Number(process.env.SMOKE_ATTEMPTS ?? 6);

@@ -8,6 +8,7 @@ import { VAULT_HEADER_KEY } from '../../../../src/services/storage/storageKeys';
 import { db } from '../../../../src/services/db';
 import { gamificationService } from '../../../../src/services/gamificationService';
 import { mockRemoteVault } from '../../helpers/remoteVault';
+import { seedLegacyGoogleVault, startOAuthFlow } from '../../helpers/legacyGoogleVault';
 
 describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
     let memoryStore: Record<string, string>;
@@ -124,7 +125,9 @@ describe('Demo Mode Isolation & Non-Destructive Invariants (TGLA-067)', () => {
             user_metadata: { full_name: 'Google Investor' },
         };
         vi.spyOn(supabaseClient, 'getUser').mockResolvedValue(mockSbUser);
+        await seedLegacyGoogleVault(mockSbUser.id, mockSbUser.email);
         mockRemoteVault();
+        startOAuthFlow();
         window.location.hash = '#access_token=token-google-999&expires_in=3600';
 
         const result = await sbAuth.handleOAuthCallback();

@@ -64,6 +64,35 @@ describe('VaultGate Component', () => {
     });
   });
 
+  it('reopens a Google Drive vault with the device key on reload instead of signing out', async () => {
+    mockUser = { id: 'g-user-1', email: 'google@example.com', authProvider: 'google', emailVerified: true };
+    vi.spyOn(vaultService, 'getStatus').mockReturnValue('locked');
+    vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+    vi.spyOn(vaultService, 'isGoogleDriveVault').mockReturnValue(true);
+    const deviceSpy = vi.spyOn(vaultService, 'unlockWithDeviceKey').mockResolvedValue(true);
+    const identitySpy = vi.spyOn(vaultService, 'unlockOAuthVault').mockResolvedValue(undefined as any);
+    vi.spyOn(vaultService, 'subscribeStatus').mockReturnValue(() => {});
+
+    render(<VaultGate><div>Secret Data</div></VaultGate>);
+
+    await waitFor(() => expect(deviceSpy).toHaveBeenCalledWith('g-user-1'));
+    expect(identitySpy).not.toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+  });
+
+  it('signs out a Google Drive vault user when no device key is available', async () => {
+    mockUser = { id: 'g-user-1', email: 'google@example.com', authProvider: 'google', emailVerified: true };
+    vi.spyOn(vaultService, 'getStatus').mockReturnValue('locked');
+    vi.spyOn(vaultService, 'isInitialized').mockReturnValue(true);
+    vi.spyOn(vaultService, 'isGoogleDriveVault').mockReturnValue(true);
+    vi.spyOn(vaultService, 'unlockWithDeviceKey').mockResolvedValue(false);
+    vi.spyOn(vaultService, 'subscribeStatus').mockReturnValue(() => {});
+
+    render(<VaultGate><div>Secret Data</div></VaultGate>);
+
+    await waitFor(() => expect(mockLogout).toHaveBeenCalled());
+  });
+
   it('calls logout if vault is locked after having been unlocked for a google user', async () => {
     mockUser = { id: 'g-user-1', email: 'google@example.com', authProvider: 'google', emailVerified: true };
     let statusCallback: ((status: any) => void) | null = null;

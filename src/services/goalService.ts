@@ -66,7 +66,7 @@ export const goalService = {
         } else {
             const newGoal: FinancialGoal = {
                 ...goalData,
-                id: Math.random().toString(36).substr(2, 9),
+                id: crypto.randomUUID(),
                 isPinned: false,
                 currentAmount: 0
             } as FinancialGoal;

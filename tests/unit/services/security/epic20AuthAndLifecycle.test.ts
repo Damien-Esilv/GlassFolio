@@ -14,6 +14,7 @@ import { appStorage } from '../../../../src/services/storage/appStorage';
 import { isOk } from '../../../../src/types/result';
 import type { User } from '../../../../src/types/domain';
 import { mockRemoteVault } from '../../helpers/remoteVault';
+import { seedLegacyGoogleVault, startOAuthFlow } from '../../helpers/legacyGoogleVault';
 
 describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', () => {
     beforeEach(async () => {
@@ -72,7 +73,10 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
                 },
             });
 
-            // Set URL hash
+            // Returning legacy Google user; this tab started the sign-in
+            await seedLegacyGoogleVault('google-usr-999', 'investor.google@example.com');
+            mockRemoteVault();
+            startOAuthFlow();
             window.location.hash = fakeOAuthHash;
 
             const res = await sbAuth.handleOAuthCallback();
@@ -101,6 +105,7 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
                 email: 'victim@example.com',
                 user_metadata: { name: 'Attacker' },
             });
+            startOAuthFlow();
             window.location.hash = '#access_token=attacker-token&expires_in=3600';
 
             // 3. Must block and protect existing vault

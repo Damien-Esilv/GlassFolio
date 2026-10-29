@@ -189,11 +189,43 @@ describe('restore keeps local secrets', () => {
   beforeEach(seedRealAccount);
 
   it('keeps the API key already stored when restoring AI settings from an export (which has none)', async () => {
-    appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify({ model: 'old', apiKey: 'sk-local', customApiKey: 'ck-local' }));
+    appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify({ activeProvider: 'groq', apiKey: 'sk-local', customApiKey: 'ck-local' }));
 
-    await restoreBackupReset({ aiSettings: [{ model: 'from-backup' }] });
+    await restoreBackupReset({ aiSettings: [{ executionMode: 'read_only' }] });
 
     const stored = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') as string);
-    expect(stored).toMatchObject({ model: 'from-backup', apiKey: 'sk-local', customApiKey: 'ck-local' });
+    expect(stored).toMatchObject({ executionMode: 'read_only', activeProvider: 'groq', apiKey: 'sk-local', customApiKey: 'ck-local' });
+  });
+
+  it('never lets a backup choose the provider, endpoint or API keys', async () => {
+    appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify({ activeProvider: 'groq', apiKey: 'sk-local', ollamaEndpoint: 'http://localhost:11434' }));
+
+    await restoreBackupReset({
+      aiSettings: [{
+        activeProvider: 'openai',
+        apiKey: 'sk-planted',
+        providerApiKeys: { openai: 'sk-planted' },
+        ollamaEndpoint: 'http://127.0.0.1:9999',
+        cloudModel: 'attacker-model',
+        executionMode: 'nonsense',
+      }],
+    });
+
+    const stored = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') as string);
+    expect(stored).toMatchObject({ activeProvider: 'groq', apiKey: 'sk-local', ollamaEndpoint: 'http://localhost:11434' });
+    expect(stored.providerApiKeys).toBeUndefined();
+    expect(stored.cloudModel).toBeUndefined();
+    expect(stored.executionMode).toBeUndefined();
+  });
+
+  it('plants no key even when the device has none yet', async () => {
+    appStorage.removeItem('glassfolio_ai_settings_v1');
+
+    await restoreBackupReset({ aiSettings: [{ activeProvider: 'openai', apiKey: 'sk-planted', enableThinking: false }] });
+
+    const stored = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') as string);
+    expect(stored.apiKey).toBeUndefined();
+    expect(stored.activeProvider).toBeUndefined();
+    expect(stored.enableThinking).toBe(false);
   });
 });

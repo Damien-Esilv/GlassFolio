@@ -358,6 +358,10 @@ export const supabaseClient = {
             // fallback
         }
 
+        if (!verifier || !code.trim()) {
+            throw new Error('Missing or invalid PKCE verifier.');
+        }
+
         const endpoint = `${config.url}/auth/v1/token?grant_type=pkce`;
         const res = await fetch(endpoint, {
             method: 'POST',
@@ -371,6 +375,34 @@ export const supabaseClient = {
         const data = await res.json();
         if (!res.ok) {
             throw toSupabaseError(data, res.status, 'Failed to exchange PKCE code.');
+        }
+
+        return {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+            user: data.user,
+        };
+    },
+
+    async signInWithIdToken(params: { provider: 'google'; token: string; nonce: string }): Promise<SupabaseAuthSession> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const endpoint = `${config.url}/auth/v1/token?grant_type=id_token`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: createHeaders(config),
+            body: JSON.stringify({
+                provider: params.provider,
+                id_token: params.token,
+                nonce: params.nonce,
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw toSupabaseError(data, res.status, 'Failed to authenticate ID token with Supabase.');
         }
 
         return {
@@ -554,12 +586,11 @@ export const supabaseClient = {
         return data as SupabaseUserData;
     },
 
-    async signOut(accessToken: string): Promise<void> {
+    async signOut(accessToken: string, scope: 'local' | 'global' | 'others' = 'local'): Promise<void> {
         const config = getSupabaseConfig();
         if (!config) return;
 
-        // `local` ends this session only; GoTrue's default (`global`) would sign out every device.
-        const endpoint = `${config.url}/auth/v1/logout?scope=local`;
+        const endpoint = `${config.url}/auth/v1/logout?scope=${scope}`;
         try {
             await fetch(endpoint, {
                 method: 'POST',
@@ -770,6 +801,29 @@ export const supabaseClient = {
      * Deletes the account server-side. The RPC removes the vault rows itself, after checking the
      * session's assurance level and a recent authentication, so nothing is deleted beforehand.
      */
+    /**
+     * Replaces the vault header and re-encrypted records in ONE server transaction (migration 0007).
+     * Used after a DEK rotation: separate requests could leave a new header over old-DEK records.
+     */
+    async commitVaultMigration(
+        accessToken: string,
+        header: Record<string, unknown>,
+        records: Array<{ record_key: string; ciphertext: string }>
+    ): Promise<void> {
+        const config = getSupabaseConfig();
+        if (!config) throw new Error('Supabase is not configured.');
+
+        const res = await fetch(`${config.url}/rest/v1/rpc/commit_vault_migration`, {
+            method: 'POST',
+            headers: createHeaders(config, accessToken),
+            body: JSON.stringify({ p_header: header, p_records: records }),
+        });
+        if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as { message?: string };
+            throw new Error(data.message || `Vault migration commit failed (HTTP ${res.status}).`);
+        }
+    },
+
     async deleteOwnAccount(accessToken: string): Promise<void> {
         const config = getSupabaseConfig();
         if (!config) throw new Error('Supabase is not configured.');

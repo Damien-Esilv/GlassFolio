@@ -8,6 +8,15 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-1": {
+      "title": "Connexion Google, clés IA et confidentialité",
+      "highlights": {
+        "googleVault": "Connexion avec Google : la clé de votre coffre est conservée dans l'espace d'application de votre propre Google Drive, avec une clé de secours pour ne jamais perdre l'accès.",
+        "manualPrices": "Les prix saisis à la main sont maintenant stockés dans votre coffre chiffré, y compris sur votre serveur auto-hébergé.",
+        "aiKeys": "Chaque fournisseur d'IA garde sa propre clé API, et la conversation avec l'assistant s'efface dès que vous verrouillez le coffre.",
+        "privacyNotice": "Une notice de confidentialité plus claire sur les fournisseurs de données de marché qui voient les tickers que vous suivez."
+      }
+    },
     "v1-0": {
       "title": "Lancement officiel de GlassFolio V1",
       "highlights": {

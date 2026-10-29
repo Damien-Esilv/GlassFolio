@@ -97,15 +97,19 @@ jobs:
         run: npx vitest run tests/unit/scripts/emailTemplates.test.ts
 
       - name: Dry-run check for email templates & config diff (Epic E25)
+        if: github.ref == 'refs/heads/main'
         run: npm run deploy:emails
         env:
+          DRY_RUN: 'true'
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         continue-on-error: true
 
       - name: Dry-run check for Turnstile anti-bot config diff (Epic E22)
+        if: github.ref == 'refs/heads/main'
         run: npm run deploy:turnstile
         env:
+          DRY_RUN: 'true'
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
@@ -299,7 +303,8 @@ jobs:
             smoke: false
           - label: vercel-parity
             build_cmd: VITE_DEPLOYMENT_MODE=cloud npm run build
-            limit_kb: 2560
+            # 2560 -> 2624: Google Drive split-trust (OIDC, Drive key, device key, recovery modal) adds ~35 KB.
+            limit_kb: 2624
             landing: present
             smoke: true
     steps:
