@@ -130,6 +130,12 @@ describe('ColumnMappingTable', () => {
     expect(screen.getAllByRole('option', { name: /fields.transactionDate \*/ }).length).toBeGreaterThan(0);
   });
 
+  it('counts a currency column as the asset of a bank statement line', () => {
+    renderTable({ mappings: { transactionDate: 'Date', amountPrimary: 'Montant', currency: 'Devise' } });
+    const required = screen.getByRole('status', { name: /required.title/ });
+    expect(within(required).queryByText(/required.missing/)).toBeNull();
+  });
+
   it('counts an amount computed from quantity and unit price as found', () => {
     renderTable({ mappings: { transactionDate: 'Date', quantity: 'Qty', priceUnit: 'Price', assetSymbol: 'Ticker' } });
     const required = screen.getByRole('status', { name: /required.title/ });

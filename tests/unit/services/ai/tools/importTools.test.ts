@@ -19,6 +19,7 @@ import { aiToolRegistry } from '../../../../../src/services/ai/aiToolRegistry';
 import '../../../../../src/services/ai/tools';
 import {
   previewCsvImportTool,
+  proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
   getCostBasisMethodTool,
@@ -37,12 +38,13 @@ describe('import AI tools', () => {
   });
 
   it('are registered, and every write tool requires human confirmation', () => {
-    for (const name of ['preview_csv_import', 'preview_snapshot_import', 'import_snapshot', 'get_cost_basis_method', 'set_cost_basis_method']) {
+    for (const name of ['preview_csv_import', 'propose_csv_mapping', 'preview_snapshot_import', 'import_snapshot', 'get_cost_basis_method', 'set_cost_basis_method']) {
       expect(aiToolRegistry.getTool(name)).toBeDefined();
     }
     expect(importSnapshotTool.requiresConfirmation).toBe(true);
     expect(setCostBasisMethodTool.requiresConfirmation).toBe(true);
     expect(previewCsvImportTool.requiresConfirmation).toBeFalsy();
+    expect(proposeCsvMappingTool.requiresConfirmation).toBeFalsy();
     expect(previewSnapshotImportTool.requiresConfirmation).toBeFalsy();
   });
 
@@ -51,6 +53,42 @@ describe('import AI tools', () => {
     expect(result).toMatchObject({ delimiter: ';', headerRowIndex: 1, rowCount: 2, dateFormat: 'DD/MM/YYYY' });
     expect(result.mapping).toMatchObject({ transactionDate: 'Date', quantity: 'Quantité', priceUnit: 'Cours', amountPrimary: 'Montant' });
     expect(db.getUnifiedTransactions()).toHaveLength(0);
+  });
+
+  it('propose_csv_mapping maps a foreign layout column by column and saves nothing', async () => {
+    const csv = 'Datum;Typ;WKN;Wertpapier;Stück;Kurs;Betrag\n05.01.2024;Kauf;US0378331005;Apple Inc.;5;185,50;927,50\n12.02.2024;Verkauf;US5949181045;Microsoft Corp.;2;400,00;800,00';
+    const result = await proposeCsvMappingTool.execute({ csvText: csv });
+
+    expect(result).toMatchObject({ delimiter: ';', rowCount: 2, detectedPreset: null });
+    const byHeader = Object.fromEntries(result.columns.map(c => [c.header, c]));
+    expect(byHeader.Datum).toMatchObject({ field: 'transactionDate', status: 'matched' });
+    expect(byHeader.WKN).toMatchObject({ field: 'assetIsin', status: 'matched', samples: ['US0378331005', 'US5949181045'] });
+    expect(result.summary).toEqual({ matched: 7, ambiguous: 0, unmatched: 0 });
+    expect(result.mapping).toMatchObject({ transactionDate: 'Datum', quantity: 'Stück', amountPrimary: 'Betrag' });
+    expect(db.getUnifiedTransactions()).toHaveLength(0);
+  });
+
+  it('propose_csv_mapping reports the columns it cannot place instead of guessing', async () => {
+    const result = await proposeCsvMappingTool.execute({ csvText: 'when,how many,cash\n2024-01-05,5,927.50\n2024-02-12,2,800.00' });
+
+    const unmatched = result.columns.filter(c => c.status === 'unmatched').map(c => c.header);
+    expect(unmatched).toEqual(['how many', 'cash']);
+    expect(result.mapping).toEqual({ transactionDate: 'when' });
+  });
+
+  it('propose_csv_mapping follows a known broker preset instead of guessing (GlassFolio export: amount is the quantity)', async () => {
+    const csv = 'id,date,type,operation,instrument,symbol,amount,price,total,currency,source,fees,status,accountName,bankName\nt1,2026-03-10,Buy,BUY,Amundi MSCI World,CW8,5,10,50,EUR,manual,1,Completed,CTO,Broker';
+    const result = await proposeCsvMappingTool.execute({ csvText: csv });
+
+    expect(result.detectedPreset).toBe('GlassFolio');
+    expect(result.mapping).toMatchObject({ quantity: 'amount', amountPrimary: 'total', transactionDate: 'date', assetSymbol: 'symbol' });
+    const amount = result.columns.find(c => c.header === 'amount');
+    expect(amount).toMatchObject({ field: 'quantity', status: 'matched' });
+  });
+
+  it('propose_csv_mapping handles holdings snapshots too', async () => {
+    const result = await proposeCsvMappingTool.execute({ csvText: SNAPSHOT, mode: 'snapshot' });
+    expect(result.mapping).toMatchObject({ assetSymbol: 'Symbol', quantity: 'Quantité', avgPrice: 'PRU' });
   });
 
   it('preview then import a snapshot; re-import is a no-op', async () => {

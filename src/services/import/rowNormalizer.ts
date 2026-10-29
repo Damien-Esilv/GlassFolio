@@ -197,8 +197,9 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
             code: 'TYPE_UNRECOGNIZED',
             params: { label: rawType, type }
         });
-    } else if (!rawType && resolution.source === 'sign' && !isCashAsset) {
-        // On a currency line the sign is the standard convention (money in / money out), not a guess
+    } else if (!rawType && resolution.source === 'sign' && !isCashAsset && type !== 'BUY') {
+        // Reading a row as a purchase is the standard assumption and stays silent; a sale read from
+        // a sign is worth a look. On a currency line the sign is the convention (money in / out).
         issues.push({
             field: 'type',
             message: `No type in the file: read as ${type} from the sign of the quantity or amount`,

@@ -156,14 +156,14 @@
                 "summaryLabel": "Résumé de l'association des colonnes",
                 "summary": {
                     "matched": "Reconnues",
-                    "attention": "À vérifier",
-                    "ignored": "Non utilisées"
+                    "attention": "À confirmer",
+                    "ignored": "Non associées"
                 },
                 "acceptAll": "Accepter toutes les suggestions ({{count}})",
                 "filter": {
                     "label": "Colonnes à afficher",
                     "all": "Toutes les colonnes",
-                    "attention": "À vérifier ({{count}})"
+                    "attention": "À traiter ({{count}})"
                 },
                 "table": {
                     "column": "Colonne de votre fichier",
@@ -174,8 +174,8 @@
                 "ignoreOption": "Ne pas utiliser cette colonne",
                 "status": {
                     "matched": "Reconnue",
-                    "attention": "À vérifier",
-                    "ignored": "Non utilisée"
+                    "attention": "À confirmer",
+                    "ignored": "Non associée"
                 },
                 "suggestion": "Suggestion : {{field}}",
                 "useSuggestion": "Utiliser",
@@ -187,7 +187,7 @@
                 "required": {
                     "title": "Informations obligatoires",
                     "amount": "Montant, ou quantité et prix unitaire",
-                    "identifier": "Symbole de l'actif ou code ISIN",
+                    "identifier": "Actif : symbole, code ISIN ou devise",
                     "found": "Trouvé dans « {{column}} »",
                     "foundDerived": "Calculé à partir de la quantité et du prix unitaire",
                     "missing": "Pas encore associé"

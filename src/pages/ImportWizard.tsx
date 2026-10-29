@@ -65,7 +65,7 @@ const ImportWizard: React.FC = () => {
   return (
     <div className="py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-primary">{t('importWizard.title')}</h1>
           <p className="text-secondary mt-1">

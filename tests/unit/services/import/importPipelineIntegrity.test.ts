@@ -19,6 +19,7 @@ import { parseFile, commitBatch, detectPreset, parseCSVText } from '../../../../
 import type { FieldMappings, ParseResult } from '../../../../src/services/import/importManager';
 import { matchHistoryColumns } from '../../../../src/services/import/columnMatcher';
 import { parseSnapshotFile } from '../../../../src/services/import/snapshotService';
+import { computeRowHash } from '../../../../src/services/core/transactionManager';
 
 const ACCOUNT = 'acc-1';
 
@@ -201,5 +202,22 @@ describe('import pipeline integrity', () => {
 
     expect(parsed.positions.map(p => p.position.quantity)).toEqual(['1.5', '2.25']);
     expect(parsed.positions.map(p => p.position.avgPrice)).toEqual(['100', '200.5']);
+  });
+
+  it('keeps the row hash of ordinary broker rows, so files imported before still dedupe', async () => {
+    const generic = await parse('Date,Type,Symbol,Shares,Price,Amount,Fee\n2024-01-08,BUY,AAPL,5,185.5,927.5,1');
+    expect(generic.candidates[0].rowHash).toBe(await computeRowHash('2024-01-08T00:00:00.000Z', '927.5', 'AAPL', 'BUY', '1'));
+
+    const binance = await parse('UTC_Time,Account,Operation,Coin,Change,Fee,Remark\n2024-01-05 10:15:32,Spot,Buy,BTC,0.025,-0.0001,Market order');
+    expect(binance.candidates[0].rowHash).toBe(await computeRowHash('2024-01-05T10:15:32.000Z', '0.025', 'BTC', 'BUY', '-0.0001'));
+  });
+
+  it('still reads a file with no type column and only positive amounts as purchases, without guessing noise', async () => {
+    const csv = 'Date,Symbol,Shares,Price,Amount\n2024-01-05,AAPL,5,100,500\n2024-02-05,MSFT,2,200,400';
+    const parsed = await parse(csv, matchHistoryColumns(parseCSVText(csv).headers) as FieldMappings);
+
+    expect(parsed.candidates.map(c => c.parsed.type)).toEqual(['BUY', 'BUY']);
+    expect(parsed.candidates.flatMap(c => c.errors.map(e => e.code))).not.toContain('TYPE_INFERRED');
+    expect(parsed.stats.errors).toBe(0);
   });
 });

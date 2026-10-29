@@ -382,6 +382,19 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
             expect(result.current.isValidMappingForAnalysis).toBe(true);
         });
 
+        it('isValidMappingForAnalysis accepts a currency column as the identity of a bank statement line', async () => {
+            const { result } = renderHook(() => useImportWizard());
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+            act(() => {
+                result.current.setMapping('transactionDate', 'Date');
+                result.current.setMapping('amountPrimary', 'Amount');
+                result.current.setMapping('currency', 'Devise');
+            });
+
+            expect(result.current.isValidMappingForAnalysis).toBe(true);
+        });
+
         it('applyTemplate applies the selected template mappings', async () => {
             const { result } = renderHook(() => useImportWizard());
             await waitFor(() => expect(result.current.isLoading).toBe(false));

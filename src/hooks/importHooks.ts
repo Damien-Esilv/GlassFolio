@@ -799,7 +799,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
 
     const isValidMappingForAnalysis = useMemo(() => {
         const m = state.mappings;
-        const hasIdentifier = !!(m.assetSymbol || m.assetIsin);
+        // A bank statement line is identified by its currency
+        const hasIdentifier = !!(m.assetSymbol || m.assetIsin || m.currency);
         // Amount can be derived from quantity × unit price when the file has no amount column
         const hasAmount = !!(m.amountPrimary || (m.quantity && m.priceUnit));
         return !!(m.transactionDate && hasAmount && hasIdentifier);
