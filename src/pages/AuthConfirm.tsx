@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, MailCheck, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, KeyRound, MailCheck, ShieldCheck } from 'lucide-react';
+import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import { authService } from '../services/security/authService';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 import { getAuthCapabilities } from '../services/security/authCapabilities';
@@ -122,7 +123,7 @@ export const AuthConfirm: React.FC = () => {
         <div className="min-h-screen flex items-center justify-center p-4 bg-canvas">
             <div className="w-full max-w-md p-6 sm:p-8 rounded-2xl bg-card border border-subtle shadow-2xl space-y-6 text-center">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                    {status === 'verifying' && <Loader2 size={32} className="animate-spin" />}
+                    {status === 'verifying' && <AppThinkingOrb state="searching" size={32} label={t('common:labels.loading')} />}
                     {(status === 'handedOff' || status === 'signInToFinish' || status === 'emailChangeSuccess') && (
                         <CheckCircle2 size={32} />
                     )}

@@ -7,6 +7,7 @@ import { googleOidcService, sha256Hex } from '../../../../src/services/security/
 import { deviceVaultKeyStore } from '../../../../src/services/security/deviceVaultKeyStore';
 import { userRepository } from '../../../../src/services/repositories';
 import { mockRemoteVault } from '../../helpers/remoteVault';
+import { getSyncedStorageProvider } from '../../../../src/services/storage/storageFactory';
 
 const USER = { id: 'g-user-1', email: 'Investor@Example.test', user_metadata: { full_name: 'Inv Estor', picture: 'https://lh3.googleusercontent.com/a.png' } };
 const session = (user = USER) => ({ accessToken: 'sb-at', refreshToken: 'sb-rt', expiresAt: Date.now() + 3_600_000, user }) as never;
@@ -34,12 +35,29 @@ describe('handleGoogleOidcCallback', () => {
 
         const res = await auth.handleGoogleOidcCallback(callback);
 
-        expect(getOrCreate).toHaveBeenCalledWith('drive-at', 'g-user-1');
+        expect(getOrCreate).toHaveBeenCalledWith('drive-at', 'g-user-1', { replaceForeignKey: true });
         expect(res.recoveryKey).toMatch(/^[A-Z2-7-]{20,}$/);
         expect(res.user.authProvider).toBe('google');
         expect(res.user.email).toBe('Investor@Example.test');
         expect(res.user.name).toBe('Inv Estor');
         expect(vaultService.isUnlocked()).toBe(true);
+        expect(vaultService.isGoogleDriveVault()).toBe(true);
+        expect(publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('replaces a leftover cached vault when the server has none for this account', async () => {
+        // e.g. another account's password vault, or a first attempt that failed before publishing
+        await vaultService.setup('Str0ng!Passphrase#2026', { authProvider: 'email' });
+        await vaultService.lock();
+        mockRemoteVault();
+        // the server has no vault for this account, whatever the device still caches
+        vi.spyOn(getSyncedStorageProvider()!, 'pullFromRemote').mockResolvedValue({ ok: true, hasRemoteHeader: false });
+        vi.spyOn(googleDriveVaultKeyService, 'getOrCreateRootSecret').mockResolvedValue({ driveSecret: secret(), keyId: 'k1' });
+        const publish = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
+
+        const res = await auth.handleGoogleOidcCallback(callback);
+
+        expect(res.recoveryKey).toBeTruthy();
         expect(vaultService.isGoogleDriveVault()).toBe(true);
         expect(publish).toHaveBeenCalledTimes(1);
     });
@@ -130,6 +148,55 @@ describe('handleGoogleOidcCallback', () => {
         vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
         await auth.handleGoogleOidcCallback(callback);
         expect(reset).toHaveBeenCalled();
+    });
+
+    describe('account with a verified TOTP', () => {
+        const totp = [{ id: 'f1', factor_type: 'totp', status: 'verified' }] as never;
+
+        it('stops at the second factor before reading or writing anything', async () => {
+            mockRemoteVault();
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue(totp);
+            const pull = vi.spyOn(supabaseClient, 'getVaultHeader');
+            const driveKey = vi.spyOn(googleDriveVaultKeyService, 'getOrCreateRootSecret');
+            const publish = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
+
+            const res = await auth.handleGoogleOidcCallback(callback);
+
+            expect(res.requiresTwoFactor).toBe(true);
+            expect(res.secondFactorMethods).toEqual(['totp']);
+            expect(pull).not.toHaveBeenCalled();
+            expect(driveKey).not.toHaveBeenCalled();
+            expect(publish).not.toHaveBeenCalled();
+            expect(vaultService.isUnlocked()).toBe(false);
+        });
+
+        it('creates the vault with the AAL2 session once the code is verified', async () => {
+            mockRemoteVault();
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockResolvedValue(totp);
+            vi.spyOn(supabaseClient, 'challengeMfaFactor').mockResolvedValue({ id: 'c1' });
+            vi.spyOn(supabaseClient, 'verifyMfaFactor').mockResolvedValue(session());
+            vi.spyOn(googleDriveVaultKeyService, 'getOrCreateRootSecret').mockResolvedValue({ driveSecret: secret(), keyId: 'k1' });
+            const publish = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
+
+            await auth.handleGoogleOidcCallback(callback);
+            const res = await auth.verifySecondFactor('123456');
+
+            expect(res.requiresTwoFactor).toBeFalsy();
+            expect(res.recoveryKey).toMatch(/^[A-Z2-7-]{20,}$/);
+            expect(res.user.authProvider).toBe('google');
+            expect(publish).toHaveBeenCalledTimes(1);
+            expect(vaultService.isUnlocked()).toBe(true);
+        });
+
+        it('fails closed when the factors cannot be listed', async () => {
+            mockRemoteVault();
+            vi.spyOn(supabaseClient, 'listMfaFactors').mockRejectedValue(new Error('offline'));
+            const publish = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
+
+            await expect(auth.handleGoogleOidcCallback(callback)).rejects.toThrow('offline');
+            expect(publish).not.toHaveBeenCalled();
+            expect(vaultService.isUnlocked()).toBe(false);
+        });
     });
 });
 

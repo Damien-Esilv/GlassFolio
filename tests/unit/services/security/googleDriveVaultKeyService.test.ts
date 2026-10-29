@@ -88,6 +88,28 @@ describe('googleDriveVaultKeyService', () => {
         await expect(drive.getOrCreateRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_WRITE_FAILED_403');
     });
 
+    it('refuses a key file of another account by default', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('deleted-user') } });
+        await expect(drive.getOrCreateRootSecret('tok', 'u1')).rejects.toThrow('DRIVE_KEY_FILE_USER_MISMATCH');
+        expect(calls.some((c) => c.method === 'POST' || c.method === 'PATCH')).toBe(false);
+    });
+
+    it('replaces the key file of a deleted account (PATCH) when the account has no vault yet', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('deleted-user') } });
+        const key = await drive.getOrCreateRootSecret('tok', 'u1', { replaceForeignKey: true });
+        const write = calls.find((c) => c.method === 'PATCH')!;
+        expect(write.url).toContain('/files/f1?uploadType=multipart');
+        expect(write.body).toContain('"userId":"u1"');
+        expect(write.body).toContain(btoa(String.fromCharCode(...key.driveSecret)));
+        expect(key.keyId).not.toBe('key-1');
+    });
+
+    it('still refuses an unreadable key file, even when replacing foreign ones is allowed', async () => {
+        const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile('u1', 16) } });
+        await expect(drive.getOrCreateRootSecret('tok', 'u1', { replaceForeignKey: true })).rejects.toThrow('DRIVE_KEY_FILE_UNREADABLE');
+        expect(calls.some((c) => c.method === 'POST' || c.method === 'PATCH')).toBe(false);
+    });
+
     it('returns an existing key from getOrCreate without writing', async () => {
         const calls = stubDrive({ files: [{ id: 'f1', name: 'k' }], media: { status: 200, body: goodFile() } });
         const key = await drive.getOrCreateRootSecret('tok', 'u1');

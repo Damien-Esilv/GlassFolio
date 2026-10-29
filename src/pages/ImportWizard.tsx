@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useImportWizard, WizardStep } from '../hooks/importHooks';
 import { useAuth } from '../context/AuthContext';
+import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import DetectedFormatPanel from '../components/import/DetectedFormatPanel';
 import DuplicateFileBanner from '../components/import/DuplicateFileBanner';
 import ColumnMappingTable from '../components/import/ColumnMappingTable';
@@ -96,7 +97,7 @@ const ImportWizard: React.FC = () => {
       {wizard.isLoading && !showSnapshotWizard && (
         <div className="fixed inset-0 bg-canvas/80 z-50 flex items-center justify-center backdrop-blur-sm">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <AppThinkingOrb state="searching" size={64} className="mx-auto mb-4" label={t('common:labels.processing')} />
             <p className="text-primary">{t('common:labels.processing')}</p>
           </div>
         </div>

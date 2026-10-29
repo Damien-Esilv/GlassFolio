@@ -11,9 +11,19 @@ interface PullToRefreshProps {
 }
 
 /**
- * Universal Pull-To-Refresh with GlassFolio 3D Thinking Orb.
- * Intercepts touch and trackpad overscroll at window top, rendering the animated
- * ThinkingOrb instead of browser-native grey spinning wheels.
+ * True on phones and tablets (primary input is a finger, nothing to hover with). A desktop with a
+ * mouse or trackpad, even one with a touchscreen, keeps the browser's own behaviour: a pull-to-refresh
+ * gesture there looks like a mobile app inside a desktop window.
+ */
+const isTouchFirstDevice = (): boolean =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+/**
+ * Pull-To-Refresh with the GlassFolio Thinking Orb, for touch-first devices only.
+ * Intercepts the touch pull at the top of the page and renders the animated orb instead of the
+ * browser-native grey spinning wheel.
  */
 export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, children }) => {
   const { t } = useTranslation();
@@ -37,6 +47,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
   }, [onRefresh]);
 
   useEffect(() => {
+    if (!isTouchFirstDevice()) return undefined;
+
     const handleTouchStart = (e: TouchEvent) => {
       if (window.scrollY <= 0) {
         touchStartY.current = e.touches[0].clientY;
@@ -111,7 +123,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
             }}
           >
             <AppThinkingOrb
-              state={isRefreshing ? 'working' : progressRatio >= 1 ? 'solving' : 'breathing'}
+              state={isRefreshing ? 'working' : progressRatio >= 1 ? 'solving' : 'searching'}
               size={32}
               label={isRefreshing ? t('common:labels.loading') : t('common:actions.refresh')}
             />

@@ -4,6 +4,7 @@ import { userRepository } from '../services/repositories';
 import { vaultService } from '../services/security/vaultService';
 import { authService } from '../services/security/authService';
 import { AuthResult, SecondFactorMethod, SignUpOptions } from '../services/security/authTypes';
+import type { GoogleCallbackResult } from '../services/security/googleOidcService';
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
 import {
@@ -30,8 +31,10 @@ interface AuthContextType {
   unlockLocalVault: (password: string) => Promise<AuthResult>;
   /** Methods offered while a sign-in waits for its second factor; null when none is pending. */
   pendingSecondFactor: SecondFactorMethod[] | null;
-  completeSecondFactor: (code: string) => Promise<void>;
-  completeSecondFactorWithPasskey: () => Promise<void>;
+  completeSecondFactor: (code: string) => Promise<AuthResult>;
+  completeSecondFactorWithPasskey: () => Promise<AuthResult>;
+  /** Direct Google OIDC callback: may leave a second factor pending, like a password sign-in. */
+  handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
   cancelSecondFactor: () => Promise<void>;
   /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
   signInWithPasskey: () => Promise<AuthResult>;
@@ -242,14 +245,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return applyAuthResult(await authService.unlockLocalVault(password));
   };
 
-  const completeSecondFactor = async (code: string): Promise<void> => {
+  const completeSecondFactor = async (code: string): Promise<AuthResult> => {
     if (!authService.verifySecondFactor) throw new Error('Second factor verification is unavailable.');
-    applyAuthResult(await authService.verifySecondFactor(code));
+    return applyAuthResult(await authService.verifySecondFactor(code));
   };
 
-  const completeSecondFactorWithPasskey = async (): Promise<void> => {
+  const completeSecondFactorWithPasskey = async (): Promise<AuthResult> => {
     if (!authService.verifySecondFactorWithPasskey) throw new Error('Passkey verification is unavailable.');
-    applyAuthResult(await authService.verifySecondFactorWithPasskey());
+    return applyAuthResult(await authService.verifySecondFactorWithPasskey());
+  };
+
+  const handleGoogleCallback = async (params: GoogleCallbackResult): Promise<AuthResult> => {
+    if (!authService.handleGoogleOidcCallback) throw new Error('Google authentication is not supported in this deployment mode.');
+    return applyAuthResult(await authService.handleGoogleOidcCallback(params));
   };
 
   const signInWithPasskey = async (): Promise<AuthResult> => {
@@ -390,6 +398,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unlockLocalVault,
       pendingSecondFactor,
       completeSecondFactor,
+      handleGoogleCallback,
       completeSecondFactorWithPasskey,
       cancelSecondFactor,
       signInWithPasskey,

@@ -315,7 +315,7 @@ const Dashboard: React.FC = () => {
   if (isContextLoading || isLoadingSummary || !summary) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" role="status" aria-live="polite">
-        <AppThinkingOrb state="breathing" size={72} label={t('common:labels.loading')} />
+        <AppThinkingOrb state="searching" size={72} label={t('common:labels.loading')} />
         <span className="text-xs sm:text-sm font-semibold text-secondary tracking-wide">
           {t('common:labels.loading')}
         </span>

@@ -29,9 +29,25 @@ export interface DriveKeyResult {
 export const googleDriveVaultKeyService = {
     /**
      * Retrieves existing drive root secret from appDataFolder, or generates and stores a new one.
+     *
+     * `replaceForeignKey` is only for an account that has NO vault on the server yet: a key file that
+     * names another account is then the leftover of an account that was deleted (or never finished
+     * its first sign-in), so nothing can be locked out by replacing it. A file that cannot be read
+     * at all is still refused, since it may hold the key of a vault we cannot see.
      */
-    async getOrCreateRootSecret(accessToken: string, userId: string): Promise<DriveKeyResult> {
-        const existing = await this.readRootSecret(accessToken, userId);
+    async getOrCreateRootSecret(
+        accessToken: string,
+        userId: string,
+        options?: { replaceForeignKey?: boolean }
+    ): Promise<DriveKeyResult> {
+        let existing: DriveKeyResult | null;
+        try {
+            existing = await this.readRootSecret(accessToken, userId);
+        } catch (err) {
+            const isForeign = err instanceof Error && err.message === 'DRIVE_KEY_FILE_USER_MISMATCH';
+            if (!(options?.replaceForeignKey && isForeign)) throw err;
+            existing = null;
+        }
         if (existing) {
             return existing;
         }
