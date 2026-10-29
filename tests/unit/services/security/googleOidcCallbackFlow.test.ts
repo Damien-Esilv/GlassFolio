@@ -292,6 +292,10 @@ describe('Google actions that go through Google again', () => {
 
         expect(order).toEqual(['drive', 'account']);
         expect(googleDriveVaultKeyService.deleteOwnedRootSecret).toHaveBeenCalledWith('drive-at', 'g-user-1');
+        // and nothing of the account is left on this device
+        expect(vaultService.isInitialized()).toBe(false);
+        expect(await userRepository.getUser()).toBeNull();
+        expect(localStorage.getItem('gf_sb_session')).toBeNull();
     });
 
     it('deletes nothing when the Drive key file cannot be removed', async () => {
