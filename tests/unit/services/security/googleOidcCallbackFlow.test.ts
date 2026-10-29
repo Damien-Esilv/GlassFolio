@@ -35,7 +35,7 @@ describe('handleGoogleOidcCallback', () => {
 
         const res = await auth.handleGoogleOidcCallback(callback);
 
-        expect(getOrCreate).toHaveBeenCalledWith('drive-at', 'g-user-1');
+        expect(getOrCreate).toHaveBeenCalledWith('drive-at', 'g-user-1', { replaceForeignKey: true });
         expect(res.recoveryKey).toMatch(/^[A-Z2-7-]{20,}$/);
         expect(res.user.authProvider).toBe('google');
         expect(res.user.email).toBe('Investor@Example.test');

@@ -1020,9 +1020,12 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 this.assertVaultReplaceable();
                 await vaultService.resetVault();
             }
+            // No vault on the server: a key file naming another account is the leftover of a deleted
+            // account, and may be replaced (an unreadable file is still refused).
             const driveKey = await googleDriveVaultKeyService.getOrCreateRootSecret(
                 callbackResult.accessToken,
-                session.user.id
+                session.user.id,
+                { replaceForeignKey: true }
             );
             const setupRes = await vaultService.setupGoogleDriveVault(
                 driveKey.driveSecret,
