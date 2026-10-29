@@ -128,10 +128,13 @@ export const googleDriveVaultKeyService = {
         };
 
         const boundary = `----GlassFolioMultipart${crypto.randomUUID()}`;
-        const metadata = JSON.stringify({
-            name: VAULT_KEY_FILENAME,
-            parents: ['appDataFolder'],
-        });
+        // `parents` is only writable when creating the file: sending it on a PATCH makes Drive answer
+        // 403 (fieldNotWritable), which broke the replacement of an existing key file.
+        const metadata = JSON.stringify(
+            existingFileId
+                ? { name: VAULT_KEY_FILENAME }
+                : { name: VAULT_KEY_FILENAME, parents: ['appDataFolder'] }
+        );
         const content = JSON.stringify(payload);
 
         const multipartBody =
