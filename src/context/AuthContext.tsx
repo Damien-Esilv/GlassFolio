@@ -36,6 +36,8 @@ interface AuthContextType {
   /** Direct Google OIDC callback: may leave a second factor pending, like a password sign-in. */
   handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
   cancelSecondFactor: () => Promise<void>;
+  /** Reloads the profile from the unlocked vault (used once a sign-in flow finished outside the context). */
+  loadUserFromRepo: () => Promise<void>;
   /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
   signInWithPasskey: () => Promise<AuthResult>;
   setupLocalVault: (name: string, password: string, options?: { overwriteExisting?: boolean }) => Promise<string | undefined>;
@@ -401,6 +403,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleGoogleCallback,
       completeSecondFactorWithPasskey,
       cancelSecondFactor,
+      loadUserFromRepo,
       signInWithPasskey,
       setupLocalVault,
       logout,
