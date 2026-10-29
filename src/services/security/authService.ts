@@ -25,7 +25,7 @@ import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY, VAULT_HEADER_KEY } from '../storage/storageKeys';
 import { getSyncedStorageProvider, requireLocalPersistence } from '../storage/storageFactory';
 import { purgeLocalAccountFootprint } from '../storage/accountErasure';
-import { googleOidcService, GoogleCallbackResult } from './googleOidcService';
+import { googleOidcService, GoogleCallbackResult, GoogleCeremonyIntent, readIdTokenEmail } from './googleOidcService';
 import { googleDriveVaultKeyService } from './googleDriveVaultKeyService';
 import {
     isSupabaseConfigured,
@@ -1027,10 +1027,13 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 session.user.id,
                 { replaceForeignKey: true }
             );
+            // No recovery key is imposed: signing in with Google is meant to leave the user without a key
+            // to manage. It can be created later from the security settings (createGoogleRecoveryKey).
             const setupRes = await vaultService.setupGoogleDriveVault(
                 driveKey.driveSecret,
                 driveKey.keyId,
-                session.user.id
+                session.user.id,
+                { withRecoveryKey: false }
             );
             recoveryKey = setupRes.recoveryKey;
             await this.publishNewVault(session);
@@ -1849,6 +1852,11 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         if (!active) {
             throw new Error('Your session expired. Sign in again to delete your account.');
         }
+        await this.deleteRemoteAccountAndWipeLocal(active);
+    }
+
+    /** The account is deleted server-side first; nothing local is wiped if that fails. */
+    private async deleteRemoteAccountAndWipeLocal(active: SupabaseAuthSession): Promise<void> {
         await supabaseClient.deleteOwnAccount(active.accessToken);
 
         await vaultService.resetVault();
@@ -1857,6 +1865,60 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await this.signOut();
         purgeLocalAccountFootprint();
         await requireLocalPersistence();
+    }
+
+    /**
+     * Sends the browser through Google again for an action that needs the Drive key file. The Drive
+     * access token is never kept after sign-in, so these actions cannot reuse it.
+     */
+    public async startGoogleReauth(intent: Exclude<GoogleCeremonyIntent, 'sign-in'>): Promise<void> {
+        const user = await userRepository.getUser();
+        await googleOidcService.startCeremony({ intent, loginHint: user?.email });
+    }
+
+    /** The Google account chosen in the round trip must be the one this account is signed in with. */
+    private async requireSameGoogleAccount(
+        callbackResult: GoogleCallbackResult
+    ): Promise<SupabaseAuthSession> {
+        const active = await this.getActiveSession();
+        if (!active) {
+            throw new Error('Your session expired. Sign in again.');
+        }
+        const email = readIdTokenEmail(callbackResult.idToken);
+        if (!email || email !== active.user.email.trim().toLowerCase()) {
+            throw new Error('GOOGLE_ACCOUNT_MISMATCH');
+        }
+        return active;
+    }
+
+    /**
+     * Deletes a Google account: the Drive key file first (so the user is left with nothing behind in
+     * their Drive), then the account and local data. A failure before the account is deleted changes nothing.
+     */
+    public async completeGoogleAccountDeletion(callbackResult: GoogleCallbackResult): Promise<void> {
+        const active = await this.requireSameGoogleAccount(callbackResult);
+        await googleDriveVaultKeyService.deleteOwnedRootSecret(callbackResult.accessToken, active.user.id);
+        await this.deleteRemoteAccountAndWipeLocal(active);
+    }
+
+    /**
+     * Creates (or replaces) the emergency recovery key of a Google vault, which is created without one.
+     * The Drive key is read back to unwrap the DEK, then the new header is published before the key is shown.
+     */
+    public async createGoogleRecoveryKey(callbackResult: GoogleCallbackResult): Promise<string> {
+        const active = await this.requireSameGoogleAccount(callbackResult);
+        const driveKey = await googleDriveVaultKeyService.readRootSecret(callbackResult.accessToken, active.user.id);
+        if (!driveKey) {
+            throw new Error('DRIVE_KEY_MISSING: the vault key file is not in your Google Drive app data.');
+        }
+        if (!vaultService.isUnlocked()) {
+            await vaultService.unlockGoogleDriveVault(driveKey.driveSecret, active.user.id);
+        }
+        const recoveryKey = await vaultService.createRecoveryKeyFromDriveSecret(driveKey.driveSecret);
+        const header = vaultService.getVaultHeader();
+        if (!header) throw new Error('Vault header is missing.');
+        await supabaseClient.upsertVaultHeader(active.accessToken, header as unknown as Record<string, unknown>);
+        return recoveryKey;
     }
 }
 

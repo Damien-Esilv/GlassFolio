@@ -53,7 +53,12 @@
         "regenerateTitle": "Régénérer la clé de secours d'urgence",
         "regenerateSubtitle": "Confirmez votre mot de passe maître pour dériver une nouvelle clé de secours 256-bit.",
         "masterPasswordConfirm": "Mot de passe maître",
-        "confirmRegenerate": "Régénérer"
+        "confirmRegenerate": "Régénérer",
+        "googleRecoveryMissing": "Aucune clé de secours pour l’instant. Votre coffre s’ouvre uniquement avec votre compte Google : créez une clé pour pouvoir l’ouvrir si vous perdez l’accès à ce compte.",
+        "googleRecoveryPresent": "Une clé de secours existe pour ce coffre.",
+        "googleRecoveryCreate": "Créer une clé de secours",
+        "googleRecoveryRegenerate": "Remplacer la clé de secours",
+        "googleRecoveryRedirectNote": "Vous serez envoyé vers Google pour confirmer que c’est bien vous, puis ramené ici."
     },
     "totp": {
         "title": "Authentification à deux facteurs (2FA / TOTP)",

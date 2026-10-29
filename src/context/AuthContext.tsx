@@ -36,6 +36,12 @@ interface AuthContextType {
   /** Direct Google OIDC callback: may leave a second factor pending, like a password sign-in. */
   handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
   cancelSecondFactor: () => Promise<void>;
+  /** Google account: goes through Google again for an action that needs the Drive key file. */
+  startGoogleReauth: (intent: 'delete-account' | 'recovery-key') => Promise<void>;
+  /** After that round trip: removes the Drive key file, then deletes the account. */
+  handleGoogleAccountDeletion: (params: GoogleCallbackResult) => Promise<void>;
+  /** After that round trip: creates the emergency recovery key and returns it once. */
+  createGoogleRecoveryKey: (params: GoogleCallbackResult) => Promise<string>;
   /** Reloads the profile from the unlocked vault (used once a sign-in flow finished outside the context). */
   loadUserFromRepo: () => Promise<void>;
   /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
@@ -262,6 +268,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return applyAuthResult(await authService.handleGoogleOidcCallback(params));
   };
 
+  const startGoogleReauth = async (intent: 'delete-account' | 'recovery-key'): Promise<void> => {
+    if (!authService.startGoogleReauth) throw new Error('Google authentication is not supported in this deployment mode.');
+    await authService.startGoogleReauth(intent);
+  };
+
+  const handleGoogleAccountDeletion = async (params: GoogleCallbackResult): Promise<void> => {
+    if (!authService.completeGoogleAccountDeletion) throw new Error('Google authentication is not supported in this deployment mode.');
+    await authService.completeGoogleAccountDeletion(params);
+    setUser(null);
+  };
+
+  const createGoogleRecoveryKey = async (params: GoogleCallbackResult): Promise<string> => {
+    if (!authService.createGoogleRecoveryKey) throw new Error('Google authentication is not supported in this deployment mode.');
+    return authService.createGoogleRecoveryKey(params);
+  };
+
   const signInWithPasskey = async (): Promise<AuthResult> => {
     if (!authService.signInWithPasskey) throw new Error('Passkey sign-in is unavailable.');
     return applyAuthResult(await authService.signInWithPasskey());
@@ -403,6 +425,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleGoogleCallback,
       completeSecondFactorWithPasskey,
       cancelSecondFactor,
+      startGoogleReauth,
+      handleGoogleAccountDeletion,
+      createGoogleRecoveryKey,
       loadUserFromRepo,
       signInWithPasskey,
       setupLocalVault,

@@ -86,6 +86,12 @@ const Settings: React.FC = () => {
             setTimeout(() => setSuccessMsg(''), 5000);
             return;
         }
+        // Google account: the Drive key file is removed first, which needs a fresh Google round trip.
+        // The page is left here; the callback page deletes the key file, then the account.
+        if (user?.authProvider === 'google' && authService.startGoogleReauth) {
+            await authService.startGoogleReauth('delete-account');
+            return;
+        }
         // The account is deleted server-side first (cloud); nothing local is wiped if that fails.
         await deleteAccount({
             password,
@@ -1060,6 +1066,9 @@ const Settings: React.FC = () => {
                                                 placeholder={t('settings:dataAndBackup.confirmGooglePlaceholder')}
                                                 className="w-full px-3 py-2 text-sm bg-subtle text-primary border border-subtle rounded-xl focus:ring-1 focus:ring-negative focus:border-negative"
                                             />
+                                            <p className="text-[11px] text-tertiary mt-1.5 leading-relaxed">
+                                                {t('settings:dataAndBackup.deleteGoogleDriveNote')}
+                                            </p>
                                         </div>
                                     ) : (
                                         <p className="text-xs text-secondary">{t('security:stepUp.description')}</p>

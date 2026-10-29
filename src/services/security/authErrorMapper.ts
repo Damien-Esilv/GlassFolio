@@ -87,6 +87,8 @@ const MESSAGE_KEYS: Array<[RegExp, string]> = [
     [/mfa_step_up_required/, 'common:errors.auth.mfaStepUpRequired'],
     [/google_client_id_not_configured/, 'common:errors.auth.googleNotConfigured'],
     [/google_vault_unlock_failed/, 'common:errors.auth.googleVaultUnlockFailed'],
+    [/google_account_mismatch/, 'common:errors.auth.googleAccountMismatch'],
+    [/drive_delete_failed/, 'common:errors.auth.driveCleanupFailed'],
     [/drive_key_missing/, 'common:errors.auth.driveKeyMissing'],
     [/drive_key_file/, 'common:errors.auth.driveKeyUnreadable'],
     [/not available in local mode/, 'common:errors.auth.localEmailUnavailable'],
