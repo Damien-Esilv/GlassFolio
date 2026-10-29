@@ -9,6 +9,7 @@ import { GoogleVaultRecoveryModal } from '../components/security/GoogleVaultReco
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { runGoogleCallbackOnce } from '../services/security/googleCallbackRun';
 
 export const GoogleAuthCallback: React.FC = () => {
     const { t } = useTranslation();
@@ -19,9 +20,9 @@ export const GoogleAuthCallback: React.FC = () => {
     const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(true);
 
-    // The URL fragment is single-use (it is scrubbed when parsed) and the auth context re-renders
-    // when a second factor becomes pending: the callback must therefore run exactly once.
-    const startedRef = useRef(false);
+    // The URL fragment is single-use (it is scrubbed when parsed), so the callback runs once per page
+    // load (runGoogleCallbackOnce). This page itself can be mounted more than once: StrictMode, and the
+    // app shell swapping layout as soon as the user is signed in. Each mount only attaches to that run.
     const isMountedRef = useRef(true);
     useEffect(() => {
         isMountedRef.current = true;
@@ -55,31 +56,27 @@ export const GoogleAuthCallback: React.FC = () => {
     };
 
     useEffect(() => {
-        if (startedRef.current) return;
-        startedRef.current = true;
+        let active = true;
 
-        const processCallback = async () => {
-            try {
-                // Parse hash from URL fragment (immediately scrubbing the fragment)
-                const parsed = googleOidcService.parseCallbackHash();
+        // Exchange with Supabase, then derive/unlock/migrate the Google Drive vault. An account
+        // with a second factor stops here until the code (or passkey) is verified.
+        const run = runGoogleCallbackOnce(async () => handleGoogleCallback(googleOidcService.parseCallbackHash()));
 
-                // Exchange with Supabase, then derive/unlock/migrate the Google Drive vault. An account
-                // with a second factor stops here until the code (or passkey) is verified.
-                const res = await handleGoogleCallback(parsed);
-                if (!isMountedRef.current) return;
-
-                if (res.requiresTwoFactor) {
-                    setIsProcessing(false);
-                    return;
-                }
-                await finishSignIn(res);
-            } catch (err: unknown) {
-                reportFailure(err);
+        run.then(async (res) => {
+            if (!active) return;
+            if (res.requiresTwoFactor) {
+                setIsProcessing(false);
+                return;
             }
-        };
+            await finishSignIn(res);
+        }).catch((err: unknown) => {
+            if (active) reportFailure(err);
+        });
 
-        void processCallback();
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- single-use callback, see startedRef
+        return () => {
+            active = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- single-use callback, see runGoogleCallbackOnce
     }, []);
 
     const handleSecondFactorCancelled = async (): Promise<void> => {
