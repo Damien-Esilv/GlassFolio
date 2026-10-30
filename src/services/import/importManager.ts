@@ -228,6 +228,7 @@ export async function parseFile(
     const instrumentsById = new Map<string, Instrument>();
     // New instruments are denominated in the target account currency (EUR for a PEA, not USD)
     const accountCurrency = db.getAccountById(config.accountId)?.defaultCurrency;
+    const accountType = db.getAccountById(config.accountId)?.type;
 
     // File-wide conventions (day/month order, decimal separator, amount signs), read once
     const rowContext = buildRowContext(headers, rows, mappings, {
@@ -269,7 +270,8 @@ export async function parseFile(
                     name: assetName,
                     exchange,
                     network,
-                    contractAddress
+                    contractAddress,
+                    accountType
                 });
                 instrumentId = instrument.id;
                 parsed.instrumentId = instrumentId;

@@ -25,6 +25,7 @@ import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../constants/themeCata
 import { authService } from '../services/security/authService';
 import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
 import { LocalStorageStatusCard } from '../components/security/LocalStorageStatusCard';
+import { AssetLookupToggle } from '../components/settings/AssetLookupToggle';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
@@ -493,6 +494,8 @@ const Settings: React.FC = () => {
                                             <option value="YYYY-MM-DD">{t('settings:preferences.dateFormatISO')}</option>
                                         </select>
                                     </div>
+
+                                    <AssetLookupToggle />
 
                                     {/* Appearance & Themes Section */}
                                     <div className="border-t border-border pt-6 space-y-5">

@@ -11,6 +11,7 @@
  */
 
 import {
+    AccountType,
     Instrument,
     InstrumentType,
     MarketIdentifier,
@@ -23,6 +24,7 @@ import { validateISIN } from './core/validationService';
 import { portfolioService } from './portfolioService';
 import { taxService } from './fiscal/taxService';
 import { forgetCachedPrices } from './priceService';
+import { classifyAsset } from './assetClassifier';
 
 // ============================================================================
 // TYPES
@@ -51,6 +53,8 @@ export interface AssetHint {
     currencyCode?: string;
     /** Denomination currency (e.g. USD for US stocks) */
     denominationCurrency?: string;
+    /** Type of the account the asset is imported into: its default class when nothing else tells. */
+    accountType?: AccountType;
 }
 
 /**
@@ -463,14 +467,23 @@ export const instrumentService = {
             return existing;
         }
 
-        // Create new instrument
-        const type = inferInstrumentType(hint);
+        // Create new instrument: the class comes from the file, the currency code, the account and, best
+        // effort, a market-data lookup (assetClassifier); the local rules are the offline fallback.
+        const classification = await classifyAsset({
+            symbol: upperSymbol,
+            isin: upperIsin,
+            network: hint.network,
+            contractAddress: hint.contractAddress,
+            accountType: hint.accountType,
+            type: hint.type,
+        }).catch(() => undefined);
+        const type = classification?.type ?? inferInstrumentType(hint);
         const now = new Date().toISOString();
 
         const marketIdentifier: MarketIdentifier = {
             symbol: upperSymbol,
             isin: upperIsin,
-            exchange: hint.exchange,
+            exchange: hint.exchange ?? classification?.exchange,
             network: hint.network,
             contractAddress: hint.contractAddress,
             currencyCode: type === 'cash' ? (hint.currencyCode || upperSymbol) : hint.currencyCode
@@ -481,7 +494,7 @@ export const instrumentService = {
         const newInstrument: Instrument = {
             id: `instr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             ownerId: 'default-user',
-            name: hint.name || upperSymbol,
+            name: hint.name || classification?.name || upperSymbol,
             type,
             marketIdentifier,
             isMarketReady: validation.isMarketReady,

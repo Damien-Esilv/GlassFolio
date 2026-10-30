@@ -543,6 +543,7 @@ export async function generateReconciliationTransactions(
         try {
             const instrument = await instrumentService.findOrCreateInstrument({
                 denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
+                accountType: db.getAccountById(accountId)?.type,
                 symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
                 isin: diff.assetIsin,
                 name: diff.displayName
@@ -634,6 +635,7 @@ export async function createPositionTransactions(
         try {
             const instrument = await instrumentService.findOrCreateInstrument({
                 denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
+                accountType: db.getAccountById(accountId)?.type,
                 symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
                 isin: pos.assetIsin,
                 name: pos.displayName
