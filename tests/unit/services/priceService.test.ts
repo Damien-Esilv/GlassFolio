@@ -81,6 +81,8 @@ describe('priceService.getLastPriceFetchTime', () => {
   });
 });
 
+const clearCacheOnly = () => localStorage.removeItem('gf_price_cache');
+
 describe('priceService.refreshPositionPrices', () => {
   beforeEach(() => {
     clearPriceCache();
@@ -120,6 +122,28 @@ describe('priceService.refreshPositionPrices', () => {
     // fetch should not have been called for cash
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result).toHaveLength(1);
+  });
+
+  it('never queries a price tracker for "Other" assets: the price is the latest one entered by hand', async () => {
+    saveManualPrice('ARTWORK', 11000);
+    saveManualPrice('ARTWORK', 12500);
+    // even once the 15-minute price cache is gone, the hand-entered price stays
+    clearCacheOnly();
+    const positions = [makePosition({ type: 'Other', symbol: 'ARTWORK', quantity: 2, avgCost: 10000, lastPrice: 10000, marketValue: 20000 })];
+
+    const result = await refreshPositionPrices(positions);
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result[0].lastPrice).toBe(12500);
+    expect(result[0].marketValue).toBe(25000);
+    expect(result[0].unrealizedPL).toBe(5000);
+  });
+
+  it('leaves an "Other" asset without a manual price untouched and offline', async () => {
+    const positions = [makePosition({ type: 'Other', symbol: 'WINE', lastPrice: 0, marketValue: 0 })];
+    const result = await refreshPositionPrices(positions);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result[0].lastPrice).toBe(0);
   });
 
   it('uses cached prices when cache is valid (< 15 min old)', async () => {

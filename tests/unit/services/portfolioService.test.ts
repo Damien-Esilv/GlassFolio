@@ -72,6 +72,16 @@ describe('portfolioService', () => {
       expect(result[0].symbol).toBe('BTC');
     });
 
+    it('has an "Other" class: bonds and other assets are listed apart from ETFs', async () => {
+      const other: Position = { ...samplePositions[0], id: 'pos-3', instrument: 'Vintage wine', symbol: 'WINE', type: 'Other', lastPrice: 900, marketValue: 900 };
+      vi.spyOn(portfolioRepository, 'getPositions').mockResolvedValue([...samplePositions, other]);
+      vi.spyOn(portfolioRepository, 'savePositions').mockResolvedValue(undefined);
+
+      const result = await portfolioService.getPositions({ type: 'Other' });
+      expect(result.map(p => p.symbol)).toEqual(['WINE']);
+      expect((await portfolioService.getPositions({ type: 'ETFs' }))).toHaveLength(0);
+    });
+
     it('filters positions by search query', async () => {
       vi.spyOn(portfolioRepository, 'getPositions').mockResolvedValue(samplePositions);
       vi.spyOn(portfolioRepository, 'savePositions').mockResolvedValue(undefined);

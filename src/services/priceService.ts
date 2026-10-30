@@ -105,7 +105,8 @@ const COINGECKO_MAP: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function toYahooTicker(pos: Position): string | null {
-    if (pos.type === 'Cash') return null;
+    // Cash has no price; "Other" has no price tracker either: its price is entered by hand.
+    if (pos.type === 'Cash' || pos.type === 'Other') return null;
     const clean = pos.symbol.trim().toUpperCase();
 
     if (pos.type === 'Crypto') {
@@ -201,6 +202,14 @@ export function getManualPriceHistory(symbol: string): ManualPricePoint[] {
     } catch {
         return [];
     }
+}
+
+/** Latest price the user entered by hand for a symbol, if any. */
+function latestManualPrice(symbol: string): number | undefined {
+    const points = getManualPriceHistory(symbol);
+    if (points.length === 0) return undefined;
+    const latest = points.reduce((a, b) => (new Date(b.date).getTime() >= new Date(a.date).getTime() ? b : a));
+    return latest.price > 0 ? latest.price : undefined;
 }
 
 function readCache(): PriceCache | null {
@@ -324,7 +333,8 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
     }
 
     const tickers = Array.from(tickerToPositions.keys());
-    if (tickers.length === 0) return positions;
+    // "Other" assets have no ticker but still take their hand-entered price below
+    if (tickers.length === 0 && !positions.some(p => p.type === 'Other')) return positions;
 
     // Check cache
     const cached = readCache();
@@ -363,8 +373,12 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
 
     // Apply resolved prices to positions
     return positions.map(pos => {
+        if (pos.type === 'Cash') return pos;
         const ticker = toYahooTicker(pos);
-        const resolvedPrice = (ticker && prices[ticker]) ?? prices[pos.symbol.trim().toUpperCase()];
+        // "Other": the latest price entered by hand, kept in the manual price history (the 15-minute
+        // price cache would drop it); every other class: the fetched or cached market price.
+        const manualPrice = pos.type === 'Other' ? latestManualPrice(pos.symbol) : undefined;
+        const resolvedPrice = manualPrice ?? (ticker && prices[ticker]) ?? prices[pos.symbol.trim().toUpperCase()];
 
         if (!resolvedPrice) return pos;
 
@@ -407,7 +421,7 @@ export async function fetchRealPriceHistory(
     pos: Position,
     timeRange: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL' | string = '1Y'
 ): Promise<HistoricalPricePoint[]> {
-    if (!pos || pos.type === 'Cash') return [];
+    if (!pos || pos.type === 'Cash' || pos.type === 'Other') return [];
 
     const ticker = toYahooTicker(pos) || pos.symbol.trim().toUpperCase();
     const cacheKey = `${ticker}_${timeRange}`;

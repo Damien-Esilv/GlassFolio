@@ -60,7 +60,9 @@
         "badges": {
             "cash": "Cash",
             "untracked": "Untracked",
-            "untrackedTooltip": "Price is not automatically updated via Yahoo Finance"
+            "untrackedTooltip": "Price is not automatically updated via Yahoo Finance",
+            "manualPrice": "Manual price",
+            "manualPriceTooltip": "No price tracker for this asset: its price is the one you enter by hand."
         },
         "manualModal": {
             "title": "Manual Price Entry",

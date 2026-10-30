@@ -1,5 +1,6 @@
 import { Achievement, Position, Transaction } from '../types';
 import { db, delay } from './db';
+import { getStartOfCurrentWeek } from '../utils/date';
 
 export interface AchievementUnlockEvent {
     achievementId: string;
@@ -83,23 +84,35 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
     return maxMonths;
 }
 
+/** Local calendar day of a date, as a stable key (no DST arithmetic on timestamps). */
+const dayKey = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
 /**
- * Calculates active tracking streak (distinct active weeks from transactions).
+ * Calculates the tracking streak: the number of consecutive ISO weeks (Monday to Sunday, local time)
+ * with at least one completed transaction, ending this week or, if nothing happened yet this week,
+ * last week. Weeks without activity break it; future-dated and pending transactions do not count.
  */
-export function calculateWeeklyTrackingStreak(transactions: Transaction[]): number {
-    if (transactions.length === 0) return 0;
-    const weekSet = new Set<string>();
+export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: Date = new Date()): number {
+    const activeWeeks = new Set<string>();
     transactions.forEach(t => {
+        if (t.status === 'Pending') return;
         const d = new Date(t.date);
-        if (!isNaN(d.getTime())) {
-            const year = d.getFullYear();
-            const oneJan = new Date(year, 0, 1);
-            const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-            const week = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
-            weekSet.add(`${year}-W${week}`);
-        }
+        if (isNaN(d.getTime()) || d.getTime() > now.getTime()) return;
+        activeWeeks.add(dayKey(getStartOfCurrentWeek(d)));
     });
-    return Math.max(1, weekSet.size);
+    if (activeWeeks.size === 0) return 0;
+
+    const cursor = getStartOfCurrentWeek(now);
+    if (!activeWeeks.has(dayKey(cursor))) {
+        cursor.setDate(cursor.getDate() - 7);
+        if (!activeWeeks.has(dayKey(cursor))) return 0;
+    }
+    let streak = 0;
+    while (activeWeeks.has(dayKey(cursor))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 7);
+    }
+    return streak;
 }
 
 // This simulates the "Game Engine" running on the server
