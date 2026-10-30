@@ -69,6 +69,7 @@ export const portfolioService = {
 
             positionMap.set(key, {
                 id: `pos-${crypto.randomUUID()}`,
+                instrumentId: instrument?.id,
                 instrument: instrument?.name || firstTx.label || symbol,
                 symbol,
                 quantity: state.quantity,

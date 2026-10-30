@@ -47,6 +47,7 @@ export type ValidatedFinancialGoal = z.infer<typeof FinancialGoalSchema>;
 
 export const PositionSchema = z.object({
   id: z.string().min(1),
+  instrumentId: z.string().optional(),
   instrument: z.string(),
   symbol: z.string(),
   isin: z.string().optional(),
@@ -205,6 +206,7 @@ export function repairPosition(raw: unknown): ValidatedPosition | null {
 
   const repaired = {
     id,
+    instrumentId: typeof item.instrumentId === 'string' ? item.instrumentId : undefined,
     instrument: typeof item.instrument === 'string' ? item.instrument : 'Unknown Asset',
     symbol: typeof item.symbol === 'string' ? item.symbol : 'UNKNOWN',
     isin: typeof item.isin === 'string' ? item.isin : undefined,

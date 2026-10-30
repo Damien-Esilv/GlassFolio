@@ -239,6 +239,24 @@ function writeCache(data: Record<string, number>): void {
     }
 }
 
+/** Drops the cached market price of symbols whose asset was edited (their old price no longer applies). */
+export function forgetCachedPrices(symbols: string[]): void {
+    try {
+        const raw = appStorage.getItem(CACHE_KEY);
+        if (!raw) return;
+        const parsed: PriceCache = JSON.parse(raw);
+        for (const symbol of symbols) {
+            const clean = symbol.trim().toUpperCase();
+            if (!clean) continue;
+            delete parsed.data[clean];
+            delete parsed.data[`${clean}-USD`];
+        }
+        appStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+    } catch {
+        // Storage disabled or cache corrupted: nothing to forget
+    }
+}
+
 export function clearPriceCache(): void {
     appStorage.removeItem(CACHE_KEY);
     appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);

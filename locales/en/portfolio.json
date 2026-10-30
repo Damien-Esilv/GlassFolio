@@ -75,6 +75,41 @@
         "fallback": {
             "noSource": "Unknown source",
             "mainAccount": "Main account"
+        },
+        "editAsset": {
+            "title": "Edit asset",
+            "name": "Name",
+            "symbol": "Symbol / ticker",
+            "type": "Asset type",
+            "isin": "ISIN",
+            "currency": "Currency",
+            "exchange": "Exchange",
+            "network": "Network (crypto)",
+            "contractAddress": "Contract address (crypto)",
+            "noInstrument": "This position is not linked to an asset record yet, so only its price can be edited here. Reload after a recalculation, or edit the asset from a transaction.",
+            "otherPriceHint": "“Other” assets have no price tracker: the price you enter here is the one used.",
+            "saveFailed": "The asset could not be saved. Nothing was changed.",
+            "mergeInto": "Merge into {{name}} ({{symbol}})",
+            "save": "Save asset",
+            "types": {
+                "stock": "Stock",
+                "etf": "ETF",
+                "fund": "Fund",
+                "crypto": "Crypto",
+                "cash": "Cash",
+                "bond": "Bond",
+                "other": "Other (manual price)"
+            },
+            "issues": {
+                "INSTRUMENT_SYMBOL_REQUIRED": "The symbol is required.",
+                "INSTRUMENT_TYPE_INVALID": "Choose a valid asset type.",
+                "INSTRUMENT_ISIN_INVALID": "The ISIN is not valid: 2 letters, 9 letters or digits, then a check digit.",
+                "INSTRUMENT_ISIN_CHECKDIGIT": "The check digit of {{value}} does not match: double-check the ISIN.",
+                "INSTRUMENT_CURRENCY_INVALID": "The currency must be a code of 2 to 10 letters or digits (EUR, USD, USDT…).",
+                "INSTRUMENT_DUPLICATE": "{{name}} ({{symbol}}) is already recorded with the same symbol or ISIN. Merge into it to keep a single asset.",
+                "INSTRUMENT_MARKET_DATA_MISSING": "Not enough identifiers to fetch a market price automatically (ISIN, or symbol and exchange; for crypto an exchange, network or contract). You can still enter the price by hand.",
+                "INSTRUMENT_MANUAL_PRICE_ONLY": "No price tracker for this class: the value comes from the price you enter by hand."
+            }
         }
     },
     "hub": {
