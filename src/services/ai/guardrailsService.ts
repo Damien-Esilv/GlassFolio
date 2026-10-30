@@ -105,10 +105,12 @@ class GuardrailsService {
 
     let sanitized = content;
 
-    // 1. API Keys (OpenAI, Anthropic, Gemini, AWS)
+    // 1. API Keys (OpenAI, Anthropic, Gemini, AWS, Groq, CoinGecko)
     sanitized = sanitized.replace(/sk-[a-zA-Z0-9_-]{20,}/g, '[REDACTED_API_KEY]');
     sanitized = sanitized.replace(/AIzaSy[a-zA-Z0-9_-]{30,}/g, '[REDACTED_API_KEY]');
     sanitized = sanitized.replace(/AKIA[0-9A-Z]{16}/g, '[REDACTED_API_KEY]');
+    sanitized = sanitized.replace(/gsk_[a-zA-Z0-9_-]{20,}/g, '[REDACTED_API_KEY]');
+    sanitized = sanitized.replace(/CG-[a-zA-Z0-9_-]{20,}/g, '[REDACTED_API_KEY]');
 
     // 2. Recovery keys (8 groups of 4 uppercase alphanumeric chars)
     sanitized = sanitized.replace(
@@ -135,7 +137,13 @@ class GuardrailsService {
   public assertSafeContext(content: string): void {
     if (!content) return;
 
-    if (/sk-[a-zA-Z0-9_-]{20,}/.test(content) || /AIzaSy[a-zA-Z0-9_-]{30,}/.test(content)) {
+    if (
+      /sk-[a-zA-Z0-9_-]{20,}/.test(content) ||
+      /AIzaSy[a-zA-Z0-9_-]{30,}/.test(content) ||
+      /AKIA[0-9A-Z]{16}/.test(content) ||
+      /gsk_[a-zA-Z0-9_-]{20,}/.test(content) ||
+      /CG-[a-zA-Z0-9_-]{20,}/.test(content)
+    ) {
       throw new Error('Potential API key exfiltration detected in AI context');
     }
 

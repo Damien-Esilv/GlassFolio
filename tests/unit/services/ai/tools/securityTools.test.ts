@@ -110,6 +110,8 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
         it('redacts sensitive API keys, recovery keys, and vault envelope metadata', () => {
             const rawPrompt = `
                 User input: my key is sk-1234567890abcdef1234567890
+                and groq key is gsk_1234567890abcdef1234567890
+                and coingecko key is CG-1234567890abcdef1234567890
                 and my recovery key is A1B2-C3D4-E5F6-G7H8-I9J0-K1L2-M3N4-O5P6
                 and otp uri otpauth://totp/GlassFolio:alex?secret=JBSWY3DPEHPK3PXP
                 and envelope {"v":1,"alg":"A256GCM","iv":"iv","ct":"ct"}
@@ -119,6 +121,8 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
             const redacted = guardrailsService.redactSensitiveExfiltrations(rawPrompt);
 
             expect(redacted).not.toContain('sk-1234567890abcdef1234567890');
+            expect(redacted).not.toContain('gsk_1234567890abcdef1234567890');
+            expect(redacted).not.toContain('CG-1234567890abcdef1234567890');
             expect(redacted).toContain('[REDACTED_API_KEY]');
 
             expect(redacted).not.toContain('A1B2-C3D4-E5F6-G7H8-I9J0-K1L2-M3N4-O5P6');
@@ -134,6 +138,14 @@ describe('securityTools & AI Guardrails (AI & MCP)', () => {
         it('assertSafeContext detects and blocks exfiltration of raw secrets', () => {
             expect(() => {
                 guardrailsService.assertSafeContext('Here is the key: sk-live-99999999999999999999999');
+            }).toThrow(/Potential API key exfiltration detected/);
+
+            expect(() => {
+                guardrailsService.assertSafeContext('Groq key: gsk_1234567890abcdef1234567890');
+            }).toThrow(/Potential API key exfiltration detected/);
+
+            expect(() => {
+                guardrailsService.assertSafeContext('CoinGecko key: CG-1234567890abcdef1234567890');
             }).toThrow(/Potential API key exfiltration detected/);
 
             expect(() => {
