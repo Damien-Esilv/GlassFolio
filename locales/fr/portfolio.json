@@ -60,7 +60,9 @@
         "badges": {
             "cash": "Liquidités",
             "untracked": "Non tracké",
-            "untrackedTooltip": "Le prix n'est pas mis à jour automatiquement via Yahoo Finance"
+            "untrackedTooltip": "Le prix n'est pas mis à jour automatiquement via Yahoo Finance",
+            "manualPrice": "Prix manuel",
+            "manualPriceTooltip": "Cet actif n’a pas de suivi de prix : son prix est celui que vous saisissez à la main."
         },
         "manualModal": {
             "title": "Saisie Manuelle du Prix",

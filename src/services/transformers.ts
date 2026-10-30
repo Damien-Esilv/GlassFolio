@@ -2,22 +2,7 @@ import { Transaction } from '../types';
 import { UnifiedTransaction, Account, Institute, Instrument, InstrumentType } from '../types';
 import { db } from './db';
 import { resolveQuantity } from './portfolio/positionLedger';
-
-/**
- * Map InstrumentType to legacy asset class
- */
-function instrumentTypeToAssetClass(type: InstrumentType): 'Equity' | 'ETF' | 'Crypto' | 'Cash' {
-    switch (type) {
-        case 'stock': return 'Equity';
-        case 'etf': return 'ETF';
-        case 'fund': return 'ETF';
-        case 'crypto': return 'Crypto';
-        case 'cash': return 'Cash';
-        case 'bond': return 'Equity';
-        case 'other': return 'Equity';
-        default: return 'Equity';
-    }
-}
+import { instrumentTypeToPositionType } from './portfolio/assetTypeMapping';
 
 /**
  * Helper to lookup entity by ID from either Map<string, T> or T[]
@@ -73,9 +58,7 @@ export function convertToLegacyTransaction(
     };
 
     // Asset class from instrument type (no hardcoded symbol lists)
-    const assetClass = instrument
-        ? instrumentTypeToAssetClass(instrument.type)
-        : 'Equity';
+    const assetClass = instrumentTypeToPositionType(instrument?.type);
 
     const symbol = instrument?.marketIdentifier.symbol || unified.assetSymbol || '';
 

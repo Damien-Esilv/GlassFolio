@@ -7,15 +7,11 @@ import { formatChartDate, DateFormatPattern } from '../utils/date';
 import { roundCurrency } from '../utils/currency';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
+import { instrumentTypeToPositionType } from './portfolio/assetTypeMapping';
 import { buildLedger, buildRealizedEvents, applyTransaction, defaultLedgerKey, emptyLedgerState, rowSymbol, sortChronologically, LedgerState } from './portfolio/positionLedger';
 
 /** Asset class shown for a position, from its instrument (no instrument: equity) */
-const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => {
-    if (!instrument) return 'Equity';
-    if (instrument.type === 'stock') return 'Equity';
-    if (instrument.type === 'crypto') return 'Crypto';
-    return instrument.type === 'cash' ? 'Cash' : 'ETF';
-};
+const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => instrumentTypeToPositionType(instrument?.type);
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {

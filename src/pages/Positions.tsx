@@ -39,7 +39,8 @@ const Positions: React.FC = () => {
     ...ASSET_CLASSES_CONFIG.map(ac => ({
         value: ac.id,
         label: t(`categories.${ac.i18nKey}`, { defaultValue: ac.id })
-    }))
+    })),
+    { value: 'Other', label: t('categories.other') }
   ]), [t]);
 
   // Derive unique values from global state (for dropdowns)
@@ -171,7 +172,11 @@ const Positions: React.FC = () => {
 
                 // Untracked price detection (detect non-standard symbols like emojis, random text, or un-resolvable Yahoo tickers)
                 const isStandardTicker = /^[A-Za-z0-9.-]+$/.test(pos.symbol.trim());
-                const isUntracked = pos.type !== 'Cash' && (!isStandardTicker || pos.symbol.startsWith('UNTRACKED') || pos.lastPrice === 0 || pos.symbol.includes('MANUAL'));
+                // "Other" assets have no price tracker: the price is entered by hand, so a missing price is what to flag.
+                const isManualPriced = pos.type === 'Other';
+                const isUntracked = pos.type !== 'Cash' && (isManualPriced
+                  ? pos.lastPrice === 0
+                  : (!isStandardTicker || pos.symbol.startsWith('UNTRACKED') || pos.lastPrice === 0 || pos.symbol.includes('MANUAL')));
 
                 return (
                   <tr
@@ -196,6 +201,7 @@ const Positions: React.FC = () => {
                         <div className="flex gap-2 text-xs text-secondary items-center mt-0.5">
                           <span>{pos.symbol}</span>
                           {pos.type === 'Cash' && <span className="bg-success/10 text-success px-1 rounded">{t('positions.badges.cash')}</span>}
+                          {isManualPriced && !isUntracked && <span className="bg-subtle text-secondary px-1 rounded" title={t('positions.badges.manualPriceTooltip')}>{t('positions.badges.manualPrice')}</span>}
                         </div>
                       </div>
                     </td>
