@@ -14,6 +14,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useImportWizard from '../../../src/hooks/importHooks';
+import { importService } from '../../../src/services/importService';
+import { stageInstrument, clearStagedInstruments } from '../../../src/services/import/instrumentDrafts';
 
 // ============================================================================
 // MOCKS
@@ -596,6 +598,44 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
 
             act(() => { result.current.cancelEditRow(); });
             expect(result.current.editingRowId).toBeNull();
+        });
+
+        it('updateRowField re-validates with the full rules, and the counters follow', async () => {
+            const result = await setupToStep4();
+            expect(result.current.stats.errors).toBe(1);
+
+            act(() => { result.current.updateRowField('row-2', 'transactionDate', '2024-01-17'); });
+            act(() => { result.current.updateRowField('row-2', 'amountPrimary', '10'); });
+
+            const row = result.current.stagedTransactions.find(t => t.id === 'row-2')!;
+            expect(row.errors.some(e => e.field === 'transactionDate' || e.field === 'amountPrimary')).toBe(false);
+            expect(row.errors.every(e => Boolean(e.code))).toBe(true); // coded: no more "Invalid value" after an edit
+            expect(result.current.stats.errors).toBe(result.current.stagedTransactions.filter(t => t.status === 'error').length);
+            expect(result.current.stats.total).toBe(result.current.stagedTransactions.length);
+        });
+
+        it('lists the assets of the import and lets a draft asset be edited before confirming', async () => {
+            vi.mocked(importService.parseFile).mockResolvedValueOnce({
+                candidates: [
+                    { ...mockStagedTransactions[0], parsed: { ...mockStagedTransactions[0].parsed, assetSymbol: 'NEAR', instrumentId: 'draft-near' } },
+                ],
+                stats: { total: 1, valid: 1, errors: 0, duplicates: 0, warnings: 0 },
+                instruments: [],
+            } as never);
+            const draft = { id: 'draft-near', ownerId: 'u', name: 'NEAR', type: 'stock', marketIdentifier: { symbol: 'NEAR' }, isMarketReady: false, denominationCurrency: 'EUR', createdAt: '', updatedAt: '' } as never;
+            stageInstrument(draft);
+            const result = await setupToStep4();
+
+            // the asset table is rebuilt from the rows
+            act(() => { result.current.removeRow('nothing'); });
+            expect(result.current.instruments.map(i => [i.instrument.marketIdentifier.symbol, i.isNew, i.rowCount])).toEqual([['NEAR', true, 1]]);
+            expect(result.current.previewImportInstrumentIssues('draft-near', { isin: 'bad' }).some(i => i.code === 'INSTRUMENT_ISIN_INVALID')).toBe(true);
+
+            await act(async () => { await result.current.updateImportInstrument('draft-near', { type: 'crypto', exchange: 'Bitget' }); });
+
+            expect(result.current.instruments[0].instrument).toMatchObject({ type: 'crypto', marketIdentifier: { exchange: 'Bitget' } });
+            expect(result.current.stagedTransactions[0].parsed.instrumentId).toBe('draft-near');
+            await expect(act(async () => { await result.current.updateImportInstrument('draft-near', { isin: 'bad' }); })).rejects.toThrow();
         });
 
         it('importableTxCount counts only importable rows', async () => {
