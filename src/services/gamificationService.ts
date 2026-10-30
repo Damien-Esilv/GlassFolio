@@ -1,4 +1,4 @@
-import { InvestorRank, GamificationQuest, ThemeReward } from '../types';
+import { InvestorRank, GamificationQuest, ThemeReward, XpEvent } from '../types';
 import { db, delay, isRealUserVaultActive } from './db';
 
 export const INVESTOR_RANKS: InvestorRank[] = [
@@ -199,6 +199,30 @@ export const gamificationService = {
             return defaultQuests;
         }
         return stored;
+    },
+
+    /** Every dated gain of experience points, oldest first. */
+    getXpEvents: async (): Promise<XpEvent[]> => {
+        await delay(100);
+        return db.getXpEvents();
+    },
+
+    /**
+     * Records a gain of experience points with its date, so that "XP earned this week" can be told.
+     * Returns the stored event, or null for a gain of nothing.
+     */
+    recordXp: async (amount: number, source: XpEvent['source'], refId?: string, at: Date = new Date()): Promise<XpEvent | null> => {
+        await delay(50);
+        if (!Number.isFinite(amount) || amount <= 0) return null;
+        const event: XpEvent = {
+            id: `xp-${at.getTime()}-${Math.random().toString(36).slice(2, 9)}`,
+            date: at.toISOString(),
+            amount: Math.round(amount),
+            source,
+            refId
+        };
+        db.saveXpEvents([...db.getXpEvents(), event]);
+        return event;
     },
 
     /**

@@ -198,6 +198,7 @@ export async function restoreBackupReset(backupData: Record<string, any[]>): Pro
     if (data.quests && typeof (db as any).saveQuests === 'function') {
         (db as any).saveQuests(data.quests);
     }
+    if (data.xpEvents) db.saveXpEvents(data.xpEvents);
     if (data.pinnedBadges && typeof (db as any).savePinnedBadges === 'function') {
         const ids = data.pinnedBadges.map((b: any) => typeof b === 'string' ? b : b?.id).filter(Boolean);
         (db as any).savePinnedBadges(ids);
@@ -268,6 +269,7 @@ export async function mergeBackupData(data: Record<string, any[]>): Promise<{ im
     if (data.quests && typeof (db as any).saveQuests === 'function' && typeof (db as any).getQuests === 'function') {
         (db as any).saveQuests(mergeEntityList((db as any).getQuests(), data.quests));
     }
+    if (data.xpEvents) db.saveXpEvents(mergeEntityList(db.getXpEvents(), data.xpEvents));
     if (data.gamification && data.gamification.length > 0) {
         const currentGamificationStr = appStorage.getItem('glassfolio_gamification_v1');
         if (!currentGamificationStr) {

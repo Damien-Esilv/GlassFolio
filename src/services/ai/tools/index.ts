@@ -8,7 +8,8 @@ import { listGoalsTool, createGoalTool } from './goalTools';
 import { 
   getGamificationStatusTool, 
   suggestNextMilestoneTool, 
-  listQuestsTool 
+  listQuestsTool,
+  getProgressStatsTool
 } from './gamificationTools';
 import {
   getSecurityStatusTool,
@@ -55,6 +56,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getGamificationStatusTool);
   aiToolRegistry.registerTool(suggestNextMilestoneTool);
   aiToolRegistry.registerTool(listQuestsTool);
+  aiToolRegistry.registerTool(getProgressStatsTool);
   aiToolRegistry.registerTool(getSecurityStatusTool);
   aiToolRegistry.registerTool(listAuthMethodsTool);
   aiToolRegistry.registerTool(listVaultSecretsTool);
@@ -95,6 +97,7 @@ export {
   getGamificationStatusTool,
   suggestNextMilestoneTool,
   listQuestsTool,
+  getProgressStatsTool,
   getSecurityStatusTool,
   listAuthMethodsTool,
   listVaultSecretsTool,

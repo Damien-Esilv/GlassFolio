@@ -7,7 +7,8 @@
     "goals": "Goals",
     "achievements": "Achievements",
     "quests": "Missions",
-    "ranks": "Ranks & Rewards"
+    "ranks": "Ranks & Rewards",
+    "stats": "Stats"
   },
   "level": "Level",
   "xp": "XP",
@@ -119,5 +120,22 @@
       "title": "Portfolio Pioneer",
       "description": "Maintain active portfolio tracking consistency"
     }
+  },
+  "stats": {
+    "thisWeek": "This week",
+    "allTime": "All time",
+    "totalTransactions": "Transactions",
+    "currentStreak": "Current streak",
+    "bestStreak": "Best streak",
+    "activeWeeks": "Active weeks",
+    "totalXp": "Total XP",
+    "level": "Level",
+    "achievements": "Achievements unlocked",
+    "goals": "Goals reached",
+    "trackingSince": "Tracking since",
+    "weeksValue_one": "{{count}} week",
+    "weeksValue_other": "{{count}} weeks",
+    "ofTotal": "{{done}} / {{total}}",
+    "noneYet": "Nothing yet"
   }
 }

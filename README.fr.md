@@ -31,7 +31,7 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 1. **Chiffré avant de quitter votre navigateur.** Transactions, positions, objectifs et secrets vivent dans un coffre côté client : AES-256-GCM, avec des clés dérivées de votre mot de passe maître par PBKDF2 (600 000 itérations) et HKDF. Un serveur ne voit jamais que du texte chiffré.
 2. **Auto-hébergé ou cloud, à vous de choisir.** Une commande démarre un conteneur Docker durci sur votre machine ou votre NAS, sans compte ni télémétrie. Ou utilisez la version cloud gérée : rien à installer, synchronisée sur vos appareils. Même application, même chiffrement.
 3. **Un moteur fiscal modulaire.** Les règles françaises sont intégrées nativement : comparez le PFU et le barème progressif sur vos chiffres réels et préparez les Cerfa 2042, 2074 et 3916. Les règles sont isolées par juridiction pour accueillir de nouveaux pays.
-4. **Un assistant IA qui demande d'abord.** Interrogez votre portefeuille en langage naturel, avec un modèle local (Ollama) ou votre propre clé d'API. 34 outils sont exposés à l'assistant intégré et aux clients MCP externes, et toute action qui modifie des données financières exige votre approbation explicite.
+4. **Un assistant IA qui demande d'abord.** Interrogez votre portefeuille en langage naturel, avec un modèle local (Ollama) ou votre propre clé d'API. 35 outils sont exposés à l'assistant intégré et aux clients MCP externes, et toute action qui modifie des données financières exige votre approbation explicite.
 5. **Importez votre historique.** Importez les exports CSV de vos courtiers et banques avec mappage des colonnes, aperçu en direct, protection contre les doublons et annulation en un clic.
 
 ## ✨ Fonctionnalités

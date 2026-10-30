@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,8 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
 import { STAGGER_DELAY_MS } from '../constants/animations';
 import { gamificationService } from '../services/gamificationService';
+import { computeProgressStats } from '../services/progressStatsService';
+import ProgressStatsTab from '../components/progress/ProgressStatsTab';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
@@ -41,7 +43,7 @@ const GOAL_COLOR_TOKENS: Record<string, string> = {
     rose: 'var(--color-accent-red)'
 };
 
-type ProgressTab = 'goals' | 'achievements' | 'quests' | 'ranks';
+type ProgressTab = 'goals' | 'achievements' | 'quests' | 'ranks' | 'stats';
 type AchievementCategoryFilter = 'all' | 'discipline' | 'wealth' | 'explorer' | 'mastery';
 
 const Progress: React.FC = () => {
@@ -59,11 +61,21 @@ const Progress: React.FC = () => {
         addAssetGroup, 
         updateAssetGroup,
         togglePinBadge,
-        claimQuest
+        claimQuest,
+        transactions,
+        xpEvents
     } = useData();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
     const currency = user?.preferences?.currency || 'USD';
+    const progressStats = useMemo(() => computeProgressStats({
+        transactions,
+        xpEvents,
+        xp: user?.xp ?? 0,
+        level: user?.level ?? 1,
+        achievements,
+        goals
+    }), [transactions, xpEvents, user?.xp, user?.level, achievements, goals]);
     
     const [activeTab, setActiveTab] = useState<ProgressTab>('goals');
     const [categoryFilter, setCategoryFilter] = useState<AchievementCategoryFilter>('all');
@@ -99,7 +111,7 @@ const Progress: React.FC = () => {
     // Handle URL Params for Tabs and Deep Linking
     useEffect(() => {
         const tab = searchParams.get('tab') as ProgressTab | null;
-        if (tab && ['goals', 'achievements', 'quests', 'ranks'].includes(tab)) {
+        if (tab && ['goals', 'achievements', 'quests', 'ranks', 'stats'].includes(tab)) {
             setActiveTab(tab);
         }
 
@@ -276,6 +288,14 @@ const Progress: React.FC = () => {
                     >
                         {t('gamification:tabs.ranks')}
                     </button>
+                    <button 
+                        onClick={() => { setActiveTab('stats'); setSearchParams({ tab: 'stats' }); }} 
+                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
+                            activeTab === 'stats' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
+                        }`}
+                    >
+                        {t('gamification:tabs.stats')}
+                    </button>
                 </div>
             </div>
 
@@ -429,6 +449,8 @@ const Progress: React.FC = () => {
             )}
 
             {/* --- RANKS & REWARDS VIEW --- */}
+            {activeTab === 'stats' && <ProgressStatsTab stats={progressStats} locale={locale} />}
+
             {activeTab === 'ranks' && (
                 <InvestorRankCard 
                     currentLevel={user?.level || 1} 
