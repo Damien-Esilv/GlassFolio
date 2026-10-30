@@ -20,7 +20,7 @@ import AnimatedCounter from '../components/AnimatedCounter';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import { getISOWeekNumber, getStartOfCurrentWeek } from '../utils/date';
-import { calculateWeeklyTrackingStreak } from '../services/achievementService';
+import { calculateLongestWeeklyStreak } from '../services/achievementService';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
       return !isNaN(txTime) && txTime >= startOfWeek.getTime();
     }).length;
 
-    const streak = calculateWeeklyTrackingStreak(transactions);
+    const streak = calculateLongestWeeklyStreak(transactions);
     const xp = user?.xp || 0;
 
     // Relative progress percentage for progress bars (0 if empty/no data)

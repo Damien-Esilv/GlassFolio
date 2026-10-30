@@ -459,11 +459,17 @@ describe('validateRow', () => {
     expect(result.errors.some(e => e.code === 'SNAPSHOT_PRICE_REQUIRED')).toBe(true);
   });
 
-  it('separates errors from warnings in result', () => {
+  it('does not warn about a missing description: most broker exports have none', () => {
     const result = validateRow({ ...validRow, rawLabel: undefined, label: undefined }, 'history');
-    // Missing label = warning, not error
     expect(result.errors).toHaveLength(0);
-    expect(result.warnings.some(e => e.code === 'LABEL_MISSING')).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it('separates errors from warnings in result', () => {
+    // A stock with neither ISIN nor exchange: a market-data warning, not an error
+    const result = validateRow({ ...validRow, instrumentType: 'stock', assetIsin: undefined, exchange: undefined }, 'history');
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings.some(e => e.code === 'INSTRUMENT_ID_INSUFFICIENT')).toBe(true);
   });
 
   it('isValid is false when any error is present', () => {

@@ -5,7 +5,8 @@
  *   1. a type the caller already knows
  *   2. an ISO currency code  -> cash (read per row, so cash stays cash in any account)
  *   3. a network / contract address (a token) -> crypto
- *   4. the account's default: a crypto account -> crypto, an "other" account -> other (no lookup needed)
+ *   4. the account's default: a crypto account, or an account held at a crypto exchange or wallet -> crypto;
+ *      an "other" account -> other (no lookup needed)
  *   5. a market-data lookup by symbol or ISIN: Yahoo `quoteType`, then CoinGecko (exact symbol only)
  *   6. offline fallback: the short list of well-known cryptos, otherwise stock
  *
@@ -37,6 +38,8 @@ export interface ClassificationInput {
     network?: string;
     contractAddress?: string;
     accountType?: AccountType;
+    /** Kind of the institution holding the account (a crypto exchange or wallet implies crypto). */
+    instituteType?: string;
     /** Type already known by the caller (file column, user choice): returned as is. */
     type?: InstrumentType;
 }
@@ -98,7 +101,7 @@ const readCache = (): Record<string, CacheEntry> => {
 };
 
 const cacheKey = (input: ClassificationInput): string =>
-    `${(input.isin || input.symbol).trim().toUpperCase()}|${isCryptoAccount(input.accountType) ? 'c' : 'x'}`;
+    `${(input.isin || input.symbol).trim().toUpperCase()}|${isCryptoContext(input) ? 'c' : 'x'}`;
 
 const readEntry = (key: string): CacheEntry | undefined => {
     const entry = readCache()[key];
@@ -126,9 +129,16 @@ export function clearAssetClassCache(): void {
 const isCryptoAccount = (type?: AccountType): boolean =>
     type === 'crypto_spot' || type === 'crypto_earn' || type === 'crypto_futures';
 
+/** Crypto exchanges and wallets only hold crypto (and cash), whatever type the account was given. */
+const isCryptoInstitute = (instituteType?: string): boolean =>
+    instituteType === 'exchange' || instituteType === 'wallet';
+
+const isCryptoContext = (input: { accountType?: AccountType; instituteType?: string }): boolean =>
+    isCryptoAccount(input.accountType) || isCryptoInstitute(input.instituteType);
+
 /** What an account makes of an asset that has no other signal. */
-export function defaultTypeForAccount(type?: AccountType): InstrumentType | undefined {
-    if (isCryptoAccount(type)) return 'crypto';
+export function defaultTypeForAccount(type?: AccountType, instituteType?: string): InstrumentType | undefined {
+    if (isCryptoAccount(type) || isCryptoInstitute(instituteType)) return 'crypto';
     if (type === 'other') return 'other';
     return undefined;
 }
@@ -184,13 +194,18 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 
 const baseOf = (yahooSymbol: string): string => yahooSymbol.toUpperCase().split(/[.-]/)[0];
 
-/** Picks the quote that is this asset: the exact symbol, else the same base ticker (NEAR-USD, CW8.PA). */
+/**
+ * Picks the quote that is this asset: the exact symbol, else the same base ticker (NEAR-USD, CW8.PA).
+ * Tickers collide across classes (ETH is also a stock, BTC and ETH are also ETFs): when the results hold
+ * both, a crypto context (crypto account or exchange, or a well-known coin) picks the crypto.
+ */
 function pickQuote(quotes: YahooSearchQuote[], query: string, preferCrypto: boolean): YahooSearchQuote | undefined {
     const wanted = query.toUpperCase();
     const exact = quotes.find(q => q.symbol?.toUpperCase() === wanted);
-    if (exact) return exact;
     const sameBase = quotes.filter(q => q.symbol && baseOf(q.symbol) === wanted);
-    return (preferCrypto && sameBase.find(q => q.quoteType?.toUpperCase() === 'CRYPTOCURRENCY')) || sameBase[0];
+    const crypto = sameBase.find(q => q.quoteType?.toUpperCase() === 'CRYPTOCURRENCY');
+    if (crypto && preferCrypto) return crypto;
+    return exact ?? sameBase[0];
 }
 
 async function lookupYahoo(query: string, preferCrypto: boolean, isinQuery: boolean): Promise<CacheEntry | null> {
@@ -232,7 +247,7 @@ export async function classifyAsset(input: ClassificationInput): Promise<Classif
     if (!hasIsin && isFiat(symbol)) return { type: 'cash', source: 'currency' };
     if (input.network || input.contractAddress) return { type: 'crypto', source: 'token' };
 
-    const accountDefault = !hasIsin ? defaultTypeForAccount(input.accountType) : undefined;
+    const accountDefault = !hasIsin ? defaultTypeForAccount(input.accountType, input.instituteType) : undefined;
     if (accountDefault) return { type: accountDefault, source: 'account' };
 
     const key = cacheKey(input);
@@ -242,7 +257,7 @@ export async function classifyAsset(input: ClassificationInput): Promise<Classif
     if (!cached && isAssetLookupEnabled()) {
         const hit = hasIsin
             ? await lookupYahoo(isin as string, false, true)
-            : (await lookupYahoo(symbol, isCryptoAccount(input.accountType), false)) ?? (await lookupCoinGecko(symbol));
+            : (await lookupYahoo(symbol, isCryptoContext(input) || isKnownCrypto(symbol), false)) ?? (await lookupCoinGecko(symbol));
         writeEntry(key, hit ?? { type: null, source: 'yahoo', at: Date.now() });
         if (hit?.type) return { type: hit.type, name: hit.name, exchange: hit.exchange, source: hit.source };
     }

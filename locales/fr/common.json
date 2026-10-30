@@ -145,7 +145,6 @@
             "CASH_CURRENCY_INVALID": "Les lignes de liquidités nécessitent un code devise ISO 4217 valide",
             "SNAPSHOT_QTY_REQUIRED": "La quantité est obligatoire",
             "SNAPSHOT_PRICE_REQUIRED": "Le prix de revient unitaire (PRU) est obligatoire",
-            "LABEL_MISSING": "Libellé recommandé pour la traçabilité",
             "OVERSELL": "Impossible de vendre {{sell}} {{symbol}} : seulement {{position}} détenu(s)",
             "TYPE_INFERRED": "Aucun type dans le fichier : lu comme {{type}} d'après le signe de la quantité ou du montant",
             "TYPE_UNRECOGNIZED": "Type inconnu « {{label}} » : vérifiez que cette ligne est bien un(e) {{type}}",

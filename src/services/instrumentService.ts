@@ -55,6 +55,8 @@ export interface AssetHint {
     denominationCurrency?: string;
     /** Type of the account the asset is imported into: its default class when nothing else tells. */
     accountType?: AccountType;
+    /** Kind of the institution holding that account (an exchange or wallet implies crypto). */
+    instituteType?: string;
 }
 
 /**
@@ -475,6 +477,7 @@ export const instrumentService = {
             network: hint.network,
             contractAddress: hint.contractAddress,
             accountType: hint.accountType,
+            instituteType: hint.instituteType,
             type: hint.type,
         }).catch(() => undefined);
         const type = classification?.type ?? inferInstrumentType(hint);

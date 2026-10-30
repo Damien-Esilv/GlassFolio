@@ -65,6 +65,15 @@ describe('assetClassifier', () => {
       expect(res).toMatchObject({ type: 'etf', exchange: 'PAR', name: 'Amundi MSCI World', source: 'yahoo' });
     });
 
+    it('an account held at a crypto exchange or wallet is crypto whatever type it was given', async () => {
+      for (const instituteType of ['exchange', 'wallet']) {
+        expect(await classifyAsset({ symbol: 'NEAR', accountType: 'investment', instituteType })).toEqual({ type: 'crypto', source: 'account' });
+      }
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(defaultTypeForAccount('investment', 'exchange')).toBe('crypto');
+      expect(defaultTypeForAccount('investment', 'broker')).toBeUndefined();
+    });
+
     it('maps the account types to a default', () => {
       expect(defaultTypeForAccount('crypto_earn')).toBe('crypto');
       expect(defaultTypeForAccount('other')).toBe('other');
@@ -87,6 +96,20 @@ describe('assetClassifier', () => {
       const res = await classifyAsset({ symbol: 'NEAR', accountType: 'investment' });
       expect(res).toMatchObject({ type: 'crypto', name: 'NEAR Protocol USD', source: 'yahoo' });
       expect(String(mockFetch.mock.calls[0][0])).toContain('/v1/finance/search?q=NEAR');
+    });
+
+    it('does not turn BTC, ETH or SOL into the stocks and ETFs that share their ticker', async () => {
+      // Yahoo lists both: the ETF / stock "BTC", "ETH", "SOL" and the coin "BTC-USD"…
+      for (const symbol of ['BTC', 'ETH', 'SOL']) {
+        clearAssetClassCache();
+        routes(yahoo({ symbol, quoteType: symbol === 'BTC' ? 'ETF' : 'EQUITY' }, { symbol: `${symbol}-USD`, quoteType: 'CRYPTOCURRENCY' }), gecko());
+        expect((await classifyAsset({ symbol, accountType: 'investment' })).type, symbol).toBe('crypto');
+      }
+    });
+
+    it('keeps an ambiguous ticker a stock when nothing says it is a coin', async () => {
+      routes(yahoo({ symbol: 'NEAR', quoteType: 'EQUITY' }, { symbol: 'NEAR-USD', quoteType: 'CRYPTOCURRENCY' }), gecko());
+      expect((await classifyAsset({ symbol: 'NEAR', accountType: 'investment', instituteType: 'broker' })).type).toBe('stock');
     });
 
     it('classifies a stock and keeps its name and exchange', async () => {

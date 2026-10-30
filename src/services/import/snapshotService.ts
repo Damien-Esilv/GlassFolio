@@ -22,8 +22,92 @@ import { portfolioService } from '../portfolioService';
 import { parseCSVText, parseDate, parseDecimal, detectDateFormat } from './importManager';
 import { detectDecimalSeparator } from './typeNormalizer';
 import { instrumentService } from '../instrumentService';
+import type { Instrument } from '../../types';
+import { getAccountContext } from './accountContext';
+import {
+    clearStagedInstruments,
+    commitStagedInstruments,
+    findInstrument,
+    isStagedInstrument,
+    removeInstruments,
+    resolveInstrumentId,
+} from './instrumentDrafts';
+import { resolveStagedInstrument } from './importManager';
+import type { ImportInstrumentSummary } from './importManager';
 import { buildLedger, QTY_EPSILON } from '../portfolio/positionLedger';
 import { validateDate } from '../core/validationService';
+
+// ============================================================================
+// ASSETS OF THE SNAPSHOT IN REVIEW
+// ============================================================================
+
+/** Asset key -> instrument id of the assets staged for the snapshot in review (drafts, or existing ones). */
+const stagedAssets = new Map<string, string>();
+/** Instruments persisted by the commit in progress, taken back if it fails. */
+let persistedByCommit: string[] = [];
+
+/** The assets of a snapshot as the review shows them (one entry per asset, drafts included). */
+export function describeSnapshotInstruments(positions: SnapshotPosition[]): ImportInstrumentSummary[] {
+    const counts = new Map<string, number>();
+    for (const pos of positions) {
+        const staged = stagedAssets.get(pos.assetKey);
+        if (!staged) continue;
+        const id = resolveInstrumentId(staged);
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    const summaries: ImportInstrumentSummary[] = [];
+    for (const [id, rowCount] of counts) {
+        const instrument = findInstrument(id);
+        if (instrument) summaries.push({ instrument, isNew: isStagedInstrument(id), rowCount });
+    }
+    return summaries.sort((a, b) => a.instrument.marketIdentifier.symbol.localeCompare(b.instrument.marketIdentifier.symbol));
+}
+
+/**
+ * Resolves the assets of a parsed snapshot for the review: new ones become drafts (persisted when the
+ * import is confirmed), exactly like the history import, so the same corrections are possible.
+ */
+export async function stageSnapshotInstruments(positions: SnapshotPosition[], accountId: string): Promise<ImportInstrumentSummary[]> {
+    clearStagedInstruments();
+    stagedAssets.clear();
+    for (const pos of positions) {
+        const instrument = await resolveStagedInstrument(
+            { symbol: pos.assetSymbol, isin: pos.assetIsin, name: pos.displayName },
+            accountId
+        );
+        if (instrument) stagedAssets.set(pos.assetKey, instrument.id);
+    }
+    return describeSnapshotInstruments(positions);
+}
+
+/** Forgets the review (cancelled or finished). */
+export function clearSnapshotInstruments(): void {
+    clearStagedInstruments();
+    stagedAssets.clear();
+}
+
+/** The instrument of a snapshot row at commit: the reviewed draft if there is one, else found or created. */
+async function resolveSnapshotInstrument(
+    identity: { assetKey?: string; symbol?: string; isin?: string; name?: string },
+    accountId: string
+): Promise<Instrument> {
+    const stagedId = identity.assetKey ? stagedAssets.get(identity.assetKey) : undefined;
+    if (stagedId) {
+        persistedByCommit.push(...commitStagedInstruments([stagedId]));
+        const reviewed = findInstrument(stagedId);
+        if (reviewed) return reviewed;
+    }
+    const context = getAccountContext(accountId);
+    return instrumentService.findOrCreateInstrument({
+        denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
+        accountType: context.accountType,
+        instituteType: context.instituteType,
+        exchange: context.exchange,
+        symbol: identity.symbol || identity.isin || 'UNKNOWN',
+        isin: identity.isin,
+        name: identity.name
+    });
+}
 
 /** Cost basis differences below half a cent are rounding noise */
 const COST_EPSILON = 0.005;
@@ -541,13 +625,10 @@ export async function generateReconciliationTransactions(
         // Resolve instrument
         let instrumentId = '';
         try {
-            const instrument = await instrumentService.findOrCreateInstrument({
-                denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
-                accountType: db.getAccountById(accountId)?.type,
-                symbol: diff.assetSymbol || diff.assetIsin || 'UNKNOWN',
-                isin: diff.assetIsin,
-                name: diff.displayName
-            });
+            const instrument = await resolveSnapshotInstrument(
+                { assetKey: diff.assetKey, symbol: diff.assetSymbol, isin: diff.assetIsin, name: diff.displayName },
+                accountId
+            );
             instrumentId = instrument.id;
         } catch (e) {
             // ignore
@@ -633,13 +714,10 @@ export async function createPositionTransactions(
         // Resolve instrument
         let instrumentId = '';
         try {
-            const instrument = await instrumentService.findOrCreateInstrument({
-                denominationCurrency: db.getAccountById(accountId)?.defaultCurrency,
-                accountType: db.getAccountById(accountId)?.type,
-                symbol: pos.assetSymbol || pos.assetIsin || 'UNKNOWN',
-                isin: pos.assetIsin,
-                name: pos.displayName
-            });
+            const instrument = await resolveSnapshotInstrument(
+                { assetKey: pos.assetKey, symbol: pos.assetSymbol, isin: pos.assetIsin, name: pos.displayName },
+                accountId
+            );
             instrumentId = instrument.id;
         } catch (e) {
             // ignore
@@ -758,7 +836,14 @@ export async function commitSnapshotImport(params: CommitSnapshotParams): Promis
     const batchId = `batch-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = params.date || new Date().toISOString();
 
-    const transactions = await buildSnapshotCommit({ ...params, batchId, date: now });
+    persistedByCommit = [];
+    let transactions: UnifiedTransaction[];
+    try {
+        transactions = await buildSnapshotCommit({ ...params, batchId, date: now });
+    } catch (error) {
+        removeInstruments(persistedByCommit);
+        throw error;
+    }
     const batch: ImportBatch = {
         id: batchId,
         ownerId: params.userId,
@@ -780,11 +865,16 @@ export async function commitSnapshotImport(params: CommitSnapshotParams): Promis
         transactionManager.addTransactions(transactions);
         transactionManager.addBatch(batch);
         const result = transactionManager.commit();
-        if (!result.success) return result;
+        if (!result.success) {
+            removeInstruments(persistedByCommit);
+            return result;
+        }
+        clearSnapshotInstruments();
         await portfolioService.recalculatePositions();
         return { ...result, batch };
     } catch (error) {
         transactionManager.rollback();
+        removeInstruments(persistedByCommit);
         return {
             success: false,
             transactionCount: 0,
