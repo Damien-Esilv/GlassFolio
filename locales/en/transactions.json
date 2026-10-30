@@ -308,6 +308,25 @@
             "hint": "This is exactly what the import will keep. If a date, an amount or an asset looks wrong, change its column above.",
             "row": "Row {{index}}",
             "incomplete": "Match the date, the amount and the asset to see how your rows will be stored."
+        },
+        "assets": {
+            "title": "Detected assets",
+            "subtitle": "Check what each asset is before importing: change its type, or edit any detail. New assets are only created when you confirm the import.",
+            "columns": {
+                "asset": "Asset",
+                "type": "Type",
+                "identifiers": "ISIN · market · network",
+                "price": "Price",
+                "rows": "Rows"
+            },
+            "badgeNew": "New asset",
+            "badgeExisting": "Already in your portfolio",
+            "priceAuto": "Automatic price",
+            "priceManual": "Price by hand",
+            "editDetails": "Edit details",
+            "apply": "Apply",
+            "cancel": "Cancel",
+            "existingNote": "This asset is already in your portfolio: changes apply immediately, not only to this import."
         }
     },
     "cashWizard": {

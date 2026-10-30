@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
+import { ImportAssetsTable } from '../components/import/ImportAssetsTable';
 import SnapshotWizard from '../components/SnapshotWizard';
 import CashImportWizard from '../components/CashImportWizard';
 import {
@@ -730,6 +731,13 @@ const Step4StagingArea: React.FC<{ wizard: ReturnType<typeof useImportWizard> }>
           </button>
         )}
       </div>
+
+      {/* Assets the import creates or uses: review and correct their metadata */}
+      <ImportAssetsTable
+        instruments={wizard.instruments}
+        onUpdate={wizard.updateImportInstrument}
+        preview={wizard.previewImportInstrumentIssues}
+      />
 
       {/* Staging Table */}
       <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">

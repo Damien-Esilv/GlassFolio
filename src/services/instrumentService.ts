@@ -326,7 +326,7 @@ export function validateInstrumentDraft(draft: Instrument, others: Instrument[])
 }
 
 /** An "other" instrument has no market data to look up, so it is always ready. */
-const isReady = (instrument: Instrument): boolean =>
+export const isInstrumentMarketReady = (instrument: Instrument): boolean =>
     instrument.type === 'other' || validateMarketReadiness(instrument.type, instrument.marketIdentifier).isMarketReady;
 
 /** What must be refreshed once an instrument changed (positions, tax summary, stale prices, groups). */
@@ -368,7 +368,7 @@ function mergeInstrumentRecords(sourceId: string, targetId: string): Instrument 
         },
         updatedAt: new Date().toISOString(),
     };
-    merged.isMarketReady = isReady(merged);
+    merged.isMarketReady = isInstrumentMarketReady(merged);
 
     db.saveUnifiedTransactions(db.getUnifiedTransactions().map(tx =>
         tx.instrumentId === source.id
@@ -412,7 +412,7 @@ export const instrumentService = {
      * No hardcoded lookup — all instruments come from prior imports
      * or are created on the fly.
      */
-    findOrCreateInstrument: async (hint: AssetHint): Promise<Instrument> => {
+    findOrCreateInstrument: async (hint: AssetHint, options?: { persist?: boolean }): Promise<Instrument> => {
         await delay(50);
 
         const rawSymbol = hint.symbol || hint.isin || 'UNKNOWN';
@@ -504,9 +504,11 @@ export const instrumentService = {
             updatedAt: now
         };
 
-        // Save
-        const all = db.getInstruments();
-        db.saveInstruments([...all, newInstrument]);
+        // Save (an import review keeps new instruments as drafts until the import is confirmed)
+        if (options?.persist !== false) {
+            const all = db.getInstruments();
+            db.saveInstruments([...all, newInstrument]);
+        }
 
         return newInstrument;
     },
@@ -554,7 +556,7 @@ export const instrumentService = {
         const blocking = issues.filter(i => i.severity === 'error' && !(mergeTarget && i.code === 'INSTRUMENT_DUPLICATE'));
         if (blocking.length > 0) throw new InstrumentValidationError(issues);
 
-        const saved: Instrument = { ...draft, isMarketReady: isReady(draft), updatedAt: new Date().toISOString() };
+        const saved: Instrument = { ...draft, isMarketReady: isInstrumentMarketReady(draft), updatedAt: new Date().toISOString() };
         db.saveInstruments(all.map(i => (i.id === id ? saved : i)));
 
         let result = saved;
