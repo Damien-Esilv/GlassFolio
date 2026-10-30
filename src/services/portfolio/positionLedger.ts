@@ -273,11 +273,18 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
  */
 export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'> & { type?: string }>(txs: T[]): T[] {
     const rank = (tx: T): number => (tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0);
-    return [...txs].sort((a, b) =>
-        new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
-        || (a.createdAt || '').localeCompare(b.createdAt || '')
-        || rank(a) - rank(b)
-    );
+    return [...txs].sort((a, b) => {
+        // BOLT OPTIMIZATION: Avoid allocating Date objects and using localeCompare inside sort comparator loop.
+        // Date.parse avoids object heap allocations; string < / > is faster than localeCompare.
+        const diff = Date.parse(a.transactionDate) - Date.parse(b.transactionDate);
+        if (diff) return diff;
+
+        const createdA = a.createdAt || '';
+        const createdB = b.createdAt || '';
+        if (createdA !== createdB) return createdA < createdB ? -1 : 1;
+
+        return rank(a) - rank(b);
+    });
 }
 
 export interface LedgerEntry {

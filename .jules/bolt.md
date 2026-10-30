@@ -1,0 +1,3 @@
+## 2025-10-30 - Optimize transaction array sort comparator in position ledger
+**Learning:** `new Date()` heap allocations and `String.prototype.localeCompare` inside $O(N \log N)$ sorting loops produce noticeable CPU and GC overhead when processing transaction journals. Using `Date.parse()` and standard JavaScript relational operators (`<` and `>`) for ISO string comparisons eliminates heap allocations during sorts.
+**Action:** Always prefer primitive date comparisons (`Date.parse()`, ISO string relational comparison) over `new Date()` or `localeCompare()` inside hot array sorting comparator callbacks.
