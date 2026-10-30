@@ -3,7 +3,10 @@ import { FinancialGoal } from '../types';
 import { Home, Plane, Car, Shield, Wallet, Pin, Trash2, Edit2, Zap, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency } from '../utils/currency';
+import { AnimatedCounter } from './AnimatedCounter';
+import { AnimatedNumber } from './ui/AnimatedNumber';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 
@@ -23,6 +26,7 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
     const Icon = ICON_MAP[goal.iconType] || Wallet;
     const safeCurrent = goal.currentAmount || 0;
     const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
+    const entered = useEntranceAnimation();
 
     let colorClass = 'bg-accent-blue';
     if (goal.color === 'emerald') colorClass = 'bg-accent-green';
@@ -77,14 +81,17 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm font-medium">
                     <span className="text-secondary">{t('common:labels.progress')}</span>
-                    <span className="text-primary">{progress.toFixed(0)}%</span>
+                    <span className="text-primary"><AnimatedNumber value={progress} locale={locale} />%</span>
                 </div>
                 <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
-                    <div className={`h-full ${colorClass} transition-all duration-1000 relative overflow-hidden`} style={{ width: `${progress}%` }}></div>
+                    <div
+                        className={`h-full ${colorClass} transition-all relative overflow-hidden`}
+                        style={{ width: `${entered ? progress : 0}%`, transitionDuration: `${ANIMATION_DURATION_MS}ms`, transitionTimingFunction: ANIMATION_EASING }}
+                    ></div>
                 </div>
                 <div className="flex justify-between text-xs text-secondary font-mono">
-                    <span>{formatCurrency(safeCurrent, currency, locale, { maximumFractionDigits: 0 })}</span>
-                    <span>{t('common:labels.target')}: {formatCurrency(goal.targetAmount, currency, locale, { maximumFractionDigits: 0 })}</span>
+                    <span><AnimatedCounter value={safeCurrent} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} /></span>
+                    <span>{t('common:labels.target')}: <AnimatedCounter value={goal.targetAmount} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} /></span>
                 </div>
             </div>
 

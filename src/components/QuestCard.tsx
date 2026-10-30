@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GamificationQuest } from '../types';
 import { CheckCircle2, Zap } from 'lucide-react';
+import { AnimatedNumber } from './ui/AnimatedNumber';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 import Button from './Button';
 
 interface QuestCardProps {
@@ -10,7 +13,8 @@ interface QuestCardProps {
 }
 
 const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
-    const { t } = useTranslation(['gamification']);
+    const { t, i18n } = useTranslation(['gamification']);
+    const entered = useEntranceAnimation();
     const [isClaiming, setIsClaiming] = useState(false);
 
     const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
@@ -67,15 +71,15 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
             {/* Progress bar */}
             <div className="space-y-1.5 mt-4">
                 <div className="flex justify-between text-[11px] font-bold text-secondary">
-                    <span>{quest.progress} / {quest.target}</span>
-                    <span>{percent}%</span>
+                    <span><AnimatedNumber value={quest.progress} locale={i18n.language} /> / {quest.target}</span>
+                    <span><AnimatedNumber value={percent} locale={i18n.language} />%</span>
                 </div>
                 <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
                     <div 
-                        className={`h-full transition-all duration-500 ${
+                        className={`h-full transition-all ${
                             quest.completed ? 'bg-brand' : 'bg-brand/60'
                         }`} 
-                        style={{ width: `${percent}%` }}
+                        style={{ width: `${entered ? percent : 0}%`, transitionDuration: `${ANIMATION_DURATION_MS}ms`, transitionTimingFunction: ANIMATION_EASING }}
                     />
                 </div>
             </div>

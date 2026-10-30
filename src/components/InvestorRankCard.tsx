@@ -7,6 +7,9 @@ import {
 } from '../services/gamificationService';
 import { Award, Lock, CheckCircle2, Palette, Sparkles, ChevronRight, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AnimatedNumber } from './ui/AnimatedNumber';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 
 interface InvestorRankCardProps {
     currentLevel: number;
@@ -19,7 +22,8 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
     currentXp, 
     themeRewards 
 }) => {
-    const { t } = useTranslation(['gamification', 'common']);
+    const { t, i18n } = useTranslation(['gamification', 'common']);
+    const entered = useEntranceAnimation();
     const { user, updateProfile } = useAuth();
     const currentRank = gamificationService.getInvestorRank(currentLevel);
     const progress = gamificationService.calculateLevelProgress(currentXp);
@@ -64,15 +68,15 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                     {/* XP Progress Capsule */}
                     <div className="w-full md:w-64 p-4 rounded-2xl bg-subtle/50 border border-subtle shrink-0">
                         <div className="flex justify-between items-center text-xs font-bold mb-2">
-                            <span className="text-primary">{currentXp} {t('gamification:xp')}</span>
+                            <span className="text-primary"><AnimatedNumber value={currentXp} locale={i18n.language} /> {t('gamification:xp')}</span>
                             <span className="text-secondary">
-                                {progress.progressPercent}%
+                                <AnimatedNumber value={progress.progressPercent} locale={i18n.language} />%
                             </span>
                         </div>
                         <div className="w-full bg-subtle h-2.5 rounded-full overflow-hidden">
                             <div 
-                                className="h-full bg-brand rounded-full transition-all duration-700"
-                                style={{ width: `${progress.progressPercent}%` }}
+                                className="h-full bg-brand rounded-full transition-all"
+                                style={{ width: `${entered ? progress.progressPercent : 0}%`, transitionDuration: `${ANIMATION_DURATION_MS}ms`, transitionTimingFunction: ANIMATION_EASING }}
                             />
                         </div>
                         <p className="text-[11px] text-tertiary mt-2 text-right">

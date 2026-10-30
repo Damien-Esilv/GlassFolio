@@ -29,7 +29,9 @@ import QuestCard from '../components/QuestCard';
 import InvestorRankCard from '../components/InvestorRankCard';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
-import { STAGGER_DELAY_MS } from '../constants/animations';
+import { Reveal } from '../components/ui/Reveal';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { gamificationService } from '../services/gamificationService';
 import { computeProgressStats } from '../services/progressStatsService';
 import ProgressStatsTab from '../components/progress/ProgressStatsTab';
@@ -224,6 +226,10 @@ const Progress: React.FC = () => {
         return ach.category === categoryFilter;
     });
 
+    // Cards appear again whenever the tab changes, and the badges whenever their filter does
+    const animActive = useEntranceAnimation(activeTab);
+    const gridActive = useEntranceAnimation(`${activeTab}:${categoryFilter}`);
+
     const pinnedAchievementsList = achievements.filter(a => pinnedBadges.includes(a.id));
     const currentRank = gamificationService.getInvestorRank(user?.level || 1);
     const progress = gamificationService.calculateLevelProgress(user?.xp || 0);
@@ -242,7 +248,7 @@ const Progress: React.FC = () => {
                             {t(currentRank.titleKey)}
                         </span>
                         <span>
-                            {t('gamification:level')} {user?.level || 1} • {user?.xp || 0} {t('gamification:xp')}
+                            {t('gamification:level')} <AnimatedNumber value={user?.level || 1} locale={locale} /> • <AnimatedNumber value={user?.xp || 0} locale={locale} /> {t('gamification:xp')}
                         </span>
                         <span className="text-tertiary hidden md:inline">•</span>
                         <span className="text-xs text-tertiary hidden md:inline">
@@ -301,6 +307,7 @@ const Progress: React.FC = () => {
 
             {/* Featured Showcase (if any badges pinned) */}
             {pinnedAchievementsList.length > 0 && activeTab === 'achievements' && (
+                <Reveal active={animActive}>
                 <div className="p-5 rounded-3xl bg-card border border-subtle space-y-3">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-black uppercase text-secondary flex items-center gap-1.5">
@@ -326,6 +333,7 @@ const Progress: React.FC = () => {
                         ))}
                     </div>
                 </div>
+                </Reveal>
             )}
 
             {/* --- GOALS VIEW --- */}
@@ -360,20 +368,14 @@ const Progress: React.FC = () => {
                     ) : (
                         <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {sortedGoals.map((goal, idx) => (
-                                <div
-                                    key={goal.id}
-                                    className="animate-scale-up"
-                                    style={{
-                                        animationDelay: `${idx * STAGGER_DELAY_MS}ms`
-                                    }}
-                                >
+                                <Reveal key={goal.id} active={animActive} index={idx}>
                                     <GoalCard
                                         goal={goal}
                                         onEdit={handleEdit}
                                         onDelete={deleteGoal}
                                         onPin={toggleGoalPin}
                                     />
-                                </div>
+                                </Reveal>
                             ))}
                         </div>
                     )}
@@ -402,13 +404,7 @@ const Progress: React.FC = () => {
 
                     <div key={`achievements-${activeTab}-${categoryFilter}`} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {filteredAchievements.map((ach, idx) => (
-                            <div
-                                key={ach.id}
-                                className="animate-scale-up"
-                                style={{
-                                    animationDelay: `${idx * STAGGER_DELAY_MS}ms`
-                                }}
-                            >
+                            <Reveal key={ach.id} active={gridActive} index={idx}>
                                 <AchievementBadge
                                     achievement={ach}
                                     isPinned={pinnedBadges.includes(ach.id)}
@@ -418,7 +414,7 @@ const Progress: React.FC = () => {
                                     }}
                                     onClick={() => setSelectedAchievement(ach)}
                                 />
-                            </div>
+                            </Reveal>
                         ))}
                     </div>
                 </div>
@@ -427,22 +423,25 @@ const Progress: React.FC = () => {
             {/* --- MISSIONS / QUESTS VIEW --- */}
             {activeTab === 'quests' && (
                 <div className="space-y-6">
-                    <div className="p-6 rounded-3xl bg-card border border-subtle">
-                        <h3 className="text-xl font-black text-primary mb-1">
-                            {t('gamification:quests.title')}
-                        </h3>
-                        <p className="text-sm text-secondary">
-                            {t('gamification:quests.subtitle')}
-                        </p>
-                    </div>
+                    <Reveal active={animActive}>
+                        <div className="p-6 rounded-3xl bg-card border border-subtle">
+                            <h3 className="text-xl font-black text-primary mb-1">
+                                {t('gamification:quests.title')}
+                            </h3>
+                            <p className="text-sm text-secondary">
+                                {t('gamification:quests.subtitle')}
+                            </p>
+                        </div>
+                    </Reveal>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {quests.map((quest) => (
-                            <QuestCard 
-                                key={quest.id} 
-                                quest={quest} 
-                                onClaim={claimQuest} 
-                            />
+                        {quests.map((quest, idx) => (
+                            <Reveal key={quest.id} active={animActive} index={idx + 1}>
+                                <QuestCard 
+                                    quest={quest} 
+                                    onClaim={claimQuest} 
+                                />
+                            </Reveal>
                         ))}
                     </div>
                 </div>
@@ -452,11 +451,13 @@ const Progress: React.FC = () => {
             {activeTab === 'stats' && <ProgressStatsTab stats={progressStats} locale={locale} />}
 
             {activeTab === 'ranks' && (
-                <InvestorRankCard 
-                    currentLevel={user?.level || 1} 
-                    currentXp={user?.xp || 0} 
-                    themeRewards={themeRewards} 
-                />
+                <Reveal active={animActive}>
+                    <InvestorRankCard 
+                        currentLevel={user?.level || 1} 
+                        currentXp={user?.xp || 0} 
+                        themeRewards={themeRewards} 
+                    />
+                </Reveal>
             )}
 
             {/* --- GOAL MODAL --- */}

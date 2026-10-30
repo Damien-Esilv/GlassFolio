@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../../constants/animations';
+import { AnimatedNumber } from '../ui/AnimatedNumber';
 import type { WeeklyStats } from '../../services/progressStatsService';
 
 interface WeeklyProgressCardProps {
@@ -22,7 +23,7 @@ interface Tile {
 
 /** This week's figures: transactions of the week, current streak, XP earned this week. */
 export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({ stats, animated = true, className = '' }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const tiles: Tile[] = [
     { key: 'transactions', value: stats.transactions, percent: stats.transactionsPercent, labelKey: 'dashboard:transactions', valueClass: 'text-primary', trackClass: 'bg-primary/20', barClass: 'bg-primary' },
@@ -43,7 +44,9 @@ export const WeeklyProgressCard: React.FC<WeeklyProgressCardProps> = ({ stats, a
         {tiles.map(tile => (
           <div key={tile.key} className="flex flex-col items-center gap-3" data-testid={`weekly-${tile.key}`}>
             <div className="relative">
-              <p className={`text-4xl font-black tracking-tighter ${tile.valueClass}`}>{tile.value}</p>
+              <p className={`text-4xl font-black tracking-tighter ${tile.valueClass}`}>
+                <AnimatedNumber value={tile.value} locale={i18n.language} />
+              </p>
               <div className={`h-1.5 w-12 mt-2 rounded-full overflow-hidden ${tile.trackClass}`}>
                 <div
                   className={`h-full rounded-full shadow-sm transition-all ${tile.barClass}`}
