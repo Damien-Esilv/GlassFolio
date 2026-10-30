@@ -203,6 +203,18 @@ export interface GamificationQuest {
   claimed?: boolean;
 }
 
+/** One gain of experience points, dated, so what was earned in a period can be told. */
+export interface XpEvent {
+  id: string;
+  ownerId?: string;
+  /** ISO 8601 date-time of the gain */
+  date: string;
+  amount: number;
+  source: 'achievement' | 'quest';
+  /** Achievement id or quest id the gain comes from */
+  refId?: string;
+}
+
 export interface ThemeReward {
   id: string;
   themeKey: string;

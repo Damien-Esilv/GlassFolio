@@ -19,8 +19,8 @@ import { ANIMATION_DURATION_MS, ANIMATION_EASING, STAGGER_DELAY_MS } from '../co
 import AnimatedCounter from '../components/AnimatedCounter';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
-import { getISOWeekNumber, getStartOfCurrentWeek } from '../utils/date';
-import { calculateLongestWeeklyStreak } from '../services/achievementService';
+import { computeWeeklyStats } from '../services/progressStatsService';
+import WeeklyProgressCard from '../components/progress/WeeklyProgressCard';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ const Dashboard: React.FC = () => {
   const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
   const dateFormat = user?.preferences?.dateFormat || 'DD/MM/YYYY';
   const currency = user?.preferences?.currency || 'USD';
-  const { transactions, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
+  const { transactions, xpEvents, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
   const [chartMode, setChartMode] = useChartPriceMode();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -67,32 +67,8 @@ const Dashboard: React.FC = () => {
     fetchSummary();
   }, [transactions, positions, timeRange, currency, locale, dateFormat, chartMode]);
 
-  // Dynamic Weekly Progress values
-  const currentWeekNumber = useMemo(() => getISOWeekNumber(new Date()), []);
-  const weeklyStats = useMemo(() => {
-    const startOfWeek = getStartOfCurrentWeek();
-    const weeklyTxs = transactions.filter(tx => {
-      const txTime = new Date(tx.date).getTime();
-      return !isNaN(txTime) && txTime >= startOfWeek.getTime();
-    }).length;
-
-    const streak = calculateLongestWeeklyStreak(transactions);
-    const xp = user?.xp || 0;
-
-    // Relative progress percentage for progress bars (0 if empty/no data)
-    const txPercent = Math.min(100, Math.round((weeklyTxs / 5) * 100));
-    const streakPercent = Math.min(100, Math.round((streak / 10) * 100));
-    const xpPercent = Math.min(100, Math.round((Math.min(xp, 1000) / 1000) * 100));
-
-    return {
-      weeklyTxs,
-      streak,
-      xp,
-      txPercent,
-      streakPercent,
-      xpPercent
-    };
-  }, [transactions, user?.xp]);
+  // This week's figures: transactions of the week, current streak, XP earned this week
+  const weeklyStats = useMemo(() => computeWeeklyStats(transactions, xpEvents), [transactions, xpEvents]);
 
   // Dynamic Asset Allocation Breakdown for Donut Chart
   const assetAllocation = useMemo(() => {
@@ -590,67 +566,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Weekly Progress */}
-        <div className={`${cardStyle} flex flex-col justify-between`}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-primary">{t('dashboard:weeklyProgress')}</h3>
-            <span className="text-xs font-bold text-tertiary px-3 py-1 bg-subtle rounded-full">
-              {t('common:common.week')} {currentWeekNumber}
-            </span>
-          </div>
-
-          <div className="flex justify-around items-end text-center flex-1 pb-4">
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <p className="text-4xl font-black text-primary tracking-tighter">{weeklyStats.weeklyTxs}</p>
-                <div className="h-1.5 w-12 bg-primary/20 mt-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full shadow-sm transition-all"
-                    style={{
-                      width: animActive ? `${weeklyStats.txPercent}%` : '0%',
-                      transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                      transitionTimingFunction: ANIMATION_EASING
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <p className="text-[10px] text-tertiary font-bold uppercase tracking-widest">{t('dashboard:transactions')}</p>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <p className="text-4xl font-black text-warning tracking-tighter">{weeklyStats.streak}</p>
-                <div className="h-1.5 w-12 bg-warning/20 mt-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-warning rounded-full shadow-sm transition-all"
-                    style={{
-                      width: animActive ? `${weeklyStats.streakPercent}%` : '0%',
-                      transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                      transitionTimingFunction: ANIMATION_EASING
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <p className="text-[10px] text-tertiary font-bold uppercase tracking-widest">{t('dashboard:streak')}</p>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <p className="text-4xl font-black text-positive tracking-tighter">{weeklyStats.xp}</p>
-                <div className="h-1.5 w-12 bg-positive/20 mt-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-positive rounded-full shadow-sm transition-all"
-                    style={{
-                      width: animActive ? `${weeklyStats.xpPercent}%` : '0%',
-                      transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                      transitionTimingFunction: ANIMATION_EASING
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <p className="text-[10px] text-tertiary font-bold uppercase tracking-widest">{t('dashboard:xpEarned')}</p>
-            </div>
-          </div>
-        </div>
+        <WeeklyProgressCard stats={weeklyStats} animated={animActive} />
       </div>
 
       {/* 5. Row 5: Recent Alerts */}

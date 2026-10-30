@@ -31,7 +31,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 1. **Encrypted before it leaves your browser.** Transactions, holdings, goals and secrets live in a client-side vault: AES-256-GCM, with keys derived from your master password through PBKDF2 (600,000 iterations) and HKDF. A server only ever sees ciphertext.
 2. **Self-hosted or cloud, your choice.** One command starts a hardened Docker container on your own machine or NAS, with no account and no telemetry. Or use the managed cloud version: nothing to install, synced across your devices. Same app, same encryption.
 3. **A modular tax engine.** French rules are built in natively: compare the flat tax (PFU) with the progressive scale on your real numbers and prepare Cerfa 2042, 2074 and 3916. Rules are isolated by jurisdiction so new countries can be added.
-4. **An AI assistant that asks first.** Ask questions about your portfolio in plain language, with a local model (Ollama) or your own API key. 34 tools are exposed to the in-app assistant and to external MCP clients, and every action that changes financial data needs your explicit approval.
+4. **An AI assistant that asks first.** Ask questions about your portfolio in plain language, with a local model (Ollama) or your own API key. 35 tools are exposed to the in-app assistant and to external MCP clients, and every action that changes financial data needs your explicit approval.
 5. **Bring your history.** Import CSV exports from your brokers and banks with column mapping, a live preview, duplicate protection and one-click rollback.
 
 ## ✨ Features

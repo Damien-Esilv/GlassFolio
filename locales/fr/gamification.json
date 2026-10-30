@@ -7,7 +7,8 @@
     "goals": "Objectifs",
     "achievements": "Badges & Succès",
     "quests": "Missions",
-    "ranks": "Rangs & Récompenses"
+    "ranks": "Rangs & Récompenses",
+    "stats": "Stats"
   },
   "level": "Niveau",
   "xp": "XP",
@@ -119,5 +120,22 @@
       "title": "Pionnier du Suivi",
       "description": "Maintenir un suivi actif et régulier dans la durée"
     }
+  },
+  "stats": {
+    "thisWeek": "Cette semaine",
+    "allTime": "Depuis le début",
+    "totalTransactions": "Transactions",
+    "currentStreak": "Série actuelle",
+    "bestStreak": "Meilleure série",
+    "activeWeeks": "Semaines actives",
+    "totalXp": "XP total",
+    "level": "Niveau",
+    "achievements": "Succès débloqués",
+    "goals": "Objectifs atteints",
+    "trackingSince": "Suivi depuis",
+    "weeksValue_one": "{{count}} semaine",
+    "weeksValue_other": "{{count}} semaines",
+    "ofTotal": "{{done}} / {{total}}",
+    "noneYet": "Rien pour l’instant"
   }
 }

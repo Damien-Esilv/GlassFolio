@@ -88,18 +88,27 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
 const dayKey = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 /**
- * Calculates the tracking streak: the number of consecutive ISO weeks (Monday to Sunday, local time)
- * with at least one completed transaction, ending this week or, if nothing happened yet this week,
- * last week. Weeks without activity break it; future-dated and pending transactions do not count.
+ * The ISO weeks (Monday to Sunday, local time) with at least one completed transaction, keyed by their
+ * Monday. Pending and future-dated transactions do not count.
  */
-export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: Date = new Date()): number {
-    const activeWeeks = new Set<string>();
+export function collectActiveWeeks(transactions: Transaction[], now: Date = new Date()): Map<string, Date> {
+    const weeks = new Map<string, Date>();
     transactions.forEach(t => {
         if (t.status === 'Pending') return;
         const d = new Date(t.date);
         if (isNaN(d.getTime()) || d.getTime() > now.getTime()) return;
-        activeWeeks.add(dayKey(getStartOfCurrentWeek(d)));
+        const monday = getStartOfCurrentWeek(d);
+        weeks.set(dayKey(monday), monday);
     });
+    return weeks;
+}
+
+/**
+ * The current tracking streak: consecutive weeks with a completed transaction, ending this week or, if
+ * nothing happened yet this week, last week. A week without activity breaks it.
+ */
+export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: Date = new Date()): number {
+    const activeWeeks = collectActiveWeeks(transactions, now);
     if (activeWeeks.size === 0) return 0;
 
     const cursor = getStartOfCurrentWeek(now);
@@ -116,19 +125,12 @@ export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: 
 }
 
 /**
- * The longest tracking streak in the whole history: consecutive ISO weeks with a completed transaction,
+ * The longest tracking streak in the whole history: consecutive weeks with a completed transaction,
  * wherever they are on the calendar. It comes from the transaction dates (when the user traded), not from
  * when they were imported, so importing years of history gives the streak those years earned.
  */
 export function calculateLongestWeeklyStreak(transactions: Transaction[], now: Date = new Date()): number {
-    const weeks = new Map<string, Date>();
-    transactions.forEach(t => {
-        if (t.status === 'Pending') return;
-        const d = new Date(t.date);
-        if (isNaN(d.getTime()) || d.getTime() > now.getTime()) return;
-        const monday = getStartOfCurrentWeek(d);
-        weeks.set(dayKey(monday), monday);
-    });
+    const weeks = collectActiveWeeks(transactions, now);
 
     let longest = 0;
     for (const monday of weeks.values()) {
