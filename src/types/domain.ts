@@ -50,6 +50,8 @@ export interface User {
 export interface Position {
   id: string;
   ownerId?: string;
+  /** Id of the Instrument this position was built from (absent on positions cached before it existed). */
+  instrumentId?: string;
   instrument: string;
   symbol: string;
   isin?: string;

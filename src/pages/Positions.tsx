@@ -2,15 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
-import { Search, Download, AlertTriangle, Edit2, Check, X } from 'lucide-react';
+import { Search, Download, AlertTriangle, Edit2 } from 'lucide-react';
 import { portfolioService } from '../services/portfolioService';
 import { Position } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
 import { currencyService } from '../services/currencyService';
-import { saveManualPrice } from '../services/priceService';
-import { db } from '../services/db';
+import { EditAssetModal } from '../components/positions/EditAssetModal';
 import { ASSET_CLASSES_CONFIG } from '../constants/assetClasses';
 import { STAGGER_DELAY_MS } from '../constants/animations';
 
@@ -31,8 +30,6 @@ const Positions: React.FC = () => {
 
   // Manual price update state
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
-  const [manualPriceInput, setManualPriceInput] = useState<string>('');
-  const [manualSymbolInput, setManualSymbolInput] = useState<string>('');
 
   const typeTabs = useMemo(() => ([
     { value: 'All', label: t('positions.filters.all') },
@@ -263,96 +260,12 @@ const Positions: React.FC = () => {
         )}
       </div>
 
-      {/* Manual Price / Ticker Edit Modal */}
       {editingPosition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card border border-subtle rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-subtle pb-3">
-              <div>
-                <h3 className="text-lg font-bold text-primary">{t('positions.manualModal.title')}</h3>
-                <p className="text-xs text-tertiary">{editingPosition.instrument} ({editingPosition.symbol})</p>
-              </div>
-              <button onClick={() => setEditingPosition(null)} className="p-1 rounded-lg hover:bg-subtle text-secondary">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">{t('positions.manualModal.tickerLabel')}</label>
-                <input 
-                  type="text"
-                  placeholder={editingPosition.symbol}
-                  value={manualSymbolInput}
-                  onChange={(e) => setManualSymbolInput(e.target.value)}
-                  className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary font-mono"
-                />
-                <p className="text-[11px] text-tertiary mt-1">{t('positions.manualModal.tickerInfo')}</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">{t('positions.manualModal.priceLabel', { currency: editingPosition.currency || 'EUR' })}</label>
-                <input 
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder={editingPosition.lastPrice.toString()}
-                  value={manualPriceInput}
-                  onChange={(e) => setManualPriceInput(e.target.value)}
-                  className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg p-2.5 focus:ring-primary focus:border-primary font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
-              <Button variant="ghost" size="sm" onClick={() => setEditingPosition(null)}>
-                {t('positions.manualModal.cancel')}
-              </Button>
-              <Button 
-                size="sm" 
-                className="bg-primary text-white hover:bg-primary/90"
-                onClick={async () => {
-                  const newPrice = parseFloat(manualPriceInput);
-                  const symbolToUse = manualSymbolInput.trim() || editingPosition.symbol;
-                  
-                  if (!isNaN(newPrice) && newPrice > 0) {
-                    saveManualPrice(symbolToUse, newPrice);
-                    
-                    // Update positions in db
-                    const allPositions = db.getPositions();
-                    const updated = allPositions.map(p => {
-                      if (p.id === editingPosition.id) {
-                        const marketValue = p.quantity * newPrice;
-                        const costBasis = p.quantity * p.avgCost;
-                        const unrealizedPL = marketValue - costBasis;
-                        const unrealizedPLPercent = costBasis > 0 ? (unrealizedPL / costBasis) * 100 : 0;
-                        return {
-                          ...p,
-                          symbol: symbolToUse,
-                          lastPrice: newPrice,
-                          marketValue,
-                          unrealizedPL,
-                          unrealizedPLPercent
-                        };
-                      }
-                      return p;
-                    });
-                    db.savePositions(updated);
-                    setFilteredPositions(prev => prev.map(p => p.id === editingPosition.id ? { ...p, lastPrice: newPrice, symbol: symbolToUse } : p));
-                    
-                    // Trigger global DataContext refresh
-                    await refreshData();
-                  }
-                  setEditingPosition(null);
-                  setManualPriceInput('');
-                  setManualSymbolInput('');
-                }}
-              >
-                {t('positions.manualModal.save')}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <EditAssetModal
+          position={editingPosition}
+          onClose={() => setEditingPosition(null)}
+          onSaved={refreshData}
+        />
       )}
     </div>
   );
