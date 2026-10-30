@@ -15,7 +15,8 @@
         "taxAccuracy": "Tax figures are more accurate: up-to-date brackets and rates, amounts in foreign currencies converted at the rate of their day, and a crypto portfolio that counts staking rewards and exchanges.",
         "quests": "Quests now follow what you actually do each month and quarter, and a reward to claim is announced in your notifications.",
         "localDemo": "A self-hosted install no longer shows a demo button: start it with npm run dev:demo to open the demo account directly.",
-        "reliability": "Many fixes: you stay signed in with Google after a refresh, data stays in sync across tabs, Escape closes windows, and every message is translated."
+        "reliability": "Many fixes: you stay signed in with Google after a refresh, data stays in sync across tabs, Escape closes windows, and every message is translated.",
+        "smootherNumbers": "Gains, losses and key figures count up smoothly on every screen, and the tax pages open without a loading flash."
       }
     },
     "v1-2": {

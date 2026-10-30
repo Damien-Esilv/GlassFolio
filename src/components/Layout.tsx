@@ -214,7 +214,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <Link
               to="/portfolio"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() => {
+                setIsPortfolioExpanded(true);
+                setIsMobileMenuOpen(false);
+              }}
               className="flex items-center gap-3 flex-1 px-4 py-2.5"
             >
               <Briefcase size={18} />
@@ -277,7 +280,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <Link
               to="/analytics"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() => {
+                setIsAnalyticsExpanded(true);
+                setIsMobileMenuOpen(false);
+              }}
               className="flex items-center gap-3 flex-1 px-4 py-2.5"
             >
               <BarChart3 size={18} />
@@ -340,7 +346,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <Link
               to="/tax"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() => {
+                setIsFiscaliteExpanded(true);
+                setIsMobileMenuOpen(false);
+              }}
               className="flex items-center gap-3 flex-1 px-4 py-2.5"
             >
               <Scale size={18} />

@@ -28,6 +28,7 @@ import { formatCurrency } from '../utils/currency';
 import { currencyService } from '../services/currencyService';
 import { ASSET_CLASSES_CONFIG, ASSET_CLASSES, isAssetClassMatch, getAssetClassConfig } from '../constants/assetClasses';
 import AnimatedCounter from '../components/AnimatedCounter';
+import { TrendValue } from '../components/ui/TrendValue';
 import { STAGGER_DELAY_MS } from '../constants/animations';
 
 // ============================================================================
@@ -216,14 +217,29 @@ const Portfolio: React.FC = () => {
                             <span>{formattedDate}</span>
                         </div>
                         <div className="text-4xl md:text-5xl font-bold text-primary mb-3">
-                            {formatCurrency(totalValue, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            <AnimatedCounter value={totalValue} currency={prefCurrency} locale={locale} options={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }} />
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`flex items-center gap-1 font-semibold text-sm ${totalGain >= 0 ? 'text-success' : 'text-error'}`}>
-                                {totalGain >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                                <span>{totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, prefCurrency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                                <span>({gainPercent >= 0 ? '+' : ''}{gainPercent.toFixed(2)}%)</span>
-                            </div>
+                            <TrendValue
+                                value={totalGain}
+                                format="currency"
+                                currency={prefCurrency}
+                                locale={locale}
+                                decimals={0}
+                                showPlusSign
+                                showIcon
+                                iconSize={16}
+                                className="text-sm font-semibold"
+                                animated
+                            />
+                            <TrendValue
+                                value={gainPercent}
+                                format="percent"
+                                decimals={2}
+                                showPlusSign
+                                className="text-sm font-semibold"
+                                animated
+                            />
                         </div>
                     </div>
 

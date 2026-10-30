@@ -23,10 +23,10 @@ const TaxHub: React.FC = () => {
     const { user } = useAuth();
 
     const [fiscalYear, setFiscalYear] = useState<string>(DEFAULT_FISCAL_YEAR);
-    const [summary, setSummary] = useState<TaxSummaryResult | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
     const profile: FiscalProfile = user?.preferences?.fiscalProfile || {};
+    const [summary, setSummary] = useState<TaxSummaryResult | null>(() => taxService.getCachedTaxSummary(fiscalYear, profile));
+    const [isLoading, setIsLoading] = useState(!summary);
+
     const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
     const supportedYears = taxService.getSupportedYears();
 
@@ -38,6 +38,12 @@ const TaxHub: React.FC = () => {
         // A late answer for a year the user already left must not replace the current one
         let cancelled = false;
         const loadSummary = async () => {
+            const cached = taxService.getCachedTaxSummary(fiscalYear, profile);
+            if (cached) {
+                setSummary(cached);
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 const result = await taxService.getTaxSummary(fiscalYear, profile);

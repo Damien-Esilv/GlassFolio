@@ -15,7 +15,8 @@
         "taxAccuracy": "Les calculs fiscaux sont plus justes : barèmes et taux à jour, montants en devises convertis au taux du jour de l’opération, et un portefeuille crypto qui compte les récompenses de staking et les échanges.",
         "quests": "Les quêtes suivent maintenant ce que vous faites chaque mois et chaque trimestre, et une récompense à réclamer est signalée dans vos notifications.",
         "localDemo": "Une installation auto-hébergée n’affiche plus de bouton démo : lancez-la avec npm run dev:demo pour ouvrir directement le compte démo.",
-        "reliability": "De nombreuses corrections : vous restez connecté avec Google après un rafraîchissement, les données restent synchronisées entre onglets, Échap ferme les fenêtres et tous les messages sont traduits."
+        "reliability": "De nombreuses corrections : vous restez connecté avec Google après un rafraîchissement, les données restent synchronisées entre onglets, Échap ferme les fenêtres et tous les messages sont traduits.",
+        "smootherNumbers": "Les gains, pertes et chiffres clés défilent en douceur sur tous les écrans, et les pages fiscales s’ouvrent sans écran de chargement."
       }
     },
     "v1-2": {

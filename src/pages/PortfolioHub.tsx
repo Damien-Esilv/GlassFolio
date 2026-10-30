@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import AnimatedCounter from '../components/AnimatedCounter';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 import { PieChart, LayoutDashboard, ArrowRightLeft, ArrowRight, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useData } from '../context/DataContext';
@@ -101,7 +102,10 @@ const PortfolioHub: React.FC = () => {
                                         {card.isCurrencyBadge && typeof card.badgeValue === 'number' ? (
                                             <AnimatedCounter value={card.badgeValue} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} />
                                         ) : (
-                                            `${card.badgeValue} ${card.badgeLabelKey ? t(card.badgeLabelKey) : ''}`
+                                            <>
+                                                <AnimatedNumber value={Number(card.badgeValue) || 0} locale={locale} />
+                                                {card.badgeLabelKey ? ` ${t(card.badgeLabelKey)}` : ''}
+                                            </>
                                         )}
                                     </span>
                                 </div>

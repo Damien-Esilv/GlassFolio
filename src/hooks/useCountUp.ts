@@ -13,7 +13,7 @@ const prefersReducedMotion = (): boolean =>
  * the first render and from what is shown when the target changes. With reduced motion it is simply the target.
  */
 export function useCountUp(target: number, duration: number = ANIMATION_DURATION_MS): number {
-    const [value, setValue] = useState<number>(() => (prefersReducedMotion() ? target : 0));
+    const [value, setValue] = useState<number>(() => (prefersReducedMotion() || duration <= 0 ? target : 0));
     const shownRef = useRef(value);
     const frameRef = useRef<number | null>(null);
 

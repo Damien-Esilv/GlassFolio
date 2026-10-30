@@ -94,7 +94,7 @@ const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; h
     const { i18n } = useTranslation();
     return (
     <div 
-        className={`rounded-xl p-4 border transition-all animate-fade-in-up ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
+        className={`rounded-xl p-4 border transition-all animate-slide-in-left ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
         style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
     >
         <p className="text-xs text-secondary mb-1">{label}</p>
@@ -116,8 +116,8 @@ const DeclarationAssistant: React.FC = () => {
 
     type Tab = 'cto' | 'dividends' | 'pea' | 'crypto' | 'foreign' | 'forms';
     const [activeTab, setActiveTab] = useState<Tab>('cto');
-    const [summary, setSummary] = useState<TaxSummaryResult | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [summary, setSummary] = useState<TaxSummaryResult | null>(() => taxService.getCachedTaxSummary(fiscalYear, profile));
+    const [isLoading, setIsLoading] = useState<boolean>(!summary);
 
     const tabs: { id: Tab; labelKey: string }[] = [
         { id: 'cto', labelKey: 'tax:declaration.tabs.cto' },
@@ -130,6 +130,12 @@ const DeclarationAssistant: React.FC = () => {
 
     const profileKey = JSON.stringify(profile);
     const loadSummary = useCallback(async (isCancelled: () => boolean = () => false) => {
+        const cached = taxService.getCachedTaxSummary(fiscalYear, profile);
+        if (cached) {
+            setSummary(cached);
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         try {
             const result = await taxService.getTaxSummary(fiscalYear, profile);
@@ -206,7 +212,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── CTO Tab ── */}
             {!isLoading && summary && activeTab === 'cto' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="cto" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.cto.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.cto.subtitle')}</p>
@@ -232,7 +238,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Dividends Tab ── */}
             {!isLoading && summary && activeTab === 'dividends' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="dividends" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.dividends.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.dividends.subtitle')}</p>
@@ -252,12 +258,12 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── PEA Tab ── */}
             {!isLoading && summary && activeTab === 'pea' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="pea" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.pea.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.pea.subtitle')}</p>
                     </div>
-                    <div className="rounded-xl bg-brand/5 border border-brand/20 p-4 flex gap-3">
+                    <div className="rounded-xl bg-brand/5 border border-brand/20 p-4 flex gap-3 animate-slide-in-left">
                         <Info size={16} className="text-brand shrink-0 mt-0.5" />
                         <p className="text-xs text-secondary leading-relaxed">{t('tax:declaration.pea.internalNote')}</p>
                     </div>
@@ -290,13 +296,13 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Crypto Tab ── */}
             {!isLoading && summary && activeTab === 'crypto' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="crypto" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.crypto.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.crypto.subtitle')}</p>
                     </div>
                     {/* Threshold indicator */}
-                    <div className={`rounded-xl p-4 border flex items-center gap-3 ${summary.crypto.exceedsThreshold ? 'bg-warning/10 border-warning/30' : 'bg-success/10 border-success/30'}`}>
+                    <div className={`rounded-xl p-4 border flex items-center gap-3 animate-slide-in-left ${summary.crypto.exceedsThreshold ? 'bg-warning/10 border-warning/30' : 'bg-success/10 border-success/30'}`}>
                         {summary.crypto.exceedsThreshold
                             ? <AlertTriangle size={16} className="text-warning shrink-0" />
                             : <CheckCircle size={16} className="text-success shrink-0" />}
@@ -308,10 +314,10 @@ const DeclarationAssistant: React.FC = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <StatCard label={t('tax:declaration.crypto.totalCessions')} value={summary.crypto.totalCessions} />
-                        <StatCard label={t('tax:declaration.crypto.totalGains')} value={summary.crypto.totalGains} />
-                        <StatCard label={t('tax:declaration.crypto.totalLosses')} value={summary.crypto.totalLosses} isNegative />
-                        <StatCard label={t('tax:declaration.crypto.netResult')} value={summary.crypto.netResult} highlight isNegative={summary.crypto.netResult < 0} />
+                        <StatCard label={t('tax:declaration.crypto.totalCessions')} value={summary.crypto.totalCessions} index={0} />
+                        <StatCard label={t('tax:declaration.crypto.totalGains')} value={summary.crypto.totalGains} index={1} />
+                        <StatCard label={t('tax:declaration.crypto.totalLosses')} value={summary.crypto.totalLosses} isNegative index={2} />
+                        <StatCard label={t('tax:declaration.crypto.netResult')} value={summary.crypto.netResult} highlight isNegative={summary.crypto.netResult < 0} index={3} />
                     </div>
                     <div className="rounded-xl bg-subtle p-3 flex gap-2">
                         <Info size={14} className="text-secondary shrink-0 mt-0.5" />
@@ -331,20 +337,24 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Foreign Accounts Tab ── */}
             {!isLoading && summary && activeTab === 'foreign' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="foreign" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.foreign.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.foreign.subtitle')}</p>
                     </div>
                     {summary.foreignAccounts.length === 0 ? (
-                        <div className="rounded-xl bg-success/10 border border-success/20 p-6 text-center">
+                        <div className="rounded-xl bg-success/10 border border-success/20 p-6 text-center animate-slide-in-left">
                             <CheckCircle size={32} className="text-success mx-auto mb-2" />
                             <p className="text-sm text-primary font-medium">{t('tax:declaration.foreign.noAccounts')}</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {summary.foreignAccounts.map((ob) => (
-                                <div key={ob.instituteId} className="rounded-xl bg-card border border-subtle p-4">
+                            {summary.foreignAccounts.map((ob, idx) => (
+                                <div
+                                    key={ob.instituteId}
+                                    className="rounded-xl bg-card border border-subtle p-4 animate-slide-in-left"
+                                    style={{ animationDelay: `${idx * STAGGER_DELAY_MS}ms` }}
+                                >
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
                                             <Globe size={16} className="text-brand" />
@@ -363,7 +373,7 @@ const DeclarationAssistant: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-                            <div className="rounded-xl bg-error/5 border border-error/20 p-3 flex gap-2">
+                            <div className="rounded-xl bg-error/5 border border-error/20 p-3 flex gap-2 animate-slide-in-left">
                                 <AlertTriangle size={14} className="text-error shrink-0 mt-0.5" />
                                 <p className="text-xs text-secondary">
                                     {t('tax:declaration.foreign.penalty')}: <strong className="text-error">{formatEur(getFiscalRules(fiscalYear)?.foreignAccounts.finePerAccount ?? 1500, i18n.language)}</strong> {t('tax:declaration.foreign.perAccount')}
@@ -376,12 +386,12 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Forms Tab ── */}
             {!isLoading && summary && activeTab === 'forms' && (
-                <div className="space-y-6 animate-fade-in">
+                <div key="forms" className="space-y-6 animate-fade-in">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.forms.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.forms.subtitle')}</p>
                     </div>
-                    <div className="rounded-xl bg-brand/5 border border-brand/20 p-3 flex gap-2">
+                    <div className="rounded-xl bg-brand/5 border border-brand/20 p-3 flex gap-2 animate-slide-in-left">
                         <FileText size={14} className="text-brand shrink-0 mt-0.5" />
                         <p className="text-xs text-secondary">{t('tax:declaration.forms.downloadNote')}</p>
                     </div>
