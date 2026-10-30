@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateCTOCapitalGains,
   calculateCryptoGains,
+  calculateDividendTax,
   EnrichedTransaction,
 } from '../../../../src/services/fiscal/taxEngine';
 import { getFiscalRulesOrThrow } from '../../../../src/services/fiscal/taxRules';
@@ -217,5 +218,26 @@ describe('CTO gains — PMP, art. 150-0 D', () => {
     ], '2024', rules2024);
 
     expect(events[0].missingData ?? []).not.toContain('fx_rate_missing');
+  });
+});
+
+describe('income received inside a tax wrapper (TGLA-188)', () => {
+  it('taxes a CTO dividend but not one received in an assurance-vie, a PER, a livret or a PEA', () => {
+    const dividend = (wrapper: EnrichedTransaction['resolvedWrapperType']) => stock('ACME', {
+      type: 'INCOME', subType: 'DIVIDEND', transactionDate: '2024-05-01T00:00:00Z', amountPrimary: '100', resolvedWrapperType: wrapper,
+    });
+    const events = calculateDividendTax(
+      [dividend('CTO'), dividend('ASSURANCE_VIE'), dividend('PER'), dividend('LIVRET'), dividend('PEA')],
+      '2024', rules2024,
+    );
+    expect(events.map(e => e.wrapperType)).toEqual(['CTO']);
+  });
+
+  it('lets a reversed dividend lower the income of the year', () => {
+    const events = calculateDividendTax([
+      stock('ACME', { type: 'INCOME', subType: 'DIVIDEND', transactionDate: '2024-05-01T00:00:00Z', amountPrimary: '100' }),
+      stock('ACME', { type: 'INCOME', subType: 'DIVIDEND', transactionDate: '2024-05-02T00:00:00Z', amountPrimary: '-50' }),
+    ], '2024', rules2024);
+    expect(events.reduce((sum, e) => sum + e.taxableAmount, 0)).toBe(50);
   });
 });

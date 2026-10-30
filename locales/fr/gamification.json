@@ -29,7 +29,10 @@
     "newRankTitle": "Nouveau Rang d'Investisseur Débloqué !",
     "rewardGained": "+{{xp}} XP Gagnés",
     "continue": "Super !",
-    "viewBadge": "Voir le badge"
+    "viewBadge": "Voir le badge",
+    "levelUp": "Niveau supérieur !",
+    "xpGained": "+{{xp}} XP !",
+    "questDone": "Mission accomplie"
   },
   "ranks": {
     "title": "Rangs d'Investisseur",
@@ -53,7 +56,8 @@
     "sovereign": {
       "title": "Architecte Financier Souverain",
       "description": "Maîtrise totale du patrimoine, indépendance financière et vision à long terme."
-    }
+    },
+    "levelRange": "Niv. {{min}} – {{max}}"
   },
   "themes": {
     "title": "Thèmes Déblocables",
@@ -85,7 +89,13 @@
     "allocationAudit": {
       "title": "Audit de Diversification",
       "description": "Détenez des positions réparties sur au moins 3 classes d'actifs distinctes."
-    }
+    },
+    "frequency": {
+      "monthly": "Mensuelle",
+      "quarterly": "Trimestrielle",
+      "onboarding": "Premiers pas"
+    },
+    "claiming": "Réclamation…"
   },
   "badges": {
     "executioner": {

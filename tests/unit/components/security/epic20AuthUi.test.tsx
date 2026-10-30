@@ -6,6 +6,7 @@ import { AntiBotShield, AntiBotShieldHandle } from '../../../../src/components/s
 import { TwoFactorChallengeModal } from '../../../../src/components/security/TwoFactorChallengeModal';
 import { EmailVerificationGate } from '../../../../src/components/security/EmailVerificationGate';
 import { PasswordResetFlow } from '../../../../src/pages/PasswordResetFlow';
+import * as authCapabilitiesModule from '../../../../src/services/security/authCapabilities';
 import { authService } from '../../../../src/services/security/authService';
 import { AuthProvider } from '../../../../src/context/AuthContext';
 
@@ -141,6 +142,11 @@ describe('Epic 20 — Auth & Security UI Components', () => {
 
     describe('PasswordResetFlow', () => {
         it('renders request mode by default and allows switching to emergency recovery key mode', async () => {
+            // Cloud: the reset email exists (local mode goes straight to the recovery key, see below)
+            vi.spyOn(authCapabilitiesModule, 'getAuthCapabilities').mockReturnValue({
+                ...authCapabilitiesModule.getAuthCapabilities(),
+                emailVerification: true,
+            });
             render(
                 <MemoryRouter>
                     <PasswordResetFlow initialMode="request" />
@@ -154,6 +160,22 @@ describe('Epic 20 — Auth & Security UI Components', () => {
             fireEvent.click(switchBtn);
 
             expect(screen.getByPlaceholderText(/XXXX-XXXX/i)).toBeDefined();
+            vi.restoreAllMocks();
+        });
+
+        it('never offers a reset email in local mode, which sends none (TGLA-188)', () => {
+            vi.spyOn(authCapabilitiesModule, 'getAuthCapabilities').mockReturnValue({
+                ...authCapabilitiesModule.getAuthCapabilities(),
+                emailVerification: false,
+            });
+            render(
+                <MemoryRouter>
+                    <PasswordResetFlow initialMode="request" />
+                </MemoryRouter>
+            );
+            expect(screen.queryByPlaceholderText('alex@example.com')).toBeNull();
+            expect(screen.getByPlaceholderText(/XXXX-XXXX/i)).toBeDefined();
+            vi.restoreAllMocks();
         });
     });
 });

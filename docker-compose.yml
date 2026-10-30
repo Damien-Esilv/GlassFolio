@@ -26,6 +26,8 @@ services:
       ACCESS_TOKEN: ${GLASSFOLIO_ACCESS_TOKEN:-}
       # Extra origins the page may call (e.g. a remote Ollama: https://ollama.example.com), space-separated.
       CSP_CONNECT_SRC: ${GLASSFOLIO_CSP_CONNECT_SRC:-}
+      # 1 = open on the demo account (GLASSFOLIO_DEMO=1 npm run docker:up); unset = no demo offered.
+      GLASSFOLIO_DEMO: ${GLASSFOLIO_DEMO:-}
     read_only: true
     tmpfs:
       - /tmp

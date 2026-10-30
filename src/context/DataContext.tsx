@@ -9,6 +9,7 @@ import { goalService } from '../services/goalService';
 import { achievementService } from '../services/achievementService';
 import { gamificationService } from '../services/gamificationService';
 import { getLastPriceFetchTime, clearPriceCache } from '../services/priceService';
+import { currencyService } from '../services/currencyService';
 import { db } from '../services/db';
 import CelebrationModal, { CelebrationData } from '../components/CelebrationModal';
 import { isDemoAccount } from '../services/security/demoAccount';
@@ -97,6 +98,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const userRef = useRef(user);
   userRef.current = user;
+  // Read through a ref: a new updateProfile identity must not re-run the whole data load.
+  const updateProfileRef = useRef(updateProfile);
+  updateProfileRef.current = updateProfile;
 
   const refreshData = useCallback(async () => {
     const currentUser = userRef.current;
@@ -141,10 +145,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setXpEvents(events);
       setPinnedBadges(pinned);
 
-      // Evaluate Smart Alerts (Multi-Domain Engine)
-      const totalPortfolioValue = pos.reduce((sum, p) => sum + (p.marketValue || 0), 0);
+      // Evaluate Smart Alerts (Multi-Domain Engine), on values in the base currency
+      const rates = await currencyService.getExchangeRates([...new Set(pos.map(p => p.currency || 'EUR'))], baseCurr);
+      const positionsInBase = pos.map(p => ({
+        ...p,
+        marketValue: currencyService.convertAmount(p.marketValue || 0, p.currency || 'EUR', baseCurr, rates),
+      }));
+      const totalPortfolioValue = positionsInBase.reduce((sum, p) => sum + p.marketValue, 0);
       const evalResult = await alertService.evaluateSmartAlerts({
-        positions: pos,
+        positions: positionsInBase,
         totalPortfolioValue,
         taxZone: currentUser?.preferences?.fiscalProfile?.taxZone,
         preferences: currentUser?.preferences,
@@ -166,7 +175,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newXp = (currentUser.xp || 0) + achData.xpGained;
         const oldLevel = currentUser.level || 1;
         const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
-        updateProfile({ xp: newXp, level: newLevel });
+        updateProfileRef.current({ xp: newXp, level: newLevel }).catch(err => console.error('Failed to save XP', err));
 
         // Date every gain, so the XP earned this week can be told
         for (const unlocked of achData.unlockedEvents ?? []) {
@@ -181,7 +190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (newLevel > oldLevel) {
             setActiveCelebration({
               type: 'level_up',
-              title: `Level Up!`,
+              title: t('gamification:celebration.levelUp'),
               level: newLevel,
               xpGained: achData.xpGained
             });
@@ -208,7 +217,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, updateProfile, t]);
+  }, [user?.id, t]);
 
   /** Clears the 15-min price cache and triggers a full data reload with fresh prices. */
   const forceRefreshPrices = useCallback(async () => {
@@ -219,6 +228,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Initial fetch
   useEffect(() => {
     refreshData();
+  }, [refreshData]);
+
+  // Another tab of this browser saved data: reload it here, or this tab would show (and act on) a stale copy
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = db.subscribeExternalChanges(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void refreshData(); }, 300);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
   }, [refreshData]);
 
   const addTransactions = useCallback(async (newTxs: Transaction[]) => {
@@ -287,21 +309,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (newLevel > oldLevel) {
         setActiveCelebration({
           type: 'level_up',
-          title: 'Level Up!',
+          title: t('gamification:celebration.levelUp'),
           level: newLevel,
           xpGained: res.xpReward
         });
       } else {
         setActiveCelebration({
           type: 'rank',
-          title: `+${res.xpReward} XP !`,
-          subtitle: 'Mission accomplie',
+          title: t('gamification:celebration.xpGained', { xp: res.xpReward }),
+          subtitle: t('gamification:celebration.questDone'),
           xpGained: res.xpReward
         });
       }
       setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true, claimed: true } : q));
     }
-  }, [user, updateProfile]);
+  }, [user, updateProfile, t]);
 
   const markAlertAsRead = useCallback(async (alertId: string) => {
     const updated = await alertService.markAlertAsRead(alertId);

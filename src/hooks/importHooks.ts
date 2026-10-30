@@ -38,6 +38,7 @@ import {
 import { instrumentService } from '../services/instrumentService';
 import type { InstrumentIssue, InstrumentPatch } from '../services/instrumentService';
 import { readAndParseCsvFile } from '../services/import/csvWorkerClient';
+import { parseDate, parseDecimal } from '../services/import/typeNormalizer';
 import {
     proposeColumnMapping,
     proposalsToMappings,
@@ -254,6 +255,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
     const stateRef = useRef(state);
     stateRef.current = state;
     const resolveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    /** Rows whose cells were typed in the review: stored like file values once editing ends. */
+    const editedRowIds = useRef(new Set<string>());
     useEffect(() => () => {
         Object.values(resolveTimers.current).forEach(clearTimeout);
     }, []);
@@ -414,6 +417,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
                 existingBatch,
                 mappings,
                 detectedPreset,
+                // A new file is read on its own: the date order chosen for the previous one may not apply
+                dateFormat: 'auto',
                 isLoading: false,
                 step: 3 // Move to mapping step
             });
@@ -619,9 +624,35 @@ export const useImportWizard = (userId: string = 'default-user') => {
         updateState({ editingRowId: rowId });
     }, [updateState]);
 
+    /**
+     * A cell typed in the review is text in the user's own format ("1 234,56", "05/01/2024"): read it
+     * like the file's values, or it would be stored as is (1 instead of 1234.56, a non-ISO date).
+     */
+    const normalizeEditedRows = (rows: StagedTransaction[], dateFormat: DateFormatHint | 'auto', mode: ImportMode): StagedTransaction[] => {
+        if (editedRowIds.current.size === 0) return rows;
+        const edited = new Set(editedRowIds.current);
+        editedRowIds.current.clear();
+        return rows.map(row => {
+            if (!edited.has(row.id)) return row;
+            const date = row.parsed.transactionDate
+                ? parseDate(row.parsed.transactionDate, dateFormat === 'auto' ? undefined : dateFormat)
+                : null;
+            const amount = row.parsed.amountPrimary ? parseDecimal(row.parsed.amountPrimary) : null;
+            const parsed = {
+                ...row.parsed,
+                ...(date ? { transactionDate: date } : {}),
+                ...(amount !== null ? { amountPrimary: amount } : {}),
+            };
+            return revalidateStagedRow({ ...row, parsed }, mode);
+        });
+    };
+
     const cancelEditRow = useCallback(() => {
-        updateState({ editingRowId: null });
-    }, [updateState]);
+        setState(prev => ({
+            ...refreshRows(prev, normalizeEditedRows(prev.stagedTransactions, prev.dateFormat, prev.importMode)),
+            editingRowId: null,
+        }));
+    }, []);
 
     /** Rows re-validated with the full rules; the asset summary and the counters follow. */
     const refreshRows = (prev: ImportWizardState, rows: StagedTransaction[]): ImportWizardState => ({
@@ -632,6 +663,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
     });
 
     const updateRowField = useCallback((rowId: string, field: string, value: string) => {
+        editedRowIds.current.add(rowId);
         setState(prev => refreshRows(prev, prev.stagedTransactions.map(t => {
             if (t.id !== rowId) return t;
             return revalidateStagedRow({ ...t, parsed: { ...t.parsed, [field]: value } }, prev.importMode);
@@ -722,8 +754,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
         updateState({ isLoading: true, error: null });
 
         try {
-            // Set all pending valid/warning rows to import
-            const toCommit = state.stagedTransactions.map(t => ({
+            // Set all pending valid/warning rows to import (a row still being edited is read first)
+            const toCommit = normalizeEditedRows(state.stagedTransactions, state.dateFormat, state.importMode).map(t => ({
                 ...t,
                 resolution: t.resolution === 'pending' && (t.status === 'valid' || t.status === 'warning')
                     ? 'import' as const
@@ -757,7 +789,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToCompleteImport'), isLoading: false });
         }
-    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, state.delimiter, userId, updateState]);
+    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, state.delimiter, state.dateFormat, userId, updateState]);
 
     // =========================================================================
     // NAVIGATION

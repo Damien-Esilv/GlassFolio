@@ -43,7 +43,7 @@
     "network": {
       "title": "Access from your network",
       "body": "By default only this computer can open the app. To reach it from a phone or another machine, bind it to every interface and set an access token; the start script refuses to expose the app without one.",
-      "login": "Your browser then asks for a user name and password: the user name is glassfolio and the password is the token. The /health endpoint stays open for monitoring.",
+      "login": "Your browser then asks for a user name and password: the user name is glassfolio and the password is the token printed by the second line, so keep it in your password manager. Start every later docker:up (updates included) with the same GLASSFOLIO_ACCESS_TOKEN and GLASSFOLIO_BIND, or the app goes back to this computer only. The /health endpoint stays open for monitoring.",
       "proxy": "For access from outside your home network, put the app behind a reverse proxy with HTTPS and list its domain in GLASSFOLIO_ALLOWED_HOSTS. Never expose port 3000 directly to the internet."
     },
     "backup": {

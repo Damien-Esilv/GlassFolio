@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { InvestorRank, ThemeReward } from '../types';
+import { InvestorRank, ThemeReward, UserPreferences } from '../types';
 import { 
     INVESTOR_RANKS, 
     gamificationService 
@@ -30,12 +30,7 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
 
     const handleApplyTheme = (themeKey: string) => {
         if (!user || !updateProfile) return;
-        updateProfile({
-            preferences: {
-                ...user.preferences,
-                theme: themeKey as any
-            }
-        });
+        updateProfile({ preferences: { theme: themeKey as UserPreferences['theme'] } }).catch(() => undefined);
     };
 
     return (
@@ -114,7 +109,7 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-xs font-bold text-secondary">
-                                        Lv. {rank.levelMin} - {rank.levelMax === 999 ? '∞' : rank.levelMax}
+                                        {t('gamification:ranks.levelRange', { min: rank.levelMin, max: rank.levelMax === 999 ? '∞' : rank.levelMax })}
                                     </span>
                                     {isUnlocked ? (
                                         <CheckCircle2 size={16} className="text-positive" />

@@ -52,7 +52,9 @@ describe('useDemoAccess hook (TGLA-057 / TGLA-058)', () => {
     expect(mockLogin).toHaveBeenCalledWith('demo@glassfolio.com', 'password');
     // Crucial UX invariant: replace: false ensures Back button returns to /welcome
     expect(mockNavigate).toHaveBeenCalledWith('/', { replace: false });
-    expect(result.current.isLaunchingDemo).toBe(false);
+    // Still "launching" until the page is left: the login page signs out a demo session it sees
+    // while no demo is launching (TGLA-188)
+    expect(result.current.isLaunchingDemo).toBe(true);
     expect(result.current.demoError).toBe('');
   });
 

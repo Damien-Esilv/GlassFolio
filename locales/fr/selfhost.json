@@ -43,7 +43,7 @@
     "network": {
       "title": "Accès depuis votre réseau",
       "body": "Par défaut, seul cet ordinateur peut ouvrir l'application. Pour y accéder depuis un téléphone ou une autre machine, écoutez sur toutes les interfaces et définissez un jeton d'accès ; le script de démarrage refuse d'exposer l'application sans jeton.",
-      "login": "Votre navigateur demande alors un nom d'utilisateur et un mot de passe : l'utilisateur est glassfolio et le mot de passe est le jeton. Le point /health reste ouvert pour la supervision.",
+      "login": "Votre navigateur demande alors un nom d'utilisateur et un mot de passe : l'utilisateur est glassfolio et le mot de passe est le jeton affiché par la deuxième ligne, à garder dans votre gestionnaire de mots de passe. Lancez chaque docker:up suivant (mises à jour comprises) avec les mêmes GLASSFOLIO_ACCESS_TOKEN et GLASSFOLIO_BIND, sinon l'application ne redevient accessible que depuis cet ordinateur. Le point /health reste ouvert pour la supervision.",
       "proxy": "Pour un accès depuis l'extérieur de chez vous, placez l'application derrière un proxy inverse en HTTPS et déclarez son domaine dans GLASSFOLIO_ALLOWED_HOSTS. N'exposez jamais le port 3000 directement sur Internet."
     },
     "backup": {

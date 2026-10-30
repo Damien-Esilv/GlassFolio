@@ -360,13 +360,15 @@ export function getUserFiscalDeadline(
     const deadlineDate = new Date(`${deadlineStr}T23:59:59`);
     const now = new Date();
     const diffMs = deadlineDate.getTime() - now.getTime();
-    const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const dayMs = 1000 * 60 * 60 * 24;
+    // Past the deadline by a few hours is "passed", not "0 days left" (Math.ceil gave -0 there)
+    const daysRemaining = diffMs < 0 ? Math.floor(diffMs / dayMs) : Math.ceil(diffMs / dayMs);
 
     return {
         userZone: zone,
         userDeadline: deadlineStr,
         departmentName,
         daysRemaining,
-        isPassed: daysRemaining < 0,
+        isPassed: diffMs < 0,
     };
 }

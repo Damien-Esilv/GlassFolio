@@ -421,6 +421,12 @@
         "category": "Strictement Nécessaire (Sécurité)",
         "purpose": "Mémorise le domaine (RP ID) auquel vos passkeys sont liées afin de déverrouiller le coffre quand il est verrouillé. Métadonnée publique de déploiement, aucune donnée personnelle.",
         "lifespan": "Jusqu'à la suppression du compte ou l'effacement du cache"
+      },
+      "chunkReload": {
+        "key": "gf_chunk_reload_at",
+        "category": "Strictement nécessaire (session)",
+        "purpose": "Heure du dernier rechargement automatique après une mise à jour de GlassFolio, pour qu’une page qui ne se charge pas ne soit rechargée qu’une fois et jamais en boucle. Ne contient aucune donnée personnelle.",
+        "lifespan": "Jusqu’à la fermeture de l’onglet"
       }
     },
     "managerTitle": "Gestionnaire Interactif du Consentement",

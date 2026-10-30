@@ -335,7 +335,7 @@ const Portfolio: React.FC = () => {
                                                         <div className="overflow-hidden">
                                                             <div className="font-medium text-primary truncate">{pos.instrument}</div>
                                                             <div className="text-secondary flex items-center gap-1.5">
-                                                                <span>{pos.quantity.toLocaleString()} {pos.symbol}</span>
+                                                                <span>{pos.quantity.toLocaleString(locale, { maximumFractionDigits: 8 })} {pos.symbol}</span>
                                                                 {isForeign && (
                                                                     <span className="text-[10px] px-1 py-0.2 rounded bg-subtle border border-border text-tertiary">
                                                                         {posCurr}

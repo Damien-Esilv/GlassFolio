@@ -243,6 +243,7 @@ export const useSnapshotImport = (
             );
 
             const validPositions = parseResult.positions.filter(p => p.status === 'valid');
+            const keepAssets = parseResult.positions.filter(p => p.status !== 'valid').map(p => p.position);
 
             // Both modes reconcile against the account so the preview shows the real
             // outcome (and snapshot-only never duplicates positions on re-import)
@@ -253,7 +254,7 @@ export const useSnapshotImport = (
             const reconciliation = await calculateReconciliation(
                 validPositions.map(p => p.position),
                 existingPos,
-                { closeMissing: state.closeMissingAssets }
+                { closeMissing: state.closeMissingAssets, keepAssets }
             );
 
             const instruments = await stageSnapshotInstruments(validPositions.map(p => p.position), accountId);
@@ -336,6 +337,7 @@ export const useSnapshotImport = (
             const validPositions = state.parsedPositions
                 .filter(p => p.status === 'valid')
                 .map(p => p.position);
+            const keepAssets = state.parsedPositions.filter(p => p.status !== 'valid').map(p => p.position);
 
             const result = await commitSnapshotImport({
                 mode: state.generateSyntheticTransactionsOption ? 'synthetic' : 'replace',
@@ -344,6 +346,7 @@ export const useSnapshotImport = (
                 accountId,
                 userId,
                 closeMissing: state.closeMissingAssets,
+                keepAssets,
                 rawContent: state.rawCSVText,
                 fileName,
                 totalRows: state.parseStats.total

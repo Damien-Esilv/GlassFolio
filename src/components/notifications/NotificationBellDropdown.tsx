@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { Alert, NotificationCategory } from '../../types';
+import { alertText } from '../../utils/alertText';
 
 interface NotificationBellDropdownProps {
   className?: string;
@@ -189,18 +190,18 @@ export const NotificationBellDropdown: React.FC<NotificationBellDropdownProps> =
                           }}
                           className={`text-xs font-semibold truncate hover:underline ${!alert.read ? 'text-primary' : 'text-secondary'}`}
                         >
-                          {alert.title}
+                          {alertText(alert, t).title}
                         </Link>
                       ) : (
                         <p className={`text-xs font-semibold truncate ${!alert.read ? 'text-primary' : 'text-secondary'}`}>
-                          {alert.title}
+                          {alertText(alert, t).title}
                         </p>
                       )}
                       {!alert.read && (
                         <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" aria-hidden="true" />
                       )}
                     </div>
-                    <p className="text-[11px] text-tertiary mt-0.5 line-clamp-2">{alert.message}</p>
+                    <p className="text-[11px] text-tertiary mt-0.5 line-clamp-2">{alertText(alert, t).message}</p>
 
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-tertiary">
                       <span className="flex items-center gap-1">

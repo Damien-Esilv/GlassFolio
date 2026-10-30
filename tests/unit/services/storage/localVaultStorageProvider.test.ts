@@ -170,6 +170,36 @@ describe('LocalVaultStorageProvider (E33 — TGLA-139)', () => {
             expect(client.commits[1].batch.set).toEqual({ glassfolio_a: 'new' });
         });
 
+        it('refuses a value the server would reject forever, without blocking the other changes', async () => {
+            const client = makeClient({});
+            const provider = create(client);
+            await provider.connect();
+
+            expect(() => provider.setItem('glassfolio_big', 'x'.repeat(5 * 1024 * 1024 + 1))).toThrow(/too large/);
+            provider.setItem('glassfolio_small', 'ok');
+            await settle();
+
+            expect(provider.getItem('glassfolio_big')).toBeNull();
+            expect(client.commits.at(-1)?.batch.set).toEqual({ glassfolio_small: 'ok' });
+        });
+
+        it('sends a large batch as several requests and keeps the unsent part queued', async () => {
+            const client = makeClient({});
+            const provider = create(client);
+            await provider.connect();
+            const big = 'y'.repeat(3 * 1024 * 1024);
+            client.commitResults = [true, false];
+
+            provider.setItem('glassfolio_a', big);
+            provider.setItem('glassfolio_b', big);
+            provider.setItem('glassfolio_c', big);
+            await settle();
+
+            expect(client.commits.length).toBe(2);
+            expect(provider.getStatus().pending).toBeGreaterThan(0);
+            expect(provider.getStatus().lastError).not.toBeNull();
+        });
+
         it('flush() resolves true once confirmed and false when the server is unreachable', async () => {
             const client = makeClient();
             const provider = create(client);
@@ -309,6 +339,24 @@ describe('LocalVaultStorageProvider (E33 — TGLA-139)', () => {
             expect(tabB.getItem('glassfolio_a')).toBeNull();
             tabA.clear();
             expect(tabB.getItem('glassfolio_b')).toBeNull();
+        });
+
+        it('tells the layers above which keys another tab changed', async () => {
+            FakeChannel.bus.clear();
+            vi.stubGlobal('BroadcastChannel', FakeChannel);
+            const tabA = create(makeClient({}));
+            const tabB = create(makeClient({}));
+            await tabA.connect();
+            await tabB.connect();
+            const seen: Array<string[] | null> = [];
+            const unsubscribe = tabB.onExternalChange((keys) => seen.push(keys));
+
+            tabA.setItem('glassfolio_transactions', 'cipher');
+            tabA.clear();
+            unsubscribe();
+            tabA.setItem('glassfolio_goals', 'cipher');
+
+            expect(seen).toEqual([['glassfolio_transactions'], null]);
         });
     });
 });

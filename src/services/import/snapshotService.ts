@@ -228,7 +228,16 @@ export interface ReconciliationResult {
 export interface ReconciliationOptions {
     /** Close assets held on the account that are absent from the snapshot (default true) */
     closeMissing?: boolean;
+    /** Assets of rows the file lists but that could not be read: never closed for being "absent" */
+    keepAssets?: Array<Pick<SnapshotPosition, 'assetSymbol' | 'assetIsin'>>;
 }
+
+const sameAsset = (
+    ex: Pick<ExistingPosition, 'assetSymbol' | 'assetIsin'>,
+    other: Pick<SnapshotPosition, 'assetSymbol' | 'assetIsin'>
+): boolean =>
+    Boolean(ex.assetIsin && other.assetIsin && ex.assetIsin === other.assetIsin)
+    || Boolean(ex.assetSymbol && other.assetSymbol && ex.assetSymbol.toUpperCase() === other.assetSymbol.toUpperCase());
 
 /** Snapshot commit strategy: 'replace' = snapshot-only mode, 'synthetic' = reconciliation journal */
 export type SnapshotCommitMode = 'replace' | 'synthetic';
@@ -241,6 +250,8 @@ export interface SnapshotCommitParams {
     date: string;
     userId: string;
     closeMissing?: boolean;
+    /** Rows of the file that could not be read (see ReconciliationOptions.keepAssets) */
+    keepAssets?: ReconciliationOptions['keepAssets'];
     /** Pre-computed reconciliation (synthetic mode, may include user edits) */
     diffs?: ReconciliationDiff[];
 }
@@ -540,12 +551,7 @@ export async function calculateReconciliation(
     const matchedExisting = new Set<ExistingPosition>();
 
     for (const newPos of newPositions) {
-        const existing = existingPositions.find(ex =>
-            !matchedExisting.has(ex) && (
-                (ex.assetIsin && newPos.assetIsin && ex.assetIsin === newPos.assetIsin) ||
-                (ex.assetSymbol && newPos.assetSymbol && ex.assetSymbol.toUpperCase() === newPos.assetSymbol.toUpperCase())
-            )
-        );
+        const existing = existingPositions.find(ex => !matchedExisting.has(ex) && sameAsset(ex, newPos));
         if (existing) matchedExisting.add(existing);
 
         const diff = buildDiff({
@@ -565,8 +571,11 @@ export async function calculateReconciliation(
     }
 
     if (closeMissing) {
+        const keepAssets = options.keepAssets ?? [];
         for (const existing of existingPositions) {
             if (matchedExisting.has(existing) || parseFloat(existing.quantity) <= QTY_EPSILON) continue;
+            // Listed on a row that has an error: the asset is held, the row just could not be read
+            if (keepAssets.some(kept => sameAsset(existing, kept))) continue;
             diffs.push(buildDiff({
                 assetKey: existing.assetKey,
                 displayName: existing.assetName || existing.assetSymbol || existing.assetIsin || existing.assetKey,
@@ -803,7 +812,7 @@ export async function buildSnapshotCommit(params: SnapshotCommitParams): Promise
     }
 
     const existing = await getExistingPositions(accountId);
-    const { diffs } = await calculateReconciliation(positions, existing, { closeMissing });
+    const { diffs } = await calculateReconciliation(positions, existing, { closeMissing, keepAssets: params.keepAssets });
 
     if (mode === 'synthetic') {
         return generateReconciliationTransactions(diffs, batchId, accountId, date, userId);

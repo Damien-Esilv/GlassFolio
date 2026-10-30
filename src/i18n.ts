@@ -107,4 +107,12 @@ i18n
         },
     });
 
+// Screen readers and the browser's own translation read <html lang>: keep it on the UI language
+const syncDocumentLanguage = (lng: string | undefined): void => {
+    if (typeof document === 'undefined' || !lng) return;
+    document.documentElement.lang = lng.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+};
+i18n.on('languageChanged', syncDocumentLanguage);
+syncDocumentLanguage(i18n.language);
+
 export default i18n;

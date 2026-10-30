@@ -421,6 +421,12 @@
         "category": "Strictly Necessary (Security)",
         "purpose": "Remembers the domain (RP ID) your passkeys are bound to so the vault can be unlocked while locked. Public deployment metadata, no personal data.",
         "lifespan": "Until account deletion or cache clearing"
+      },
+      "chunkReload": {
+        "key": "gf_chunk_reload_at",
+        "category": "Strictly Necessary (Session)",
+        "purpose": "Time of the last automatic reload after a GlassFolio update, so a page that cannot load is reloaded only once instead of in a loop. Contains no personal data.",
+        "lifespan": "Until the tab is closed"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",

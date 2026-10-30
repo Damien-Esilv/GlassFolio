@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { supabaseClient } from '../../../../src/services/supabase/supabaseClient';
+import { SupabaseRequestError, supabaseClient } from '../../../../src/services/supabase/supabaseClient';
 import { LocalAuthProvider, SupabaseAuthProvider, authService } from '../../../../src/services/security/authService';
 import { vaultService } from '../../../../src/services/security/vaultService';
 import { totpService, generateTotpCode } from '../../../../src/services/security/totpService';
@@ -171,6 +171,9 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
             const requirements = await stepUpService.getRequirements(google);
             expect(requirements).toMatchObject({ password: false, recentSignInRequired: true, recentSignInSatisfied: false });
             await expect(stepUpService.verify(google, {})).rejects.toMatchObject({ name: 'RecentSignInRequiredError' });
+            // Account deletion goes through Google by itself: no recent sign-in is required first
+            expect((await stepUpService.getRequirements(google, { googleRoundTrip: true })).recentSignInRequired).toBe(false);
+            await expect(stepUpService.verify(google, {}, { googleRoundTrip: true })).resolves.toBeUndefined();
         });
 
         it('delegates the proof to the provider re-authentication', async () => {
@@ -351,8 +354,25 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
             expect(await provider.getActiveAccessToken()).toBe('refreshed-tok');
 
             (provider as unknown as { supabaseSession: unknown }).supabaseSession = { ...session(), expiresAt: Date.now() + 10_000 };
-            vi.spyOn(supabaseClient, 'refreshSession').mockRejectedValue(new Error('revoked'));
+            vi.spyOn(supabaseClient, 'refreshSession').mockRejectedValue(new SupabaseRequestError('Invalid Refresh Token', 400, 'refresh_token_not_found'));
             expect(await provider.getActiveAccessToken()).toBeUndefined();
+        });
+
+        it('keeps the session through a network failure, and refreshes only once at a time', async () => {
+            const current = { ...session(), expiresAt: Date.now() + 10_000 };
+            (provider as unknown as { supabaseSession: unknown }).supabaseSession = current;
+            vi.spyOn(supabaseClient, 'refreshSession').mockRejectedValue(new TypeError('Failed to fetch'));
+            expect(await provider.getActiveAccessToken()).toBe(current.accessToken);
+
+            let release: (value: unknown) => void = () => undefined;
+            vi.mocked(supabaseClient.refreshSession).mockClear();
+            const refresh = vi.spyOn(supabaseClient, 'refreshSession').mockImplementation(
+                () => new Promise(resolve => { release = () => resolve(session('sb-1', 'refreshed-once')); }) as never
+            );
+            const both = Promise.all([provider.getActiveAccessToken(), provider.getActiveAccessToken()]);
+            release(undefined);
+            expect(await both).toEqual(['refreshed-once', 'refreshed-once']);
+            expect(refresh).toHaveBeenCalledTimes(1);
         });
 
         it('fails closed when the factor list cannot be read', async () => {

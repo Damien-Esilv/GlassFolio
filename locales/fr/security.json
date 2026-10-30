@@ -137,7 +137,8 @@
         "cancelButton": "Annuler",
         "invalidPassword": "Mot de passe maître incorrect",
         "invalidTotp": "Code à deux facteurs incorrect",
-        "recentSignInRequired": "Par sécurité, déconnectez-vous puis reconnectez-vous avec Google, et réessayez dans les 10 minutes.",
+        "recentSignInRequired": "Par sécurité, confirmez d’abord avec Google. Vous pourrez ensuite le faire dans les 10 minutes.",
+        "confirmWithGoogle": "Confirmer avec Google",
         "recentSignInOk": "Vous vous êtes connecté récemment avec Google : confirmez pour continuer.",
         "passkeyRequired": "Vous confirmerez avec l’une de vos passkeys."
     },
@@ -162,7 +163,8 @@
         "cancel": "Annuler",
         "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette clé d'API ?",
         "savedSuccess": "Clé secrète enregistrée en toute sécurité dans le coffre.",
-        "customProvider": "Fournisseur personnalisé"
+        "customProvider": "Fournisseur personnalisé",
+        "labelPlaceholder": "ex. Clé Gemini de production"
     },
     "audit": {
         "title": "Journal d'audit de sécurité",
@@ -213,6 +215,16 @@
             "pending": "Modifications en attente d'enregistrement",
             "serverHelp": "Vos données chiffrées sont stockées sur la machine qui exécute GlassFolio. Vider ou changer de navigateur n'a aucun effet dessus.",
             "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine."
+        }
+    },
+    "vaultIntegrity": {
+        "corrupted": {
+            "title": "Une partie de vos données n’a pas pu être déchiffrée",
+            "description": "Elle est conservée telle quelle et toute modification est bloquée pour ne jamais l’écraser. Déconnectez-vous puis reconnectez-vous ; si ce message reste, restaurez une sauvegarde depuis Paramètres > Préférences."
+        },
+        "writeFailed": {
+            "title": "Vos dernières modifications ne sont pas encore enregistrées",
+            "description": "Elles n’ont pas pu être écrites (le stockage est peut-être plein). Elles restent en attente et seront réessayées à votre prochaine modification. Libérez de l’espace ou exportez une sauvegarde avant de fermer cet onglet."
         }
     }
 }

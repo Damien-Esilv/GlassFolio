@@ -27,8 +27,12 @@ export const goalService = {
             if (goal.method === 'dynamic' && goal.linkedAssets) {
                 goal.linkedAssets.forEach(link => {
                     if (link.type === 'asset') {
-                        const pos = positions.find(p => p.symbol === link.id);
-                        if (pos) currentAmount += getPosValueInBase(pos) * (link.percentage / 100);
+                        // Linked by symbol (position ids change on every recalculation; older goals
+                        // stored one); the same asset held on several accounts counts in full.
+                        const assetValue = positions
+                            .filter(p => p.symbol === link.id || p.id === link.id)
+                            .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        currentAmount += assetValue * (link.percentage / 100);
                     } else if (link.type === 'class') {
                         // Sum all assets of this class converted to base currency
                         const classTotal = positions

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { ChevronLeft, ChevronDown, FileText, Globe, AlertTriangle, CheckCircle, HelpCircle, XCircle, Info } from 'lucide-react';
 import Button from '../components/Button';
 import { taxService } from '../services/fiscal';
+import { getFiscalRules } from '../services/fiscal/taxRules';
 import { DEFAULT_FISCAL_YEAR } from '../constants/fiscalConstants';
 import { TaxSummaryResult, FiscalProfile, TaxableEvent, FiscalConfidence } from '../types/types.backend';
 import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../constants/animations';
@@ -28,14 +29,15 @@ const ConfidenceBadge: React.FC<{ confidence: FiscalConfidence }> = ({ confidenc
 };
 
 // ── Amount formatter ────────────────────────────────────────────────────────
-const formatEur = (value: number) =>
-    value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const formatEur = (value: number, language: string, currency: string = 'EUR') =>
+    value.toLocaleString(language, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ── Event row ───────────────────────────────────────────────────────────────
 const EventRow: React.FC<{ event: TaxableEvent }> = ({ event }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [expanded, setExpanded] = useState(false);
     const isNegative = event.taxableAmount < 0;
+    const money = (value: number) => formatEur(value, i18n.language, event.currency);
 
     return (
         <div className="border border-subtle rounded-lg overflow-hidden">
@@ -48,31 +50,37 @@ const EventRow: React.FC<{ event: TaxableEvent }> = ({ event }) => {
                         <span className="font-semibold text-sm text-primary">{event.symbol || event.instrumentName}</span>
                         <ConfidenceBadge confidence={event.confidence} />
                     </div>
-                    <div className="text-xs text-secondary mt-0.5">{new Date(event.eventDate).toLocaleDateString('fr-FR')}</div>
+                    <div className="text-xs text-secondary mt-0.5">{new Date(event.eventDate).toLocaleDateString(i18n.language)}</div>
                 </div>
                 <div className="text-right shrink-0">
                     <div className={`font-bold text-sm ${isNegative ? 'text-error' : 'text-success'}`}>
-                        {isNegative ? '' : '+'}{formatEur(event.taxableAmount)}
+                        {isNegative ? '' : '+'}{money(event.taxableAmount)}
                     </div>
-                    <div className="text-xs text-secondary">{formatEur(event.grossAmount)}</div>
+                    <div className="text-xs text-secondary">{money(event.grossAmount)}</div>
                 </div>
                 <ChevronDown size={14} className={`text-secondary shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </button>
             {expanded && (
                 <div className="px-3 pb-3 border-t border-subtle bg-subtle/30 text-xs space-y-1.5">
-                    <div className="flex justify-between"><span className="text-secondary">{t('tax:declaration.cto.grossAmount')}</span><span className="font-medium text-primary">{formatEur(event.grossAmount)}</span></div>
-                    <div className="flex justify-between"><span className="text-secondary">{t('tax:declaration.cto.costBasis')}</span><span className="font-medium text-primary">{formatEur(event.acquisitionCost)}</span></div>
-                    <div className="flex justify-between"><span className="text-secondary">{t('common:fees', { ns: 'common' })}</span><span className="font-medium text-primary">{formatEur(event.fees)}</span></div>
+                    <div className="flex justify-between"><span className="text-secondary">{t('tax:declaration.cto.grossAmount')}</span><span className="font-medium text-primary">{money(event.grossAmount)}</span></div>
+                    <div className="flex justify-between"><span className="text-secondary">{t('tax:declaration.cto.costBasis')}</span><span className="font-medium text-primary">{money(event.acquisitionCost)}</span></div>
+                    <div className="flex justify-between"><span className="text-secondary">{t('common:fees', { ns: 'common' })}</span><span className="font-medium text-primary">{money(event.fees)}</span></div>
                     <div className="flex justify-between border-t border-subtle pt-1.5">
                         <span className="text-secondary font-semibold">{t('tax:declaration.cto.netGain')}</span>
-                        <span className={`font-bold ${isNegative ? 'text-error' : 'text-success'}`}>{formatEur(event.taxableAmount)}</span>
+                        <span className={`font-bold ${isNegative ? 'text-error' : 'text-success'}`}>{money(event.taxableAmount)}</span>
                     </div>
-                    {event.explanation && <p className="text-secondary mt-1 leading-relaxed">{event.explanation}</p>}
+                    {(event.explanationKey || event.explanation) && (
+                        <p className="text-secondary mt-1 leading-relaxed">
+                            {event.explanationKey
+                                ? t(`tax:declaration.explanations.${event.explanationKey}`, event.explanationParams)
+                                : event.explanation}
+                        </p>
+                    )}
                     {event.legalReference && <p className="text-tertiary italic">{event.legalReference}</p>}
                     {event.missingData && event.missingData.length > 0 && (
                         <div className="flex items-start gap-1 text-warning mt-1">
                             <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                            <span>{event.missingData.join(', ')}</span>
+                            <span>{event.missingData.map(key => t(`tax:declaration.missingData.${key}`, { defaultValue: key })).join(' · ')}</span>
                         </div>
                     )}
                 </div>
@@ -82,19 +90,22 @@ const EventRow: React.FC<{ event: TaxableEvent }> = ({ event }) => {
 };
 
 // ── Stat card ───────────────────────────────────────────────────────────────
-const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; highlight?: boolean; index?: number }> = ({ label, value, isNegative, highlight, index = 0 }) => (
+const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; highlight?: boolean; index?: number }> = ({ label, value, isNegative, highlight, index = 0 }) => {
+    const { i18n } = useTranslation();
+    return (
     <div 
         className={`rounded-xl p-4 border transition-all animate-fade-in-up ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
         style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
     >
         <p className="text-xs text-secondary mb-1">{label}</p>
-        <p className={`text-lg font-bold ${isNegative ? 'text-error' : highlight ? 'text-brand' : 'text-primary'}`}>{formatEur(value)}</p>
+        <p className={`text-lg font-bold ${isNegative ? 'text-error' : highlight ? 'text-brand' : 'text-primary'}`}>{formatEur(value, i18n.language)}</p>
     </div>
-);
+    );
+};
 
 // ── Main component ──────────────────────────────────────────────────────────
 const DeclarationAssistant: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user } = useAuth();
@@ -117,18 +128,28 @@ const DeclarationAssistant: React.FC = () => {
         { id: 'forms', labelKey: 'tax:declaration.tabs.forms' },
     ];
 
-    const loadSummary = useCallback(async () => {
+    const profileKey = JSON.stringify(profile);
+    const loadSummary = useCallback(async (isCancelled: () => boolean = () => false) => {
         setIsLoading(true);
         try {
             const result = await taxService.getTaxSummary(fiscalYear, profile);
-            setSummary(result);
+            if (!isCancelled()) setSummary(result);
         } catch (err) {
             console.error('Failed to load tax summary:', err);
+            // Never leave another year's figures under this year's title
+            if (!isCancelled()) setSummary(null);
         }
-        setIsLoading(false);
-    }, [fiscalYear]);
+        if (!isCancelled()) setIsLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- profile is read through profileKey
+    }, [fiscalYear, profileKey]);
 
-    useEffect(() => { loadSummary(); }, [loadSummary]);
+    useEffect(() => {
+        let cancelled = false;
+        loadSummary(() => cancelled);
+        return () => {
+            cancelled = true;
+        };
+    }, [loadSummary]);
 
     return (
         <div className="space-y-6 w-full animate-fade-in">
@@ -240,7 +261,30 @@ const DeclarationAssistant: React.FC = () => {
                         <Info size={16} className="text-brand shrink-0 mt-0.5" />
                         <p className="text-xs text-secondary leading-relaxed">{t('tax:declaration.pea.internalNote')}</p>
                     </div>
-                    <p className="text-secondary text-sm text-center py-8">{t('tax:declaration.pea.noEvents')}</p>
+                    {summary.pea.withdrawals.length === 0 ? (
+                        <p className="text-secondary text-sm text-center py-8">{t('tax:declaration.pea.noEvents')}</p>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <StatCard label={t('tax:declaration.pea.taxableGain')} value={summary.pea.taxableGain} index={0} highlight />
+                                <StatCard label={t('tax:declaration.pea.incomeTax')} value={summary.pea.incomeTax} index={1} />
+                                <StatCard label={t('tax:declaration.pea.socialContributions')} value={summary.pea.socialContributions} index={2} />
+                            </div>
+                            <div className="space-y-2">
+                                {summary.pea.withdrawals.map(e => (
+                                    <div key={e.transactionIds[0]}>
+                                        {e.closesPlan && (
+                                            <p className="text-xs text-warning flex items-center gap-1 mb-1">
+                                                <AlertTriangle size={12} />{t('tax:declaration.pea.closesPlan')}
+                                            </p>
+                                        )}
+                                        <EventRow event={e} />
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-secondary">{t('tax:declaration.pea.ifuNote')}</p>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -311,7 +355,7 @@ const DeclarationAssistant: React.FC = () => {
                                             {ob.form}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-secondary mb-2">{ob.reason}</p>
+                                    <p className="text-xs text-secondary mb-2">{ob.reasonKey ? t(`tax:declaration.foreign.reasons.${ob.reasonKey}`, { country: ob.country }) : ob.reason}</p>
                                     <div className="flex flex-wrap gap-1">
                                         {ob.accountNames.map(name => (
                                             <span key={name} className="px-2 py-0.5 bg-subtle rounded text-xs text-secondary">{name}</span>
@@ -322,7 +366,7 @@ const DeclarationAssistant: React.FC = () => {
                             <div className="rounded-xl bg-error/5 border border-error/20 p-3 flex gap-2">
                                 <AlertTriangle size={14} className="text-error shrink-0 mt-0.5" />
                                 <p className="text-xs text-secondary">
-                                    {t('tax:declaration.foreign.penalty')}: <strong className="text-error">1 500 €</strong> {t('tax:declaration.foreign.perAccount')}
+                                    {t('tax:declaration.foreign.penalty')}: <strong className="text-error">{formatEur(getFiscalRules(fiscalYear)?.foreignAccounts.finePerAccount ?? 1500, i18n.language)}</strong> {t('tax:declaration.foreign.perAccount')}
                                 </p>
                             </div>
                         </div>
@@ -361,7 +405,7 @@ const DeclarationAssistant: React.FC = () => {
                                             <td className="px-4 py-3 font-mono font-semibold text-primary text-xs">{fm.form}</td>
                                             <td className="px-4 py-3 font-mono font-bold text-brand text-xs">{fm.caseId}</td>
                                             <td className="px-4 py-3 text-secondary text-xs max-w-xs">{fm.caseDescription}</td>
-                                            <td className="px-4 py-3 text-right font-bold text-primary">{fm.value.toLocaleString('fr-FR')} €</td>
+                                            <td className="px-4 py-3 text-right font-bold text-primary">{formatEur(fm.value, i18n.language)}</td>
                                             <td className="px-4 py-3"><ConfidenceBadge confidence={fm.confidence} /></td>
                                         </tr>
                                     ))}

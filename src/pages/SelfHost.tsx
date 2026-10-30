@@ -14,12 +14,18 @@ import {
   SELF_HOST_DEFAULT_URL,
   buildPublicPagePath,
 } from '../config/project';
+import { useDemoOffered } from '../hooks/useDemoOffered';
 
 /** Shell commands shown on the page. They mirror package.json scripts and docker-compose.yml. */
 const COMMANDS = {
   logs: ['npm run docker:logs'],
   stop: ['npm run docker:down'],
-  expose: ['GLASSFOLIO_BIND=0.0.0.0 GLASSFOLIO_ACCESS_TOKEN=$(openssl rand -hex 16) npm run docker:up'],
+  // The token is printed so it can be kept: it is the password, and every later docker:up needs it
+  expose: [
+    'export GLASSFOLIO_ACCESS_TOKEN="$(openssl rand -hex 16)"',
+    'echo "$GLASSFOLIO_ACCESS_TOKEN"',
+    'GLASSFOLIO_BIND=0.0.0.0 npm run docker:up',
+  ],
   backup: ['docker run --rm --volumes-from glassfolio-app -v "$PWD":/backup alpine tar czf /backup/glassfolio-data.tgz -C /data .'],
   restore: [
     'docker stop glassfolio-app',
@@ -81,6 +87,7 @@ const Prose: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const SelfHost: React.FC = () => {
   const { t } = useTranslation();
   const { launchDemo, isLaunchingDemo } = useDemoAccess();
+  const demoOffered = useDemoOffered();
   const active = useActiveSection();
 
   const scrollTo = (event: React.MouseEvent<HTMLAnchorElement>, id: SectionId): void => {
@@ -121,7 +128,7 @@ const SelfHost: React.FC = () => {
                   <Github size={17} />
                   <span>{t('selfhost:ctaGithub')}</span>
                 </a>
-                <button
+                {demoOffered && <button
                   type="button"
                   onClick={() => launchDemo('/')}
                   disabled={isLaunchingDemo}
@@ -129,7 +136,7 @@ const SelfHost: React.FC = () => {
                 >
                   <Sparkles size={16} className="text-secondary" />
                   <span>{t('selfhost:ctaDemo')}</span>
-                </button>
+                </button>}
               </div>
             </m.div>
           </div>

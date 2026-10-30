@@ -7,11 +7,13 @@ import { openConsentPreferences } from '../../services/consentService';
 import { getDeploymentMode, getAppUrl, buildAppDestinationUrl, getAppTarget } from '../../config/deployment';
 import { usePublicThemeLang } from '../../hooks/usePublicThemeLang';
 import { GITHUB_REPO_URL, GITHUB_LICENSE_URL, buildPublicPagePath } from '../../config/project';
+import { useDemoOffered } from '../../hooks/useDemoOffered';
 
 export const LandingFooter: React.FC = () => {
   const { t } = useTranslation();
   const { theme, language } = usePublicThemeLang();
   const { launchDemo, isLaunchingDemo } = useDemoAccess();
+  const demoOffered = useDemoOffered();
   const currentYear = new Date().getFullYear();
   const deploymentMode = getDeploymentMode();
   const isExternalApp = Boolean(getAppUrl());
@@ -39,6 +41,7 @@ export const LandingFooter: React.FC = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            {demoOffered && (
             <button
               type="button"
               onClick={() => launchDemo('/')}
@@ -48,6 +51,7 @@ export const LandingFooter: React.FC = () => {
               <Sparkles size={16} />
               <span>{t('landing:common.tryLiveDemo')}</span>
             </button>
+            )}
 
             {isExternalApp ? (
               <a

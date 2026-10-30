@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Trophy, Star, Sparkles, X, ChevronRight } from 'lucide-react';
 import Button from './Button';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export interface CelebrationData {
     type: 'level_up' | 'achievement' | 'rank';
@@ -21,6 +22,7 @@ interface CelebrationModalProps {
 }
 
 const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, data }) => {
+    useEscapeKey(onClose, isOpen);
     const { t } = useTranslation(['gamification', 'common']);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -133,7 +135,7 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, da
                 <button 
                     onClick={onClose}
                     className="absolute top-4 right-4 p-2 text-secondary hover:text-primary rounded-full hover:bg-subtle transition-colors"
-                    aria-label="Close"
+                    aria-label={t('common:buttons.close')}
                 >
                     <X size={18} />
                 </button>

@@ -12,6 +12,7 @@ import {
     instrumentService,
 } from '../../services/instrumentService';
 import { saveManualPrice } from '../../services/priceService';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface EditAssetModalProps {
     position: Position;
@@ -28,6 +29,7 @@ const fieldClass =
  * contract, currency) with live integrity checks, plus its manual price. A duplicate can be merged into.
  */
 export const EditAssetModal: React.FC<EditAssetModalProps> = ({ position, onClose, onSaved }) => {
+    useEscapeKey(onClose);
     const { t } = useTranslation('portfolio');
     const instrument = useMemo(() => instrumentService.findInstrumentForPosition(position), [position]);
 

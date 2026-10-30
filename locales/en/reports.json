@@ -46,7 +46,9 @@
         "clearSelection": "Clear selection",
         "searching": "Searching live...",
         "selectedCount": "{{count}} / 4 selected",
-        "maxSelectedNotice": "Maximum limit of 4 reference assets reached."
+        "maxSelectedNotice": "Maximum limit of 4 reference assets reached.",
+        "delta": "Difference",
+        "benchmarkWithRate": "Benchmark ({{rate}} %)"
     },
     "pl": {
         "title": "Realized vs. Unrealized P&L",

@@ -10,6 +10,7 @@
         "publicProfile": "Profil public",
         "profilePicture": "Photo de profil",
         "profilePictureInfo": "Supporte JPG, PNG ou GIF. Taille max 2 Mo.",
+        "avatarRejected": "Cette image n’a pas pu être utilisée. Choisissez un fichier JPG, PNG ou GIF de 2 Mo maximum.",
         "displayName": "Nom d'affichage",
         "emailAddress": "Adresse e-mail",
         "profileUpdated": "Détails du profil mis à jour avec succès",
@@ -120,7 +121,8 @@
             "invalid_zip": "Archive ZIP illisible ou corrompue.",
             "unsupported_compression": "Compression ZIP non prise en charge.",
             "crc_mismatch": "Archive ZIP corrompue : un fichier ne passe pas le contrôle d'intégrité.",
-            "zip_no_backup": "Cette archive ne contient pas de sauvegarde GlassFolio (data/glassfolio-backup-….json)."
+            "zip_no_backup": "Cette archive ne contient pas de sauvegarde GlassFolio (data/glassfolio-backup-….json).",
+            "empty_backup": "Cette sauvegarde ne contient aucune donnée : la restaurer ne ferait qu’effacer votre compte."
         }
     },
     "legal": {

@@ -108,6 +108,8 @@ git clone https://github.com/Damien-Esilv/GlassFolio.git && cd GlassFolio && npm
 
 Open <http://localhost:3000>, create your master password, and you are in.
 
+To explore the demo account instead, start it with `GLASSFOLIO_DEMO=1 npm run docker:up`: the app opens directly on the demo (`npm run docker:up` alone never offers it).
+
 ```bash
 npm run docker:logs    # follow the logs
 npm run docker:down    # stop the container (your data is kept)
@@ -203,11 +205,11 @@ npm install
 npm run dev        # http://localhost:3000 (local mode)
 ```
 
-To try it without entering data, sign in with the demo account `demo@glassfolio.com` / `password`, or open `/?demo=1`. Sample broker CSV files are in [`test-data/`](test-data).
+To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLIO_DEMO=1 npm run docker:up`): the app opens on the demo account. A normal launch offers no demo. Sample broker CSV files are in [`test-data/`](test-data).
 
 | Script | Purpose |
 |---|---|
-| `npm run dev` / `dev:cloud` | Dev server in local mode / cloud (Supabase) mode |
+| `npm run dev` / `dev:demo` / `dev:cloud` | Dev server in local mode / local mode on the demo account / cloud (Supabase) mode |
 | `npm run build` | Production build (`build:local`, `build:app`, `build:showcase` for specific targets) |
 | `npm run preview` | Preview the production build |
 | `npm run mcp` | Start the MCP server (stdio) |

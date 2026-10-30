@@ -138,3 +138,66 @@ describe('supabaseClient fail-loud vault API (TGLA-101)', () => {
         expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/rest/v1/rpc/delete_own_account'), expect.anything());
     });
 });
+
+describe('Cloud replication retries (TGLA-188)', () => {
+    let provider: SyncedBackingStorageProvider;
+    let upsertRecord: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        vi.stubEnv('VITE_SUPABASE_URL', 'https://mock-test.supabase.co');
+        vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'mock-anon-key-12345');
+        process.env.VITE_SUPABASE_URL = 'https://mock-test.supabase.co';
+        process.env.VITE_SUPABASE_ANON_KEY = 'mock-anon-key-12345';
+        provider = new SyncedBackingStorageProvider(new LocalStorageProvider(), 'cloud');
+        upsertRecord = vi.spyOn(supabaseClient, 'upsertVaultRecord').mockResolvedValue();
+        vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllEnvs();
+        delete process.env.VITE_SUPABASE_URL;
+        delete process.env.VITE_SUPABASE_ANON_KEY;
+        localStorage.clear();
+    });
+
+    it('retries a failed upload and keeps the unsent change when pulling (TGLA-188)', async () => {
+        vi.useFakeTimers();
+        try {
+            provider.setSupabaseSession(sessionFor('alice'));
+            provider.enableReplication('alice');
+            upsertRecord.mockRejectedValueOnce(new Error('Failed to fetch'));
+
+            provider.setItem('glassfolio_transactions', CIPHERTEXT);
+            await vi.advanceTimersByTimeAsync(0);
+            expect(provider.getUnsyncedCount()).toBe(1);
+
+            // The server still has the older copy: a pull must not bring it back over the unsent change
+            const older = JSON.stringify({ v: 1, alg: 'A256GCM', iv: 'b2xk', ct: 'b2xk' });
+            vi.spyOn(supabaseClient, 'getVaultHeader').mockResolvedValue(null);
+            vi.spyOn(supabaseClient, 'getVaultRecords').mockResolvedValue([{ record_key: 'glassfolio_transactions', ciphertext: older } as never]);
+            await provider.pullFromRemote();
+            expect(provider.getItem('glassfolio_transactions')).toBe(CIPHERTEXT);
+
+            await vi.advanceTimersByTimeAsync(5_000);
+            expect(upsertRecord).toHaveBeenLastCalledWith('token-alice', 'glassfolio_transactions', CIPHERTEXT);
+            expect(provider.getUnsyncedCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('never sends one account\'s queued changes under another account\'s session', async () => {
+        provider.setSupabaseSession(sessionFor('alice'));
+        provider.enableReplication('alice');
+        upsertRecord.mockRejectedValueOnce(new Error('Failed to fetch'));
+        provider.setItem('glassfolio_goals', CIPHERTEXT);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        provider.setSupabaseSession(sessionFor('bob'));
+        provider.enableReplication('bob');
+        expect(provider.getUnsyncedCount()).toBe(0);
+        expect(upsertRecord).not.toHaveBeenCalledWith('token-bob', expect.anything(), expect.anything());
+    });
+});

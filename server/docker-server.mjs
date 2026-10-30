@@ -63,10 +63,38 @@ const EXTRA_CONNECT_SRC = (process.env.CSP_CONNECT_SRC || '')
 // CSP + hardening headers, shared with vercel.json (server/securityHeaders.mjs)
 const SECURITY_HEADERS = buildSecurityHeaders('local', { extraConnectSrc: EXTRA_CONNECT_SRC });
 
-const handleLocalVault = createLocalVaultHandler(vaultStore, { securityHeaders: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS });
+// GLASSFOLIO_DEMO=1: the app opens on the demo account instead of offering it on every visit
+const DEMO = process.env.GLASSFOLIO_DEMO === '1';
+const handleLocalVault = createLocalVaultHandler(vaultStore, { securityHeaders: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS, demo: DEMO });
+
+/** Hashed build output (Vite `assets/`): its name changes with its content, so it can be cached for good. */
+const isFingerprintedAsset = (pathname) => pathname.startsWith('/assets/');
 
 const server = http.createServer(async (req, res) => {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  try {
+    await handleRequest(req, res);
+  } catch (err) {
+    // One bad request must never take the server (and every user's session) down
+    console.error('[docker-server] Request failed', err);
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
+      res.end('Internal Server Error');
+    } else {
+      res.destroy();
+    }
+  }
+});
+
+async function handleRequest(req, res) {
+  let parsedUrl;
+  try {
+    // A malformed request target (e.g. "//") makes the URL constructor throw
+    parsedUrl = new URL(req.url, 'http://localhost');
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
+    res.end('Bad Request');
+    return;
+  }
   const pathname = parsedUrl.pathname;
 
   // 1. Health checks
@@ -107,8 +135,14 @@ const server = http.createServer(async (req, res) => {
     filePath = path.join(filePath, 'index.html');
   }
 
-  // If file doesn't exist, fallback to SPA index.html
+  // If file doesn't exist, fallback to SPA index.html; a missing file (e.g. a chunk of an older
+  // build) gets a 404, not an HTML page served under a script's name.
   if (!fs.existsSync(filePath)) {
+    if (path.extname(pathname)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
+      res.end('Not Found');
+      return;
+    }
     filePath = path.join(STATIC_DIR, 'index.html');
   }
 
@@ -121,14 +155,16 @@ const server = http.createServer(async (req, res) => {
       'Content-Type': contentType,
       'Content-Length': content.length,
       ...SECURITY_HEADERS,
-      ...(ext === '.html' ? { 'Cache-Control': 'no-cache, must-revalidate' } : { 'Cache-Control': 'public, max-age=31536000, immutable' }),
+      'Cache-Control': ext === '.html'
+        ? 'no-cache, must-revalidate'
+        : isFingerprintedAsset(pathname) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600',
     });
     res.end(content);
   } catch {
     res.writeHead(500, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS });
     res.end('Internal Server Error');
   }
-});
+}
 
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {

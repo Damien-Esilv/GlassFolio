@@ -68,6 +68,8 @@ export interface ChatMessage {
   toolName?: string;
   pendingAction?: PendingActionProposal;
   thought?: string;
+  /** The provider's own content blocks for this turn (Anthropic thinking + tool_use), sent back as is. */
+  providerContent?: unknown[];
 }
 
 export type AIProviderType = 'mock' | 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'openrouter';
@@ -90,4 +92,6 @@ export interface LLMResponse {
   content: string;
   toolCalls?: ToolCallRequest[];
   thought?: string;
+  /** See ChatMessage.providerContent */
+  providerContent?: unknown[];
 }

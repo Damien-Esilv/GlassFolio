@@ -167,8 +167,14 @@ class AIService {
       const lng = resolveLanguage(context);
       const systemPrompt = i18n.t('ai:prompt.system', { lng });
 
+      // Secrets pasted in the chat (API keys, recovery keys, TOTP seeds) never leave the device
+      const outgoing = (): ChatMessage[] => this.messages.map((m) => ({
+        ...m,
+        content: guardrailsService.redactSensitiveExfiltrations(m.content),
+      }));
+
       // First call to the LLM
-      const initialResponse = await provider.sendMessage(this.messages, tools, systemPrompt, lng);
+      const initialResponse = await provider.sendMessage(outgoing(), tools, systemPrompt, lng);
 
       // Handle Tool Calls if any
       if (initialResponse.toolCalls && initialResponse.toolCalls.length > 0) {
@@ -178,57 +184,63 @@ class AIService {
           role: 'assistant',
           content: initialResponse.content || '',
           toolCalls: initialResponse.toolCalls,
+          ...(initialResponse.providerContent ? { providerContent: initialResponse.providerContent } : {}),
           timestamp: new Date().toISOString(),
         };
         this.messages.push(assistantInvocationMsg);
 
+        const settings = aiSettingsService.getSettings();
+        // Shown after the tool results: the chat APIs require every tool call to be answered
+        // right after the invocation, before any other assistant message.
+        const followUps: ChatMessage[] = [];
+
         for (const toolCall of initialResponse.toolCalls) {
           const toolDef = aiToolRegistry.getTool(toolCall.name);
-          const settings = aiSettingsService.getSettings();
+          let toolResultStr = '';
 
           // Check if tool requires human approval (or if in strict read-only mode)
           if (toolDef?.requiresConfirmation) {
             if (settings.executionMode === 'read_only') {
-              const blockedMsg: ChatMessage = {
-                id: `msg_${Date.now()}_a`,
+              toolResultStr = JSON.stringify({ error: 'Blocked: the assistant is in read-only mode.' });
+              followUps.push({
+                id: `msg_${Date.now()}_${followUps.length}_a`,
                 role: 'assistant',
                 content: i18n.t('ai:service.readOnlyBlocked', { lng, tool: toolCall.name }),
                 timestamp: new Date().toISOString(),
-              };
-              this.messages.push(blockedMsg);
-              return [...this.messages];
+              });
+            } else {
+              // Create Pending Action for Human-in-the-loop approval: one card per proposed change
+              const proposal = guardrailsService.createPendingAction(
+                toolCall.name,
+                toolCall.name,
+                toolCall.arguments,
+                toolCall.arguments
+              );
+              toolResultStr = JSON.stringify({ status: 'awaiting_user_confirmation', actionId: proposal.id });
+              followUps.push({
+                id: `msg_${Date.now()}_${followUps.length}_a`,
+                role: 'assistant',
+                content: i18n.t('ai:service.confirmationRequired', { lng }),
+                pendingAction: proposal,
+                timestamp: new Date().toISOString(),
+              });
             }
-
-            // Create Pending Action for Human-in-the-loop approval
-            const proposal = guardrailsService.createPendingAction(
-              toolCall.name,
-              toolCall.name,
-              toolCall.arguments,
-              toolCall.arguments
-            );
-
-            assistantInvocationMsg.pendingAction = proposal;
-            assistantInvocationMsg.content =
-              initialResponse.content ||
-              `Une confirmation est requise avant d'exécuter l'action financière ci-dessous :`;
-            return [...this.messages];
-          }
-
-          // Read-only tool execution
-          let toolResultStr = '';
-          try {
-            const result = await aiToolRegistry.executeTool(
-              toolCall.name,
-              toolCall.arguments,
-              context
-            );
-            toolResultStr = JSON.stringify(result);
-          } catch (err) {
-            toolResultStr = JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+          } else {
+            // Read-only tool execution
+            try {
+              const result = await aiToolRegistry.executeTool(
+                toolCall.name,
+                toolCall.arguments,
+                context
+              );
+              toolResultStr = JSON.stringify(result);
+            } catch (err) {
+              toolResultStr = JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+            }
           }
 
           const toolMsg: ChatMessage = {
-            id: `msg_${Date.now()}_t`,
+            id: `msg_${Date.now()}_t_${toolCall.id}`,
             role: 'tool',
             toolCallId: toolCall.id,
             toolName: toolCall.name,
@@ -238,12 +250,18 @@ class AIService {
           this.messages.push(toolMsg);
         }
 
+        // A change waits for the user (or was blocked): the cards answer this turn
+        if (followUps.length > 0) {
+          this.messages.push(...followUps);
+          return [...this.messages];
+        }
+
         // Second call to let LLM summarize the tool results
-        const finalResponse = await provider.sendMessage(this.messages, tools, systemPrompt, lng);
+        const finalResponse = await provider.sendMessage(outgoing(), tools, systemPrompt, lng);
         const finalAssistantMsg: ChatMessage = {
           id: `msg_${Date.now()}_a`,
           role: 'assistant',
-          content: finalResponse.content || 'Voici les informations demandées.',
+          content: finalResponse.content || i18n.t('ai:service.emptyAnswer', { lng }),
           timestamp: new Date().toISOString(),
         };
         this.messages.push(finalAssistantMsg);
@@ -252,7 +270,7 @@ class AIService {
         const assistantMsg: ChatMessage = {
           id: `msg_${Date.now()}_a`,
           role: 'assistant',
-          content: initialResponse.content || 'Je suis à votre écoute.',
+          content: initialResponse.content || i18n.t('ai:service.emptyAnswer', { lng }),
           timestamp: new Date().toISOString(),
         };
         this.messages.push(assistantMsg);
@@ -351,27 +369,43 @@ class AIService {
   }
 
   /**
-   * Approves a pending action (Human-in-the-loop) and informs the conversation.
+   * Approves a pending action (Human-in-the-loop) and informs the conversation. A refused or failed
+   * execution is reported as such, never as saved.
    */
   public async approveAction(actionId: string, context: AIExecutionContext = {}): Promise<PendingActionProposal> {
-    const executedProposal = await guardrailsService.approveAction(actionId, context);
+    const lng = resolveLanguage(context);
+    let proposal: PendingActionProposal;
+    if (aiSettingsService.getSettings().executionMode === 'read_only') {
+      // Read-only was switched on after the card was shown
+      proposal = guardrailsService.rejectAction(actionId);
+    } else {
+      try {
+        proposal = await guardrailsService.approveAction(actionId, context);
+      } catch (err) {
+        const known = guardrailsService.getPendingAction(actionId);
+        if (!known) throw err;
+        proposal = known;
+      }
+    }
 
     // Update message state in conversation
     for (const msg of this.messages) {
       if (msg.pendingAction?.id === actionId) {
-        msg.pendingAction = { ...executedProposal };
+        msg.pendingAction = { ...proposal };
       }
     }
 
-    const confirmationMsg: ChatMessage = {
+    const outcomeKey = proposal.status === 'executed'
+      ? 'ai:service.actionApproved'
+      : proposal.status === 'rejected' ? 'ai:service.actionRejected' : 'ai:service.actionFailed';
+    this.messages.push({
       id: `msg_${Date.now()}_sys`,
       role: 'assistant',
-      content: i18n.t('ai:service.actionApproved', { lng: resolveLanguage(context) }),
+      content: i18n.t(outcomeKey, { lng, error: proposal.error ?? '' }),
       timestamp: new Date().toISOString(),
-    };
-    this.messages.push(confirmationMsg);
+    });
 
-    return executedProposal;
+    return proposal;
   }
 
   /**
@@ -385,6 +419,9 @@ class AIService {
         msg.pendingAction = { ...rejectedProposal };
       }
     }
+
+    // Already executed (a double click): nothing was cancelled, so say nothing
+    if (rejectedProposal.status !== 'rejected') return rejectedProposal;
 
     const rejectionMsg: ChatMessage = {
       id: `msg_${Date.now()}_sys`,

@@ -62,6 +62,9 @@ function applyDomTheme(theme: ShowcaseTheme): void {
   applyPublicDomTheme(theme);
 }
 
+/** Every hook instance (header, footer, app links) follows a theme picked in any of them. */
+const PUBLIC_THEME_EVENT = 'gf:public-theme-changed';
+
 export function usePublicThemeLang() {
   const { i18n } = useTranslation();
   const { user, updateProfile } = useAuth();
@@ -73,17 +76,31 @@ export function usePublicThemeLang() {
   const currentLang: ShowcaseLanguage =
     i18n.language && i18n.language.toLowerCase().startsWith('fr') ? 'fr' : 'en';
 
+  // A signed-in user's own theme (emerald, cyber, system) is the app's: a public page must not
+  // repaint it with the public base theme (nothing would put it back).
+  const keepsOwnTheme = Boolean(user) && !isPublicBaseTheme(user?.preferences?.theme);
   useEffect(() => {
     const resolved = resolveInitialTheme(user?.preferences?.theme);
     setThemeState(resolved);
-    applyDomTheme(resolved);
-  }, [user?.preferences?.theme]);
+    if (!keepsOwnTheme) applyDomTheme(resolved);
+  }, [user?.preferences?.theme, keepsOwnTheme]);
+
+  useEffect(() => {
+    const onThemeChanged = (event: Event) => {
+      const next = (event as CustomEvent<ShowcaseTheme>).detail;
+      if (isPublicBaseTheme(next)) setThemeState(next);
+    };
+    window.addEventListener(PUBLIC_THEME_EVENT, onThemeChanged);
+    return () => window.removeEventListener(PUBLIC_THEME_EVENT, onThemeChanged);
+  }, []);
 
   const setTheme = useCallback(
     (nextTheme: ShowcaseTheme) => {
       setThemeState(nextTheme);
       setSyncedPublicTheme(nextTheme);
       applyDomTheme(nextTheme);
+      // The other instances (app links carry the theme to the app) must not keep the old one
+      window.dispatchEvent(new CustomEvent<ShowcaseTheme>(PUBLIC_THEME_EVENT, { detail: nextTheme }));
       if (user && updateProfile) {
         updateProfile({
           preferences: {

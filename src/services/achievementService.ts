@@ -227,8 +227,9 @@ export const achievementService = {
             db.saveAchievements(updatedAchievements);
         }
 
+        // Progress is recomputed on every load: return it even when no level changed (stored on level-ups)
         return {
-            achievements: hasChanges ? updatedAchievements : achievements,
+            achievements: updatedAchievements,
             xpGained,
             unlockedEvents
         };

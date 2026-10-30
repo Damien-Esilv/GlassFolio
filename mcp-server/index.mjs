@@ -668,9 +668,16 @@ rl.on('line', async (line) => {
   const trimmed = line.trim();
   if (!trimmed) return;
 
+  let request;
   try {
-    const request = JSON.parse(trimmed);
-    const { id, method, params } = request;
+    request = JSON.parse(trimmed);
+  } catch (err) {
+    sendResponse(null, null, { code: -32700, message: `Parse error: ${err.message}` });
+    return;
+  }
+  const { id, method, params } = request ?? {};
+
+  try {
 
     if (method === 'initialize') {
       sendResponse(id, {
@@ -725,6 +732,7 @@ rl.on('line', async (line) => {
     // Default error for unhandled method
     sendResponse(id, null, { code: -32601, message: `Method not found: ${method}` });
   } catch (err) {
-    sendResponse(null, null, { code: -32700, message: `Parse error: ${err.message}` });
+    // A failed call answers its own request id, or the client would wait forever
+    sendResponse(id ?? null, null, { code: -32603, message: `Internal error: ${err.message}` });
   }
 });

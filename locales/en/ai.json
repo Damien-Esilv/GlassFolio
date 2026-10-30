@@ -219,7 +219,10 @@
   "service": {
     "readOnlyBlocked": "Strict read-only mode is on. The **{{tool}}** action was blocked according to your security settings.",
     "actionApproved": "✅ The operation was approved and saved to your portfolio.",
-    "actionRejected": "❌ The operation was declined and cancelled. Nothing was changed."
+    "actionRejected": "❌ The operation was declined and cancelled. Nothing was changed.",
+    "actionFailed": "⚠️ The operation could not be completed, so nothing was saved. {{error}}",
+    "confirmationRequired": "Please confirm this change before it is applied:",
+    "emptyAnswer": "I have no answer to give this time. Could you rephrase your question?"
   },
   "mock": {
     "greeting": "Hello! How can I help you with your wealth today?",

@@ -6,6 +6,8 @@ import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { stepUpService, StepUpRequirements } from '../../services/security/stepUpService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { getAuthCapabilities } from '../../services/security/authCapabilities';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export interface StepUpAuthModalProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ export interface StepUpAuthModalProps {
    */
   onVerified: (proof: { password: string }) => Promise<void>;
   onClose: () => void;
+  /** The action re-authenticates with Google by itself (account deletion): skip the recent sign-in check. */
+  googleRoundTrip?: boolean;
 }
 
 export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
@@ -29,14 +33,16 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
   actionVariant = 'primary',
   onVerified,
   onClose,
+  googleRoundTrip = false,
 }) => {
   const { t } = useTranslation(['security', 'common']);
-  const { user } = useAuth();
+  const { user, startGoogleReauth } = useAuth();
 
   const [requirements, setRequirements] = useState<StepUpRequirements | null>(null);
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  useEscapeKey(() => { if (!isLoading) onClose(); }, isOpen);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -49,7 +55,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
       return;
     }
     let cancelled = false;
-    stepUpService.getRequirements(user)
+    stepUpService.getRequirements(user, { googleRoundTrip })
       .then((next) => {
         if (!cancelled) setRequirements(next);
       })
@@ -59,7 +65,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, user, t]);
+  }, [isOpen, user, t, googleRoundTrip]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -80,15 +86,34 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
 
     setIsLoading(true);
     try {
-      await stepUpService.verify(user, { password, totpCode: totpCode.trim() || undefined, usePasskey });
-      await onVerified({ password });
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error && err.name === 'RecentSignInRequiredError'
-        ? t('security:stepUp.recentSignInRequired')
-        : mapAuthErrorMessage(err, t, 'security:stepUp.invalidPassword');
-      setError(msg);
+      try {
+        await stepUpService.verify(user, { password, totpCode: totpCode.trim() || undefined, usePasskey }, { googleRoundTrip });
+      } catch (err: unknown) {
+        setError(err instanceof Error && err.name === 'RecentSignInRequiredError'
+          ? t('security:stepUp.recentSignInRequired')
+          : mapAuthErrorMessage(err, t, 'security:stepUp.invalidPassword'));
+        return;
+      }
+      try {
+        await onVerified({ password });
+        onClose();
+      } catch (err: unknown) {
+        // The identity was proven: a failure now belongs to the action, never to the password
+        setError(mapAuthErrorMessage(err, t, 'common:errors.auth.actionFailed'));
+      }
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /** Google accounts have no password: the proof is a fresh Google sign-in, then back to this page. */
+  const confirmWithGoogle = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      await startGoogleReauth('step-up', { returnTo: `${window.location.pathname}${window.location.search}` });
+    } catch (err: unknown) {
+      setError(mapAuthErrorMessage(err, t, 'common:errors.auth.actionFailed'));
       setIsLoading(false);
     }
   };
@@ -150,6 +175,11 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
                   ? t('security:stepUp.recentSignInOk')
                   : t('security:stepUp.recentSignInRequired')}
               </p>
+            )}
+            {requirements.recentSignInRequired && !requirements.recentSignInSatisfied && (
+              <Button type="button" variant="secondary" onClick={() => void confirmWithGoogle()} isLoading={isLoading} className="w-full">
+                {t('security:stepUp.confirmWithGoogle')}
+              </Button>
             )}
 
             {/* Hidden username to anchor password manager identification */}
@@ -214,7 +244,8 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
                     id="step-up-totp"
                     name="otp"
                     type="text"
-                    inputMode="numeric"
+                    // Local backup codes hold letters: a numeric keypad could not type them
+                    inputMode={getAuthCapabilities().backupCodes ? 'text' : 'numeric'}
                     autoComplete="one-time-code"
                     value={totpCode}
                     onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 9))}

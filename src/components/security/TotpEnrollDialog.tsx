@@ -6,6 +6,7 @@ import Button from '../Button';
 import { mfaService, TotpEnrollmentDraft } from '../../services/security/mfaService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
 import { toTrustedQrHtml } from '../../services/security/trustedTypes';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface TotpEnrollDialogProps {
     isOpen: boolean;
@@ -28,6 +29,8 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState('');
     const [copiedSecret, setCopiedSecret] = useState(false);
+    // Not on the backup codes step: they are shown once and must be saved first
+    useEscapeKey(() => handleClose(), isOpen && step === 'scan' && !isVerifying);
     const [copiedBackup, setCopiedBackup] = useState(false);
     const [hasConfirmedBackup, setHasConfirmedBackup] = useState(false);
     const [isConfirmed, setIsConfirmed] = useState(false);

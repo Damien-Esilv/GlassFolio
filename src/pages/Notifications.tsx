@@ -22,6 +22,7 @@ import {
 import { useData } from '../context/DataContext';
 import { Alert, AlertRule, AlertRuleMetric, NotificationCategory } from '../types';
 import Button from '../components/Button';
+import { alertText } from '../utils/alertText';
 
 function getCategoryIcon(category?: NotificationCategory, type?: string) {
   switch (category) {
@@ -80,8 +81,9 @@ export const Notifications: React.FC = () => {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesTitle = alert.title.toLowerCase().includes(query);
-        const matchesMsg = alert.message.toLowerCase().includes(query);
+        const { title, message } = alertText(alert, t);
+        const matchesTitle = title.toLowerCase().includes(query);
+        const matchesMsg = message.toLowerCase().includes(query);
         if (!matchesTitle && !matchesMsg) return false;
       }
       // Category filter
@@ -94,11 +96,11 @@ export const Notifications: React.FC = () => {
       }
       return true;
     });
-  }, [alerts, searchQuery, selectedCategory, selectedStatus]);
+  }, [alerts, searchQuery, selectedCategory, selectedStatus, t]);
 
   const handleCreateRuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ruleForm.name.trim()) return;
+    if (!ruleForm.name.trim() || !Number.isFinite(Number(ruleForm.threshold))) return;
 
     await saveAlertRule({
       name: ruleForm.name,
@@ -247,7 +249,9 @@ export const Notifications: React.FC = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => clearReadAlerts()}
+                onClick={() => {
+                  if (window.confirm(t('notifications:filters.clearReadConfirm'))) void clearReadAlerts();
+                }}
                 className="text-xs shrink-0 text-secondary hover:text-negative"
               >
                 <Trash2 size={14} className="mr-1" />
@@ -288,10 +292,10 @@ export const Notifications: React.FC = () => {
                           }}
                           className="text-xs font-bold text-primary hover:underline"
                         >
-                          {alert.title}
+                          {alertText(alert, t).title}
                         </Link>
                       ) : (
-                        <span className="text-xs font-bold text-primary">{alert.title}</span>
+                        <span className="text-xs font-bold text-primary">{alertText(alert, t).title}</span>
                       )}
                       {!alert.read && (
                         <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-primary/20 text-primary">
@@ -299,7 +303,7 @@ export const Notifications: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-secondary mt-1">{alert.message}</p>
+                    <p className="text-xs text-secondary mt-1">{alertText(alert, t).message}</p>
 
                     <div className="flex flex-wrap items-center gap-4 mt-2 text-[11px] text-tertiary">
                       <span className="flex items-center gap-1">
@@ -440,9 +444,10 @@ export const Notifications: React.FC = () => {
                     step="any"
                     required
                     placeholder={t('notifications:rules.thresholdPlaceholder')}
-                    value={ruleForm.threshold || ''}
+                    value={Number.isFinite(ruleForm.threshold) ? ruleForm.threshold : ''}
                     onChange={(e) =>
-                      setRuleForm({ ...ruleForm, threshold: parseFloat(e.target.value) || 0 })
+                      // An empty field stays empty (NaN), so "0" and "0.5" can be typed
+                      setRuleForm({ ...ruleForm, threshold: e.target.value === '' ? Number.NaN : parseFloat(e.target.value) })
                     }
                     className="w-full px-3 py-2 rounded-xl bg-subtle border border-subtle text-primary text-xs focus:ring-primary focus:border-primary"
                   />

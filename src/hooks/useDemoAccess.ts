@@ -64,9 +64,10 @@ export function useDemoAccess(): UseDemoAccessResult {
         // From /welcome or showcase: push onto history so browser Back returns to /welcome
         const isFromWelcome = location.pathname === '/welcome' || location.pathname === '/';
         navigate(targetPath, { replace: !isFromWelcome });
+        // Stays "launching" on success: the navigation may commit after this render, and the login
+        // page signs out a demo session it sees while no demo is launching (it did so right here).
       } catch (err: unknown) {
         setDemoError(mapAuthErrorMessage(err, t, 'auth:login.failedToLogin'));
-      } finally {
         setIsLaunchingDemo(false);
       }
     },

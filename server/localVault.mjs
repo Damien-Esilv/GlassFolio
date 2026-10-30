@@ -16,6 +16,8 @@ import path from 'node:path';
 
 export const LOCAL_VAULT_PATH = '/api/local-vault';
 export const LOCAL_VAULT_BATCH_PATH = '/api/local-vault/batch';
+/** Launch options the page reads at startup (e.g. `npm run dev:demo` opens the demo account) */
+export const LOCAL_VAULT_CONFIG_PATH = '/api/local-vault/config';
 export const STORE_SCHEMA = 1;
 /**
  * Every call must carry this header (the app client always does). A cross-site page cannot add a
@@ -200,9 +202,9 @@ export const validateBatch = (batch) => {
  */
 /**
  * @param {ReturnType<typeof createLocalVaultStore>} store
- * @param {{ securityHeaders?: Record<string, string>, allowedHosts?: string[], logger?: Pick<Console, 'warn' | 'error' | 'log'> }} [options]
+ * @param {{ securityHeaders?: Record<string, string>, allowedHosts?: string[], logger?: Pick<Console, 'warn' | 'error' | 'log'>, demo?: boolean }} [options]
  */
-export function createLocalVaultHandler(store, { securityHeaders = {}, allowedHosts = [], logger = console } = {}) {
+export function createLocalVaultHandler(store, { securityHeaders = {}, allowedHosts = [], logger = console, demo = false } = {}) {
   const send = (res, status, body, extra = {}) => {
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
@@ -221,6 +223,15 @@ export function createLocalVaultHandler(store, { securityHeaders = {}, allowedHo
 
     if (req.headers[CLIENT_HEADER] !== '1') {
       send(res, 403, { error: 'Forbidden' });
+      return true;
+    }
+
+    if (url.pathname === LOCAL_VAULT_CONFIG_PATH) {
+      if (req.method !== 'GET') {
+        send(res, 405, { error: 'Method not allowed' }, { Allow: 'GET' });
+        return true;
+      }
+      send(res, 200, { demo });
       return true;
     }
 

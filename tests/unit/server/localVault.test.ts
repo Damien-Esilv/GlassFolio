@@ -170,6 +170,12 @@ describe('local vault HTTP API (E33 — TGLA-138)', () => {
     expect(JSON.parse(get.body).records).toEqual({ glassfolio_user: 'cipher' });
   });
 
+  it('tells the page whether it was started for the demo (off by default)', async () => {
+    const config = await call('GET', '/api/local-vault/config');
+    expect(config.status).toBe(200);
+    expect(JSON.parse(config.body)).toEqual({ demo: false });
+  });
+
   it('refuses requests without the app client header (second CSRF barrier)', async () => {
     const read = await call('GET', '/api/local-vault', { noClientHeader: true });
     expect(read.status).toBe(403);

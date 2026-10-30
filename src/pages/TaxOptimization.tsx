@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ChevronLeft, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Globe, CheckCircle, Info } from 'lucide-react';
 import Button from '../components/Button';
 import { taxService, OptimizationSuggestion } from '../services/fiscal';
+import { getFiscalRules } from '../services/fiscal/taxRules';
 import { DEFAULT_FISCAL_YEAR } from '../constants/fiscalConstants';
 import { FiscalProfile, FiscalConfidence } from '../types/types.backend';
 import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../constants/animations';
@@ -21,8 +22,12 @@ interface PFUComparisonResult {
     confidence: FiscalConfidence;
 }
 
-const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }> = ({ data, isLoading }) => {
-    const { t } = useTranslation();
+const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean; fiscalYear: string }> = ({ data, isLoading, fiscalYear }) => {
+    const { t, i18n } = useTranslation();
+    // The flat tax rate depends on the year (31.4 % from income 2025, LFSS 2026)
+    const rules = getFiscalRules(fiscalYear);
+    const pct = (rate: number | undefined) => rate === undefined ? '' : (rate * 100).toLocaleString(i18n.language, { maximumFractionDigits: 1 });
+    const rates = { total: pct(rules?.pfu.totalRate), ir: pct(rules?.pfu.irRate), social: pct(rules?.pfu.socialRate) };
 
     if (isLoading) return <div className="h-48 bg-card border border-subtle rounded-2xl animate-pulse" />;
     if (!data) return null;
@@ -35,14 +40,14 @@ const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }
         <div className="bg-card border border-subtle rounded-2xl p-6 space-y-5 animate-fade-in-up">
             <div>
                 <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.pfuVsBareme.title')}</h3>
-                <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle')}</p>
+                <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle', rates)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className={`rounded-xl p-4 border transition-all ${isPFUBetter ? 'border-success/40 bg-success/5' : 'border-subtle bg-subtle/40'}`}>
                     <p className="text-xs text-secondary mb-1">{t('tax:optimization.pfuVsBareme.pfuAmount')}</p>
                     <p className="text-2xl font-bold text-primary">{formatEur(data.pfuTotal)}</p>
-                    <p className="text-xs text-secondary mt-2 leading-relaxed">{t('tax:optimization.pfuVsBareme.pfuDescription')}</p>
+                    <p className="text-xs text-secondary mt-2 leading-relaxed">{t('tax:optimization.pfuVsBareme.pfuDescription', rates)}</p>
                 </div>
                 <div className={`rounded-xl p-4 border transition-all ${isBaremeBetter ? 'border-success/40 bg-success/5' : 'border-subtle bg-subtle/40'}`}>
                     <p className="text-xs text-secondary mb-1">{t('tax:optimization.pfuVsBareme.baremeAmount')}</p>
@@ -90,6 +95,11 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
         crypto: 'text-warning bg-warning/10',
         envelope: 'text-accent-purple bg-accent-purple/10',
     };
+    const impactClasses: Record<OptimizationSuggestion['impactKind'], string> = {
+        savings: 'text-success bg-success/10',
+        risk: 'text-error bg-error/10',
+        cost: 'text-warning bg-warning/10',
+    };
     const categoryIcons: Record<OptimizationSuggestion['category'], React.ReactNode> = {
         regime: <TrendingUp size={16} />,
         harvesting: <TrendingDown size={16} />,
@@ -108,14 +118,17 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4 className="font-semibold text-primary text-sm">{suggestion.title}</h4>
+                    <h4 className="font-semibold text-primary text-sm">{t(`tax:optimization.suggestions.items.${suggestion.titleKey}.title`)}</h4>
                     {suggestion.impact > 0 && (
-                        <span className="shrink-0 text-xs font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
-                            ~{formatEur(suggestion.impact)}
+                        <span
+                            className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${impactClasses[suggestion.impactKind]}`}
+                            title={t(`tax:optimization.suggestions.impactKinds.${suggestion.impactKind}`)}
+                        >
+                            {t(`tax:optimization.suggestions.impactKinds.${suggestion.impactKind}`)} ~{formatEur(suggestion.impact)}
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-secondary leading-relaxed">{suggestion.recommendation}</p>
+                <p className="text-xs text-secondary leading-relaxed">{t(`tax:optimization.suggestions.items.${suggestion.titleKey}.text`, suggestion.params)}</p>
                 <p className="text-xs text-tertiary mt-1">{t(`tax:optimization.suggestions.categories.${suggestion.category}`)}</p>
             </div>
         </div>
@@ -177,13 +190,9 @@ const TaxOptimization: React.FC = () => {
     const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const prevFetchKeyRef = useRef<string>('');
-
+    // No "already fetched" guard: under StrictMode the first run is cancelled and the second must
+    // still load (the guard left the skeleton on forever). taxService dedupes identical requests.
     useEffect(() => {
-        const fetchKey = `${fiscalYear}:${profileKey}`;
-        if (prevFetchKeyRef.current === fetchKey) return;
-        prevFetchKeyRef.current = fetchKey;
-
         let isMounted = true;
         setIsLoading(true);
 
@@ -246,7 +255,7 @@ const TaxOptimization: React.FC = () => {
             )}
 
             {/* PFU vs Barème */}
-            <PFUCard data={pfuComparison} isLoading={isLoading} />
+            <PFUCard data={pfuComparison} isLoading={isLoading} fiscalYear={fiscalYear} />
 
             {/* Personalized suggestions */}
             <div className="space-y-4">

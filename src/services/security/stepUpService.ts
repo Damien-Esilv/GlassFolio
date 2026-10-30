@@ -36,9 +36,17 @@ export class RecentSignInRequiredError extends Error {
 
 const isRecent = (): boolean => authService.isRecentlyAuthenticated?.(STEP_UP_MAX_AGE_SECONDS) ?? false;
 
+export interface StepUpOptions {
+    /** The action itself goes through Google again (account deletion): no recent sign-in needed first. */
+    googleRoundTrip?: boolean;
+}
+
 export const stepUpService = {
-    async getRequirements(user: User | null): Promise<StepUpRequirements> {
+    async getRequirements(user: User | null, options?: StepUpOptions): Promise<StepUpRequirements> {
         if (user?.authProvider === 'google') {
+            if (options?.googleRoundTrip) {
+                return { password: false, secondFactor: [], recentSignInRequired: false, recentSignInSatisfied: true };
+            }
             return { password: false, secondFactor: [], recentSignInRequired: true, recentSignInSatisfied: isRecent() };
         }
 
@@ -53,9 +61,9 @@ export const stepUpService = {
         return { password: true, secondFactor, recentSignInRequired: false, recentSignInSatisfied: true };
     },
 
-    async verify(user: User | null, proof: StepUpProof): Promise<void> {
+    async verify(user: User | null, proof: StepUpProof, options?: StepUpOptions): Promise<void> {
         if (user?.authProvider === 'google') {
-            if (!isRecent()) throw new RecentSignInRequiredError();
+            if (!options?.googleRoundTrip && !isRecent()) throw new RecentSignInRequiredError();
             return;
         }
         if (!authService.reauthenticate) {

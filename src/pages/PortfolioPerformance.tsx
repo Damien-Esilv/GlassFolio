@@ -17,6 +17,7 @@ import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations
 import { ASSET_CLASSES, ASSET_CLASSES_CONFIG } from '../constants/assetClasses';
 import { CHART_SERIES_PALETTE, getAssetStableColor } from '../constants/themeTokens';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const PortfolioPerformance: React.FC = () => {
    const { t } = useTranslation();
@@ -42,9 +43,12 @@ const PortfolioPerformance: React.FC = () => {
    const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
    const [isSearching, setIsSearching] = useState(false);
    const [referenceHistoryMap, setReferenceHistoryMap] = useState<Record<string, number[]>>({});
+   // Real curves of what is held (per asset class and 'All'): never invented ones
+   const [holdingsHistoryMap, setHoldingsHistoryMap] = useState<Record<string, number[]>>({});
 
    // Catalog Modal state
    const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+   useEscapeKey(() => setIsCatalogOpen(false), isCatalogOpen);
    const [catalogActiveTab, setCatalogActiveTab] = useState<'etf' | 'stocks' | 'crypto' | 'indices'>('etf');
    const [tempCatalogSelection, setTempCatalogSelection] = useState<string[]>([]);
 
@@ -91,17 +95,22 @@ const PortfolioPerformance: React.FC = () => {
       fetchData();
    }, [timeRange, currency, transactions, positions, locale, dateFormat, chartMode]);
 
-   // Calculate period fraction in years for compound benchmark return
+   // Calculate period fraction in years for compound benchmark return (from the real dates)
    const periodYears = useMemo(() => {
+      const yearMs = 365.25 * 24 * 3600 * 1000;
+      const now = new Date();
       switch (timeRange) {
          case '1M': return 1 / 12;
          case '3M': return 3 / 12;
-         case 'YTD': return 7 / 12;
+         case 'YTD': return Math.max(1 / 365, (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / yearMs);
          case '1Y': return 1.0;
-         case 'ALL': return 2.0;
+         case 'ALL': {
+            const first = transactions.reduce((min, tx) => Math.min(min, new Date(tx.date).getTime()), Infinity);
+            return Number.isFinite(first) ? Math.max(1 / 365, (now.getTime() - first) / yearMs) : 1.0;
+         }
          default: return 1.0;
       }
-   }, [timeRange]);
+   }, [timeRange, transactions]);
 
    // Combine Portfolio Chart Data with Benchmark Curve (Livret A cashflow-adjusted compounding)
    const combinedChartData = useMemo(() => {
@@ -153,10 +162,18 @@ const PortfolioPerformance: React.FC = () => {
    const lastPointVal = combinedChartData[combinedChartData.length - 1]?.portfolioValue || 0;
    const lastBenchmarkVal = combinedChartData[combinedChartData.length - 1]?.benchmarkValue || 0;
 
-   const portfolioReturnPct = summary?.plPercent || (firstPointVal > 0 ? ((lastPointVal - firstPointVal) / firstPointVal) * 100 : 0);
+   // Return over the selected period, not since the first purchase: the gain made during the period
+   // (new money excluded) over the capital at work in it. "ALL" gives the all-time figure.
+   const firstInvested = Number(summary?.chartData?.[0]?.invested ?? 0);
+   const lastInvested = Number(summary?.chartData?.[summary.chartData.length - 1]?.invested ?? 0);
+   const addedCapital = Math.max(0, lastInvested - firstInvested);
+   const periodBase = firstPointVal + addedCapital;
+   const periodGain = (lastPointVal - lastInvested) - (firstPointVal - firstInvested);
+   const portfolioReturnPct = periodBase > 0 ? (periodGain / periodBase) * 100 : 0;
    const totalCostBasis = summary?.totalCost || 0;
-   const benchmarkProfit = lastBenchmarkVal - totalCostBasis;
-   const benchmarkReturnPct = totalCostBasis > 0 ? (benchmarkProfit / totalCostBasis) * 100 : (benchmarkRate * periodYears);
+   const benchmarkBase = firstInvested + addedCapital;
+   const benchmarkProfit = lastBenchmarkVal - lastInvested;
+   const benchmarkReturnPct = benchmarkBase > 0 ? (benchmarkProfit / benchmarkBase) * 100 : (benchmarkRate * periodYears);
    const outperformancePct = portfolioReturnPct - benchmarkReturnPct;
    const isOutperforming = outperformancePct >= 0;
 
@@ -197,6 +214,20 @@ const PortfolioPerformance: React.FC = () => {
       };
    }, [selectedReferenceAssets, compareTimeRange]);
 
+   const comparePointsCount = compareTimeRange === '1M' ? 30 : compareTimeRange === 'ALL' ? 24 : 12;
+   useEffect(() => {
+      let isMounted = true;
+      portfolioService.getHoldingsReturnSeries(positions, compareTimeRange, comparePointsCount, currency)
+         .then((series) => { if (isMounted) setHoldingsHistoryMap(series); })
+         .catch((e) => {
+            console.error(e);
+            if (isMounted) setHoldingsHistoryMap({});
+         });
+      return () => {
+         isMounted = false;
+      };
+   }, [positions, compareTimeRange, comparePointsCount, currency]);
+
    // Generate Data for Comparison Chart (% Return vs Base 100 Index)
    const comparisonChartData = useMemo(() => {
       let pointsCount = 12;
@@ -211,7 +242,10 @@ const PortfolioPerformance: React.FC = () => {
          });
       } else if (compareTimeRange === '3M') {
          pointsCount = 12;
-         months = Array.from({ length: 12 }, (_, i) => `Wk ${i + 1}`);
+         months = Array.from({ length: 12 }, (_, i) => {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Math.round((11 - i) * 90 / 11));
+            return formatChartDate(d, 'day', dateFormat, locale);
+         });
       } else if (compareTimeRange === 'ALL') {
          pointsCount = 24;
          months = Array.from({ length: 24 }, (_, i) => {
@@ -227,72 +261,12 @@ const PortfolioPerformance: React.FC = () => {
          });
       }
 
-      // Helper to compute curve value for any asset category or ticker at index i
-      const getItemVal = (itemKey: string, index: number): number => {
-         if (itemKey === 'All' || itemKey === 'Global Portfolio') {
-            // "All" is the aggregate average of all portfolio asset classes
-            let sum = 0;
-            ASSET_CLASSES.forEach((cls) => {
-               sum += getItemVal(cls, index);
-            });
-            return Math.round((sum / ASSET_CLASSES.length) * 100) / 100;
-         }
-
-         // Use live historical API data if available for reference ticker
-         if (!isAssetCategory(itemKey) && referenceHistoryMap[itemKey] && referenceHistoryMap[itemKey][index] !== undefined) {
-            return referenceHistoryMap[itemKey][index];
-         }
-
-         let seed1 = 0;
-         let seed2 = 0;
-         for (let c = 0; c < itemKey.length; c++) {
-            seed1 = (seed1 << 5) - seed1 + itemKey.charCodeAt(c);
-            seed2 = (seed2 << 3) ^ itemKey.charCodeAt(c);
-         }
-         seed1 = Math.abs(seed1 % 1000) + 1;
-         seed2 = Math.abs(seed2 % 1000) + 1;
-
-         if (index === 0) return 0;
-
-         let scale = 2.5;
-         let drift = 0.02;
-
-         if (itemKey === 'crypto') {
-            scale = 5.0;
-            drift = -0.05;
-         } else if (itemKey === 'cash') {
-            scale = 0.2;
-            drift = 0.1;
-         } else if (itemKey === 'real_estate') {
-            scale = 1.5;
-            drift = 0.05;
-         } else if (itemKey === 'precious_metals') {
-            scale = 3.0;
-            drift = -0.08;
-         } else if (itemKey === 'equities') {
-            scale = 3.2;
-            drift = 0.04;
-         } else if (itemKey === 'etf') {
-            scale = 2.8;
-            drift = 0.03;
-         } else {
-            scale = 3.0 + (seed1 % 8) * 0.8;
-            drift = ((seed2 % 15) - 7) * 0.015;
-         }
-
-         const freq1 = 0.25 + (seed1 % 13) * 0.03;
-         const freq2 = 0.45 + (seed2 % 9) * 0.04;
-         const phase1 = (seed1 % 11) * 0.5;
-         const phase2 = (seed2 % 7) * 0.7;
-
-         const cycle1 = Math.sin(index * freq1 + phase1);
-         const cycle2 = Math.cos(index * freq2 + phase2 * 0.4);
-
-         const rawReturn = (cycle1 * 1.5 + cycle2 * 0.8) * scale + (index * drift);
-         const startOffset = (Math.sin(phase1) * 1.5 + Math.cos(phase2 * 0.4) * 0.8) * scale;
-         const relativeReturn = rawReturn - startOffset;
-
-         return Math.round(relativeReturn * 100) / 100;
+      // Curve value of an asset class, the whole portfolio or a searched ticker at index i, from real
+      // price histories only; undefined (no point drawn) when there is none.
+      const getItemVal = (itemKey: string, index: number): number | undefined => {
+         if (itemKey === 'All' || itemKey === 'Global Portfolio') return holdingsHistoryMap.All?.[index];
+         if (isAssetCategory(itemKey)) return holdingsHistoryMap[itemKey]?.[index];
+         return referenceHistoryMap[itemKey]?.[index];
       };
 
       return Array.from({ length: pointsCount }, (_, i) => {
@@ -302,24 +276,26 @@ const PortfolioPerformance: React.FC = () => {
 
          selectedCompareItems.forEach((item) => {
             const returnPct = getItemVal(item, i);
+            if (returnPct === undefined) return;
             point[item] = returnPct;
             point[`${item}_base100`] = Math.round((100 + returnPct) * 100) / 100;
          });
 
          // Calculate Merged Selection for internal asset categories ONLY
          if (curveMode === 'merged' && selectedInternalCategories.length > 1) {
-            let catSum = 0;
-            selectedInternalCategories.forEach(cat => {
-               catSum += getItemVal(cat, i);
-            });
-            const avgReturn = catSum / selectedInternalCategories.length;
-            point['Merged Selection'] = Math.round(avgReturn * 100) / 100;
-            point['Merged Selection_base100'] = Math.round((100 + avgReturn) * 100) / 100;
+            const known = selectedInternalCategories
+               .map(cat => getItemVal(cat, i))
+               .filter((v): v is number => v !== undefined);
+            if (known.length > 0) {
+               const avgReturn = known.reduce((sum, v) => sum + v, 0) / known.length;
+               point['Merged Selection'] = Math.round(avgReturn * 100) / 100;
+               point['Merged Selection_base100'] = Math.round((100 + avgReturn) * 100) / 100;
+            }
          }
 
          return point;
       });
-   }, [compareTimeRange, selectedCompareItems, selectedInternalCategories, curveMode, dateFormat, locale]);
+   }, [compareTimeRange, selectedCompareItems, selectedInternalCategories, curveMode, dateFormat, locale, holdingsHistoryMap, referenceHistoryMap]);
 
    // Selection Toggle Logic:
    // - Selecting "All" deselects internal asset categories, keeping searched reference assets if present.
@@ -512,7 +488,7 @@ const PortfolioPerformance: React.FC = () => {
                   </span>
                   {portfolioReturnPct >= 0 ? <ArrowUpRight size={20} className="text-positive" /> : <ArrowDownRight size={20} className="text-negative" />}
                </div>
-               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(summary.totalPL, currency, locale)}</p>
+               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(periodGain, currency, locale)}</p>
             </div>
 
             {/* 4. Benchmark Return */}
@@ -520,7 +496,7 @@ const PortfolioPerformance: React.FC = () => {
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.benchmarkValue')} ({benchmarkRate}%)</span>
                <div className="mt-2 flex items-center gap-2">
                   <span className="text-2xl font-extrabold text-warning">
-                     +{benchmarkReturnPct.toFixed(2)}%
+                     {benchmarkReturnPct >= 0 ? '+' : ''}{benchmarkReturnPct.toFixed(2)}%
                   </span>
                </div>
                <p className="text-tertiary text-[10px] mt-1">{formatCurrency(Math.max(0, lastBenchmarkVal - summary.totalCost), currency, locale)} ({t('reports:performance.interestGains')})</p>
@@ -614,7 +590,7 @@ const PortfolioPerformance: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-                        tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                        tickFormatter={(val: number) => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(val)}
                      />
                      <Tooltip
                         content={({ active, payload }) => {
@@ -637,12 +613,12 @@ const PortfolioPerformance: React.FC = () => {
                                     <div className="flex justify-between items-center text-warning font-bold">
                                        <span className="flex items-center gap-1.5">
                                           <span className="w-2.5 h-2.5 rounded-full bg-warning inline-block" />
-                                          Benchmark ({benchmarkRate}%)
+                                          {t('reports:performance.benchmarkWithRate', { rate: benchmarkRate })}
                                        </span>
                                        <span>{formatCurrency(Number(bVal), currency, locale, { maximumFractionDigits: 0 })}</span>
                                     </div>
                                     <div className="pt-1.5 border-t border-subtle flex justify-between text-[11px] font-bold">
-                                       <span className="text-tertiary">Delta</span>
+                                       <span className="text-tertiary">{t('reports:performance.delta')}</span>
                                        <span className={diff >= 0 ? 'text-positive' : 'text-negative'}>
                                           {diff >= 0 ? '+' : ''}{formatCurrency(diff, currency, locale, { maximumFractionDigits: 0 })}
                                        </span>

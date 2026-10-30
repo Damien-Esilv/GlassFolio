@@ -16,6 +16,8 @@ import type { Account, Institute, Instrument, UnifiedTransaction } from '../type
 import type { Transaction } from '../types/domain';
 import { totpService } from './security/totpService';
 import { passkeyService } from './security/passkeyService';
+import { vaultService } from './security/vaultService';
+import { VaultLockedError } from './security/vaultTypes';
 
 /** Thrown when an export is requested for a demo / not-yet-created account (no personal data to export). */
 export class ExportNotAllowedError extends Error {
@@ -32,6 +34,8 @@ export function canExportAccountData(): boolean {
 
 function assertExportable(): void {
     if (!canExportAccountData()) throw new ExportNotAllowedError();
+    // A locked vault reads as empty: the archive would look complete while holding nothing
+    if (vaultService.isInitialized() && !vaultService.isUnlocked()) throw new VaultLockedError();
 }
 
 export const GDPR_EXPORT_SCHEMA = 'glassfolio-gdpr-export';

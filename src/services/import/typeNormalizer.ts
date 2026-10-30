@@ -45,6 +45,12 @@ function classifyLabel(rawType: string): TransactionType | null {
         return 'SELL';
     }
 
+    // Income credited to the account ("Dividende crédité", "Intérêts crédités") is income, not a
+    // deposit; debited interest (an overdraft charge) is not income.
+    if (has('dividend', 'dividende', 'interest', 'intérêt', 'coupon', 'zinsen') && !has('debit', 'débit')) {
+        return 'INCOME';
+    }
+
     // Deposit patterns
     if (has('deposit', 'dépôt', 'virement reçu', 'credit', 'crédit', 'versement', 'apport', 'einzahlung')) {
         return 'DEPOSIT';

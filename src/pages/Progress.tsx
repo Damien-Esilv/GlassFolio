@@ -35,6 +35,7 @@ import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { gamificationService } from '../services/gamificationService';
 import { computeProgressStats } from '../services/progressStatsService';
 import ProgressStatsTab from '../components/progress/ProgressStatsTab';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
@@ -95,6 +96,8 @@ const Progress: React.FC = () => {
 
     // --- ACHIEVEMENT MODAL STATE ---
     const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+    useEscapeKey(() => setIsModalOpen(false), isModalOpen);
+    useEscapeKey(() => handleCloseAchievementModal(), selectedAchievement !== null);
 
     // Load theme rewards
     useEffect(() => {
@@ -161,12 +164,17 @@ const Progress: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingGoal || !editingGoal.title || !editingGoal.targetAmount) return;
-        saveGoal(editingGoal as FinancialGoal);
-        setIsModalOpen(false);
-        setEditingGoal(null);
+        try {
+            await saveGoal(editingGoal as FinancialGoal);
+            setIsModalOpen(false);
+            setEditingGoal(null);
+        } catch (err) {
+            // Keep the form open with what was typed
+            console.error('Failed to save goal', err);
+        }
     };
 
     const handleToggleLink = (type: 'asset' | 'class' | 'group', id: string, name: string) => {
@@ -626,7 +634,7 @@ const Progress: React.FC = () => {
                                         ) : (
                                             <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                                                 {linkTab === 'asset' && positions.map(pos => {
-                                                    const link = editingGoal.linkedAssets?.find(l => l.id === pos.id && l.type === 'asset');
+                                                    const link = editingGoal.linkedAssets?.find(l => (l.id === pos.symbol || l.id === pos.id) && l.type === 'asset');
                                                     return (
                                                         <div key={pos.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
                                                             link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'
@@ -635,7 +643,7 @@ const Progress: React.FC = () => {
                                                                 <input 
                                                                     type="checkbox" 
                                                                     checked={!!link} 
-                                                                    onChange={() => handleToggleLink('asset', pos.id, pos.symbol)} 
+                                                                    onChange={() => handleToggleLink('asset', link?.id ?? pos.symbol, pos.symbol)} 
                                                                     className="rounded border-subtle bg-subtle text-brand" 
                                                                 />
                                                                 <div>
@@ -648,7 +656,7 @@ const Progress: React.FC = () => {
                                                                     <input 
                                                                         type="number" 
                                                                         value={link.percentage} 
-                                                                        onChange={(e) => updateLinkPercentage(pos.id, 'asset', parseInt(e.target.value))} 
+                                                                        onChange={(e) => updateLinkPercentage(link.id, 'asset', parseInt(e.target.value))} 
                                                                         className="w-10 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" 
                                                                     /> 
                                                                     <span className="text-xs text-secondary">%</span>
@@ -693,7 +701,7 @@ const Progress: React.FC = () => {
                                                         <div className="flex gap-2 mb-2">
                                                             <input 
                                                                 type="text" 
-                                                                placeholder="New Group Name" 
+                                                                placeholder={t('progress:goals.newGroupName')} 
                                                                 value={newGroupname} 
                                                                 onChange={e => setNewGroupName(e.target.value)} 
                                                                 className="flex-1 bg-subtle border-none rounded text-xs px-2 text-primary placeholder-tertiary focus:ring-1 focus:ring-brand" 
@@ -727,7 +735,7 @@ const Progress: React.FC = () => {
                                                                         <button 
                                                                             onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); }} 
                                                                             className="p-1.5 rounded hover:bg-card-hover text-secondary hover:text-primary" 
-                                                                            title="Edit Members"
+                                                                            title={t('progress:goals.editMembers')}
                                                                         >
                                                                             <Settings size={14} />
                                                                         </button>
@@ -759,7 +767,7 @@ const Progress: React.FC = () => {
                                             type="number"
                                             value={editingGoal.manualAmount}
                                             onChange={(e) => setEditingGoal({ ...editingGoal, manualAmount: parseFloat(e.target.value) })}
-                                            placeholder="Enter Amount"
+                                            placeholder={t('progress:goals.enterAmount')}
                                             className="w-full bg-subtle border border-subtle rounded-lg p-3 text-primary placeholder-tertiary focus:border-brand outline-none"
                                         />
                                     </div>

@@ -8,6 +8,7 @@ import { deviceVaultKeyStore } from '../../../../src/services/security/deviceVau
 import { userRepository } from '../../../../src/services/repositories';
 import { mockRemoteVault } from '../../helpers/remoteVault';
 import { getSyncedStorageProvider } from '../../../../src/services/storage/storageFactory';
+import { appStorage } from '../../../../src/services/storage/appStorage';
 
 const USER = { id: 'g-user-1', email: 'Investor@Example.test', user_metadata: { full_name: 'Inv Estor', picture: 'https://lh3.googleusercontent.com/a.png' } };
 const session = (user = USER) => ({ accessToken: 'sb-at', refreshToken: 'sb-rt', expiresAt: Date.now() + 3_600_000, user }) as never;
@@ -282,7 +283,7 @@ describe('Google actions that go through Google again', () => {
         expect(vaultService.hasRecoveryKey()).toBe(false);
     });
 
-    it('removes the Drive key file before deleting the account', async () => {
+    it('deletes the account first, then the Drive key file', async () => {
         const order: string[] = [];
         vi.spyOn(googleDriveVaultKeyService, 'deleteOwnedRootSecret').mockImplementation(async () => { order.push('drive'); return true; });
         vi.spyOn(supabaseClient, 'deleteOwnAccount').mockImplementation(async () => { order.push('account'); });
@@ -290,7 +291,7 @@ describe('Google actions that go through Google again', () => {
 
         await auth.completeGoogleAccountDeletion({ ...reauth(), intent: 'delete-account' });
 
-        expect(order).toEqual(['drive', 'account']);
+        expect(order).toEqual(['account', 'drive']);
         expect(googleDriveVaultKeyService.deleteOwnedRootSecret).toHaveBeenCalledWith('drive-at', 'g-user-1');
         // and nothing of the account is left on this device
         expect(vaultService.isInitialized()).toBe(false);
@@ -298,13 +299,49 @@ describe('Google actions that go through Google again', () => {
         expect(localStorage.getItem('gf_sb_session')).toBeNull();
     });
 
-    it('deletes nothing when the Drive key file cannot be removed', async () => {
+    it('keeps the Drive key file when the server refuses the deletion, so the vault still opens', async () => {
+        const drive = vi.spyOn(googleDriveVaultKeyService, 'deleteOwnedRootSecret').mockResolvedValue(true);
+        vi.spyOn(supabaseClient, 'deleteOwnAccount').mockRejectedValue(new Error('reauthentication_required'));
+
+        await expect(auth.completeGoogleAccountDeletion({ ...reauth(), intent: 'delete-account' })).rejects.toThrow('reauthentication_required');
+        expect(drive).not.toHaveBeenCalled();
+        expect(vaultService.isInitialized()).toBe(true);
+    });
+
+    it('still completes the deletion when only the leftover key file cannot be removed', async () => {
         vi.spyOn(googleDriveVaultKeyService, 'deleteOwnedRootSecret').mockRejectedValue(new Error('DRIVE_DELETE_FAILED'));
         const del = vi.spyOn(supabaseClient, 'deleteOwnAccount').mockResolvedValue(undefined as never);
+        vi.spyOn(supabaseClient, 'signOut').mockResolvedValue(undefined as never);
 
-        await expect(auth.completeGoogleAccountDeletion({ ...reauth(), intent: 'delete-account' })).rejects.toThrow('DRIVE_DELETE_FAILED');
-        expect(del).not.toHaveBeenCalled();
-        expect(vaultService.isInitialized()).toBe(true);
+        await auth.completeGoogleAccountDeletion({ ...reauth(), intent: 'delete-account' });
+        expect(del).toHaveBeenCalled();
+        expect(vaultService.isInitialized()).toBe(false);
+    });
+
+    it('renews the session with the fresh Google sign-in, so the action counts as recent', async () => {
+        const fresh = { accessToken: 'sb-at-fresh', refreshToken: 'sb-rt-2', expiresAt: Date.now() + 3_600_000, user: USER };
+        vi.mocked(supabaseClient.signInWithIdToken).mockResolvedValue(fresh as never);
+        const signOut = vi.spyOn(supabaseClient, 'signOut').mockResolvedValue(undefined as never);
+
+        await auth.confirmGoogleStepUp({ ...reauth(), intent: 'step-up' });
+
+        expect((auth as unknown as { supabaseSession: { accessToken: string } }).supabaseSession.accessToken).toBe('sb-at-fresh');
+        expect(signOut).toHaveBeenCalledWith('sb-at');
+    });
+
+    it('reopens the vault after a page reload with the device key, without asking anything', async () => {
+        // A reload drops the decrypted vault but keeps the session and the device key
+        await appStorage.getEncrypted()?.flush();
+        appStorage.detachEncrypted()?.dispose();
+        (vaultService as unknown as { setStatus(status: string): void }).setStatus('locked');
+        expect(vaultService.isUnlocked()).toBe(false);
+
+        const reloaded = new SupabaseAuthProvider();
+        (reloaded as unknown as { supabaseSession: unknown }).supabaseSession = session();
+
+        await expect(reloaded.resumeDeviceSession()).resolves.toBe(true);
+        expect(vaultService.isUnlocked()).toBe(true);
+        expect((await userRepository.getUser())?.authProvider).toBe('google');
     });
 
     it('does not delete the account when another Google account was chosen', async () => {

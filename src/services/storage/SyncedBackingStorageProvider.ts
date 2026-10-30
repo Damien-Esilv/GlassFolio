@@ -9,10 +9,13 @@
  */
 
 import { DeploymentMode } from '../../config/deployment';
-import { IStorageProvider } from '../../types/storage';
+import { ExternalChangeListener, IStorageProvider } from '../../types/storage';
 import { SupabaseAuthSession, supabaseClient, isSupabaseConfigured } from '../supabase/supabaseClient';
 import { parseEnvelope, PBKDF2_ITERATIONS } from '../security/crypto';
 import { isSensitiveKey, VAULT_HEADER_KEY } from './storageKeys';
+
+const RETRY_BASE_MS = 2_000;
+const RETRY_MAX_MS = 60_000;
 
 export interface PullResult {
     /** False when the remote could not be reached; local state must then be treated as unknown. */
@@ -26,13 +29,23 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     private replicationUserId: string | null = null;
     private isPulling = false;
     private lastSyncError: unknown = null;
+    /** Keys whose latest local change the server has not confirmed yet: retried, and kept by a pull. */
+    private readonly unsynced = new Set<string>();
+    private retryTimer: ReturnType<typeof setTimeout> | null = null;
+    private retryDelayMs = RETRY_BASE_MS;
 
     constructor(
         private readonly local: IStorageProvider,
         private readonly mode: DeploymentMode
-    ) {}
+    ) {
+        if (mode === 'cloud' && typeof window !== 'undefined') {
+            window.addEventListener('online', () => this.retryNow());
+        }
+    }
 
     public setSupabaseSession(session: SupabaseAuthSession | null): void {
+        // Changes queued for one account never go out under another one's session
+        if (session?.user.id !== this.session?.user.id) this.forgetUnsynced();
         this.session = session;
         if (!session) this.replicationUserId = null;
     }
@@ -40,6 +53,12 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     /** Allows cloud replication for `userId`; ignored unless it matches the attached session. */
     public enableReplication(userId: string): void {
         this.replicationUserId = userId;
+        this.retryNow();
+    }
+
+    /** Number of local changes not confirmed by the server yet (cloud mode). */
+    public getUnsyncedCount(): number {
+        return this.unsynced.size;
     }
 
     public disableReplication(): void {
@@ -82,7 +101,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                     supabaseClient.getVaultRecords(this.session.accessToken),
                 ]);
 
-                if (headerRow) {
+                if (headerRow && !this.unsynced.has(VAULT_HEADER_KEY)) {
                     const parsed = headerRow.header_json as { kdf?: { iterations?: number } } | null;
                     if (parsed && typeof parsed === 'object' && typeof parsed.kdf?.iterations === 'number' && parsed.kdf.iterations < PBKDF2_ITERATIONS) {
                         // A downgraded header is a tamper signal, never "this account has no vault":
@@ -97,11 +116,15 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                 }
 
                 for (const row of records) {
+                    // A local change the server has not received yet is newer than its copy
+                    if (this.unsynced.has(row.record_key)) continue;
                     // Only adopt records that are valid sensitive keys and carry valid ciphertext envelopes
                     if (isSensitiveKey(row.record_key) && parseEnvelope(row.ciphertext) !== null) {
                         this.local.setItem(row.record_key, row.ciphertext);
                     }
                 }
+                if (headerRow && this.unsynced.has(VAULT_HEADER_KEY)) result = { ok: true, hasRemoteHeader: true };
+                this.retryNow();
             } else if (this.mode === 'local') {
                 // Local mode: the server snapshot was loaded into memory at startup (LocalVaultStorageProvider).
                 result = { ok: true, hasRemoteHeader: this.local.getItem(VAULT_HEADER_KEY) !== null };
@@ -137,7 +160,10 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
      * never delete the user's server-side vault, which only the account deletion RPC removes (TGLA-101).
      */
     public removeVaultKeys(shouldRemove: (key: string) => boolean): void {
-        if (this.mode === 'cloud') this.replicationUserId = null;
+        if (this.mode === 'cloud') {
+            this.replicationUserId = null;
+            this.forgetUnsynced();
+        }
         for (const key of this.local.keys()) {
             if (!shouldRemove(key)) continue;
             this.local.removeItem(key);
@@ -169,42 +195,80 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         return this.local.keys();
     }
 
+    public onExternalChange(listener: ExternalChangeListener): () => void {
+        return this.local.onExternalChange?.(listener) ?? (() => undefined);
+    }
+
     // ── Asynchronous Remote Replications ──────────────────────────────────────
 
-    private replicateSet(key: string, value: string): void {
+    private replicateSet(key: string, _value: string): void {
         // Only replicate vault header or encrypted financial keys
         if (!isSensitiveKey(key) && key !== VAULT_HEADER_KEY) return;
-
-        if (this.mode === 'cloud') {
-            if (!this.canReplicateToCloud() || !this.session) return;
-            if (key === VAULT_HEADER_KEY) {
-                try {
-                    const parsed = JSON.parse(value) as Record<string, unknown>;
-                    supabaseClient.upsertVaultHeader(this.session.accessToken, parsed, Boolean(parsed.totpEnabled)).catch((err) => {
-                        this.lastSyncError = err;
-                    });
-                } catch {
-                    // Ignored if non-json
-                }
-            } else if (parseEnvelope(value) !== null) {
-                // Only ciphertext ever leaves the device.
-                supabaseClient.upsertVaultRecord(this.session.accessToken, key, value).catch((err) => {
-                    this.lastSyncError = err;
-                });
-            }
-        }
+        if (this.mode === 'cloud') this.push(key);
     }
 
     private replicateRemove(key: string): void {
         if (!isSensitiveKey(key) && key !== VAULT_HEADER_KEY) return;
+        // Removing the local header only resets this device; the remote vault is deleted
+        // exclusively through the account deletion RPC.
+        if (this.mode === 'cloud' && key !== VAULT_HEADER_KEY) this.push(key);
+    }
 
-        if (this.mode === 'cloud') {
-            // Removing the local header only resets this device; the remote vault is deleted
-            // exclusively through the account deletion RPC.
-            if (key === VAULT_HEADER_KEY || !this.canReplicateToCloud() || !this.session) return;
-            supabaseClient.deleteVaultRecord(this.session.accessToken, key).catch((err) => {
-                this.lastSyncError = err;
-            });
+    /** Sends the current local state of `key`; a failure keeps it queued and retried with backoff. */
+    private push(key: string): void {
+        if (!this.canReplicateToCloud() || !this.session) return;
+        const token = this.session.accessToken;
+        const value = this.local.getItem(key);
+        let request: Promise<void>;
+        if (key === VAULT_HEADER_KEY) {
+            if (value === null) return;
+            let parsed: Record<string, unknown>;
+            try {
+                parsed = JSON.parse(value) as Record<string, unknown>;
+            } catch {
+                return; // Ignored if non-json
+            }
+            request = supabaseClient.upsertVaultHeader(token, parsed, Boolean(parsed.totpEnabled));
+        } else if (value === null) {
+            request = supabaseClient.deleteVaultRecord(token, key);
+        } else {
+            // Only ciphertext ever leaves the device.
+            if (parseEnvelope(value) === null) return;
+            request = supabaseClient.upsertVaultRecord(token, key, value);
         }
+        this.unsynced.add(key);
+        request.then(() => {
+            // A newer change sent its own request
+            if (this.local.getItem(key) === value) this.unsynced.delete(key);
+            this.retryDelayMs = RETRY_BASE_MS;
+            if (this.unsynced.size === 0) this.lastSyncError = null;
+        }).catch((err) => {
+            this.lastSyncError = err;
+            this.scheduleRetry();
+        });
+    }
+
+    private scheduleRetry(): void {
+        if (this.retryTimer !== null) return;
+        const delay = this.retryDelayMs;
+        this.retryDelayMs = Math.min(RETRY_MAX_MS, this.retryDelayMs * 2);
+        this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            Array.from(this.unsynced).forEach(key => this.push(key));
+        }, delay);
+    }
+
+    private retryNow(): void {
+        if (this.unsynced.size === 0 || !this.canReplicateToCloud()) return;
+        if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+        Array.from(this.unsynced).forEach(key => this.push(key));
+    }
+
+    private forgetUnsynced(): void {
+        this.unsynced.clear();
+        if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+        this.retryDelayMs = RETRY_BASE_MS;
     }
 }

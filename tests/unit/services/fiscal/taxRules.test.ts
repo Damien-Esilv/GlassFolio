@@ -51,7 +51,12 @@ describe('taxRules', () => {
       expect(rules).toBeDefined();
       expect(rules?.year).toBe('2025');
       expect(rules?.declarationYear).toBe('2026');
-      expect(rules?.irBrackets[1].min).toBe(11497);
+      // Income 2025 (loi de finances pour 2026: +0.9 %)
+      expect(rules?.irBrackets[1].min).toBe(11600);
+      expect(rules?.irBrackets[4].min).toBe(181917);
+      // LFSS 2026: 18.6 % on capital gains of 2025, dividends and interest of 2025 still at 17.2 %
+      expect(rules?.socialContributions.totalRate).toBe(0.186);
+      expect(rules?.socialContributions.placementIncomeRate).toBe(0.172);
     });
 
     it('extrapolates rules for future/unlisted years in France using 2025 template', () => {
@@ -60,8 +65,9 @@ describe('taxRules', () => {
       expect(rules?.year).toBe('2028');
       expect(rules?.declarationYear).toBe('2029');
       expect(rules?.country).toBe('FR');
-      // Should inherit PFU and IR brackets from 2025 rules
-      expect(rules?.pfu.totalRate).toBe(0.30);
+      // Should inherit PFU and IR brackets from 2025 rules; from 2026 every item is at 18.6 %
+      expect(rules?.pfu.totalRate).toBe(0.314);
+      expect(rules?.socialContributions.placementIncomeRate).toBeUndefined();
       expect(rules?.calendar).toBeDefined();
       expect(rules?.calendar.declarationOpening).toBeTruthy();
     });
@@ -147,40 +153,30 @@ describe('taxRules', () => {
     });
 
     it('calculates progressive tax correctly for income in 11% bracket', () => {
-      // 2024 brackets: 0..11294 @ 0%, 11294..28797 @ 11%
-      // For 20000: (20000 - 11294) * 0.11 = 8706 * 0.11 = 957.66
+      // Income 2024 brackets: 0..11497 @ 0%, 11497..29315 @ 11%
+      // For 20000: (20000 - 11497) * 0.11 = 8503 * 0.11 = 935.33
       const tax = calculateIRPerShare(20000, '2024');
-      expect(tax).toBeCloseTo(957.66, 2);
+      expect(tax).toBeCloseTo(935.33, 2);
     });
 
     it('calculates progressive tax across multiple brackets', () => {
-      // For 50000:
-      // Bracket 1 (0..11294): 0
-      // Bracket 2 (11294..28797): (28797 - 11294) * 0.11 = 17503 * 0.11 = 1925.33
-      // Bracket 3 (28797..50000): (50000 - 28797) * 0.30 = 21203 * 0.30 = 6360.90
-      // Total = 1925.33 + 6360.90 = 8286.23
+      // For 50000 (income 2024 brackets):
+      // Bracket 1 (0..11497): 0
+      // Bracket 2 (11497..29315): (29315 - 11497) * 0.11 = 17818 * 0.11 = 1959.98
+      // Bracket 3 (29315..50000): (50000 - 29315) * 0.30 = 20685 * 0.30 = 6205.50
+      // Total = 1959.98 + 6205.50 = 8165.48
       const tax = calculateIRPerShare(50000, '2024');
-      expect(tax).toBeCloseTo(8286.23, 2);
+      expect(tax).toBeCloseTo(8165.48, 2);
     });
   });
 
   describe('getPEATaxRule', () => {
-    it('returns rule for plan opened less than 2 years ago', () => {
-      const openDate = '2024-01-01';
-      const withdrawalDate = '2025-01-01'; // ~1 year
-      const rule = getPEATaxRule(openDate, withdrawalDate, '2024');
-      expect(rule.incomeTaxRate).toBe(0.225);
+    it('taxes a withdrawal before 5 years at the 12.8 % flat rate and closes the plan (since 2019)', () => {
+      const rule = getPEATaxRule('2024-01-01', '2025-01-01', '2024');
+      expect(rule.incomeTaxRate).toBe(0.128);
       expect(rule.socialRate).toBe(0.172);
       expect(rule.closesOnWithdrawal).toBe(true);
-    });
-
-    it('returns rule for plan opened between 2 and 5 years ago', () => {
-      const openDate = '2021-01-01';
-      const withdrawalDate = '2024-06-01'; // ~3.4 years
-      const rule = getPEATaxRule(openDate, withdrawalDate, '2024');
-      expect(rule.incomeTaxRate).toBe(0.19);
-      expect(rule.socialRate).toBe(0.172);
-      expect(rule.closesOnWithdrawal).toBe(true);
+      expect(getPEATaxRule('2021-01-01', '2024-06-01', '2024').incomeTaxRate).toBe(0.128);
     });
 
     it('returns rule for plan opened more than 5 years ago', () => {
@@ -190,6 +186,11 @@ describe('taxRules', () => {
       expect(rule.incomeTaxRate).toBe(0);
       expect(rule.socialRate).toBe(0.172);
       expect(rule.closesOnWithdrawal).toBe(false);
+    });
+
+    it('counts the age by anniversary: 5 years on the fifth anniversary, not a day later (TGLA-188)', () => {
+      expect(getPEATaxRule('2020-03-01', '2025-03-01', '2025').incomeTaxRate).toBe(0);
+      expect(getPEATaxRule('2020-03-01', '2025-02-28', '2025').incomeTaxRate).toBe(0.128);
     });
   });
 });

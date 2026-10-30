@@ -9,7 +9,7 @@
 export const LOCAL_VAULT_ENDPOINT = '/api/local-vault';
 const BATCH_ENDPOINT = `${LOCAL_VAULT_ENDPOINT}/batch`;
 /** Browsers cap the total body of in-flight `keepalive` requests at 64 KiB. */
-const KEEPALIVE_CHUNK_BYTES = 60 * 1024;
+export const KEEPALIVE_CHUNK_BYTES = 60 * 1024;
 
 export interface VaultSnapshot {
     revision: number;
@@ -34,6 +34,26 @@ const isRecordMap = (value: unknown): value is Record<string, string> =>
     && typeof value === 'object'
     && !Array.isArray(value)
     && Object.values(value as Record<string, unknown>).every(v => typeof v === 'string');
+
+/** Launch options of the local server (server/localVault.mjs); none when there is no local server */
+export interface LocalServerConfig {
+    /** Started with --demo / GLASSFOLIO_DEMO=1: the app opens on the demo account */
+    demo: boolean;
+}
+
+export async function fetchLocalConfig(fetchImpl: FetchLike = fetch): Promise<LocalServerConfig> {
+    try {
+        const response = await fetchImpl(`${LOCAL_VAULT_ENDPOINT}/config`, {
+            headers: { Accept: 'application/json', 'X-GlassFolio-Local': '1' },
+            cache: 'no-store'
+        });
+        if (!response.ok || !(response.headers.get('content-type') ?? '').includes('application/json')) return { demo: false };
+        const body = (await response.json()) as { demo?: unknown };
+        return { demo: body.demo === true };
+    } catch {
+        return { demo: false };
+    }
+}
 
 export async function fetchSnapshot(fetchImpl: FetchLike = fetch): Promise<SnapshotOutcome> {
     let response: Response;
@@ -61,7 +81,12 @@ export async function fetchSnapshot(fetchImpl: FetchLike = fetch): Promise<Snaps
     }
 }
 
-const byteLength = (value: string): number => new TextEncoder().encode(value).length;
+export const byteLength = (value: string): number => new TextEncoder().encode(value).length;
+
+/** The server refuses a value above this size (server/localVault.mjs MAX_VALUE_BYTES), forever. */
+export const MAX_SERVER_VALUE_BYTES = 5 * 1024 * 1024;
+/** One request stays well under the server body limit (20 MiB), JSON escaping included. */
+export const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 
 /** Splits a batch so that each part fits a `keepalive` request; `clear` only goes with the first. */
 export function splitBatchForKeepalive(batch: VaultBatch, maxBytes: number = KEEPALIVE_CHUNK_BYTES): VaultBatch[] {

@@ -13,6 +13,8 @@
         "done": "Done",
         "editGoal": "Edit Goal",
         "deleteGoal": "Delete Goal",
+        "deleteGoalConfirm": "Delete the goal \"{{title}}\"? This cannot be undone.",
+        "pinGoal": "Pin to the dashboard",
         "noGoals": "No goals created yet",
         "noGoalsDescription": "Set your first financial goal to start tracking your progress.",
         "form": {
@@ -31,7 +33,10 @@
             "car": "Car",
             "emergency": "Emergency",
             "other": "Other"
-        }
+        },
+        "newGroupName": "New group name",
+        "editMembers": "Edit members",
+        "enterAmount": "Enter an amount"
     },
     "achievements": {
         "title": "Achievements",

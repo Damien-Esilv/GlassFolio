@@ -15,6 +15,7 @@
 import { yahooFinanceUrl } from '../config/marketData';
 import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
+import { currencyService } from './currencyService';
 import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +24,14 @@ import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY } from './sto
 
 interface PriceCache {
     data: Record<string, number>; // e.g. { 'AAPL': 224.50, 'BTC-USD': 64200, 'CW8.PA': 520.50 }
+    /** Quote currency of each fetched price (absent for hand-entered prices, already in the asset's currency). */
+    currencies?: Record<string, string>;
     fetchedAt: string;            // ISO 8601 string timestamp
+}
+
+interface PriceQuote {
+    price: number;
+    currency?: string;
 }
 
 interface YahooChartResponse {
@@ -33,6 +41,7 @@ interface YahooChartResponse {
                 symbol?: string;
                 regularMarketPrice?: number;
                 chartPreviousClose?: number;
+                currency?: string;
             };
         }>;
         error?: {
@@ -55,6 +64,28 @@ interface CoinGeckoPriceResponse {
 
 const CACHE_KEY = 'gf_price_cache';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+/** Yahoo quotes some listings in minor units (London in pence): price / 100 in the major currency. */
+const MINOR_UNIT_CURRENCIES: Record<string, string> = { GBp: 'GBP', GBX: 'GBP', ZAc: 'ZAR', ILA: 'ILS' };
+
+function normalizeQuote(price: number, currency: string | undefined): PriceQuote {
+    if (!currency) return { price };
+    const major = MINOR_UNIT_CURRENCIES[currency];
+    if (major) return { price: price / 100, currency: major };
+    return { price, currency: currency.trim().toUpperCase() };
+}
+
+/** Quote currency of a cached price; crypto pairs carry it in their ticker (e.g. BTC-USD). */
+function quoteCurrencyOf(ticker: string, currencies: Record<string, string> | undefined): string | undefined {
+    return currencies?.[ticker] ?? (ticker.endsWith('-USD') ? 'USD' : undefined);
+}
+
+/** Factor turning a price quoted in `quoteCurrency` into the position's own currency. */
+async function quoteToPositionRate(quoteCurrency: string | undefined, pos: Position): Promise<number> {
+    const target = (pos.currency || 'EUR').trim().toUpperCase();
+    if (!quoteCurrency || quoteCurrency === target) return 1;
+    return currencyService.getExchangeRate(quoteCurrency, target);
+}
 
 /** Mapping of common European tickers to Yahoo Finance suffixes */
 const EUROPEAN_TICKER_MAP: Record<string, string> = {
@@ -148,6 +179,8 @@ export function saveManualPrice(symbol: string, price: number): void {
         const raw = appStorage.getItem(CACHE_KEY);
         const parsed: PriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
         parsed.data[cleanSymbol] = price;
+        // Typed in the asset's own currency: never convert it
+        if (parsed.currencies) delete parsed.currencies[cleanSymbol];
         parsed.fetchedAt = new Date().toISOString();
         appStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
     } catch {
@@ -225,12 +258,13 @@ function readCache(): PriceCache | null {
     }
 }
 
-function writeCache(data: Record<string, number>): void {
+function writeCache(data: Record<string, number>, currencies: Record<string, string> = {}): void {
     try {
-        const existing = readCache()?.data ?? {};
-        const merged = { ...existing, ...data };
+        const existing = readCache();
+        const merged = { ...(existing?.data ?? {}), ...data };
         const cache: PriceCache = {
             data: merged,
+            currencies: { ...(existing?.currencies ?? {}), ...currencies },
             fetchedAt: new Date().toISOString()
         };
         appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
@@ -250,6 +284,7 @@ export function forgetCachedPrices(symbols: string[]): void {
             if (!clean) continue;
             delete parsed.data[clean];
             delete parsed.data[`${clean}-USD`];
+            delete parsed.currencies?.[clean];
         }
         appStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
     } catch {
@@ -281,7 +316,7 @@ export function getLastPriceFetchTime(): string | null {
 /**
  * Fetches price for a single ticker via Yahoo Finance v8 chart API.
  */
-async function fetchYahooTickerPrice(ticker: string): Promise<number | null> {
+async function fetchYahooTickerPrice(ticker: string): Promise<PriceQuote | null> {
     const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
 
     const url = `${base}?interval=1d&range=1d`;
@@ -302,7 +337,7 @@ async function fetchYahooTickerPrice(ticker: string): Promise<number | null> {
 
         const price = meta.regularMarketPrice ?? meta.chartPreviousClose;
         if (price !== undefined && price > 0) {
-            return price;
+            return normalizeQuote(price, meta.currency);
         }
         return null;
     } catch {
@@ -357,48 +392,60 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
     // Check cache
     const cached = readCache();
     let prices: Record<string, number> = cached?.data ?? {};
+    let currencies: Record<string, string> = cached?.currencies ?? {};
 
     const missingTickers = tickers.filter(t => !(t in prices));
 
     if (missingTickers.length > 0) {
         const fetchedPrices: Record<string, number> = {};
+        const fetchedCurrencies: Record<string, string> = {};
 
         // Fetch missing tickers in parallel
         const results = await Promise.allSettled(
             missingTickers.map(async (ticker) => {
-                let price = await fetchYahooTickerPrice(ticker);
+                let quote = await fetchYahooTickerPrice(ticker);
 
-                // If Yahoo fails and it's a crypto, attempt CoinGecko fallback
-                if (price === null && ticker.endsWith('-USD')) {
-                    price = await fetchCoinGeckoPrice(ticker);
+                // If Yahoo fails and it's a crypto, attempt CoinGecko fallback (quoted in USD)
+                if (quote === null && ticker.endsWith('-USD')) {
+                    const usd = await fetchCoinGeckoPrice(ticker);
+                    quote = usd === null ? null : { price: usd, currency: 'USD' };
                 }
 
-                return { ticker, price };
+                return { ticker, quote };
             })
         );
 
         for (const res of results) {
-            if (res.status === 'fulfilled' && res.value.price !== null) {
-                fetchedPrices[res.value.ticker] = res.value.price;
+            if (res.status === 'fulfilled' && res.value.quote !== null) {
+                fetchedPrices[res.value.ticker] = res.value.quote.price;
+                if (res.value.quote.currency) fetchedCurrencies[res.value.ticker] = res.value.quote.currency;
             }
         }
 
         if (Object.keys(fetchedPrices).length > 0) {
             prices = { ...prices, ...fetchedPrices };
-            writeCache(prices);
+            currencies = { ...currencies, ...fetchedCurrencies };
+            writeCache(prices, currencies);
         }
     }
 
     // Apply resolved prices to positions
-    return positions.map(pos => {
+    return Promise.all(positions.map(async pos => {
         if (pos.type === 'Cash') return pos;
         const ticker = toYahooTicker(pos);
         // "Other": the latest price entered by hand, kept in the manual price history (the 15-minute
         // price cache would drop it); every other class: the fetched or cached market price.
         const manualPrice = pos.type === 'Other' ? latestManualPrice(pos.symbol) : undefined;
-        const resolvedPrice = manualPrice ?? (ticker && prices[ticker]) ?? prices[pos.symbol.trim().toUpperCase()];
+        const symbolKey = pos.symbol.trim().toUpperCase();
+        const priceKey = ticker && prices[ticker] ? ticker : symbolKey;
+        const quotedPrice = manualPrice ?? prices[priceKey];
 
-        if (!resolvedPrice) return pos;
+        if (!quotedPrice) return pos;
+
+        // The cost basis is in the position's currency, so the market price must be too
+        // (a BTC-USD or AAPL quote held on a EUR account).
+        const rate = manualPrice !== undefined ? 1 : await quoteToPositionRate(quoteCurrencyOf(priceKey, currencies), pos);
+        const resolvedPrice = quotedPrice * rate;
 
         const marketValue = pos.quantity * resolvedPrice;
         const costBasis = pos.quantity * pos.avgCost;
@@ -412,7 +459,7 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
             unrealizedPL,
             unrealizedPLPercent
         };
-    });
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +475,18 @@ const HISTORICAL_PRICE_CACHE_KEY = 'gf_historical_price_cache';
 
 interface HistoricalPriceCache {
     data: Record<string, HistoricalPricePoint[]>;
+    /** Quote currency of each cached series; absent means the position's own currency. */
+    currencies?: Record<string, string>;
+    /** Series estimated from the position's own prices (market data unreachable), not real closes */
+    estimated?: Record<string, boolean>;
     fetchedAt: string;
+}
+
+async function inPositionCurrency(points: HistoricalPricePoint[], quoteCurrency: string | undefined, pos: Position): Promise<HistoricalPricePoint[]> {
+    // Today's rate for the whole series: an approximation, but the scale (USD vs EUR) is right.
+    const rate = await quoteToPositionRate(quoteCurrency, pos);
+    if (rate === 1) return points;
+    return points.map(point => ({ timestamp: point.timestamp, price: Math.round(point.price * rate * 100) / 100 }));
 }
 
 /**
@@ -437,8 +495,11 @@ interface HistoricalPriceCache {
  */
 export async function fetchRealPriceHistory(
     pos: Position,
-    timeRange: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL' | string = '1Y'
+    timeRange: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL' | string = '1Y',
+    /** false: real closes only, never a series estimated from cost and today's price */
+    options: { allowEstimate?: boolean } = {}
 ): Promise<HistoricalPricePoint[]> {
+    const allowEstimate = options.allowEstimate ?? true;
     if (!pos || pos.type === 'Cash' || pos.type === 'Other') return [];
 
     const ticker = toYahooTicker(pos) || pos.symbol.trim().toUpperCase();
@@ -450,8 +511,8 @@ export async function fetchRealPriceHistory(
         if (raw) {
             const parsed: HistoricalPriceCache = JSON.parse(raw);
             const age = Date.now() - new Date(parsed.fetchedAt).getTime();
-            if (age < CACHE_TTL_MS && parsed.data[cacheKey]?.length > 0) {
-                return parsed.data[cacheKey];
+            if (age < CACHE_TTL_MS && parsed.data[cacheKey]?.length > 0 && (allowEstimate || !parsed.estimated?.[cacheKey])) {
+                return inPositionCurrency(parsed.data[cacheKey], parsed.currencies?.[cacheKey] ?? quoteCurrencyOf(ticker, undefined), pos);
             }
         }
     } catch {
@@ -482,6 +543,8 @@ export async function fetchRealPriceHistory(
     }
 
     let points: HistoricalPricePoint[] = [];
+    // Currency of `points`; undefined once they are estimated from the position's own price.
+    let quoteCurrency: string | undefined;
 
     // 2. Fetch from Yahoo Finance
     const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
@@ -498,14 +561,17 @@ export async function fetchRealPriceHistory(
             const json = await res.json();
             const timestamps: number[] = json.chart?.result?.[0]?.timestamp || [];
             const closes: (number | null)[] = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+            const rawCurrency: string | undefined = json.chart?.result?.[0]?.meta?.currency;
 
             if (timestamps.length > 0 && closes.length === timestamps.length) {
                 for (let i = 0; i < timestamps.length; i++) {
                     const price = closes[i];
                     if (price !== null && typeof price === 'number' && price > 0) {
+                        const quote = normalizeQuote(price, rawCurrency);
+                        quoteCurrency = quote.currency;
                         points.push({
                             timestamp: timestamps[i] * 1000,
-                            price: Math.round(price * 100) / 100
+                            price: Math.round(quote.price * 100) / 100
                         });
                     }
                 }
@@ -531,6 +597,7 @@ export async function fetchRealPriceHistory(
                             timestamp: ts,
                             price: Math.round(p * 100) / 100
                         }));
+                        quoteCurrency = 'USD';
                     }
                 }
             }
@@ -540,13 +607,17 @@ export async function fetchRealPriceHistory(
     }
 
     // 4. High-precision financial fallback if external APIs failed or were rate-limited
+    let estimated = false;
+    if (points.length === 0 && !allowEstimate) return [];
     if (points.length === 0 && pos.lastPrice > 0) {
+        estimated = true;
         const plRatio = (pos.unrealizedPLPercent || 0) / 100;
         const estimatedStart = plRatio !== -1
             ? pos.lastPrice / (1 + plRatio)
             : (pos.avgCost > 0 ? pos.avgCost : pos.lastPrice * 0.9);
         const count = timeRange === '1D' ? 24 : timeRange === '1W' ? 42 : timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === 'ALL' ? 300 : 252;
         points = generateHighPrecisionHistory(pos.symbol, estimatedStart, pos.lastPrice, count);
+        quoteCurrency = undefined;
     }
 
     // 5. Save to cache if points fetched
@@ -555,6 +626,12 @@ export async function fetchRealPriceHistory(
             const raw = appStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
             const parsed: HistoricalPriceCache = raw ? JSON.parse(raw) : { data: {}, fetchedAt: new Date().toISOString() };
             parsed.data[cacheKey] = points;
+            parsed.currencies = { ...(parsed.currencies ?? {}) };
+            // An estimated series is in this position's currency: never convert it again on read
+            parsed.currencies[cacheKey] = quoteCurrency ?? (pos.currency || 'EUR').trim().toUpperCase();
+            parsed.estimated = { ...(parsed.estimated ?? {}) };
+            if (estimated) parsed.estimated[cacheKey] = true;
+            else delete parsed.estimated[cacheKey];
             parsed.fetchedAt = new Date().toISOString();
             appStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(parsed));
         } catch {
@@ -562,7 +639,7 @@ export async function fetchRealPriceHistory(
         }
     }
 
-    return points;
+    return inPositionCurrency(points, quoteCurrency, pos);
 }
 
 /**

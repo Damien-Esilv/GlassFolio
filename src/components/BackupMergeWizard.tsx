@@ -6,6 +6,7 @@ import type { BackupValidationResult } from '../services/import/importManager';
 import { findBackupEntry, readZipTextEntries, ZipError } from '../services/import/zipReader';
 import { useData } from '../context/DataContext';
 import { useTranslation } from 'react-i18next';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface BackupMergeWizardProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface BackupMergeWizardProps {
 }
 
 export const BackupMergeWizard: React.FC<BackupMergeWizardProps> = ({ isOpen, onClose, onSuccess }) => {
+    useEscapeKey(onClose, isOpen);
     const { t } = useTranslation(['settings', 'common']);
     const { refreshData } = useData();
     const [fileText, setFileText] = useState<string | null>(null);

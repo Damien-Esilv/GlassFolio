@@ -5,9 +5,11 @@ import Button from '../components/Button';
 import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert, ArrowLeft, KeyRound, Fingerprint, Key } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/security/authService';
-import { isPasskeySupported, passkeyService } from '../services/security/passkeyService';
+import { isPasskeySupported } from '../services/security/passkeyService';
 import { getDeploymentMode, isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl } from '../config/deployment';
 import { useDemoAccess } from '../hooks/useDemoAccess';
+import { useDemoOffered } from '../hooks/useDemoOffered';
+import { demoAvailability } from '../services/demoAvailability';
 import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
@@ -15,6 +17,7 @@ import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallen
 import { GoogleDrivePrivacyTooltip } from '../components/security/GoogleDrivePrivacyTooltip';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 import { isDemoAccount } from '../services/security/demoAccount';
+import { LegalLink } from '../components/ui/LegalLink';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
@@ -34,6 +37,20 @@ const Login: React.FC = () => {
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
    const { launchDemo, isLaunchingDemo, demoError } = useDemoAccess();
+   const demoOffered = useDemoOffered();
+
+   // Started for a demo (npm run dev:demo, GLASSFOLIO_DEMO=1): open it without a click
+   const launchDemoRef = useRef(launchDemo);
+   launchDemoRef.current = launchDemo;
+   useEffect(() => {
+      if (user) return;
+      let active = true;
+      void demoAvailability.claimAutoStart(() => active).then(start => {
+         if (start) void launchDemoRef.current(from);
+      });
+      return () => { active = false; };
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the first visit
+   }, []);
 
    useEffect(() => {
       isPasskeySupported().then(setPasskeySupported).catch(() => setPasskeySupported(false));
@@ -356,7 +373,8 @@ const Login: React.FC = () => {
             )}
 
             <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
-               {passkeySupported && (!isLocal || passkeyService.canUnlockVaultHere()) && (
+               {/* Local: always offered; without a passkey on this device the click explains how to add one */}
+               {(isLocal || passkeySupported) && (
                   <button
                      type="button"
                      onClick={handlePasskeySignIn}
@@ -387,7 +405,7 @@ const Login: React.FC = () => {
                   </div>
                )}
 
-                {isLocal && (
+                {isLocal && demoOffered && (
                    <button
                       type="button"
                       onClick={() => launchDemo(from)}
@@ -419,17 +437,17 @@ const Login: React.FC = () => {
             </p>
 
             <div className="flex items-center justify-center gap-3 text-xs text-tertiary mt-4 pt-4 border-t border-subtle">
-               <Link to="/welcome" className="hover:text-primary transition-colors">
+               <LegalLink path="/" className="hover:text-primary transition-colors">
                   {t('landing:header.brandName')}
-               </Link>
+               </LegalLink>
                <span>&bull;</span>
-               <Link to="/privacy" className="hover:text-primary transition-colors">
+               <LegalLink path="/privacy" className="hover:text-primary transition-colors">
                   {t('legal:center.tabs.privacy')}
-               </Link>
+               </LegalLink>
                <span>&bull;</span>
-               <Link to="/terms" className="hover:text-primary transition-colors">
+               <LegalLink path="/terms" className="hover:text-primary transition-colors">
                   {t('legal:center.tabs.terms')}
-               </Link>
+               </LegalLink>
             </div>
          </div>
 

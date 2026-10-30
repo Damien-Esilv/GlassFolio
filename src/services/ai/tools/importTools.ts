@@ -60,8 +60,9 @@ async function analyseSnapshot(accountId: string, csvText: string, closeMissing:
   }
   const parsed = await parseSnapshotFile(csvText, mapping as SnapshotFieldMappings);
   const positions = parsed.positions.filter(p => p.status === 'valid').map(p => p.position);
-  const reconciliation = await calculateReconciliation(positions, await getExistingPositions(accountId), { closeMissing });
-  return { parsed, positions, reconciliation };
+  const keepAssets = parsed.positions.filter(p => p.status !== 'valid').map(p => p.position);
+  const reconciliation = await calculateReconciliation(positions, await getExistingPositions(accountId), { closeMissing, keepAssets });
+  return { parsed, positions, keepAssets, reconciliation };
 }
 
 export const previewCsvImportTool: AIToolDefinition<{ csvText: string; mode?: CsvImportMode }, CsvPreviewResult> = {
@@ -228,13 +229,14 @@ export const importSnapshotTool: AIToolDefinition<
     required: ['accountId', 'csvText'],
   },
   execute: async ({ accountId, csvText, closeMissing = true, fileName = 'assistant_snapshot.csv' }, context) => {
-    const { parsed, positions } = await analyseSnapshot(accountId, csvText, closeMissing);
+    const { parsed, positions, keepAssets } = await analyseSnapshot(accountId, csvText, closeMissing);
     const result = await commitSnapshotImport({
       mode: 'replace',
       positions,
       accountId,
       userId: context?.userId || 'default-user',
       closeMissing,
+      keepAssets,
       rawContent: csvText,
       fileName,
       totalRows: parsed.stats.total,

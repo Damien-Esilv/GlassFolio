@@ -16,6 +16,7 @@ type CallbackOutcome =
     | { kind: 'sign-in'; res: AuthResult }
     | { kind: 'account-deleted' }
     | { kind: 'recovery-key'; recoveryKey: string }
+    | { kind: 'step-up'; returnTo: string }
     | { kind: 'failed'; intent: GoogleCeremonyIntent; error: unknown };
 
 export const GoogleAuthCallback: React.FC = () => {
@@ -26,6 +27,7 @@ export const GoogleAuthCallback: React.FC = () => {
         handleGoogleCallback,
         handleGoogleAccountDeletion,
         createGoogleRecoveryKey,
+        confirmGoogleStepUp,
         deleteAccount,
         pendingSecondFactor,
         cancelSecondFactor,
@@ -51,8 +53,8 @@ export const GoogleAuthCallback: React.FC = () => {
     const reportFailure = (err: unknown): void => {
         if (!isMountedRef.current) return;
         console.error('[GoogleAuthCallback] Authentication failed', err);
-        const message = err instanceof Error ? err.message : String(err);
-        setError(mapAuthErrorMessage(err, t, message));
+        // Unmapped errors get a generic message: raw (English, internal) text is never shown
+        setError(mapAuthErrorMessage(err, t, 'common:errors.auth.actionFailed'));
         setIsProcessing(false);
     };
 
@@ -91,6 +93,10 @@ export const GoogleAuthCallback: React.FC = () => {
                 if (parsedIntent === 'recovery-key') {
                     return { kind: 'recovery-key', recoveryKey: await createGoogleRecoveryKey(parsed) };
                 }
+                if (parsedIntent === 'step-up') {
+                    await confirmGoogleStepUp(parsed);
+                    return { kind: 'step-up', returnTo: parsed.returnTo ?? '/settings' };
+                }
                 // Exchange with Supabase, then derive/unlock/migrate the Google Drive vault. An account
                 // with a second factor stops here until the code (or passkey) is verified.
                 return { kind: 'sign-in', res: await handleGoogleCallback(parsed) };
@@ -108,6 +114,9 @@ export const GoogleAuthCallback: React.FC = () => {
                     return;
                 case 'account-deleted':
                     navigate('/login', { replace: true });
+                    return;
+                case 'step-up':
+                    navigate(outcome.returnTo, { replace: true });
                     return;
                 case 'recovery-key':
                     setRecoveryKey(outcome.recoveryKey);
@@ -155,7 +164,7 @@ export const GoogleAuthCallback: React.FC = () => {
         }
     };
 
-    const processingKey = intent === 'delete-account' ? 'deleting' : intent === 'recovery-key' ? 'recovery' : 'processing';
+    const processingKey = intent === 'delete-account' ? 'deleting' : intent === 'recovery-key' ? 'recovery' : intent === 'step-up' ? 'stepUp' : 'processing';
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-canvas p-4">

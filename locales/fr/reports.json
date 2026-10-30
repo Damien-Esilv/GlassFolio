@@ -46,7 +46,9 @@
         "clearSelection": "Effacer la sélection",
         "searching": "Recherche en temps réel...",
         "selectedCount": "{{count}} / 4 sélectionnés",
-        "maxSelectedNotice": "Plafond maximum de 4 actifs de référence atteint."
+        "maxSelectedNotice": "Plafond maximum de 4 actifs de référence atteint.",
+        "delta": "Écart",
+        "benchmarkWithRate": "Indice de référence ({{rate}} %)"
     },
     "pl": {
         "title": "P&L Réalisé vs. Latent",

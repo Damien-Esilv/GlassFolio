@@ -23,6 +23,7 @@ const ERROR_NAME_KEYS: Record<string, string> = {
     VaultNotInitializedError: 'common:errors.auth.noVault',
     VaultLockedError: 'common:errors.auth.vaultLocked',
     VaultHeaderCorruptedError: 'common:errors.auth.vaultCorrupted',
+    VaultRecordUnreadableError: 'common:errors.auth.vaultRecordUnreadable',
     EmailNotConfirmedError: 'common:errors.auth.emailNotConfirmed',
     RecentSignInRequiredError: 'common:errors.auth.recentSignInRequired',
     CryptoUnavailableError: 'common:errors.auth.cryptoUnavailable',
@@ -85,6 +86,10 @@ const MESSAGE_KEYS: Array<[RegExp, string]> = [
     [/sign-in is disabled/, 'common:errors.auth.providerDisabled'],
     [/could not be reached/, 'common:errors.auth.vaultUnreachable'],
     [/mfa_step_up_required/, 'common:errors.auth.mfaStepUpRequired'],
+    // Raised by the account deletion RPC (migration 0004)
+    [/reauthentication_required/, 'common:errors.auth.recentSignInRequired'],
+    [/^mfa_required$/, 'common:errors.auth.totpRequired'],
+    [/account deletion failed/, 'common:errors.auth.deleteFailed'],
     [/google_client_id_not_configured/, 'common:errors.auth.googleNotConfigured'],
     [/google_vault_unlock_failed/, 'common:errors.auth.googleVaultUnlockFailed'],
     [/google_account_mismatch/, 'common:errors.auth.googleAccountMismatch'],

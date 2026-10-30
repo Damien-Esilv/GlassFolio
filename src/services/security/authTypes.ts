@@ -78,6 +78,8 @@ export interface IAuthProvider {
     getFailedAttemptsCount(): number;
     getLockoutRemainingSeconds(): number;
     handleOAuthCallback?(): Promise<AuthResult | null>;
+    /** Page load: reopens the vault with this device's key (Google accounts); true when it is open. */
+    resumeDeviceSession?(): Promise<boolean>;
     setupLocalVault?(name: string, masterPassword: string, options?: { overwriteExisting?: boolean }): Promise<AuthResult>;
     unlockLocalVault?(masterPassword: string): Promise<AuthResult>;
     verifySecondFactor?(tokenOrCode: string): Promise<AuthResult>;
@@ -123,7 +125,9 @@ export interface IAuthProvider {
     /** Direct Google OIDC callback handling (Epic E25 / TGLA-170). */
     handleGoogleOidcCallback?(params: GoogleCallbackResult): Promise<AuthResult & { recoveryKey?: string }>;
     /** Goes through Google again for an action that needs the Drive key file (delete it, create a recovery key). */
-    startGoogleReauth?(intent: 'delete-account' | 'recovery-key'): Promise<void>;
+    startGoogleReauth?(intent: 'delete-account' | 'recovery-key' | 'step-up', options?: { returnTo?: string }): Promise<void>;
+    /** Back from a Google step-up round trip: renews the session so the sign-in counts as recent. */
+    confirmGoogleStepUp?(params: GoogleCallbackResult): Promise<void>;
     /** After the Google round trip: removes the Drive key file, then deletes the account. */
     completeGoogleAccountDeletion?(params: GoogleCallbackResult): Promise<void>;
     /** After the Google round trip: creates the emergency recovery key of a Google vault and returns it once. */

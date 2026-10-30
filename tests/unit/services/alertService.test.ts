@@ -262,9 +262,9 @@ describe('alertService', () => {
         totalPortfolioValue: 100000,
       });
 
-      const cashAlert = res.newAlerts.find((a) => a.category === 'portfolio' && a.title.includes('Liquidités'));
+      const cashAlert = res.newAlerts.find((a) => a.messageKey === 'notifications:engine.dormantCash');
       expect(Boolean(cashAlert)).toBe(true);
-      expect(cashAlert?.message).toContain('35.0%');
+      expect(cashAlert?.params?.percent).toBeCloseTo(35);
     });
 
     it('triggers fiscal deadline alert when within 30 days', async () => {
@@ -277,7 +277,7 @@ describe('alertService', () => {
 
       const fiscalAlert = res.newAlerts.find((a) => a.category === 'fiscal');
       expect(Boolean(fiscalAlert)).toBe(true);
-      expect(fiscalAlert?.title).toContain('Échéance fiscale');
+      expect(fiscalAlert?.titleKey).toBe('notifications:engine.fiscalDeadlineTitle');
     });
 
     it('triggers goal completion alert when goal reaches 100%', async () => {
@@ -303,7 +303,8 @@ describe('alertService', () => {
 
       const goalAlert = res.newAlerts.find((a) => a.category === 'goals');
       expect(Boolean(goalAlert)).toBe(true);
-      expect(goalAlert?.title).toContain('Objectif atteint à 100%');
+      expect(goalAlert?.titleKey).toBe('notifications:engine.goalReachedTitle');
+      expect(goalAlert?.params?.goal).toBe('Fonds d’urgence');
     });
 
     it('triggers unclaimed quest reward alert', async () => {
@@ -355,6 +356,21 @@ describe('alertService', () => {
       // Cash alert should NOT be in newAlerts because dedupKey already exists in db
       const duplicateCashAlert = res.newAlerts.find((a) => a.dedupKey === existing.dedupKey);
       expect(duplicateCashAlert).toBeUndefined();
+    });
+
+    it('never re-creates a smart alert the user deleted or cleared', async () => {
+      const dedupKey = `smart-dormant-cash-${new Date().toISOString().slice(0, 7)}`;
+      const first = await alertService.evaluateSmartAlerts({ positions: mockPositions, totalPortfolioValue: 100000 });
+      const cashAlert = first.newAlerts.find((a) => a.dedupKey === dedupKey);
+      expect(cashAlert).toBeDefined();
+
+      const afterDelete = await alertService.deleteAlert(cashAlert!.id);
+      expect(afterDelete.find((a) => a.id === cashAlert!.id)).toBeUndefined();
+
+      const second = await alertService.evaluateSmartAlerts({ positions: mockPositions, totalPortfolioValue: 100000 });
+      expect(second.newAlerts.find((a) => a.dedupKey === dedupKey)).toBeUndefined();
+      expect(second.allAlerts.find((a) => a.dedupKey === dedupKey)).toBeUndefined();
+      expect((await alertService.getAlerts()).find((a) => a.dedupKey === dedupKey)).toBeUndefined();
     });
 
     it('respects notification category flags when category is disabled', async () => {

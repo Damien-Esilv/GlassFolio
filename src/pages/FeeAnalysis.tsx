@@ -18,6 +18,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { etfFeeService, KNOWN_ETF_DB, ETFRecommendation } from '../services/etfFeeService';
 import { formatCurrency } from '../utils/currency';
+import { currencyService } from '../services/currencyService';
 import AnimatedCounter from '../components/AnimatedCounter';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 import { CHART_SERIES_PALETTE } from '../constants/themeTokens';
@@ -114,26 +115,15 @@ const FeeAnalysis: React.FC = () => {
    };
 
    // Compute fee drag projection points for selected optimization or horizon
+   // Projection of the user's own ETFs only: without any, there is nothing to project (no demo figures)
    const feeDragPoints = useMemo(() => {
-      const activeRec = optimizableRecs[selectedOptIndex] || feeAnalysis.recommendations[0];
-      
-      let currentAvgTer = 0.38;
-      let altAvgTer = 0.20;
-      let baseAmount = 50000;
+      const activeRec = optimizableRecs[Math.min(selectedOptIndex, optimizableRecs.length - 1)] || feeAnalysis.recommendations[0];
+      if (!activeRec) return [];
 
-      if (activeRec) {
-         currentAvgTer = activeRec.currentTer;
-         altAvgTer = activeRec.cheapestSimilar.ter;
-         const valInBase = activeRec.heldPosition.marketValue || 10000;
-         baseAmount = valInBase > 0 ? valInBase : 10000;
-      } else if (feeAnalysis.recommendations.length > 0) {
-         currentAvgTer = feeAnalysis.recommendations.reduce((s, r) => s + r.currentTer, 0) / feeAnalysis.recommendations.length;
-         altAvgTer = feeAnalysis.recommendations.reduce((s, r) => s + r.cheapestSimilar.ter, 0) / feeAnalysis.recommendations.length;
-         baseAmount = feeAnalysis.totalHeldEtfValue > 0 ? feeAnalysis.totalHeldEtfValue : 50000;
-      }
-
-      return etfFeeService.calculateFeeDragProjection(baseAmount, currentAvgTer, altAvgTer, horizonYears);
-   }, [feeAnalysis, optimizableRecs, selectedOptIndex, horizonYears]);
+      const baseAmount = currencyService.convertAmount(activeRec.heldPosition.marketValue, activeRec.heldPosition.currency || 'EUR', currency);
+      if (!(baseAmount > 0)) return [];
+      return etfFeeService.calculateFeeDragProjection(baseAmount, activeRec.currentTer, activeRec.cheapestSimilar.ter, horizonYears);
+   }, [feeAnalysis, optimizableRecs, selectedOptIndex, horizonYears, currency]);
 
    // Generate side-by-side comparison chart data dynamically based on selected time period
    const sideBySidePointsCount = useMemo(() => {
@@ -146,9 +136,16 @@ const FeeAnalysis: React.FC = () => {
       }
    }, [comparePeriod]);
 
-   const sideBySideData = useMemo(() => {
-      return etfFeeService.getSideBySideEtfComparisonData(selectedCompareSymbols, sideBySidePointsCount, locale);
-   }, [selectedCompareSymbols, sideBySidePointsCount, locale]);
+   const [sideBySideData, setSideBySideData] = useState<Array<Record<string, string | number>>>([]);
+   useEffect(() => {
+      let isMounted = true;
+      etfFeeService.getSideBySideEtfComparisonData(selectedCompareSymbols, comparePeriod, sideBySidePointsCount, locale)
+         .then((data) => { if (isMounted) setSideBySideData(data); })
+         .catch(() => { if (isMounted) setSideBySideData([]); });
+      return () => {
+         isMounted = false;
+      };
+   }, [selectedCompareSymbols, comparePeriod, sideBySidePointsCount, locale]);
 
    // Generate Sector & Geography allocation comparison chart data
    const allocationChartData = useMemo(() => {
@@ -503,6 +500,9 @@ const FeeAnalysis: React.FC = () => {
                   </span>
                </div>
                <div className="h-[320px] w-full">
+                  {sideBySideData.length === 0 ? (
+                     <p className="h-full flex items-center justify-center text-sm text-tertiary">{t('reports:noData')}</p>
+                  ) : (
                   <ResponsiveContainer width="100%" height="100%">
                      <LineChart data={sideBySideData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
                         <XAxis
@@ -558,6 +558,7 @@ const FeeAnalysis: React.FC = () => {
                         })}
                      </LineChart>
                   </ResponsiveContainer>
+                  )}
                </div>
             </div>
 
@@ -821,6 +822,9 @@ const FeeAnalysis: React.FC = () => {
             </div>
 
             <div className="h-[340px] w-full -mx-2">
+               {feeDragPoints.length === 0 ? (
+                  <p className="h-full flex items-center justify-center text-sm text-tertiary">{t('reports:noData')}</p>
+               ) : (
                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart key={horizonYears} data={feeDragPoints} margin={{ top: 10, right: 30, left: 20, bottom: 25 }}>
                      <defs>
@@ -846,7 +850,7 @@ const FeeAnalysis: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500 }}
-                        tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                        tickFormatter={(val: number) => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(val)}
                      />
                      <Tooltip
                         content={({ active, payload }) => {
@@ -915,6 +919,7 @@ const FeeAnalysis: React.FC = () => {
                      />
                   </AreaChart>
                </ResponsiveContainer>
+               )}
             </div>
          </div>
       </div>

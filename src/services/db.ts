@@ -82,6 +82,16 @@ export const isRealUserVaultActive = (): boolean => {
 };
 
 class MockDB {
+    /** Changes whenever the stored user data changes: lets derived results (tax summary) know they are stale. */
+    getDataVersion(): number {
+        return appStorage.getDataVersion();
+    }
+
+    /** Calls `listener` when another tab of this browser changed the stored data. */
+    subscribeExternalChanges(listener: () => void): () => void {
+        return appStorage.subscribeExternalData(() => listener());
+    }
+
     // =========================================================================
     // LEGACY METHODS (Existing Functionality)
     // =========================================================================
