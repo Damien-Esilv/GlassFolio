@@ -52,6 +52,7 @@ const COOKIE_ROW_KEYS = [
   'supabaseSession',
   'oauthVerifier',
   'marketCaches',
+  'assetLookup',
   'uiState',
   'passkeyRpId',
 ] as const;

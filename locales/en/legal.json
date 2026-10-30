@@ -404,6 +404,12 @@
         "purpose": "Locally caches public prices and exchange rates to limit network calls. Holds no personal data.",
         "lifespan": "Minutes to hours, then refreshed"
       },
+      "assetLookup": {
+        "key": "gf_asset_class_cache / gf_asset_lookup",
+        "category": "Strictly Necessary (Public cache & Preferences)",
+        "purpose": "Remembers on this device what kind of asset a symbol or ISIN is (stock, ETF, crypto) after a lookup, and your choice to switch that lookup off in Settings. Holds only public market identifiers.",
+        "lifespan": "Up to 30 days, then refreshed; the choice stays until you change it"
+      },
       "uiState": {
         "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
         "category": "Strictly Necessary (Preferences & Data)",

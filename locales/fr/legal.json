@@ -404,6 +404,12 @@
         "purpose": "Mémorise localement les cours et taux de change publics pour limiter les appels réseau. Ne contient aucune donnée personnelle.",
         "lifespan": "Quelques minutes à quelques heures, puis renouvelé"
       },
+      "assetLookup": {
+        "key": "gf_asset_class_cache / gf_asset_lookup",
+        "category": "Strictement Nécessaire (Cache public & Préférences)",
+        "purpose": "Mémorise sur cet appareil la nature d’un actif (action, ETF, crypto) pour un symbole ou un ISIN après une recherche, ainsi que votre choix de désactiver cette recherche dans les Paramètres. Ne contient que des identifiants de marché publics.",
+        "lifespan": "Jusqu’à 30 jours, puis renouvelé ; le choix reste jusqu’à ce que vous le changiez"
+      },
       "uiState": {
         "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
         "category": "Strictement Nécessaire (Préférences & Données)",

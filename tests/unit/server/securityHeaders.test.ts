@@ -97,6 +97,7 @@ describe('Content-Security-Policy (E31 — TGLA-127)', () => {
     files.push(
       join(root, 'src/services/priceService.ts'),
       join(root, 'src/services/assetSearchService.ts'),
+      join(root, 'src/services/assetClassifier.ts'),
       join(root, 'src/config/marketData.ts'),
       join(root, 'src/services/security/googleDriveVaultKeyService.ts')
     );

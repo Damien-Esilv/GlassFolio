@@ -47,7 +47,9 @@
         "dateFormatInfo": "Choose the display format for dates across the application.",
         "dateFormatFR": "European (DD/MM/YYYY)",
         "dateFormatUS": "American (MM/DD/YYYY)",
-        "dateFormatISO": "ISO Standard (YYYY-MM-DD)"
+        "dateFormatISO": "ISO Standard (YYYY-MM-DD)",
+        "assetLookup": "Recognise assets automatically",
+        "assetLookupInfo": "When you import, look up unknown symbols and ISINs with Yahoo Finance and CoinGecko to tell stocks, ETFs and crypto apart. Only the symbol or ISIN is sent. Off: the account type and built-in rules are used."
     },
     "dataAndBackup": {
         "title": "Data, Backups & Privacy",
