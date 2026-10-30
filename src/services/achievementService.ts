@@ -115,6 +115,38 @@ export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: 
     return streak;
 }
 
+/**
+ * The longest tracking streak in the whole history: consecutive ISO weeks with a completed transaction,
+ * wherever they are on the calendar. It comes from the transaction dates (when the user traded), not from
+ * when they were imported, so importing years of history gives the streak those years earned.
+ */
+export function calculateLongestWeeklyStreak(transactions: Transaction[], now: Date = new Date()): number {
+    const weeks = new Map<string, Date>();
+    transactions.forEach(t => {
+        if (t.status === 'Pending') return;
+        const d = new Date(t.date);
+        if (isNaN(d.getTime()) || d.getTime() > now.getTime()) return;
+        const monday = getStartOfCurrentWeek(d);
+        weeks.set(dayKey(monday), monday);
+    });
+
+    let longest = 0;
+    for (const monday of weeks.values()) {
+        const before = new Date(monday);
+        before.setDate(before.getDate() - 7);
+        if (weeks.has(dayKey(before))) continue; // not the first week of a run
+
+        let run = 0;
+        const cursor = new Date(monday);
+        while (weeks.has(dayKey(cursor))) {
+            run += 1;
+            cursor.setDate(cursor.getDate() + 7);
+        }
+        longest = Math.max(longest, run);
+    }
+    return longest;
+}
+
 // This simulates the "Game Engine" running on the server
 export const achievementService = {
     getAchievements: async (): Promise<{
@@ -137,7 +169,7 @@ export const achievementService = {
             .reduce((sum, p) => sum + p.marketValue, 0);
         const hodlMonths = calculateMaxHoldingDurationMonths(positions, transactions);
         const goalsCompleted = goals.filter(g => (g.currentAmount || 0) >= g.targetAmount).length;
-        const activeWeeks = calculateWeeklyTrackingStreak(transactions);
+        const activeWeeks = calculateLongestWeeklyStreak(transactions);
 
         let xpGained = 0;
         let hasChanges = false;

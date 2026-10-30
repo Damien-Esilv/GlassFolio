@@ -145,7 +145,6 @@
             "CASH_CURRENCY_INVALID": "Cash lines need a valid ISO 4217 currency code",
             "SNAPSHOT_QTY_REQUIRED": "Quantity is required",
             "SNAPSHOT_PRICE_REQUIRED": "Average price (cost basis per unit) is required",
-            "LABEL_MISSING": "Description recommended for the audit trail",
             "OVERSELL": "Cannot sell {{sell}} {{symbol}}: only {{position}} held",
             "TYPE_INFERRED": "No type in the file: read as {{type}} from the sign of the quantity or amount",
             "TYPE_UNRECOGNIZED": "Unknown type \"{{label}}\": check that this row is really a {{type}}",

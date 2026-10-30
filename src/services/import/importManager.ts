@@ -34,6 +34,7 @@ import {
 } from '../core/transactionManager';
 import { validationService, RowData } from '../core/validationService';
 import { instrumentService } from '../instrumentService';
+import { getAccountContext } from './accountContext';
 import {
     clearStagedInstruments,
     commitStagedInstruments,
@@ -254,12 +255,8 @@ export async function parseFile(
     const instrumentsById = new Map<string, Instrument>();
     // New instruments are denominated in the target account currency (EUR for a PEA, not USD)
     const accountCurrency = db.getAccountById(config.accountId)?.defaultCurrency;
-    const accountType = db.getAccountById(config.accountId)?.type;
-    // A crypto exchange account: its institute is where the coins are held (market-data context)
-    const exchangeAccountName = accountType?.startsWith('crypto')
-        ? db.getInstitutes().find(i => i.id === db.getAccountById(config.accountId)?.instituteId)?.name
-        : undefined;
-
+    // Where the assets are held steers their class; a crypto institution is also their exchange
+    const { accountType, instituteType, exchange: exchangeAccountName } = getAccountContext(config.accountId);
     // File-wide conventions (day/month order, decimal separator, amount signs), read once
     const rowContext = buildRowContext(headers, rows, mappings, {
         mode: config.mode,
@@ -301,7 +298,8 @@ export async function parseFile(
                     exchange: exchange ?? exchangeAccountName,
                     network,
                     contractAddress,
-                    accountType
+                    accountType,
+                    instituteType
                 });
                 instrumentId = instrument.id;
                 parsed.instrumentId = instrumentId;
@@ -471,13 +469,22 @@ export function describeImportInstruments(candidates: StagedTransaction[]): Impo
 
 /** The asset behind a symbol or ISIN typed in the review: an existing one, or a new draft. */
 export async function resolveStagedInstrument(
-    symbolOrIsin: { symbol?: string; isin?: string },
+    symbolOrIsin: { symbol?: string; isin?: string; name?: string },
     accountId: string
 ): Promise<Instrument | undefined> {
     const identifier = symbolOrIsin.symbol?.trim() || symbolOrIsin.isin?.trim();
     if (!identifier) return undefined;
+    const context = getAccountContext(accountId);
     const instrument = await instrumentService.findOrCreateInstrument(
-        { symbol: identifier, isin: symbolOrIsin.isin, accountType: db.getAccountById(accountId)?.type },
+        {
+            symbol: identifier,
+            isin: symbolOrIsin.isin,
+            name: symbolOrIsin.name,
+            exchange: context.exchange,
+            accountType: context.accountType,
+            instituteType: context.instituteType,
+            denominationCurrency: db.getAccountById(accountId)?.defaultCurrency
+        },
         { persist: false }
     );
     if (!db.getInstrumentById(instrument.id)) stageInstrument(instrument);
