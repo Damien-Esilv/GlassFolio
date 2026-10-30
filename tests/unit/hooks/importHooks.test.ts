@@ -15,6 +15,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useImportWizard from '../../../src/hooks/importHooks';
 import { importService } from '../../../src/services/importService';
+import { accountService } from '../../../src/services/instituteService';
+import { accountKindToFields } from '../../../src/constants/accountKinds';
 import { stageInstrument, clearStagedInstruments } from '../../../src/services/import/instrumentDrafts';
 
 // ============================================================================
@@ -239,6 +241,21 @@ describe('useImportWizard -- Pilier 5 (Tests Integration React Hooks)', () => {
             await waitFor(() => expect(result.current.accounts).toHaveLength(2));
             expect(result.current.selectedInstituteId).toBe('inst-1');
             expect(result.current.selectedAccountId).toBeNull();
+        });
+
+        it('createAccount stores the type and the tax wrapper of the chosen account kind, and selects the new account', async () => {
+            const { result } = renderHook(() => useImportWizard());
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
+            act(() => { result.current.selectInstitute('inst-1'); });
+            await waitFor(() => expect(result.current.accounts).toHaveLength(2));
+
+            const { type, wrapperType } = accountKindToFields('PEA');
+            await act(async () => { await result.current.createAccount('PEA Bourso', type, 'EUR', wrapperType); });
+
+            expect(accountService.createAccount).toHaveBeenCalledWith({
+                instituteId: 'inst-1', name: 'PEA Bourso', type: 'investment', defaultCurrency: 'EUR', wrapperType: 'PEA',
+            });
+            expect(result.current.selectedAccountId).toBe('acc-new');
         });
 
         it('deselecting institute clears accounts list', async () => {

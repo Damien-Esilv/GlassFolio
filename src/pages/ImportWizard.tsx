@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import { ImportAssetsTable } from '../components/import/ImportAssetsTable';
+import { ACCOUNT_KINDS, AccountKind, accountKindToFields, fieldsToAccountKind } from '../constants/accountKinds';
 import SnapshotWizard from '../components/SnapshotWizard';
 import CashImportWizard from '../components/CashImportWizard';
 import {
@@ -46,7 +47,7 @@ import ColumnMappingTable from '../components/import/ColumnMappingTable';
 import MappedPreview from '../components/import/MappedPreview';
 import MappingProfilesPanel from '../components/import/MappingProfilesPanel';
 import { formatFieldError } from '../components/import/formatFieldError';
-import { InstituteType, AccountType, WrapperType } from '../types';
+import { InstituteType } from '../types';
 import { useTranslation } from 'react-i18next';
 
 // ============================================================================
@@ -210,6 +211,14 @@ const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) =
 // STEP 1: CONTEXT SELECTION
 // ============================================================================
 
+/** Countries offered for an institution; the label is translated, the flag is only an icon. */
+const COUNTRY_OPTIONS = [
+  { code: 'FR', flag: '🇫🇷' }, { code: 'DE', flag: '🇩🇪' }, { code: 'NL', flag: '🇳🇱' }, { code: 'IE', flag: '🇮🇪' },
+  { code: 'US', flag: '🇺🇸' }, { code: 'GB', flag: '🇬🇧' }, { code: 'LU', flag: '🇱🇺' }, { code: 'CH', flag: '🇨🇭' },
+  { code: 'MT', flag: '🇲🇹' }, { code: 'CY', flag: '🇨🇾' }, { code: 'SC', flag: '🇸🇨' }, { code: 'SG', flag: '🇸🇬' },
+  { code: 'OTHER', flag: '🌍' },
+] as const;
+
 const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
   const { t } = useTranslation('transactions');
   const [showNewInstitute, setShowNewInstitute] = useState(false);
@@ -218,9 +227,8 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   const [newInstituteType, setNewInstituteType] = useState<InstituteType>('broker');
   const [newInstituteCountry, setNewInstituteCountry] = useState('FR');
   const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<AccountType>('investment');
+  const [newAccountKind, setNewAccountKind] = useState<AccountKind>('CTO');
   const [newAccountCurrency, setNewAccountCurrency] = useState('EUR');
-  const [newAccountWrapper, setNewAccountWrapper] = useState<WrapperType>('CTO');
 
   const handleCreateInstitute = async () => {
     if (!newInstituteName.trim()) return;
@@ -232,7 +240,8 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
 
   const handleCreateAccount = async () => {
     if (!newAccountName.trim()) return;
-    await wizard.createAccount(newAccountName.trim(), newAccountType, newAccountCurrency, newAccountWrapper);
+    const { type, wrapperType } = accountKindToFields(newAccountKind);
+    await wizard.createAccount(newAccountName.trim(), type, newAccountCurrency, wrapperType);
     setShowNewAccount(false);
     setNewAccountName('');
   };
@@ -313,19 +322,9 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 onChange={e => setNewInstituteCountry(e.target.value)}
                 className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
               >
-                <option value="FR">🇫🇷 France (FR)</option>
-                <option value="DE">🇩🇪 Allemagne (DE)</option>
-                <option value="NL">🇳🇱 Pays-Bas (NL)</option>
-                <option value="IE">🇮🇪 Irlande (IE)</option>
-                <option value="US">🇺🇸 États-Unis (US)</option>
-                <option value="GB">🇬🇧 Royaume-Uni (GB)</option>
-                <option value="LU">🇱🇺 Luxembourg (LU)</option>
-                <option value="CH">🇨🇭 Suisse (CH)</option>
-                <option value="MT">🇲🇹 Malte (MT)</option>
-                <option value="CY">🇨🇾 Chypre (CY)</option>
-                <option value="SC">🇸🇨 Seychelles (SC)</option>
-                <option value="SG">🇸🇬 Singapour (SG)</option>
-                <option value="OTHER">🌍 Autre pays étranger</option>
+                {COUNTRY_OPTIONS.map(({ code, flag }) => (
+                  <option key={code} value={code}>{flag} {t(`importWizard.context.countries.${code}`)}</option>
+                ))}
               </select>
             </div>
 
@@ -379,7 +378,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                     >
                       <span className="text-primary font-medium">{acc.name}</span>
                       <span className="block text-xs text-secondary mt-1">
-                        {acc.defaultCurrency} · {acc.wrapperType || acc.type}
+                        {acc.defaultCurrency} · {t(`importWizard.context.accountKinds.${fieldsToAccountKind(acc.type, acc.wrapperType)}`)}
                       </span>
                     </button>
                   ))}
@@ -403,36 +402,40 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:border-primary focus:ring-primary"
                 autoFocus
               />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <select
-                  value={newAccountType}
-                  onChange={e => setNewAccountType(e.target.value as AccountType)}
-                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
-                >
-                  <option value="investment">{t('importWizard.context.accountTypes.investment')}</option>
-                  <option value="crypto_spot">{t('importWizard.context.accountTypes.cryptoSpot')}</option>
-                  <option value="checking">{t('importWizard.context.accountTypes.checking')}</option>
-                </select>
-                <select
-                  value={newAccountCurrency}
-                  onChange={e => setNewAccountCurrency(e.target.value)}
-                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
-                >
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="USDT">USDT</option>
-                  <option value="BTC">BTC</option>
-                </select>
-                <select
-                  value={newAccountWrapper}
-                  onChange={e => setNewAccountWrapper(e.target.value as WrapperType)}
-                  className="bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
-                >
-                  <option value="CTO">{t('importWizard.context.wrappers.CTO')}</option>
-                  <option value="PEA">{t('importWizard.context.wrappers.PEA')}</option>
-                  <option value="OTHER">{t('importWizard.context.wrappers.OTHER')}</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="new-account-kind" className="block text-xs font-medium text-secondary mb-1">
+                    {t('importWizard.context.accountKindLabel')}
+                  </label>
+                  <select
+                    id="new-account-kind"
+                    value={newAccountKind}
+                    onChange={e => setNewAccountKind(e.target.value as AccountKind)}
+                    className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
+                  >
+                    {ACCOUNT_KINDS.map(kind => (
+                      <option key={kind} value={kind}>{t(`importWizard.context.accountKinds.${kind}`)}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-tertiary mt-1">{t('importWizard.context.accountKindHint')}</p>
+                </div>
+                <div>
+                  <label htmlFor="new-account-currency" className="block text-xs font-medium text-secondary mb-1">
+                    {t('importWizard.context.currencyLabel')}
+                  </label>
+                  <select
+                    id="new-account-currency"
+                    value={newAccountCurrency}
+                    onChange={e => setNewAccountCurrency(e.target.value)}
+                    className="w-full bg-subtle border border-subtle text-primary rounded-lg p-3 focus:ring-primary focus:border-primary"
+                  >
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="USDT">USDT</option>
+                    <option value="BTC">BTC</option>
+                  </select>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleCreateAccount} disabled={!newAccountName.trim()}>
