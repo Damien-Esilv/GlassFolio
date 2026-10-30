@@ -8,6 +8,8 @@ interface AnimatedNumberProps {
     /** Defaults to the common animation duration. */
     duration?: number;
     className?: string;
+    prefix?: string;
+    suffix?: string;
 }
 
 /**
@@ -20,9 +22,11 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     options = { maximumFractionDigits: 0 },
     duration,
     className = '',
+    prefix = '',
+    suffix = '',
 }) => {
     const shown = useCountUp(value, duration);
-    const format = (n: number): string => new Intl.NumberFormat(locale, options).format(n);
+    const format = (n: number): string => `${prefix}${new Intl.NumberFormat(locale, options).format(n)}${suffix}`;
 
     return (
         <span className={className} aria-label={format(value)}>

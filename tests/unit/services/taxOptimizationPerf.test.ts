@@ -26,6 +26,10 @@ describe('Tax Optimization Performance & Mutualized Summary', () => {
         expect(pfuResult.recommendation).toBeDefined();
         expect(Array.isArray(suggestions)).toBe(true);
 
+        // getCachedTaxSummary should synchronously return the cached summary
+        const cached = taxService.getCachedTaxSummary('2024', mockProfile);
+        expect(cached).toBe(summary);
+
         getTaxSummarySpy.mockRestore();
     });
 });

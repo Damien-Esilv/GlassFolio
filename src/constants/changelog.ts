@@ -35,6 +35,7 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
       { key: 'quests', kind: 'improved' },
       { key: 'localDemo', kind: 'improved' },
       { key: 'reliability', kind: 'improved' },
+      { key: 'smootherNumbers', kind: 'improved' },
     ],
   },
   {

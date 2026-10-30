@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING, ENTRANCE_DELAY_MS, STAGGER_DELAY_MS } from '../constants/animations';
 import AnimatedCounter from '../components/AnimatedCounter';
+import { TrendBadge } from '../components/ui/TrendBadge';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import { computeWeeklyStats } from '../services/progressStatsService';
@@ -291,7 +292,7 @@ const Dashboard: React.FC = () => {
     );
   };
 
-  if (isContextLoading || isLoadingSummary || !summary) {
+  if ((isContextLoading && !summary) || (isLoadingSummary && !summary) || !summary) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" role="status" aria-live="polite">
         <AppThinkingOrb state="searching" size={72} label={t('common:labels.loading')} />
@@ -315,9 +316,7 @@ const Dashboard: React.FC = () => {
                 <h1 className="text-4xl font-bold text-primary">
                   <AnimatedCounter value={summary.totalValue} currency={currency} locale={locale} />
                 </h1>
-                <span className={`flex items-center text-xs font-bold px-2 py-1 rounded-md ${summary.plPercent >= 0 ? 'text-accent-green bg-accent-green/10' : 'text-accent-red bg-accent-red/10'}`}>
-                  <ArrowUpRight size={14} className="mr-1" /> {summary.plPercent >= 0 ? '+' : ''}{summary.plPercent.toFixed(2)}%
-                </span>
+                <TrendBadge value={summary.plPercent} isPercent showIcon animated className="text-xs font-bold" />
               </div>
               <p className="text-tertiary text-[10px] mt-1">{t('dashboard:realTimeEstimate')}</p>
             </div>
@@ -492,17 +491,10 @@ const Dashboard: React.FC = () => {
             <p className="col-span-full text-xs text-tertiary text-center py-8">{t('dashboard:noGoalsYet')}</p>
           )}
 
-          {visibleGoals.map((goal, idx) => (
+          {visibleGoals.map((goal) => (
             <div
               key={goal.id}
-              className="cursor-default transition-all"
-              style={{
-                opacity: animActive ? 1 : 0,
-                transform: animActive ? 'scale(1)' : 'scale(0.92)',
-                transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                transitionTimingFunction: ANIMATION_EASING,
-                transitionDelay: `${idx * STAGGER_DELAY_MS}ms`
-              }}
+              className="cursor-default"
             >
               <GoalCard
                 goal={goal}
@@ -515,13 +507,6 @@ const Dashboard: React.FC = () => {
             <button
               onClick={() => navigate('/progress?action=new')}
               className="group h-full min-h-[160px] p-6 rounded-2xl border-2 border-dashed border-border text-tertiary hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3"
-              style={{
-                opacity: animActive ? 1 : 0,
-                transform: animActive ? 'scale(1)' : 'scale(0.92)',
-                transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                transitionTimingFunction: ANIMATION_EASING,
-                transitionDelay: `${visibleGoals.length * STAGGER_DELAY_MS}ms`
-              }}
             >
               <div className="p-3 rounded-full bg-subtle group-hover:bg-primary/10 transition-colors">
                 <PlusCircle size={28} />
@@ -546,17 +531,9 @@ const Dashboard: React.FC = () => {
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {achievements.slice(0, 4).map((ach, idx) => (
+            {achievements.slice(0, 4).map((ach) => (
               <div
                 key={ach.id}
-                className="transition-all"
-                style={{
-                  opacity: animActive ? 1 : 0,
-                  transform: animActive ? 'scale(1)' : 'scale(0.92)',
-                  transitionDuration: `${ANIMATION_DURATION_MS}ms`,
-                  transitionTimingFunction: ANIMATION_EASING,
-                  transitionDelay: `${idx * STAGGER_DELAY_MS}ms`
-                }}
               >
                 <AchievementBadge
                   achievement={ach}

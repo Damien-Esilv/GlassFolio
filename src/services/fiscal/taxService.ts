@@ -100,6 +100,23 @@ export const taxService = {
     clearCache: clearTaxSummaryCache,
 
     /**
+     * Synchronously returns cached tax summary if available and up to date.
+     * Prevents loading flicker when switching between Tax Hub and Declaration Assistant.
+     */
+    getCachedTaxSummary: (
+        fiscalYear: string,
+        profile: FiscalProfile,
+        country: string = DEFAULT_TAX_COUNTRY
+    ): TaxSummaryResult | null => {
+        const cacheKey = `${fiscalYear}:${country}:${JSON.stringify(profile)}`;
+        const cached = taxSummaryCache.get(cacheKey);
+        if (cached && cached.dataVersion === db.getDataVersion()) {
+            return cached.summary;
+        }
+        return null;
+    },
+
+    /**
      * Get the complete tax summary for a fiscal year.
      * This is the main entry point for the Declaration Assistant page.
      * Caches in memory to eliminate double loading screens during tab navigation.

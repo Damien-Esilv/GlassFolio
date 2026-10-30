@@ -7,6 +7,7 @@
  */
 
 export const ANIMATION_DURATION_MS = 1200;
+export const ANIMATION_DURATION_S = ANIMATION_DURATION_MS / 1000;
 export const ANIMATION_EASING = 'ease-in-out';
 export const STAGGER_DELAY_MS = 100;
 

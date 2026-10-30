@@ -13,6 +13,7 @@ import { DashboardSummary } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { formatChartDate } from '../utils/date';
 import AnimatedCounter from '../components/AnimatedCounter';
+import { TrendValue } from '../components/ui/TrendValue';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 import { ASSET_CLASSES, ASSET_CLASSES_CONFIG } from '../constants/assetClasses';
 import { CHART_SERIES_PALETTE, getAssetStableColor } from '../constants/themeTokens';
@@ -409,7 +410,7 @@ const PortfolioPerformance: React.FC = () => {
 
    const cardStyle = "rounded-2xl bg-card p-6 shadow-lg border border-border";
 
-   if (isLoading || !summary) {
+   if (!summary && isLoading) {
       return (
          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" role="status" aria-live="polite">
             <AppThinkingOrb state="searching" size={72} label={t('common:labels.loading')} />
@@ -419,6 +420,8 @@ const PortfolioPerformance: React.FC = () => {
          </div>
       );
    }
+
+   if (!summary) return null;
 
    return (
       <div className="space-y-8">
@@ -483,23 +486,39 @@ const PortfolioPerformance: React.FC = () => {
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.totalReturn')} ({timeRange})</span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className={`text-2xl font-extrabold ${portfolioReturnPct >= 0 ? 'text-positive' : 'text-negative'}`}>
-                     {portfolioReturnPct >= 0 ? '+' : ''}{portfolioReturnPct.toFixed(2)}%
-                  </span>
-                  {portfolioReturnPct >= 0 ? <ArrowUpRight size={20} className="text-positive" /> : <ArrowDownRight size={20} className="text-negative" />}
+                  <TrendValue
+                     value={portfolioReturnPct}
+                     format="percent"
+                     decimals={2}
+                     showPlusSign
+                     showIcon
+                     iconSize={20}
+                     className="text-2xl font-extrabold"
+                     animated
+                  />
                </div>
-               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(periodGain, currency, locale)}</p>
+               <p className="text-tertiary text-[10px] mt-1">
+                  <AnimatedCounter value={periodGain} currency={currency} locale={locale} />
+               </p>
             </div>
 
             {/* 4. Benchmark Return */}
             <div className={cardStyle}>
                <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:performance.benchmarkValue')} ({benchmarkRate}%)</span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-2xl font-extrabold text-warning">
-                     {benchmarkReturnPct >= 0 ? '+' : ''}{benchmarkReturnPct.toFixed(2)}%
-                  </span>
+                  <TrendValue
+                     value={benchmarkReturnPct}
+                     format="percent"
+                     decimals={2}
+                     showPlusSign
+                     showIcon={false}
+                     className="text-2xl font-extrabold text-warning"
+                     animated
+                  />
                </div>
-               <p className="text-tertiary text-[10px] mt-1">{formatCurrency(Math.max(0, lastBenchmarkVal - summary.totalCost), currency, locale)} ({t('reports:performance.interestGains')})</p>
+               <p className="text-tertiary text-[10px] mt-1">
+                  <AnimatedCounter value={Math.max(0, lastBenchmarkVal - summary.totalCost)} currency={currency} locale={locale} /> ({t('reports:performance.interestGains')})
+               </p>
             </div>
 
             {/* 5. Outperformance Delta */}
@@ -508,9 +527,15 @@ const PortfolioPerformance: React.FC = () => {
                   {isOutperforming ? t('reports:performance.outperformance') : t('reports:performance.underperformance')}
                </span>
                <div className="mt-2 flex items-center gap-2">
-                  <span className={`text-2xl font-extrabold ${isOutperforming ? 'text-positive' : 'text-negative'}`}>
-                     {isOutperforming ? '+' : ''}{outperformancePct.toFixed(2)}%
-                  </span>
+                  <TrendValue
+                     value={outperformancePct}
+                     format="percent"
+                     decimals={2}
+                     showPlusSign
+                     showIcon={false}
+                     className="text-2xl font-extrabold"
+                     animated
+                  />
                   {isOutperforming ? <Award size={20} className="text-warning" /> : <ShieldAlert size={20} className="text-negative" />}
                </div>
                <p className="text-tertiary text-[10px] mt-1">vs Benchmark @ {benchmarkRate}%</p>
