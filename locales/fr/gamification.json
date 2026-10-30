@@ -133,9 +133,8 @@
     "achievements": "Succès débloqués",
     "goals": "Objectifs atteints",
     "trackingSince": "Suivi depuis",
-    "weeksValue_one": "{{count}} semaine",
-    "weeksValue_other": "{{count}} semaines",
-    "ofTotal": "{{done}} / {{total}}",
-    "noneYet": "Rien pour l’instant"
+    "noneYet": "Rien pour l’instant",
+    "weeksUnit_one": "semaine",
+    "weeksUnit_other": "semaines"
   }
 }

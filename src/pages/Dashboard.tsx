@@ -15,7 +15,7 @@ import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
-import { ANIMATION_DURATION_MS, ANIMATION_EASING, STAGGER_DELAY_MS } from '../constants/animations';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING, ENTRANCE_DELAY_MS, STAGGER_DELAY_MS } from '../constants/animations';
 import AnimatedCounter from '../components/AnimatedCounter';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!isLoadingSummary && summary) {
       setAnimActive(false);
-      const timer = setTimeout(() => setAnimActive(true), 80);
+      const timer = setTimeout(() => setAnimActive(true), ENTRANCE_DELAY_MS);
       return () => clearTimeout(timer);
     }
   }, [isLoadingSummary, summary]);

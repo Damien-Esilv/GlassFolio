@@ -118,7 +118,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-in">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -374,7 +374,7 @@ export const Notifications: React.FC = () => {
           {isCreatingRule && (
             <form
               onSubmit={handleCreateRuleSubmit}
-              className="p-5 rounded-2xl bg-card border border-primary/30 shadow-lg space-y-4 animate-in fade-in slide-in-from-top-2"
+              className="p-5 rounded-2xl bg-card border border-primary/30 shadow-lg space-y-4"
             >
               <h4 className="text-sm font-bold text-primary flex items-center gap-2">
                 <SlidersHorizontal size={16} className="text-primary" />
