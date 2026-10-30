@@ -5,6 +5,7 @@
         "dateRange": "Plage de dates",
         "all": "Tout",
         "last30Days": "30 derniers jours",
+        "defaultAccountName": "Compte principal {{broker}}",
         "last90Days": "90 derniers jours",
         "ytd": "Année en cours",
         "class": "Classe",
@@ -388,7 +389,9 @@
         "status": {
             "completed": "Terminé",
             "partial": "Partiel",
-            "rolledBack": "Annulé"
+            "rolledBack": "Annulé",
+            "pending": "En cours",
+            "failed": "Échec"
         },
         "undo": "Annuler",
         "confirmDelete": "Supprimer {{count}} transactions ?",

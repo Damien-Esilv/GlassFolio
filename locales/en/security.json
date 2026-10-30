@@ -137,7 +137,8 @@
         "cancelButton": "Cancel",
         "invalidPassword": "Invalid master password",
         "invalidTotp": "Invalid two-factor code",
-        "recentSignInRequired": "For your security, sign out and sign in again with Google, then retry within 10 minutes.",
+        "recentSignInRequired": "For your security, confirm with Google first. You can then do this within the next 10 minutes.",
+        "confirmWithGoogle": "Confirm with Google",
         "recentSignInOk": "You signed in recently with Google: confirm to continue.",
         "passkeyRequired": "You will confirm with one of your passkeys."
     },
@@ -162,7 +163,8 @@
         "cancel": "Cancel",
         "deleteConfirm": "Are you sure you want to delete this API key?",
         "savedSuccess": "Secret key securely saved in vault.",
-        "customProvider": "Custom Provider"
+        "customProvider": "Custom Provider",
+        "labelPlaceholder": "e.g. Gemini production key"
     },
     "audit": {
         "title": "Security Audit Log",
@@ -213,6 +215,16 @@
             "pending": "Changes waiting to be saved",
             "serverHelp": "Your encrypted data is stored on the machine running GlassFolio. Clearing your browser or changing browser does not affect it.",
             "browserHelp": "Your data is stored in this browser. Run GlassFolio with Docker to keep it on your machine."
+        }
+    },
+    "vaultIntegrity": {
+        "corrupted": {
+            "title": "Part of your data could not be decrypted",
+            "description": "It is kept exactly as stored, and changes to it are blocked so it is never overwritten. Sign out and back in; if this message stays, restore a backup from Settings > Preferences."
+        },
+        "writeFailed": {
+            "title": "Your latest changes are not saved yet",
+            "description": "They could not be written to storage (it may be full). They stay queued and are retried with your next change. Free some space or export a backup before closing this tab."
         }
     }
 }

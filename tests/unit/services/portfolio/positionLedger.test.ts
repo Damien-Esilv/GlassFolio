@@ -12,6 +12,7 @@ import {
   quantityDelta,
   resolveFee,
   resolveQuantity,
+  sortChronologically,
   LedgerState,
 } from '../../../../src/services/portfolio/positionLedger';
 import type { UnifiedTransaction, CostBasisMethod } from '../../../../src/types/types.backend';
@@ -285,5 +286,18 @@ describe('buildRealizedEvents', () => {
     const buy = tx({ type: 'BUY', quantity: '10', priceUnit: '100', transactionDate: '2024-03-01', createdAt: '2024-03-01T00:00:00.000Z' });
 
     expect(buildLedger([sell, buy]).get('acc-1:inst-1')?.state.realizedPL).toBeCloseTo(100);
+  });
+});
+
+describe('sortChronologically (TGLA-188)', () => {
+  it('puts a same-day buy before a sell typed earlier, so the sale is not an oversell', () => {
+    const day = '2024-05-02T00:00:00.000Z';
+    const sell = tx({ type: 'SELL', transactionDate: day, createdAt: '2024-05-02T08:00:00.000Z', quantity: '5', priceUnit: '12' });
+    const buy = tx({ type: 'BUY', transactionDate: day, createdAt: '2024-05-02T09:00:00.000Z', quantity: '5', priceUnit: '10' });
+
+    expect(sortChronologically([sell, buy]).map(t => t.type)).toEqual(['BUY', 'SELL']);
+    const state = replay(sortChronologically([sell, buy]));
+    expect(state.quantity).toBe(0);
+    expect(state.realizedPL).toBeCloseTo(10);
   });
 });

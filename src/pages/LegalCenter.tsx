@@ -55,6 +55,7 @@ const COOKIE_ROW_KEYS = [
   'assetLookup',
   'uiState',
   'passkeyRpId',
+  'chunkReload',
 ] as const;
 
 type LegalDocKey = 'legalNotice' | 'privacy' | 'terms';

@@ -37,7 +37,8 @@
     "system": "Système",
     "statusAll": "Toutes",
     "statusUnread": "Non lues uniquement",
-    "clearRead": "Nettoyer les lues"
+    "clearRead": "Nettoyer les lues",
+    "clearReadConfirm": "Supprimer toutes les notifications lues ?"
   },
   "categories": {
     "portfolio": "Patrimoine",
@@ -102,5 +103,21 @@
     "dormantCashTitle": "Seuil de liquidités dormantes",
     "dormantCashDesc": "Alerter lorsque la part de liquidités non investies dépasse ce pourcentage du portefeuille.",
     "manageRules": "Gérer les règles d'alerte personnalisées"
+  },
+  "engine": {
+    "cashRatioAbove": "La part de liquidités ({{ratio, number(maximumFractionDigits: 1)}} %) dépasse votre seuil de {{threshold, number(maximumFractionDigits: 1)}} %.",
+    "priceAbove": "Le cours de {{symbol}} ({{price, number(maximumFractionDigits: 2)}}) a atteint votre seuil haut de {{threshold, number(maximumFractionDigits: 2)}}.",
+    "priceBelow": "Le cours de {{symbol}} ({{price, number(maximumFractionDigits: 2)}}) est passé sous votre seuil bas de {{threshold, number(maximumFractionDigits: 2)}}.",
+    "plAbove": "La plus-value latente de {{symbol}} ({{percent, number(maximumFractionDigits: 1)}} %) dépasse {{threshold, number(maximumFractionDigits: 1)}} %.",
+    "plBelow": "Le résultat latent de {{symbol}} ({{percent, number(maximumFractionDigits: 1)}} %) est sous le seuil de {{threshold, number(maximumFractionDigits: 1)}} %.",
+    "dormantCashTitle": "Liquidités dormantes élevées",
+    "dormantCash": "{{percent, number(maximumFractionDigits: 1)}} % de votre patrimoine ({{amount}} {{currency}}) n'est pas investi. Pensez à le déployer selon votre allocation cible.",
+    "fiscalDeadlineTitle": "Échéance fiscale : {{department}}",
+    "fiscalDeadline_one": "Date limite de télédéclaration le {{deadline}} (dans {{count}} jour).",
+    "fiscalDeadline_other": "Date limite de télédéclaration le {{deadline}} (dans {{count}} jours).",
+    "goalReachedTitle": "Objectif atteint : {{goal}}",
+    "goalReached": "Félicitations ! Vous avez atteint votre objectif de {{target}} {{currency}}.",
+    "questRewardTitle": "Récompense de quête disponible",
+    "questReward": "Votre quête est complétée ! Réclamez vos +{{xp}} XP."
   }
 }

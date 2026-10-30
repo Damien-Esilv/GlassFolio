@@ -29,7 +29,10 @@
     "newRankTitle": "New Investor Rank Unlocked!",
     "rewardGained": "+{{xp}} XP Earned",
     "continue": "Awesome!",
-    "viewBadge": "View Details"
+    "viewBadge": "View Details",
+    "levelUp": "Level up!",
+    "xpGained": "+{{xp}} XP!",
+    "questDone": "Quest complete"
   },
   "ranks": {
     "title": "Investor Ranks",
@@ -53,7 +56,8 @@
     "sovereign": {
       "title": "Financial Sovereign",
       "description": "Full mastery of personal net worth, long-term vision, and financial independence."
-    }
+    },
+    "levelRange": "Lv. {{min}} – {{max}}"
   },
   "themes": {
     "title": "Unlockable Themes",
@@ -85,7 +89,13 @@
     "allocationAudit": {
       "title": "Asset Class Diversification",
       "description": "Hold positions across at least 3 distinct asset classes."
-    }
+    },
+    "frequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "onboarding": "Getting started"
+    },
+    "claiming": "Claiming…"
   },
   "badges": {
     "executioner": {

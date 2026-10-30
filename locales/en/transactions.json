@@ -5,6 +5,7 @@
         "dateRange": "Date Range",
         "all": "All",
         "last30Days": "Last 30 Days",
+        "defaultAccountName": "{{broker}} main account",
         "last90Days": "Last 90 Days",
         "ytd": "YTD",
         "class": "Class",
@@ -388,7 +389,9 @@
         "status": {
             "completed": "Completed",
             "partial": "Partial",
-            "rolledBack": "Rolled Back"
+            "rolledBack": "Rolled Back",
+            "pending": "In progress",
+            "failed": "Failed"
         },
         "undo": "Undo",
         "confirmDelete": "Delete {{count}} transactions?",

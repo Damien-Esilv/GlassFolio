@@ -20,7 +20,9 @@ import AnimatedCounter from '../components/AnimatedCounter';
 import { getAssetClassConfig, getCanonicalAssetClass } from '../constants/assetClasses';
 import { AppThinkingOrb } from '../components/ui/AppThinkingOrb';
 import { computeWeeklyStats } from '../services/progressStatsService';
+import { gamificationService } from '../services/gamificationService';
 import WeeklyProgressCard from '../components/progress/WeeklyProgressCard';
+import { alertText } from '../utils/alertText';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -39,7 +41,8 @@ const Dashboard: React.FC = () => {
   const [worstHistory, setWorstHistory] = useState<HistoricalPricePoint[]>([]);
 
   useEffect(() => {
-    refreshData();
+    // Opening the dashboard is the monthly review quest
+    void gamificationService.recordDashboardVisit().catch(() => undefined).finally(refreshData);
   }, [refreshData]);
 
   useEffect(() => {
@@ -611,8 +614,8 @@ const Dashboard: React.FC = () => {
                 >
                   <AlertTriangle size={18} className={alert.type === 'warning' ? 'text-warning shrink-0' : 'text-positive shrink-0'} />
                   <div className="min-w-0">
-                    <p className="font-bold text-xs text-primary truncate hover:underline">{alert.title}</p>
-                    <p className="text-[10px] text-tertiary truncate">{alert.message}</p>
+                    <p className="font-bold text-xs text-primary truncate hover:underline">{alertText(alert, t).title}</p>
+                    <p className="text-[10px] text-tertiary truncate">{alertText(alert, t).message}</p>
                   </div>
                 </div>
                 <Button

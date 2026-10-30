@@ -13,6 +13,9 @@
 // CONTRACT
 // ============================================================================
 
+/** Keys changed by another tab of this browser; `null` when everything may have changed (clear). */
+export type ExternalChangeListener = (keys: string[] | null) => void;
+
 export interface IStorageProvider {
     getItem(key: string): string | null;
     setItem(key: string, value: string): void;
@@ -20,6 +23,8 @@ export interface IStorageProvider {
     clear(): void;
     /** Lists every key currently held by the provider. */
     keys(): string[];
+    /** Notifies changes made outside this provider (another tab); returns the unsubscribe function. */
+    onExternalChange?(listener: ExternalChangeListener): () => void;
 }
 
 // ============================================================================
@@ -46,6 +51,16 @@ export class LocalStorageProvider implements IStorageProvider {
             if (key !== null) result.push(key);
         }
         return result;
+    }
+    onExternalChange(listener: ExternalChangeListener): () => void {
+        if (typeof window === 'undefined') return () => undefined;
+        // The `storage` event only fires in the other tabs of this origin.
+        const onStorage = (event: StorageEvent): void => {
+            if (event.storageArea !== localStorage) return;
+            listener(event.key === null ? null : [event.key]);
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
     }
 }
 

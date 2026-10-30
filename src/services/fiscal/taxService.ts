@@ -10,11 +10,17 @@
 
 import { db, delay } from '../db';
 import { vaultService } from '../security/vaultService';
+import { currencyService } from '../currencyService';
+import { portfolioService } from '../portfolioService';
+import { isTaxableWrapper } from '../../constants/fiscalConstants';
 import {
     TaxSummaryResult,
     ForeignAccountObligation,
     FormCaseMapping,
     FiscalProfile,
+    UnifiedTransaction,
+    Account,
+    Instrument,
 } from '../../types/types.backend';
 
 import {
@@ -36,13 +42,38 @@ import {
     getUserFiscalDeadline,
 } from './taxCalendarService';
 
+/**
+ * Currencies, other than EUR, whose amounts must be converted for this year's summary: rows up to
+ * the end of the year, without a usable rate of their own (see taxEngine.convertToEur).
+ */
+function foreignCurrencies(
+    transactions: UnifiedTransaction[],
+    accounts: Account[],
+    instruments: Instrument[],
+    fiscalYear: string
+): string[] {
+    const accountById = new Map(accounts.map(a => [a.id, a]));
+    const instrumentById = new Map(instruments.map(i => [i.id, i]));
+    const codes = new Set<string>();
+    for (const tx of transactions) {
+        if (tx.transactionDate.slice(0, 4) > fiscalYear) continue;
+        const account = accountById.get(tx.accountId);
+        const currency = (tx.originalCurrency || account?.defaultCurrency
+            || (tx.instrumentId ? instrumentById.get(tx.instrumentId)?.denominationCurrency : undefined) || 'EUR').toUpperCase();
+        const ownRate = tx.originalCurrency && (account?.defaultCurrency || 'EUR').toUpperCase() === 'EUR' && parseFloat(tx.fxRate || '') > 0;
+        if (currency !== 'EUR' && !ownRate) codes.add(currency);
+    }
+    return Array.from(codes);
+}
+
 // ============================================================================
 // IN-MEMORY CACHE & DEDUPLICATION (PREVENTS REDUNDANT DOUBLE-LOADING)
 // ============================================================================
 
 interface CachedTaxSummary {
     summary: TaxSummaryResult;
-    txCount: number;
+    /** db.getDataVersion() when computed: an edited trade, account or asset makes it stale. */
+    dataVersion: number;
     cachedAt: number;
 }
 
@@ -79,16 +110,18 @@ export const taxService = {
         country: string = DEFAULT_TAX_COUNTRY
     ): Promise<TaxSummaryResult> => {
         const allTransactions = db.getUnifiedTransactions();
+        const dataVersion = db.getDataVersion();
         const cacheKey = `${fiscalYear}:${country}:${JSON.stringify(profile)}`;
 
-        // Fast return from memory cache if transactions count has not changed
+        // Fast return from memory cache if no data changed since
         const cached = taxSummaryCache.get(cacheKey);
-        if (cached && cached.txCount === allTransactions.length) {
+        if (cached && cached.dataVersion === dataVersion) {
             return cached.summary;
         }
 
-        // Return active in-flight request if identical query is already pending
-        const existingPromise = inFlightSummaries.get(cacheKey);
+        // Return active in-flight request if identical query is already pending (on the same data)
+        const flightKey = `${cacheKey}:${dataVersion}`;
+        const existingPromise = inFlightSummaries.get(flightKey);
         if (existingPromise) {
             return existingPromise;
         }
@@ -100,6 +133,9 @@ export const taxService = {
                 const accounts = db.getAccounts();
                 const institutes = db.getInstitutes();
                 const instruments = db.getInstruments();
+                const rateToEur = await currencyService.getHistoricalRatesToEur(
+                    foreignCurrencies(allTransactions, accounts, instruments, fiscalYear)
+                );
 
                 const summary = buildTaxSummary(
                     allTransactions,
@@ -108,22 +144,23 @@ export const taxService = {
                     instruments,
                     fiscalYear,
                     profile,
-                    country
+                    country,
+                    { rateToEur }
                 );
 
                 taxSummaryCache.set(cacheKey, {
                     summary,
-                    txCount: allTransactions.length,
+                    dataVersion,
                     cachedAt: Date.now(),
                 });
 
                 return summary;
             } finally {
-                inFlightSummaries.delete(cacheKey);
+                inFlightSummaries.delete(flightKey);
             }
         })();
 
-        inFlightSummaries.set(cacheKey, fetchPromise);
+        inFlightSummaries.set(flightKey, fetchPromise);
         return fetchPromise;
     },
 
@@ -173,7 +210,7 @@ export const taxService = {
             ...summary.income.events,
         ];
 
-        return comparePFUvsBareme(allEvents, profile, rules);
+        return comparePFUvsBareme(allEvents, profile, rules, summary.cto.lossCarryforward);
     },
 
     /**
@@ -217,7 +254,8 @@ export const taxService = {
 
     /**
      * Get optimization suggestions for a fiscal year.
-     * Returns actionable insights for tax-loss harvesting and envelope arbitrage.
+     * Each one rests on figures the summary or the portfolio actually holds; PFU vs barème has its
+     * own card on the page and is not repeated here.
      */
     getOptimizationSuggestions: async (
         fiscalYear: string,
@@ -229,59 +267,72 @@ export const taxService = {
         const rules = getFiscalRulesOrThrow(fiscalYear, country);
         const suggestions: OptimizationSuggestion[] = [];
 
-        // --- PFU vs Barème ---
-        const allEvents = [...summary.cto.events, ...summary.income.events];
-        const pfuComparison = comparePFUvsBareme(allEvents, profile, rules);
-        
-        if (pfuComparison.confidence !== 'insufficient_data') {
-            const savings = Math.abs(pfuComparison.pfuTotal - pfuComparison.baremeTotal);
-            suggestions.push({
-                id: 'pfu-vs-bareme',
-                category: 'regime',
-                title: 'PFU vs Barème',
-                impact: savings,
-                recommendation: pfuComparison.recommendation === 'BAREME'
-                    ? `L'option barème (2OP) vous ferait économiser ~${Math.round(savings)}€`
-                    : pfuComparison.recommendation === 'PFU'
-                        ? `Le PFU (flat tax) est plus avantageux (~${Math.round(savings)}€ d'économie)`
-                        : `PFU et barème sont équivalents pour votre situation`,
-                confidence: pfuComparison.confidence,
-            });
+        // --- Tax-loss harvesting: only while the year is open, only up to the gain still taxed,
+        // and only with losses the taxable accounts actually hold today ---
+        const taxedGain = Math.max(0, summary.cto.netResult - summary.cto.lossesApplied);
+        if (taxedGain > 0 && fiscalYear === String(new Date().getFullYear())) {
+            const accounts = new Map(db.getAccounts().map(a => [a.id, a]));
+            const positions = await portfolioService.getPositions();
+            const unrealizedLosses = positions
+                .filter(p => {
+                    const account = p.accountId ? accounts.get(p.accountId) : undefined;
+                    // Crypto losses offset only crypto gains (art. 150 VH bis), not these
+                    return account !== undefined && isTaxableWrapper(account.wrapperType || 'CTO')
+                        && p.type !== 'Crypto' && p.type !== 'Cash' && p.unrealizedPL < 0;
+                })
+                .reduce((sum, p) => sum + Math.abs(p.unrealizedPL), 0);
+            const harvestable = Math.min(taxedGain, unrealizedLosses);
+            if (harvestable > 0) {
+                suggestions.push({
+                    id: 'tax-loss-harvesting',
+                    category: 'harvesting',
+                    titleKey: 'harvesting',
+                    params: { gain: Math.round(taxedGain), losses: Math.round(unrealizedLosses), harvestable: Math.round(harvestable) },
+                    impact: harvestable * rules.pfu.totalRate,
+                    impactKind: 'savings',
+                    confidence: 'estimated',
+                });
+            }
         }
 
-        // --- Tax-Loss Harvesting ---
-        if (summary.cto.totalGains > 0 && summary.cto.totalLosses === 0) {
-            suggestions.push({
-                id: 'tax-loss-harvesting',
-                category: 'harvesting',
-                title: 'Tax-Loss Harvesting',
-                impact: summary.cto.totalGains * rules.pfu.totalRate,
-                recommendation: `Vous avez ${Math.round(summary.cto.totalGains)}€ de plus-values réalisées. Cherchez des positions en moins-value latente à matérialiser avant le 31/12.`,
-                confidence: 'estimated',
-            });
-        }
-
-        // --- Foreign accounts warning ---
-        if (summary.foreignAccounts.length > 0) {
+        // --- Foreign accounts: a declaration to make, with the fine incurred per account if missed ---
+        const foreignAccountCount = summary.foreignAccounts.reduce((n, o) => n + o.accountIds.length, 0);
+        if (foreignAccountCount > 0) {
             suggestions.push({
                 id: 'foreign-accounts',
                 category: 'compliance',
-                title: 'Comptes étrangers',
-                impact: summary.foreignAccounts.length * rules.foreignAccounts.finePerAccount,
-                recommendation: `${summary.foreignAccounts.length} compte(s) étranger(s) détecté(s). N'oubliez pas de les déclarer (amende ${rules.foreignAccounts.finePerAccount}€ par compte non déclaré).`,
+                titleKey: 'foreignAccounts',
+                params: { count: foreignAccountCount, fine: rules.foreignAccounts.finePerAccount },
+                impact: foreignAccountCount * rules.foreignAccounts.finePerAccount,
+                impactKind: 'risk',
                 confidence: 'determined',
             });
         }
 
-        // --- Crypto threshold ---
+        // --- Crypto under the threshold: gains exempt, nothing to report in 3AN ---
         if (summary.crypto.totalCessions > 0 && !summary.crypto.exceedsThreshold) {
             suggestions.push({
                 id: 'crypto-threshold',
                 category: 'crypto',
-                title: 'Seuil crypto 305€',
-                impact: summary.crypto.netResult * rules.crypto.pfuRate,
-                recommendation: `Vos cessions crypto totalisent ${Math.round(summary.crypto.totalCessions)}€, sous le seuil de ${rules.crypto.exemptionThreshold}€. Les gains sont exonérés mais restent déclarables.`,
+                titleKey: 'cryptoThreshold',
+                params: { cessions: Math.round(summary.crypto.totalCessions), threshold: rules.crypto.exemptionThreshold },
+                impact: Math.max(0, summary.crypto.netResult) * rules.crypto.pfuRate,
+                impactKind: 'savings',
                 confidence: 'determined',
+            });
+        }
+
+        // --- PEA withdrawal before 5 years: the plan is closed and the gain bears income tax ---
+        const earlyWithdrawals = summary.pea.withdrawals.filter(e => e.closesPlan);
+        if (earlyWithdrawals.length > 0) {
+            suggestions.push({
+                id: 'pea-early-withdrawal',
+                category: 'envelope',
+                titleKey: 'peaEarlyWithdrawal',
+                params: { count: earlyWithdrawals.length, tax: Math.round(summary.pea.incomeTax) },
+                impact: summary.pea.incomeTax,
+                impactKind: 'cost',
+                confidence: 'estimated',
             });
         }
 
@@ -296,9 +347,11 @@ export const taxService = {
 export interface OptimizationSuggestion {
     id: string;
     category: 'regime' | 'harvesting' | 'compliance' | 'crypto' | 'envelope';
-    title: string;
-    /** Estimated monetary impact in EUR */
+    /** Texts under `tax:optimization.suggestions.items.<titleKey>` (title, text), filled with `params` */
+    titleKey: 'harvesting' | 'foreignAccounts' | 'cryptoThreshold' | 'peaEarlyWithdrawal';
+    params: Record<string, number>;
+    /** Amount in EUR: a possible saving, a fine incurred, or a tax already due */
     impact: number;
-    recommendation: string;
+    impactKind: 'savings' | 'risk' | 'cost';
     confidence: import('../../types/types.backend').FiscalConfidence;
 }

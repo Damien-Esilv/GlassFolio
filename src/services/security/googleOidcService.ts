@@ -20,14 +20,20 @@ const GOOGLE_OIDC_SCOPES = `openid email profile ${GOOGLE_DRIVE_APPDATA_SCOPE}`;
  * What the Google round trip is for. A Drive access token is never kept, so an action that must touch the
  * Drive key file after sign-in (delete it with the account, create a recovery key) goes through Google again.
  */
-export type GoogleCeremonyIntent = 'sign-in' | 'delete-account' | 'recovery-key';
+export type GoogleCeremonyIntent = 'sign-in' | 'delete-account' | 'recovery-key' | 'step-up';
 
 export interface GoogleOidcCeremonyState {
     state: string;
     rawNonce: string;
     createdAt: number;
     intent?: GoogleCeremonyIntent;
+    /** In-app path to come back to after a step-up (confirming a sensitive action with Google). */
+    returnTo?: string;
 }
+
+/** Only an in-app path is accepted as a return target (no other origin, no protocol-relative URL). */
+export const sanitizeReturnPath = (path: string | undefined): string | undefined =>
+    path && path.startsWith('/') && !path.startsWith('//') && !path.includes('\\') ? path : undefined;
 
 export interface GoogleCallbackResult {
     idToken: string;
@@ -36,6 +42,7 @@ export interface GoogleCallbackResult {
     state: string;
     /** Absent means a regular sign-in. */
     intent?: GoogleCeremonyIntent;
+    returnTo?: string;
 }
 
 /** Reads the e-mail claim of an id_token (not verified here: only used to spot a wrong account choice). */
@@ -82,7 +89,7 @@ export const googleOidcService = {
      * Prepares and starts the Google OIDC + Drive OAuth flow.
      * Redirects the browser directly to accounts.google.com.
      */
-    async startCeremony(options?: { intent?: GoogleCeremonyIntent; loginHint?: string }): Promise<void> {
+    async startCeremony(options?: { intent?: GoogleCeremonyIntent; loginHint?: string; returnTo?: string }): Promise<void> {
         const intent = options?.intent ?? 'sign-in';
         const clientId = this.getClientId();
         if (!clientId) {
@@ -100,6 +107,7 @@ export const googleOidcService = {
             rawNonce,
             createdAt: Date.now(),
             intent,
+            returnTo: sanitizeReturnPath(options?.returnTo),
         };
 
         try {
@@ -201,6 +209,7 @@ export const googleOidcService = {
             rawNonce: storedCeremony.rawNonce,
             state,
             intent: storedCeremony.intent ?? 'sign-in',
+            returnTo: sanitizeReturnPath(storedCeremony.returnTo),
         };
     },
 };

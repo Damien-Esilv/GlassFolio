@@ -82,7 +82,12 @@
             "years": "ans",
             "taxRegime": "Régime fiscal applicable",
             "noEvents": "Aucun événement de retrait PEA pour cette année fiscale.",
-            "internalNote": "Les opérations internes au PEA (achats, ventes, dividendes) ne sont pas individuellement imposables. Seuls les retraits déclenchent un événement fiscal."
+            "internalNote": "Les opérations internes au PEA (achats, ventes, dividendes) ne sont pas individuellement imposables. Seuls les retraits déclenchent un événement fiscal.",
+            "taxableGain": "Gain imposable",
+            "incomeTax": "Impôt sur le revenu",
+            "socialContributions": "Prélèvements sociaux",
+            "closesPlan": "Plan clôturé",
+            "ifuNote": "Votre banque prélève ces montants et reporte le gain sur l'IFU qu'elle vous envoie : comparez-le à ces chiffres."
         },
         "crypto": {
             "title": "Actifs numériques (Art. 150 VH bis)",
@@ -111,7 +116,11 @@
             "toVerify": "À vérifier",
             "penalty": "Amende en cas de non-déclaration",
             "perAccount": "par compte non déclaré",
-            "noAccounts": "Aucun compte étranger détecté. Tous vos comptes semblent être détenus en France."
+            "noAccounts": "Aucun compte étranger détecté. Tous vos comptes semblent être détenus en France.",
+            "reasons": {
+                "bankAccount": "Compte bancaire ou titres détenu à l'étranger ({{country}}) : formulaire 3916 obligatoire.",
+                "cryptoAccount": "Compte d'actifs numériques détenu à l'étranger ({{country}}) : formulaire 3916-bis obligatoire."
+            }
         },
         "forms": {
             "title": "Récapitulatif des formulaires",
@@ -133,6 +142,25 @@
             "insufficient_dataDesc": "Données critiques manquantes — calcul non fiable",
             "complex": "Complexe",
             "complexDesc": "Situation nécessitant un avis professionnel"
+        },
+        "explanations": {
+            "cto": "PMP {{pmp, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{quantity}} = {{cost, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} de prix de revient. Prix de cession {{proceeds, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}, frais {{fees, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Résultat net {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "crypto": "Art. 150 VH bis : cession {{cession, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (prix total d'acquisition {{totalCost, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{cession, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / valeur du portefeuille {{portfolioValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) − frais {{fees, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} = {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "dividend": "Dividende brut {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Retenue à la source étrangère : {{withholding, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Abattement de 40 % en cas d'option pour le barème.",
+            "income": "Revenu perçu : {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "peaBefore5": "Plan de {{age}} an(s) : retrait {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (versements nets {{deposits, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / valeur du plan {{planValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) = gain {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Avant 5 ans le plan est clôturé ; le gain supporte {{incomeTaxRate, number(maximumFractionDigits: 1)}} % d'impôt sur le revenu et {{socialRate, number(maximumFractionDigits: 1)}} % de prélèvements sociaux.",
+            "peaAfter5": "Plan de {{age}} an(s) : retrait {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (versements nets {{deposits, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / valeur du plan {{planValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) = gain {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Après 5 ans : pas d'impôt sur le revenu, {{socialRate, number(maximumFractionDigits: 1)}} % de prélèvements sociaux."
+        },
+        "missingData": {
+            "acquisition_cost_unknown": "Prix d'acquisition inconnu",
+            "quantity_exceeds_holdings": "Vente supérieure à la quantité enregistrée",
+            "fx_rate_missing": "Pas de taux de change : montant laissé dans sa devise",
+            "fx_rate_estimated": "Taux de change approché (aucun taux ce jour-là)",
+            "portfolio_valuation_approximated": "Portefeuille valorisé aux derniers prix d'achat ou de vente",
+            "portfolio_valuation_incomplete": "Certains actifs n'ont pas de prix connu",
+            "crypto_withdrawal_unmatched": "Un retrait n'a pas de dépôt correspondant : vérifiez qu'il ne s'agit pas d'une vente",
+            "pea_valuation_approximated": "Plan valorisé aux derniers prix d'achat ou de vente",
+            "pea_open_date_missing": "Date d'ouverture absente : première opération utilisée"
         }
     },
     "optimization": {
@@ -141,7 +169,7 @@
         "backToHub": "Retour à l'Aide Fiscale",
         "pfuVsBareme": {
             "title": "PFU vs Barème (Option 2OP)",
-            "subtitle": "Comparez la flat tax (30 %) avec le barème progressif de l'IR",
+            "subtitle": "Comparez la flat tax ({{total}} %) avec le barème progressif de l'IR",
             "pfuLabel": "PFU (Flat Tax 30 %)",
             "baremeLabel": "Barème Progressif",
             "pfuAmount": "Impôt avec le PFU",
@@ -152,7 +180,7 @@
             "recommendBareme": "Le barème progressif (2OP) vous ferait économiser de l'argent",
             "recommendNeutral": "Les deux options donnent des résultats similaires",
             "needsProfile": "Complétez votre profil fiscal (revenus, parts fiscales) pour une comparaison précise",
-            "pfuDescription": "Prélèvement forfaitaire de 30 % (12,8 % IR + 17,2 % PS). Aucune action requise.",
+            "pfuDescription": "Prélèvement forfaitaire de {{total}} % ({{ir}} % IR + {{social}} % PS). Aucune action requise.",
             "baremeDescription": "Barème progressif de l'IR avec abattement de 40 % sur les dividendes. Nécessite de cocher la case 2OP. S'applique globalement à TOUS les revenus du capital."
         },
         "harvesting": {
@@ -204,6 +232,29 @@
                 "compliance": "Conformité",
                 "crypto": "Crypto-actifs",
                 "envelope": "Stratégie d'enveloppe"
+            },
+            "items": {
+                "harvesting": {
+                    "title": "Compensez vos plus-values avant le 31 décembre",
+                    "text": "{{gain}} € de plus-values sur titres sont imposés cette année, et vos comptes imposables portent {{losses}} € de moins-values latentes. En vendre jusqu'à {{harvestable}} € avant le 31 décembre compenserait autant de plus-values."
+                },
+                "foreignAccounts": {
+                    "title": "Comptes à l'étranger à déclarer",
+                    "text": "{{count}} compte(s) détenu(s) à l'étranger doivent être déclarés sur le formulaire 3916 / 3916-bis. L'amende est de {{fine}} € par compte non déclaré."
+                },
+                "cryptoThreshold": {
+                    "title": "Crypto sous le seuil de 305 €",
+                    "text": "Vos cessions crypto totalisent {{cessions}} €, sans dépasser {{threshold}} € : les plus-values sont exonérées et rien n'est à reporter en case 3AN."
+                },
+                "peaEarlyWithdrawal": {
+                    "title": "Retrait PEA avant 5 ans",
+                    "text": "{{count}} retrait(s) avant le 5e anniversaire ont clôturé le plan ; le gain supporte environ {{tax}} € d'impôt sur le revenu en plus des prélèvements sociaux. Attendez les 5 ans avant un prochain retrait."
+                }
+            },
+            "impactKinds": {
+                "savings": "Économie",
+                "risk": "Amende",
+                "cost": "Impôt"
             }
         }
     },
@@ -284,7 +335,8 @@
             "zone1Title": "Zone 1",
             "zone2Title": "Zone 2",
             "zone3Title": "Zone 3",
-            "paperTitle": "Papier"
+            "paperTitle": "Papier",
+            "deadlineAt": "{{date}} à 23h59"
         },
         "topicContent": {
             "cto": {
@@ -327,7 +379,18 @@
             "legifrance": "Légifrance (CGI)",
             "bofip": "BOFiP-Impôts",
             "impots": "impots.gouv.fr",
-            "formulaires": "Formulaires officiels DGFiP"
+            "formulaires": "Formulaires officiels DGFiP",
+            "be": {
+                "spf": "SPF Finances (administration fiscale belge)",
+                "myminfin": "MyMinfin"
+            },
+            "de": {
+                "bzst": "Office fédéral central des impôts (BZSt)",
+                "elster": "ELSTER"
+            },
+            "ch": {
+                "estv": "Administration fédérale des contributions (AFC)"
+            }
         },
         "topicDetail": {
             "backToGuide": "Retour au Guide",
@@ -335,6 +398,23 @@
             "examples": "Exemples détaillés",
             "keyRules": "Règles clés",
             "relatedTopics": "Sujets connexes"
+        },
+        "examples": {
+            "cto": {
+                "buy1": "// Achat : 100 actions @ 50 € = 5 000 € (PMP : 50 €)",
+                "buy2": "// Achat : 50 actions @ 80 € = 4 000 € (PMP : 60 €)",
+                "sell": "// Vente : 80 actions @ 70 € = 5 600 €",
+                "gain": "// PV = 5 600 − (60 × 80) = 5 600 − 4 800 =",
+                "tax": "// Impôt PFU : 800 × {{rate}} % ="
+            },
+            "crypto": {
+                "formula": "// Formule (art. 150 VH bis du CGI) :",
+                "formulaText": "// PV = Prix de cession − (Coût total du portefeuille × Prix de cession / Valeur totale du portefeuille)",
+                "sale": "// Cession de 0,5 BTC @ 50 k€ = 25 000 €",
+                "cost": "// Coût total du portefeuille : 30 000 €",
+                "value": "// Valeur totale du portefeuille : 75 000 €",
+                "gain": "// PV = 25 k − (30 k × 25 k / 75 k) = 25 k − 10 k ="
+            }
         }
     },
     "settings": {

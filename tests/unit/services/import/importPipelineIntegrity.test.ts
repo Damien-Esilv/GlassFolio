@@ -92,6 +92,32 @@ describe('import pipeline integrity', () => {
     expect(positions[0].quantity).toBe(5);
   });
 
+  it('keeps two different ETFs bought the same day for the same amount in a file without symbols (TGLA-188)', async () => {
+    const csv = 'Date,Type,ISIN,Name,Shares,Price,Amount\n'
+      + '2024-02-01,BUY,IE00B4L5Y983,iShares Core MSCI World,10,50,500\n'
+      + '2024-02-01,BUY,IE00BKM4GZ66,iShares Core MSCI EM IMI,10,50,500';
+    const parsed = await importAll(csv);
+
+    expect(parsed.candidates.map(c => c.status)).not.toContain('duplicate');
+    expect(db.getUnifiedTransactions()).toHaveLength(2);
+    expect(db.getPositions()).toHaveLength(2);
+
+    // Importing the same file again still recognises both rows
+    const again = await parse(csv);
+    expect(again.candidates.map(c => c.status)).toEqual(['duplicate', 'duplicate']);
+  });
+
+  it('still recognises a row stored with the hash older versions computed (no symbol in it)', async () => {
+    const csv = 'Date,Type,ISIN,Name,Shares,Price,Amount\n2024-02-01,BUY,IE00B4L5Y983,iShares Core MSCI World,10,50,500';
+    const parsed = await importAll(csv);
+    const legacyHash = parsed.candidates[0].legacyRowHash;
+    expect(legacyHash).toBeDefined();
+    db.saveUnifiedTransactions(db.getUnifiedTransactions().map(tx => ({ ...tx, rowHash: legacyHash as string })));
+
+    const again = await parse(csv);
+    expect(again.candidates[0].status).toBe('duplicate');
+  });
+
   it('imports a French layout without a type column: negative quantity is a sell, negative fees are costs, devise is the currency', async () => {
     const csv = 'Date;Produit;Code ISIN;Quantité;Cours;Devise;Total;Frais de courtage\n'
       + '02-01-2024;APPLE INC;US0378331005;10;185,00;USD;-1 850,00;-2,00\n'

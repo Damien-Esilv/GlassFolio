@@ -8,6 +8,7 @@ import { ChatMessage } from '../../services/ai/types';
 import { AIActionApprovalCard } from './AIActionApprovalCard';
 import { AIMarkdownRenderer } from './AIMarkdownRenderer';
 import { AppThinkingOrb } from '../ui/AppThinkingOrb';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 
 interface AIChatDrawerProps {
@@ -16,6 +17,7 @@ interface AIChatDrawerProps {
 }
 
 export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) => {
+  useEscapeKey(onClose, isOpen);
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');

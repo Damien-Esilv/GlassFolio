@@ -732,7 +732,7 @@ export interface TaxableEvent {
     fiscalYear: string;
     /** Type of taxable event */
     eventType: 'capital_gain' | 'capital_loss' | 'dividend' | 'interest' | 'coupon'
-        | 'crypto_gain' | 'crypto_loss' | 'staking_reward' | 'other_income';
+        | 'crypto_gain' | 'crypto_loss' | 'staking_reward' | 'other_income' | 'pea_withdrawal';
     /** Instrument symbol */
     symbol: string;
     /** Instrument display name */
@@ -755,12 +755,23 @@ export interface TaxableEvent {
     eventDate: string;
     /** Calculation confidence level */
     confidence: FiscalConfidence;
-    /** Explanation of the calculation */
+    /** Explanation of the calculation (English, for logs and the assistant) */
     explanation: string;
+    /** The same explanation for the UI: key under `tax:declaration.explanations`, with its figures */
+    explanationKey?: string;
+    explanationParams?: Record<string, number>;
     /** Legal reference (CGI article, BOFiP) */
     legalReference?: string;
     /** Missing data items that affect reliability */
     missingData?: string[];
+    /** Income: tax withheld at source (foreign withholding tax) */
+    withholdingTax?: number;
+    /** PEA withdrawal: income tax and social contributions due on its gain */
+    incomeTax?: number;
+    socialContributions?: number;
+    /** PEA withdrawal: plan age in whole years, and whether the withdrawal closes the plan */
+    planAgeYears?: number;
+    closesPlan?: boolean;
 }
 
 /**
@@ -804,6 +815,7 @@ export interface TaxSummaryResult {
     pea: {
         withdrawals: TaxableEvent[];
         taxableGain: number;
+        incomeTax: number;
         socialContributions: number;
     };
     /** Foreign account obligations */
@@ -832,8 +844,10 @@ export interface ForeignAccountObligation {
     accountNames: string[];
     /** Applicable form (3916 or 3916-bis) */
     form: '3916' | '3916-bis';
-    /** Reason for the obligation */
+    /** Reason for the obligation (French, for the assistant) */
     reason: string;
+    /** The same reason for the UI: key under `tax:declaration.foreign.reasons` */
+    reasonKey?: 'bankAccount' | 'cryptoAccount';
     /** Whether the obligation is certain or potential */
     certainty: 'certain' | 'probable' | 'to_verify';
 }

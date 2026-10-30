@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { User, UserPreferences } from '../types';
 import { userRepository } from '../services/repositories';
 import { vaultService } from '../services/security/vaultService';
 import { authService } from '../services/security/authService';
@@ -15,6 +15,7 @@ import {
 } from '../services/storage/publicPreferencesSync';
 
 import { consumeUrlBootstrapParams } from '../config/urlBootstrap';
+import { demoAvailability } from '../services/demoAvailability';
 
 interface AuthContextType {
   user: User | null;
@@ -37,7 +38,9 @@ interface AuthContextType {
   handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
   cancelSecondFactor: () => Promise<void>;
   /** Google account: goes through Google again for an action that needs the Drive key file. */
-  startGoogleReauth: (intent: 'delete-account' | 'recovery-key') => Promise<void>;
+  startGoogleReauth: (intent: 'delete-account' | 'recovery-key' | 'step-up', options?: { returnTo?: string }) => Promise<void>;
+  /** After a Google step-up round trip: renews the session so the sign-in counts as recent. */
+  confirmGoogleStepUp: (params: GoogleCallbackResult) => Promise<void>;
   /** After that round trip: removes the Drive key file, then deletes the account. */
   handleGoogleAccountDeletion: (params: GoogleCallbackResult) => Promise<void>;
   /** After that round trip: creates the emergency recovery key and returns it once. */
@@ -50,11 +53,14 @@ interface AuthContextType {
   logout: () => void;
   lockVault: () => Promise<void>;
   deleteAccount: (options?: { password?: string; confirmationText?: string }) => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  /** Saves profile fields; `preferences` may be partial (merged). Rejects when nothing could be saved. */
+  updateProfile: (data: ProfileUpdate) => Promise<void>;
   isAuthenticated: boolean;
   isVaultLocked: boolean;
   isLoading: boolean;
 }
+
+export type ProfileUpdate = Omit<Partial<User>, 'preferences'> & { preferences?: Partial<UserPreferences> };
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
@@ -147,7 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { demoRequested, theme: bootstrappedTheme, lang: bootstrappedLang } = consumeUrlBootstrapParams();
 
-        if (demoRequested) {
+        // A local install opens the demo only when started for it (see demoAvailability)
+        if (demoRequested && await demoAvailability.isDemoOffered()) {
           await authService.signIn('demo@glassfolio.com', 'password');
           const storedUser = await userRepository.getUser();
           if (storedUser) {
@@ -165,6 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(storedUser);
           }
         } else {
+          // A Google account reopens its vault with this device's key, so a reload keeps it signed in
+          await authService.resumeDeviceSession?.().catch(() => false);
           await loadUserFromRepo();
           if ((bootstrappedTheme || bootstrappedLang) && vaultService.isUnlocked()) {
             const storedUser = await userRepository.getUser();
@@ -268,9 +277,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return applyAuthResult(await authService.handleGoogleOidcCallback(params));
   };
 
-  const startGoogleReauth = async (intent: 'delete-account' | 'recovery-key'): Promise<void> => {
+  const startGoogleReauth = async (intent: 'delete-account' | 'recovery-key' | 'step-up', options?: { returnTo?: string }): Promise<void> => {
     if (!authService.startGoogleReauth) throw new Error('Google authentication is not supported in this deployment mode.');
-    await authService.startGoogleReauth(intent);
+    await authService.startGoogleReauth(intent, options);
+  };
+
+  const confirmGoogleStepUp = async (params: GoogleCallbackResult): Promise<void> => {
+    if (!authService.confirmGoogleStepUp) throw new Error('Google authentication is not supported in this deployment mode.');
+    await authService.confirmGoogleStepUp(params);
   };
 
   const handleGoogleAccountDeletion = async (params: GoogleCallbackResult): Promise<void> => {
@@ -344,13 +358,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(res.user);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     authService.signOut().catch(err => console.error('Error locking vault on logout', err));
     // Apply synced public base theme
     const storedPublicTheme = getSyncedPublicTheme();
     applyPublicDomTheme(storedPublicTheme);
-  };
+  }, []);
 
   const lockVault = async () => {
     if (user?.authProvider === 'google') {
@@ -369,44 +383,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const updateProfile = async (data: Partial<User>): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(async () => {
-        if (user) {
-          if (data.avatar && !isValidAvatar(data.avatar)) {
-            resolve();
-            return;
-          }
-          const updatedUser = { ...user, ...data };
-          // If preferences are partial, merge them
-          if (data.preferences) {
-            updatedUser.preferences = {
-              ...(user.preferences || {}),
-              ...data.preferences,
-              theme: data.preferences.theme ?? user.preferences?.theme ?? 'night',
-              currency: data.preferences.currency ?? user.preferences?.currency ?? 'USD',
-              notifications: data.preferences.notifications ?? user.preferences?.notifications ?? true,
-              language: data.preferences.language ?? user.preferences?.language ?? 'en',
-              dateFormat: data.preferences.dateFormat ?? user.preferences?.dateFormat ?? 'DD/MM/YYYY'
-            };
-            if (updatedUser.preferences.theme) {
-              setSyncedPublicTheme(updatedUser.preferences.theme);
-            }
-            if (updatedUser.preferences.language) {
-              setSyncedPublicLanguage(updatedUser.preferences.language);
-              if (updatedUser.preferences.language !== user.preferences?.language) {
-                // Keep branded auth emails in the user's language (Epic E25); best effort.
-                authService.syncEmailLocale?.(updatedUser.preferences.language).catch(() => undefined);
-              }
-            }
-          }
-          setUser(updatedUser);
-          await userRepository.saveUser(updatedUser);
+  // Profile writes run one after another: two quick changes must not both start from the same copy.
+  const profileQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  const applyProfileUpdate = useCallback(async (data: ProfileUpdate): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    const current = userRef.current;
+    if (!current) return;
+    if (data.avatar && !isValidAvatar(data.avatar)) {
+      throw new Error('Invalid avatar image.');
+    }
+    // Start from the stored profile: services write fields of their own there (pendingEmail, email)
+    // that this in-memory copy may not have seen yet.
+    const stored = await userRepository.getUser().catch(() => null);
+    const base: User = stored && stored.id === current.id ? { ...current, ...stored } : current;
+    const { preferences, ...fields } = data;
+    const updatedUser: User = { ...base, ...fields };
+    if (preferences) {
+      updatedUser.preferences = {
+        ...(base.preferences || {}),
+        ...preferences,
+        theme: preferences.theme ?? base.preferences?.theme ?? 'night',
+        currency: preferences.currency ?? base.preferences?.currency ?? 'EUR',
+        notifications: preferences.notifications ?? base.preferences?.notifications ?? true,
+        language: preferences.language ?? base.preferences?.language ?? 'en',
+        dateFormat: preferences.dateFormat ?? base.preferences?.dateFormat ?? 'DD/MM/YYYY'
+      };
+    }
+    await userRepository.saveUser(updatedUser);
+    userRef.current = updatedUser;
+    setUser(updatedUser);
+    if (preferences && updatedUser.preferences) {
+      if (updatedUser.preferences.theme) {
+        setSyncedPublicTheme(updatedUser.preferences.theme);
+      }
+      if (updatedUser.preferences.language) {
+        setSyncedPublicLanguage(updatedUser.preferences.language);
+        if (updatedUser.preferences.language !== base.preferences?.language) {
+          // Keep branded auth emails in the user's language (Epic E25); best effort.
+          authService.syncEmailLocale?.(updatedUser.preferences.language).catch(() => undefined);
         }
-        resolve();
-      }, 500); // Simulate network delay
-    });
-  };
+      }
+    }
+  }, []);
+
+  const updateProfile = useCallback((data: ProfileUpdate): Promise<void> => {
+    const run = profileQueueRef.current.catch(() => undefined).then(() => applyProfileUpdate(data));
+    profileQueueRef.current = run;
+    return run;
+  }, [applyProfileUpdate]);
 
   return (
     <AuthContext.Provider value={{
@@ -426,6 +451,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeSecondFactorWithPasskey,
       cancelSecondFactor,
       startGoogleReauth,
+      confirmGoogleStepUp,
       handleGoogleAccountDeletion,
       createGoogleRecoveryKey,
       loadUserFromRepo,

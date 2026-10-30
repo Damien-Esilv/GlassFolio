@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
 import { buildAppDestinationUrl, getAppUrl } from './config/deployment';
@@ -21,6 +22,8 @@ const Changelog = React.lazy(() => import('./pages/Changelog'));
 
 const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
+  const { t } = useTranslation();
+  const appUrl = getAppUrl();
 
   useEffect(() => {
     const isAppRoute =
@@ -33,7 +36,6 @@ const AppRedirectHandler: React.FC = () => {
       ? `${location.pathname}${location.search}${location.hash}`
       : '/';
 
-    const appUrl = getAppUrl();
     if (!appUrl) {
       // In local development or standalone mode without an app domain configured,
       // prevent infinite reload loop by remaining in place.
@@ -45,7 +47,19 @@ const AppRedirectHandler: React.FC = () => {
     if (typeof window !== 'undefined' && destination && destination !== window.location.href) {
       window.location.assign(destination);
     }
-  }, [location.pathname, location.search, location.hash]);
+  }, [location.pathname, location.search, location.hash, appUrl]);
+
+  // No app address for this build: say so, instead of a spinner that never ends
+  if (!appUrl) {
+    return (
+      <div role="alert" className="min-h-screen bg-canvas flex items-center justify-center p-6">
+        <div className="max-w-sm w-full bg-card border border-subtle rounded-2xl p-6 text-center space-y-3">
+          <p className="text-sm text-secondary">{t('landing:appUnavailable')}</p>
+          <Link to="/" className="inline-block text-sm font-semibold text-brand hover:underline">{t('landing:appUnavailableBack')}</Link>
+        </div>
+      </div>
+    );
+  }
 
   return <LoadingScreen />;
 };

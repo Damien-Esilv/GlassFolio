@@ -191,6 +191,44 @@ describe('priceService.refreshPositionPrices', () => {
     expect(result[0].marketValue).toBeCloseTo(newPrice * 10);
   });
 
+  it('converts a USD quote into the currency of a position held on a EUR account', async () => {
+    localStorage.removeItem('gf_fx_rates_cache');
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('USDEUR')) {
+        return { ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 0.9 } }] } }) };
+      }
+      return { ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 200, currency: 'USD' } }] } }) };
+    });
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'AAPL', currency: 'EUR', quantity: 10, avgCost: 150 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(180);
+    expect(pos.marketValue).toBeCloseTo(1800);
+    expect(pos.unrealizedPL).toBeCloseTo(300);
+  });
+
+  it('reads London quotes in pence as pounds', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 1500, currency: 'GBp' } }] } }),
+    });
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'VUSA', exchange: 'LON', currency: 'GBP', quantity: 2, avgCost: 10 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(15);
+    expect(pos.marketValue).toBeCloseTo(30);
+  });
+
+  it('converts a cached crypto pair quoted in USD for a EUR position', async () => {
+    localStorage.removeItem('gf_fx_rates_cache');
+    localStorage.setItem('gf_price_cache', JSON.stringify({ data: { 'BTC-USD': 50000 }, fetchedAt: new Date().toISOString() }));
+    mockFetch.mockImplementation(async () => ({ ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 0.9 } }] } }) }));
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'BTC', type: 'Crypto', currency: 'EUR', quantity: 1, avgCost: 30000 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(45000);
+  });
+
   it('handles empty positions array without fetching', async () => {
     const result = await refreshPositionPrices([]);
     expect(result).toHaveLength(0);

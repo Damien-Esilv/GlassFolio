@@ -21,6 +21,8 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
     }, []);
 
     const hasAutoUnlockedRef = React.useRef(false);
+    // A re-render while the unlock is running must not start a second one
+    const unlockInFlightRef = React.useRef(false);
 
     // Seamless Zero-Password auto-unlock for Google OAuth accounts (Option A)
     // If the vault locks again after initial unlock (e.g. inactivity auto-lock), log out securely.
@@ -31,7 +33,9 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
         }
 
         if (status === 'locked') {
+            if (unlockInFlightRef.current) return;
             if (!hasAutoUnlockedRef.current && vaultService.isInitialized()) {
+                unlockInFlightRef.current = true;
                 const unlock = vaultService.isGoogleDriveVault()
                     // Drive vaults: reopen with the non-extractable device key kept in IndexedDB. If it is
                     // gone (new device, inactivity lock) the user signs in with Google again.
@@ -45,6 +49,8 @@ export const VaultGate: React.FC<VaultGateProps> = ({ children }) => {
                     // Never recreate a vault here: a fresh sign-in re-checks the server copy first.
                     console.warn('[VaultGate] Google OAuth auto-unlock failed, signing out', err);
                     logout();
+                }).finally(() => {
+                    unlockInFlightRef.current = false;
                 });
             } else if (hasAutoUnlockedRef.current) {
                 logout();

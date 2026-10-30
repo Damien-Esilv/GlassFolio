@@ -863,6 +863,7 @@ export class VaultService {
                 if (val !== null) decryptedRecords.set(key, val);
             }
         }
+        tempProvider.dispose();
 
         // 3. Generate BRAND NEW DEK (DEK Rotation!)
         const newDek = await generateExtractableDek();
@@ -912,11 +913,8 @@ export class VaultService {
 
         // 6. Open fresh EncryptedStorageProvider with newDek and re-encrypt all records
         const newRuntimeDek = await unwrapDek(wrappedDriveDek, driveKek, false);
-        const newEncrypted = await EncryptedStorageProvider.open(appStorage.getBacking(), newRuntimeDek, { adoptLegacyPlaintext: false });
-
-        for (const [key, value] of decryptedRecords.entries()) {
-            newEncrypted.setItem(key, value);
-        }
+        // The records still hold old-DEK ciphertext: rekey replaces it (open() would see it as unreadable)
+        const newEncrypted = EncryptedStorageProvider.rekey(appStorage.getBacking(), newRuntimeDek, decryptedRecords);
         await newEncrypted.flush();
         appStorage.attachEncrypted(newEncrypted);
 
@@ -1247,10 +1245,7 @@ export class VaultService {
         // 6. Dispose old provider and attach new
         currentEncrypted.dispose();
         const newRuntimeDek = await unwrapDek(newWrappedPassword, derived.kek, false);
-        const newProvider = await EncryptedStorageProvider.open(appStorage.getBacking(), newRuntimeDek);
-        for (const [k, v] of snapshot.entries()) {
-            newProvider.setItem(k, v);
-        }
+        const newProvider = EncryptedStorageProvider.rekey(appStorage.getBacking(), newRuntimeDek, snapshot);
         await newProvider.flush();
         appStorage.attachEncrypted(newProvider);
     }

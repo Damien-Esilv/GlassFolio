@@ -37,7 +37,8 @@
     "system": "System",
     "statusAll": "All",
     "statusUnread": "Unread only",
-    "clearRead": "Clear Read"
+    "clearRead": "Clear Read",
+    "clearReadConfirm": "Delete every read notification?"
   },
   "categories": {
     "portfolio": "Portfolio",
@@ -102,5 +103,21 @@
     "dormantCashTitle": "Dormant Cash Alert Threshold",
     "dormantCashDesc": "Alert when uninvested cash exceeds this percentage of total portfolio.",
     "manageRules": "Manage Custom Alert Rules"
+  },
+  "engine": {
+    "cashRatioAbove": "Cash share ({{ratio, number(maximumFractionDigits: 1)}} %) is above your {{threshold, number(maximumFractionDigits: 1)}} % threshold.",
+    "priceAbove": "{{symbol}} price ({{price, number(maximumFractionDigits: 2)}}) reached your upper threshold of {{threshold, number(maximumFractionDigits: 2)}}.",
+    "priceBelow": "{{symbol}} price ({{price, number(maximumFractionDigits: 2)}}) fell below your lower threshold of {{threshold, number(maximumFractionDigits: 2)}}.",
+    "plAbove": "{{symbol}} unrealised gain ({{percent, number(maximumFractionDigits: 1)}} %) is above {{threshold, number(maximumFractionDigits: 1)}} %.",
+    "plBelow": "{{symbol}} unrealised result ({{percent, number(maximumFractionDigits: 1)}} %) is below {{threshold, number(maximumFractionDigits: 1)}} %.",
+    "dormantCashTitle": "High idle cash",
+    "dormantCash": "{{percent, number(maximumFractionDigits: 1)}} % of your wealth ({{amount}} {{currency}}) is not invested. Consider deploying it according to your target allocation.",
+    "fiscalDeadlineTitle": "Tax deadline: {{department}}",
+    "fiscalDeadline_one": "Online filing deadline: {{deadline}} (in {{count}} day).",
+    "fiscalDeadline_other": "Online filing deadline: {{deadline}} (in {{count}} days).",
+    "goalReachedTitle": "Goal reached: {{goal}}",
+    "goalReached": "Congratulations! You reached your goal of {{target}} {{currency}}.",
+    "questRewardTitle": "Quest reward available",
+    "questReward": "Your quest is complete: claim your +{{xp}} XP."
   }
 }

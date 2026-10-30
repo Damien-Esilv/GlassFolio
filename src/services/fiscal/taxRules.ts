@@ -91,6 +91,12 @@ export interface FiscalYearRules {
         solidarityRate: number;
         /** CSG déductible rate (when barème option is chosen) */
         deductibleCSGRate: number;
+        /**
+         * Rate on investment income (dividends, interest) when it differs from the rate above, which
+         * applies to capital gains. Income 2025: gains already at 18.6 % (LFSS 2026), dividends and
+         * interest received in 2025 still at 17.2 % (the increase applies to them from 2026-01-01).
+         */
+        placementIncomeRate?: number;
     };
 
     // --- Barème progressif de l'IR ---
@@ -214,11 +220,12 @@ const RULES_2024: FiscalYearRules = {
     },
 
     irBrackets: [
-        { min: 0, max: 11294, rate: 0 },
-        { min: 11294, max: 28797, rate: 0.11 },
-        { min: 28797, max: 82341, rate: 0.30 },
-        { min: 82341, max: 177106, rate: 0.41 },
-        { min: 177106, max: Infinity, rate: 0.45 },
+        // Income 2024, declared in 2025 (loi de finances pour 2025, art. 2: +1.8 %)
+        { min: 0, max: 11497, rate: 0 },
+        { min: 11497, max: 29315, rate: 0.11 },
+        { min: 29315, max: 83823, rate: 0.30 },
+        { min: 83823, max: 180294, rate: 0.41 },
+        { min: 180294, max: Infinity, rate: 0.45 },
     ],
 
     dividends: {
@@ -238,21 +245,14 @@ const RULES_2024: FiscalYearRules = {
     pea: {
         taxByAge: [
             {
+                // Since 2019 (loi PACTE) the 22.5 % / 19 % rates no longer exist: before 5 years the gain
+                // is taxed like other investment income, at the 12.8 % flat rate (or the barème).
                 minAgeYears: 0,
-                maxAgeYears: 2,
-                incomeTaxRate: 0.225,
-                socialRate: 0.172,
-                closesOnWithdrawal: true,
-                description: 'Retrait avant 2 ans : clôture du plan, gain taxé à 22,5 % + 17,2 % PS',
-                legalReference: CGI_ARTICLES.ART_163_QUINQUIES_D,
-            },
-            {
-                minAgeYears: 2,
                 maxAgeYears: 5,
-                incomeTaxRate: 0.19,
+                incomeTaxRate: 0.128,
                 socialRate: 0.172,
                 closesOnWithdrawal: true,
-                description: 'Retrait entre 2 et 5 ans : clôture du plan, gain taxé à 19 % + 17,2 % PS',
+                description: 'Retrait avant 5 ans : clôture du plan (sauf exceptions), gain taxé à 12,8 % + 17,2 % PS',
                 legalReference: CGI_ARTICLES.ART_163_QUINQUIES_D,
             },
             {
@@ -379,27 +379,30 @@ const RULES_2025: FiscalYearRules = {
     year: '2025',
     declarationYear: '2026',
 
+    // LFSS 2026 (loi n° 2025-1403): CSG on capital income +1.4 point, from income 2025 for capital
+    // gains (revenus du patrimoine), from 2026-01-01 for dividends and interest. Assurance-vie keeps 17.2 %.
     pfu: {
-        totalRate: 0.30,
+        totalRate: 0.314,
         irRate: 0.128,
-        socialRate: 0.172,
+        socialRate: 0.186,
     },
 
     socialContributions: {
-        totalRate: 0.172,
-        csgRate: 0.092,
+        totalRate: 0.186,
+        csgRate: 0.106,
         crdsRate: 0.005,
         solidarityRate: 0.075,
         deductibleCSGRate: 0.068,
+        placementIncomeRate: 0.172,
     },
 
-    // 2025 brackets (indexed for inflation — to be confirmed with LFI 2025 publication)
+    // Income 2025, declared in 2026 (loi de finances pour 2026: +0.9 %)
     irBrackets: [
-        { min: 0, max: 11497, rate: 0 },
-        { min: 11497, max: 29315, rate: 0.11 },
-        { min: 29315, max: 83823, rate: 0.30 },
-        { min: 83823, max: 180294, rate: 0.41 },
-        { min: 180294, max: Infinity, rate: 0.45 },
+        { min: 0, max: 11600, rate: 0 },
+        { min: 11600, max: 29579, rate: 0.11 },
+        { min: 29579, max: 84577, rate: 0.30 },
+        { min: 84577, max: 181917, rate: 0.41 },
+        { min: 181917, max: Infinity, rate: 0.45 },
     ],
 
     dividends: {
@@ -410,7 +413,8 @@ const RULES_2025: FiscalYearRules = {
 
     crypto: {
         exemptionThreshold: 305,
-        pfuRate: 0.30,
+        // 12.8 % income tax + 18.6 % social contributions (LFSS 2026, from income 2025)
+        pfuRate: 0.314,
         cryptoCryptoNeutral: true,
         legalReference: CGI_ARTICLES.ART_150_VH_BIS,
         stablecoinAsCrypto: true,
@@ -419,21 +423,14 @@ const RULES_2025: FiscalYearRules = {
     pea: {
         taxByAge: [
             {
+                // Since 2019 (loi PACTE) the 22.5 % / 19 % rates no longer exist: before 5 years the gain
+                // is taxed like other investment income, at the 12.8 % flat rate (or the barème).
                 minAgeYears: 0,
-                maxAgeYears: 2,
-                incomeTaxRate: 0.225,
-                socialRate: 0.172,
-                closesOnWithdrawal: true,
-                description: 'Retrait avant 2 ans : clôture du plan, gain taxé à 22,5 % + 17,2 % PS',
-                legalReference: CGI_ARTICLES.ART_163_QUINQUIES_D,
-            },
-            {
-                minAgeYears: 2,
                 maxAgeYears: 5,
-                incomeTaxRate: 0.19,
+                incomeTaxRate: 0.128,
                 socialRate: 0.172,
                 closesOnWithdrawal: true,
-                description: 'Retrait entre 2 et 5 ans : clôture du plan, gain taxé à 19 % + 17,2 % PS',
+                description: 'Retrait avant 5 ans : clôture du plan (sauf exceptions), gain taxé à 12,8 % + 17,2 % PS',
                 legalReference: CGI_ARTICLES.ART_163_QUINQUIES_D,
             },
             {
@@ -590,11 +587,19 @@ export function getFiscalRules(year: string, country: string = DEFAULT_TAX_COUNT
     if (!rules && country === 'FR') {
         const yearNum = parseInt(year, 10);
         if (!isNaN(yearNum)) {
+            // Latest known rules (brackets not yet indexed); from 2026 dividends and interest are at
+            // the same 18.6 % as capital gains.
             const template = RULES_2025;
             rules = {
                 ...template,
                 year,
                 declarationYear: String(yearNum + 1),
+                socialContributions: { ...template.socialContributions, placementIncomeRate: undefined },
+                // PEA gains are investment income: 18.6 % on withdrawals from 2026-01-01
+                pea: {
+                    ...template.pea,
+                    taxByAge: template.pea.taxByAge.map(rule => ({ ...rule, socialRate: template.socialContributions.totalRate })),
+                },
                 calendar: computeFrenchTaxCalendar(year),
             };
         }
@@ -662,6 +667,20 @@ export function calculateIRPerShare(taxableIncomePerShare: number, year: string,
 }
 
 /**
+ * Age of a plan in whole years, by anniversary: a plan opened 2021-03-01 is 5 years old on
+ * 2026-03-01 (a day count over 365.25 left it at 4.999 that very day).
+ */
+export function planAgeYears(planOpenDate: string, atDate: string): number {
+    const open = new Date(planOpenDate);
+    const at = new Date(atDate);
+    let ageYears = at.getUTCFullYear() - open.getUTCFullYear();
+    const anniversaryReached = at.getUTCMonth() > open.getUTCMonth()
+        || (at.getUTCMonth() === open.getUTCMonth() && at.getUTCDate() >= open.getUTCDate());
+    if (!anniversaryReached) ageYears -= 1;
+    return Math.max(0, ageYears);
+}
+
+/**
  * Determine PEA tax treatment based on plan age at withdrawal date.
  * Note: PEA is specific to France. Other countries may have equivalent
  * tax-advantaged wrappers with different rules.
@@ -673,9 +692,7 @@ export function getPEATaxRule(
     country: string = DEFAULT_TAX_COUNTRY
 ): PEATaxRule {
     const rules = getFiscalRulesOrThrow(year, country);
-    const openMs = new Date(planOpenDate).getTime();
-    const withdrawMs = new Date(withdrawalDate).getTime();
-    const ageYears = (withdrawMs - openMs) / (1000 * 60 * 60 * 24 * 365.25);
+    const ageYears = planAgeYears(planOpenDate, withdrawalDate);
 
     for (const rule of rules.pea.taxByAge) {
         if (ageYears >= rule.minAgeYears && ageYears < rule.maxAgeYears) {

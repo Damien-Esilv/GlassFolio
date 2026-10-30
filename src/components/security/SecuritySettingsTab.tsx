@@ -17,6 +17,8 @@ import { RecoveryKeyDialog } from './RecoveryKeyDialog';
 import { StepUpAuthModal } from './StepUpAuthModal';
 import { evaluatePassword } from '../../services/security/passwordValidator';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { getAuthCapabilities } from '../../services/security/authCapabilities';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export const SecuritySettingsTab: React.FC = () => {
     const { t } = useTranslation();
@@ -28,6 +30,7 @@ export const SecuritySettingsTab: React.FC = () => {
 
     // Change Password Modal state
     const [showChangePassword, setShowChangePassword] = useState(false);
+    useEscapeKey(() => setShowChangePassword(false), showChangePassword);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -443,10 +446,11 @@ export const SecuritySettingsTab: React.FC = () => {
                                         id="change-totp"
                                         name="otp"
                                         type="text"
-                                        inputMode="numeric"
+                                        // Local backup codes (XXXX-XXXX) hold letters
+                                        inputMode={getAuthCapabilities().backupCodes ? 'text' : 'numeric'}
                                         autoComplete="one-time-code"
                                         value={totpCode}
-                                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                                        onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 9))}
                                         className="w-full bg-subtle border border-subtle text-primary text-sm font-mono tracking-wider rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary text-center"
                                         placeholder={t('security:totp.codePlaceholder', '000000')}
                                     />

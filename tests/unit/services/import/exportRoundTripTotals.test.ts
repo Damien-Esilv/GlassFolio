@@ -75,6 +75,38 @@ const BROKER_CSV = [
 describe('export -> import round trip', () => {
   beforeEach(seedAccounts);
 
+  it('estimates a long-held asset over its holding period, so a 1M chart shows one month, not the whole gain (TGLA-188)', async () => {
+    await importInto('acc-a', [
+      'Date,Type,Symbol,Shares,Price,Amount,Fee',
+      '2024-01-05,BUY,LONGHELD,10,100,1000,0',
+    ].join('\n'));
+    // Worth 150 a share today
+    db.savePositions(db.getPositions().map(p => p.symbol === 'LONGHELD' ? { ...p, lastPrice: 150, marketValue: 1500 } : p));
+
+    const summary = await portfolioService.getDashboardSummary('1M', 'EUR');
+    const first = summary.chartData[0].value;
+    const last = summary.chartData[summary.chartData.length - 1].value;
+    // Held for more than 2 years: a month ago the estimate was already close to today's 1 500
+    expect(first).toBeGreaterThan(1400);
+    expect(last).toBeGreaterThan(1450);
+  });
+
+  it('values a fully sold asset from its own trades in the chart, never at 1 per unit (TGLA-188)', async () => {
+    await importInto('acc-a', [
+      'Date,Type,Symbol,Shares,Price,Amount,Fee',
+      '2024-01-05,BUY,NVDA,10,100,1000,0',
+      '2024-03-01,SELL,NVDA,10,150,1500,0',
+    ].join('\n'));
+    expect(db.getPositions().filter(p => p.symbol === 'NVDA')).toEqual([]);
+
+    const summary = await portfolioService.getDashboardSummary('ALL', 'EUR');
+    const held = summary.chartData.filter(point => point.value > 0);
+    expect(held.length).toBeGreaterThan(0);
+    // 10 shares bought at 100: worth around 1 000 while held, not 10
+    held.forEach(point => expect(point.value).toBeGreaterThan(900));
+    held.forEach(point => expect(point.invested).toBeCloseTo(1000, 0));
+  });
+
   it('brings back the same positions, realized gain and dashboard totals on a fresh account', async () => {
     await importInto('acc-a', BROKER_CSV);
     const positionsBefore = positionsOf();

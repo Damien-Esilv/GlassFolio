@@ -1,4 +1,6 @@
 {
+  "appUnavailable": "L’application GlassFolio n’est pas disponible depuis cette adresse.",
+  "appUnavailableBack": "Retour à l’accueil",
   "common": {
     "demoDataBadge": "Données d'exemple",
     "tryLiveDemo": "Essayer la Démo (1-Clic)",

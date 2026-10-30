@@ -106,6 +106,14 @@ export class VaultLockedError extends Error {
     }
 }
 
+/** A record that could not be decrypted is kept as is: writing over it would destroy the data. */
+export class VaultRecordUnreadableError extends Error {
+    constructor(key: string) {
+        super(`Vault record "${key}" could not be decrypted; it is kept unchanged.`);
+        this.name = 'VaultRecordUnreadableError';
+    }
+}
+
 export class VaultNotInitializedError extends Error {
     constructor() {
         super('Vault is not initialized.');

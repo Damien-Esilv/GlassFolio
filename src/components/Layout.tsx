@@ -16,7 +16,9 @@ import { NotificationBellDropdown } from './notifications/NotificationBellDropdo
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 import { UserAvatar } from './ui/UserAvatar';
 import { LocalPersistenceNotice } from './security/LocalPersistenceNotice';
+import { VaultIntegrityNotice } from './security/VaultIntegrityNotice';
 import { PullToRefresh } from './ui/PullToRefresh';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,6 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
   const [isFiscaliteExpanded, setIsFiscaliteExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useEscapeKey(() => setIsMobileMenuOpen(false), isMobileMenuOpen);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -69,8 +72,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleForceRefresh = useCallback(async () => {
     setIsRefreshingPrices(true);
-    await forceRefreshPrices();
-    setIsRefreshingPrices(false);
+    try {
+      await forceRefreshPrices();
+    } catch (err) {
+      console.error('Price refresh failed', err);
+    } finally {
+      setIsRefreshingPrices(false);
+    }
   }, [forceRefreshPrices]);
 
   // Close dropdown when clicking outside
@@ -111,10 +119,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     '/about',
     '/roadmap',
     '/changelog',
+    // Auth flows can be opened from an email link while signed in: never inside the app shell
+    '/forgot-password',
+    '/reset-password',
+    '/auth/confirm',
+    '/auth/google-callback',
   ];
+  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
   const isFullScreenRoute =
-    PUBLIC_FULL_SCREEN_ROUTES.includes(location.pathname) ||
-    location.pathname.startsWith('/welcome');
+    PUBLIC_FULL_SCREEN_ROUTES.includes(normalizedPath) ||
+    normalizedPath.startsWith('/welcome');
 
   // If not authenticated or currently on a public full-screen route, render children in full screen
   if (!user || isFullScreenRoute) {
@@ -209,7 +223,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsPortfolioExpanded(!isPortfolioExpanded)}
               className="px-3 py-2.5 hover:text-primary"
-              aria-label="Toggle portfolio menu"
+              aria-label={t('navigation:toggleMenu', { menu: t('navigation:menu.portfolio') })}
             >
               {isPortfolioExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
@@ -272,7 +286,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsAnalyticsExpanded(!isAnalyticsExpanded)}
               className="px-3 py-2.5 hover:text-primary"
-              aria-label="Toggle analytics menu"
+              aria-label={t('navigation:toggleMenu', { menu: t('navigation:menu.analytics') })}
             >
               {isAnalyticsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
@@ -335,7 +349,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsFiscaliteExpanded(!isFiscaliteExpanded)}
               className="px-3 py-2.5 hover:text-primary"
-              aria-label="Toggle fiscalité menu"
+              aria-label={t('navigation:toggleMenu', { menu: t('navigation:menu.fiscalite') })}
             >
               {isFiscaliteExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
@@ -604,7 +618,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="p-4 md:p-6 lg:p-8">
           <LocalPersistenceNotice />
-          <PullToRefresh>
+          <VaultIntegrityNotice />
+          {/* Reloads the data in place: a page reload would lock the vault and drop unsaved input */}
+          <PullToRefresh onRefresh={handleForceRefresh}>
             {children}
           </PullToRefresh>
         </main>
@@ -615,6 +631,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Real-time Floating Notification Toasts */}
       <NotificationToastContainer />
+
+      {/* Also mounted when signed in, so "Cookie preferences" in Settings opens it */}
+      <ConsentBanner />
     </div>
   );
 };

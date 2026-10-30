@@ -212,7 +212,7 @@ const Positions: React.FC = () => {
                         pos.source || t('positions.fallback.noSource')
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right">{pos.quantity.toLocaleString(locale, { maximumFractionDigits: 8 })}</td>
                     <td className="px-6 py-4 text-right">{formatCurrency(pos.avgCost, posCurr, locale)}</td>
                     <td className="px-6 py-4 text-right text-tertiary">
                       <span>{formatCurrency(pos.lastPrice, posCurr, locale)}</span>

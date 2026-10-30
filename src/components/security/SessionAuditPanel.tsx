@@ -42,14 +42,14 @@ export const SessionAuditPanel: React.FC = () => {
                 return (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-error/15 text-error border border-error/30">
                         <AlertOctagon size={11} />
-                        CRITICAL
+                        {t('security:audit.severities.critical')}
                     </span>
                 );
             case 'warning':
                 return (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-warning/15 text-warning border border-warning/30">
                         <AlertTriangle size={11} />
-                        WARN
+                        {t('security:audit.severities.warning')}
                     </span>
                 );
             case 'info':
@@ -57,7 +57,7 @@ export const SessionAuditPanel: React.FC = () => {
                 return (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand border border-brand/20">
                         <Info size={11} />
-                        INFO
+                        {t('security:audit.severities.info')}
                     </span>
                 );
         }

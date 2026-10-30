@@ -82,7 +82,12 @@
             "years": "years",
             "taxRegime": "Applicable Tax Regime",
             "noEvents": "No PEA withdrawal events for this fiscal year.",
-            "internalNote": "Internal PEA transactions (buys, sells, dividends) are not individually taxable. Only withdrawals trigger tax events."
+            "internalNote": "Internal PEA transactions (buys, sells, dividends) are not individually taxable. Only withdrawals trigger tax events.",
+            "taxableGain": "Taxable gain",
+            "incomeTax": "Income tax",
+            "socialContributions": "Social contributions",
+            "closesPlan": "Plan closed",
+            "ifuNote": "Your bank withholds these amounts and reports the gain on the IFU it sends you: check it against these figures."
         },
         "crypto": {
             "title": "Crypto Assets (Art. 150 VH bis)",
@@ -111,7 +116,11 @@
             "toVerify": "To verify",
             "penalty": "Non-declaration penalty",
             "perAccount": "per undeclared account",
-            "noAccounts": "No foreign accounts detected. All your accounts appear to be held in France."
+            "noAccounts": "No foreign accounts detected. All your accounts appear to be held in France.",
+            "reasons": {
+                "bankAccount": "Bank or securities account held abroad ({{country}}): form 3916 is required.",
+                "cryptoAccount": "Digital asset account held abroad ({{country}}): form 3916-bis is required."
+            }
         },
         "forms": {
             "title": "Tax Form Summary",
@@ -133,6 +142,25 @@
             "insufficient_dataDesc": "Critical data missing — cannot compute reliably",
             "complex": "Complex",
             "complexDesc": "Situation requires professional review"
+        },
+        "explanations": {
+            "cto": "Average cost (PMP) {{pmp, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{quantity}} = {{cost, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} acquisition cost. Proceeds {{proceeds, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}, fees {{fees, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Net {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "crypto": "Art. 150 VH bis: cession {{cession, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (total acquisition price {{totalCost, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{cession, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / portfolio value {{portfolioValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) − fees {{fees, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} = {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "dividend": "Gross dividend {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Tax withheld abroad: {{withholding, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. 40 % allowance if you opt for the progressive scale.",
+            "income": "Income received: {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}.",
+            "peaBefore5": "Plan {{age}} year(s) old: withdrawal {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (net deposits {{deposits, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / plan value {{planValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) = gain {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. Before 5 years the plan is closed; the gain bears {{incomeTaxRate, number(maximumFractionDigits: 1)}} % income tax and {{socialRate, number(maximumFractionDigits: 1)}} % social contributions.",
+            "peaAfter5": "Plan {{age}} year(s) old: withdrawal {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} − (net deposits {{deposits, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} × {{amount, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}} / plan value {{planValue, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}) = gain {{net, number(minimumFractionDigits: 2; maximumFractionDigits: 2)}}. After 5 years: no income tax, {{socialRate, number(maximumFractionDigits: 1)}} % social contributions."
+        },
+        "missingData": {
+            "acquisition_cost_unknown": "Acquisition cost unknown",
+            "quantity_exceeds_holdings": "Sale larger than the recorded holding",
+            "fx_rate_missing": "No exchange rate: amount left in its own currency",
+            "fx_rate_estimated": "Exchange rate approximated (no rate for that day)",
+            "portfolio_valuation_approximated": "Portfolio valued at last traded prices",
+            "portfolio_valuation_incomplete": "Some assets have no known price",
+            "crypto_withdrawal_unmatched": "A withdrawal has no matching deposit: check it is not a sale",
+            "pea_valuation_approximated": "Plan valued at last traded prices",
+            "pea_open_date_missing": "Opening date missing: first operation used"
         }
     },
     "optimization": {
@@ -141,7 +169,7 @@
         "backToHub": "Back to Tax Assistant",
         "pfuVsBareme": {
             "title": "PFU vs Barème (Option 2OP)",
-            "subtitle": "Compare flat tax (30%) with progressive income tax",
+            "subtitle": "Compare the flat tax ({{total}}%) with progressive income tax",
             "pfuLabel": "PFU (Flat Tax 30%)",
             "baremeLabel": "Barème Progressif",
             "pfuAmount": "Tax under PFU",
@@ -152,7 +180,7 @@
             "recommendBareme": "The barème progressif (2OP) would save you money",
             "recommendNeutral": "Both options produce similar results",
             "needsProfile": "Complete your fiscal profile (income, fiscal shares) for an accurate comparison",
-            "pfuDescription": "Automatic flat tax at 30% (12.8% IR + 17.2% social contributions). No action needed.",
+            "pfuDescription": "Automatic flat tax at {{total}}% ({{ir}}% income tax + {{social}}% social contributions). No action needed.",
             "baremeDescription": "Progressive income tax with 40% dividend abatement. Requires checking box 2OP. Applies globally to ALL capital income."
         },
         "harvesting": {
@@ -204,6 +232,29 @@
                 "compliance": "Compliance",
                 "crypto": "Crypto",
                 "envelope": "Envelope Strategy"
+            },
+            "items": {
+                "harvesting": {
+                    "title": "Offset your gains before 31 December",
+                    "text": "{{gain}} € of securities gains are taxed this year, and your taxable accounts hold {{losses}} € of unrealised losses. Selling up to {{harvestable}} € of them before 31 December would offset that much gain."
+                },
+                "foreignAccounts": {
+                    "title": "Foreign accounts to declare",
+                    "text": "{{count}} account(s) held abroad must be declared on form 3916 / 3916-bis. The fine is {{fine}} € per undeclared account."
+                },
+                "cryptoThreshold": {
+                    "title": "Crypto under the 305 € threshold",
+                    "text": "Your crypto cessions total {{cessions}} €, not over {{threshold}} €: the gains are exempt and nothing goes in box 3AN."
+                },
+                "peaEarlyWithdrawal": {
+                    "title": "PEA withdrawal before 5 years",
+                    "text": "{{count}} withdrawal(s) before the 5th anniversary closed the plan; the gain bears about {{tax}} € of income tax on top of social contributions. Wait for the 5 years before the next withdrawal."
+                }
+            },
+            "impactKinds": {
+                "savings": "Saving",
+                "risk": "Fine",
+                "cost": "Tax"
             }
         }
     },
@@ -284,7 +335,8 @@
             "zone1Title": "Zone 1",
             "zone2Title": "Zone 2",
             "zone3Title": "Zone 3",
-            "paperTitle": "Paper"
+            "paperTitle": "Paper",
+            "deadlineAt": "{{date}} at 11:59 pm"
         },
         "topicContent": {
             "cto": {
@@ -327,7 +379,18 @@
             "legifrance": "Légifrance (CGI)",
             "bofip": "BOFiP-Impôts",
             "impots": "impots.gouv.fr",
-            "formulaires": "Official DGFiP Forms"
+            "formulaires": "Official DGFiP Forms",
+            "be": {
+                "spf": "SPF Finances (Belgian tax administration)",
+                "myminfin": "MyMinfin"
+            },
+            "de": {
+                "bzst": "Federal Central Tax Office (BZSt)",
+                "elster": "ELSTER"
+            },
+            "ch": {
+                "estv": "Federal Tax Administration (FTA)"
+            }
         },
         "topicDetail": {
             "backToGuide": "Back to Guide",
@@ -335,6 +398,23 @@
             "examples": "Worked Examples",
             "keyRules": "Key Rules",
             "relatedTopics": "Related Topics"
+        },
+        "examples": {
+            "cto": {
+                "buy1": "// Buy: 100 shares @ €50 = €5,000 (average price: €50)",
+                "buy2": "// Buy: 50 shares @ €80 = €4,000 (average price: €60)",
+                "sell": "// Sell: 80 shares @ €70 = €5,600",
+                "gain": "// Gain = 5,600 − (60 × 80) = 5,600 − 4,800 =",
+                "tax": "// Flat tax: 800 × {{rate}} % ="
+            },
+            "crypto": {
+                "formula": "// Formula (art. 150 VH bis CGI):",
+                "formulaText": "// Gain = Sale price − (Total portfolio cost × Sale price / Total portfolio value)",
+                "sale": "// Sale of 0.5 BTC @ €50k = €25,000",
+                "cost": "// Total portfolio cost: €30,000",
+                "value": "// Total portfolio value: €75,000",
+                "gain": "// Gain = 25k − (30k × 25k / 75k) = 25k − 10k ="
+            }
         }
     },
     "settings": {

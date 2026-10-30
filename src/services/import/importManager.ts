@@ -109,6 +109,8 @@ export interface StagedTransaction {
     originalRowArray: string[];
     parsed: Partial<UnifiedTransaction>;
     rowHash: string;
+    /** Hash an older version gave this row (see hashParts.legacySymbol), for duplicate detection only */
+    legacyRowHash?: string;
     status: 'valid' | 'error' | 'duplicate' | 'warning';
     errors: FieldError[];
     resolution: 'pending' | 'import' | 'skip';
@@ -283,6 +285,9 @@ export async function parseFile(
             hashParts.fee
         );
         parsed.rowHash = rowHash;
+        const legacyRowHash = hashParts.legacySymbol === undefined
+            ? undefined
+            : await computeRowHash(hashParts.date, hashParts.amount, hashParts.legacySymbol, hashParts.type, hashParts.fee);
 
         // Resolve the instrument from the symbol or, failing that, the ISIN
         const { exchange, network, contractAddress, assetName } = normalized.instrumentHints;
@@ -352,6 +357,7 @@ export async function parseFile(
             originalRowArray: row,
             parsed,
             rowHash,
+            ...(legacyRowHash ? { legacyRowHash } : {}),
             status,
             errors: [...normalized.issues, ...validation.errors, ...validation.warnings],
             resolution: 'pending' as const
@@ -391,9 +397,11 @@ function flagDuplicates(candidates: StagedTransaction[], storedCounts: Map<strin
     const seenInFile = new Map<string, number>();
     for (const candidate of candidates) {
         if (candidate.status === 'error') continue;
-        const occurrence = seenInFile.get(candidate.rowHash) ?? 0;
-        seenInFile.set(candidate.rowHash, occurrence + 1);
-        if (occurrence < (storedCounts.get(candidate.rowHash) ?? 0)) {
+        // Rows stored by an older version carry the hash it computed then
+        const hash = candidate.legacyRowHash && storedCounts.has(candidate.legacyRowHash) ? candidate.legacyRowHash : candidate.rowHash;
+        const occurrence = seenInFile.get(hash) ?? 0;
+        seenInFile.set(hash, occurrence + 1);
+        if (occurrence < (storedCounts.get(hash) ?? 0)) {
             candidate.status = 'duplicate';
             candidate.resolution = 'skip';
         }
@@ -663,8 +671,13 @@ export async function commitBatch(
 
         if (result.success) {
             clearStagedInstruments();
-            // Recalculate positions after successful commit
-            await recalculatePositions();
+            // The import is committed: a failed recalculation must not report it as failed, nor drop
+            // the instruments its transactions use. Positions are rebuilt on the next recalculation.
+            try {
+                await recalculatePositions();
+            } catch (recalcError) {
+                console.error('[import] Position recalculation failed after a committed import', recalcError);
+            }
             return { ...result, batch: newBatch };
         }
 

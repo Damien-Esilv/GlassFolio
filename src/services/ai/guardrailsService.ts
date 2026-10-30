@@ -7,6 +7,8 @@ import { vaultService } from '../security/vaultService';
  */
 class GuardrailsService {
   private pendingActions: Map<string, PendingActionProposal> = new Map();
+  /** Actions being executed: a second click must not run them twice, nor reject them midway. */
+  private executing = new Set<string>();
 
   constructor() {
     vaultService.subscribeStatus((status) => {
@@ -55,10 +57,11 @@ class GuardrailsService {
       throw new Error(`Pending action '${id}' not found`);
     }
 
-    if (action.status !== 'pending') {
-      throw new Error(`Action '${id}' is already ${action.status}`);
+    if (action.status !== 'pending' || this.executing.has(id)) {
+      throw new Error(`Action '${id}' is already ${this.executing.has(id) ? 'executing' : action.status}`);
     }
 
+    this.executing.add(id);
     try {
       const tool = aiToolRegistry.getTool(action.toolName);
       if (!tool) {
@@ -67,13 +70,23 @@ class GuardrailsService {
 
       // Execute directly bypassing the requirement check since human confirmed
       const result = await tool.execute(action.params, context);
-      action.status = 'executed';
       action.result = result;
+      // Tools report a refused change as { success: false }: that is not "executed"
+      const refused = typeof result === 'object' && result !== null && (result as { success?: unknown }).success === false;
+      if (refused) {
+        const detail = result as { error?: unknown; message?: unknown };
+        action.status = 'failed';
+        action.error = String(detail.error ?? detail.message ?? 'The change was refused.');
+      } else {
+        action.status = 'executed';
+      }
       return action;
     } catch (err) {
       action.status = 'failed';
       action.error = err instanceof Error ? err.message : String(err);
       throw err;
+    } finally {
+      this.executing.delete(id);
     }
   }
 
@@ -86,7 +99,8 @@ class GuardrailsService {
       throw new Error(`Pending action '${id}' not found`);
     }
 
-    action.status = 'rejected';
+    // Only a change still waiting can be declined (not one running or already done)
+    if (action.status === 'pending' && !this.executing.has(id)) action.status = 'rejected';
     return action;
   }
 

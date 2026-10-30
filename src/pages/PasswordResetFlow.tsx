@@ -8,6 +8,8 @@ import { evaluatePassword } from '../services/security/passwordValidator';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { getAuthCapabilities } from '../services/security/authCapabilities';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface PasswordResetFlowProps {
     initialMode?: 'request' | 'recover';
@@ -18,8 +20,10 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
-    // Determine mode from prop or query parameter (?mode=recover or default)
-    const modeFromQuery = searchParams.get('mode') === 'recover' ? 'recover' : initialMode;
+    // Determine mode from prop or query parameter (?mode=recover or default). Local mode sends no email
+    // at all: the only way back in is the recovery key, never a "reset email sent" that never comes.
+    const emailAvailable = getAuthCapabilities().emailVerification;
+    const modeFromQuery = !emailAvailable || searchParams.get('mode') === 'recover' ? 'recover' : initialMode;
     const [mode, setMode] = useState<'request' | 'recover'>(modeFromQuery);
 
     // Form states
@@ -34,6 +38,7 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
     const [requestSuccess, setRequestSuccess] = useState(false);
     const [newRotatedRecoveryKey, setNewRotatedRecoveryKey] = useState<string | null>(null);
     const [showLostKeyWarning, setShowLostKeyWarning] = useState(false);
+    useEscapeKey(() => setShowLostKeyWarning(false), showLostKeyWarning);
 
     const antiBotRef = useRef<AntiBotShieldHandle | null>(null);
 

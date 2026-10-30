@@ -1,5 +1,6 @@
 import { db, delay } from '../db';
 import { appStorage } from '../storage/appStorage';
+import { portfolioService } from '../portfolioService';
 import { verifyBackupChecksum } from './backupIntegrity';
 
 /**
@@ -16,7 +17,8 @@ export type BackupErrorCode =
     | 'prototype_pollution'
     | 'invalid_collection'
     | 'checksum_mismatch'
-    | 'unsupported_version';
+    | 'unsupported_version'
+    | 'empty_backup';
 
 /** Highest backup format version (major) this build can restore. Exports write "1.0". */
 export const SUPPORTED_BACKUP_MAJOR = 1;
@@ -91,6 +93,11 @@ export function validateBackupContent(fileText: string): BackupValidationResult 
             if (!Array.isArray(val)) {
                 return { valid: false, error: 'invalid_collection', errorParams: { collection: key } };
             }
+        }
+
+        // A file without a single row would only wipe the account in "reset" mode
+        if (!Object.values(json.data as Record<string, unknown[]>).some((rows) => rows.length > 0)) {
+            return { valid: false, error: 'empty_backup' };
         }
 
         // Sanitize payload against prototype pollution and corruption
@@ -169,16 +176,42 @@ function mergeAiSettingsKeepingKeys(incoming: Record<string, any>): Record<strin
     return next;
 }
 
+/** Every vault record a reset restore may touch, so a failure can put them back as they were. */
+const RESTORE_SCOPED_KEYS = (): string[] =>
+    appStorage.keys().filter((key) => key.startsWith('glassfolio_'));
+
 export async function restoreBackupReset(backupData: Record<string, any[]>): Promise<void> {
     await delay(300);
-    db.clearAll();
 
     // An empty collection means "nothing stored" (GDPR archives only carry persisted data): skip it so
     // built-in reference data (mapping presets, instruments, achievement levels) is not wiped.
     const data: Record<string, any[]> = Object.fromEntries(
         Object.entries(backupData).filter(([, rows]) => !Array.isArray(rows) || rows.length > 0)
     );
-    
+    if (Object.keys(data).length === 0) {
+        // Never wipe the account for a backup that holds nothing
+        throw new Error('This backup holds no data to restore.');
+    }
+
+    const snapshot = new Map(RESTORE_SCOPED_KEYS().map((key) => [key, appStorage.getItem(key)]));
+    try {
+        db.clearAll();
+        writeResetData(data);
+    } catch (err) {
+        // Put the account back exactly as it was rather than leave it half restored
+        for (const key of RESTORE_SCOPED_KEYS()) {
+            if (!snapshot.has(key)) appStorage.removeItem(key);
+        }
+        for (const [key, value] of snapshot) {
+            if (value !== null) appStorage.setItem(key, value);
+        }
+        throw err;
+    }
+    // Positions are derived from the journal: rebuild them from it (older backups only carry positions)
+    if (data.unifiedTransactions) await portfolioService.recalculatePositions();
+}
+
+function writeResetData(data: Record<string, any[]>): void {
     if (data.transactions) db.saveTransactions(data.transactions);
     if (data.positions) db.savePositions(data.positions);
     if (data.goals) db.saveGoals(data.goals);
@@ -287,6 +320,10 @@ export async function mergeBackupData(data: Record<string, any[]>): Promise<{ im
         }
         const mergedChats = mergeEntityList(currentChats, data.aiConversations);
         appStorage.setItem('glassfolio_ai_chats_v1', JSON.stringify(mergedChats));
+    }
+
+    if (importedCount > 0 && (data.unifiedTransactions || data.accounts || data.instruments)) {
+        await portfolioService.recalculatePositions();
     }
 
     return { importedCount };

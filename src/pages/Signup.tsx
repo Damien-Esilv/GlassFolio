@@ -14,8 +14,10 @@ import { isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl, getDe
 import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { authService } from '../services/security/authService';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
+import { captchaTokenForResend, CaptchaRequiredError } from '../services/security/captchaResend';
 import { GoogleDrivePrivacyTooltip } from '../components/security/GoogleDrivePrivacyTooltip';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { LegalLink } from '../components/ui/LegalLink';
 
 const Signup: React.FC = () => {
    const { t } = useTranslation();
@@ -113,11 +115,16 @@ const Signup: React.FC = () => {
       setError('');
       setInfo('');
       try {
-         await authService.resendEmailVerification?.(email);
+         const captchaToken = captchaTokenForResend(antiBotRef.current?.getPayload().captchaToken);
+         await authService.resendEmailVerification?.(email, { captchaToken });
          setInfo(t('auth:verification.emailSent'));
          setResendCooldown(30);
       } catch (err: unknown) {
-         setError(mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
+         setError(err instanceof CaptchaRequiredError
+            ? t('auth:verification.captchaRequired')
+            : mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
+      } finally {
+         antiBotRef.current?.reset();
       }
    };
 
@@ -197,6 +204,8 @@ const Signup: React.FC = () => {
 
             const payload = antiBotRef.current?.getPayload();
             await signup(email, password, name, { captchaToken: payload?.captchaToken, legalAcceptance: createLegalAcceptance() });
+            // The token was spent on the sign-up: a resend needs a new one
+            antiBotRef.current?.reset();
             setSignupStage('verification');
             return;
          }
@@ -403,8 +412,8 @@ const Signup: React.FC = () => {
                         i18nKey="auth:signup.acceptLegal"
                         values={{ version: LEGAL_DOCUMENTS_VERSION }}
                         components={{
-                           terms: <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
-                           privacy: <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                           terms: <LegalLink path="/terms" newTab className="text-brand hover:underline" />,
+                           privacy: <LegalLink path="/privacy" newTab className="text-brand hover:underline" />,
                         }}
                      />
                   </span>
@@ -464,7 +473,8 @@ const Signup: React.FC = () => {
                </form>
             )}
 
-            {!isLocal && signupStage === 'form' && <AntiBotShield ref={antiBotRef} />}
+            {/* Also on the verification step: resending the email needs a new captcha token */}
+            {!isLocal && <AntiBotShield ref={antiBotRef} />}
 
             {!isLocal && (
                <div className="mt-4 pt-4 border-t border-subtle">
@@ -486,8 +496,8 @@ const Signup: React.FC = () => {
                      <Trans
                         i18nKey="auth:signup.googleLegalNotice"
                         components={{
-                           terms: <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
-                           privacy: <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" />,
+                           terms: <LegalLink path="/terms" newTab className="text-brand hover:underline" />,
+                           privacy: <LegalLink path="/privacy" newTab className="text-brand hover:underline" />,
                         }}
                      />
                   </p>

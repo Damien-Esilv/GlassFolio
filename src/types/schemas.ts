@@ -62,6 +62,7 @@ export const PositionSchema = z.object({
   type: z.string(),
   source: z.string().optional(),
   bankName: z.string().optional(),
+  accountId: z.string().optional(),
   accountName: z.string().optional(),
 });
 
@@ -89,6 +90,9 @@ export const AlertSchema = z.object({
   actionUrl: z.string().optional(),
   actionLabelKey: z.string().optional(),
   dedupKey: z.string().optional(),
+  titleKey: z.string().optional(),
+  messageKey: z.string().optional(),
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 export type ValidatedAlert = z.infer<typeof AlertSchema>;
@@ -221,6 +225,7 @@ export function repairPosition(raw: unknown): ValidatedPosition | null {
     type: typeof item.type === 'string' && item.type ? item.type : 'Equity',
     source: typeof item.source === 'string' ? item.source : undefined,
     bankName: typeof item.bankName === 'string' ? item.bankName : undefined,
+    accountId: typeof item.accountId === 'string' ? item.accountId : undefined,
     accountName: typeof item.accountName === 'string' ? item.accountName : undefined,
   };
 

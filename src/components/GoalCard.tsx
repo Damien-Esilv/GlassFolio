@@ -22,10 +22,10 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
     const { t } = useTranslation();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
-    const currency = user?.preferences?.currency || 'USD';
+    const currency = user?.preferences?.currency || 'EUR';
     const Icon = ICON_MAP[goal.iconType] || Wallet;
     const safeCurrent = goal.currentAmount || 0;
-    const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
+    const progress = goal.targetAmount > 0 ? Math.min((safeCurrent / goal.targetAmount) * 100, 100) : 0;
     const entered = useEntranceAnimation();
 
     let colorClass = 'bg-accent-blue';
@@ -44,19 +44,27 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
         <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-border hover:border-strong transition-all">
             {/* Actions (Only show if handlers provided) */}
             {(onPin || onEdit || onDelete) && (
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                // Always visible on touch screens (nothing to hover with) and when reached with the keyboard
+                <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity z-10">
                     {onPin && (
-                        <button onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
+                        <button type="button" aria-label={t('progress:goals.pinGoal')} aria-pressed={Boolean(goal.isPinned)} onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
                             <Pin size={16} fill={goal.isPinned ? "currentColor" : "none"} />
                         </button>
                     )}
                     {onEdit && (
-                        <button onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
+                        <button type="button" aria-label={t('progress:goals.editGoal')} onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
                             <Edit2 size={16} />
                         </button>
                     )}
                     {onDelete && (
-                        <button onClick={() => onDelete(goal.id)} className="p-2 rounded-full hover:bg-error/10 text-error">
+                        <button
+                            type="button"
+                            aria-label={t('progress:goals.deleteGoal')}
+                            onClick={() => {
+                                if (window.confirm(t('progress:goals.deleteGoalConfirm', { title: goal.title }))) onDelete(goal.id);
+                            }}
+                            className="p-2 rounded-full hover:bg-error/10 text-error"
+                        >
                             <Trash2 size={16} />
                         </button>
                     )}

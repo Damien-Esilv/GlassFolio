@@ -66,6 +66,8 @@ export interface Position {
   type: AssetClass | 'Cash' | string;
   source?: string;
   bankName?: string;
+  /** Account holding the position (absent on positions cached before it existed). */
+  accountId?: string;
   accountName?: string;
 }
 
@@ -101,6 +103,10 @@ export interface Alert {
   actionUrl?: string;
   actionLabelKey?: string;
   dedupKey?: string;
+  /** Texts for the UI (title/message are the English fallback): i18n keys filled with `params` */
+  titleKey?: string;
+  messageKey?: string;
+  params?: Record<string, string | number>;
 }
 
 export type AlertRuleMetric =
@@ -201,6 +207,8 @@ export interface GamificationQuest {
   target: number;
   expiryDate?: string;
   claimed?: boolean;
+  /** Period the progress belongs to (e.g. 2026-10, 2026-Q4): a new period starts the quest over */
+  periodKey?: string;
 }
 
 /** One gain of experience points, dated, so what was earned in a period can be told. */

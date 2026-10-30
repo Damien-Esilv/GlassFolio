@@ -52,7 +52,10 @@ describe('<SelfHost /> guide', () => {
   it('never suggests exposing the app without an access token', () => {
     renderPage();
     const network = document.getElementById('network') as HTMLElement;
-    expect(within(network).getByText(/GLASSFOLIO_BIND=0\.0\.0\.0 GLASSFOLIO_ACCESS_TOKEN=/)).toBeTruthy();
+    // The token is set first, printed so it can be kept (it is the password), then the app is exposed
+    expect(within(network).getByText(/export GLASSFOLIO_ACCESS_TOKEN=/)).toBeTruthy();
+    expect(within(network).getByText(/echo "\$GLASSFOLIO_ACCESS_TOKEN"/)).toBeTruthy();
+    expect(within(network).getByText(/GLASSFOLIO_BIND=0\.0\.0\.0 npm run docker:up/)).toBeTruthy();
   });
 
   it('copies a code block to the clipboard', () => {
@@ -77,9 +80,10 @@ describe('<SelfHost /> guide', () => {
     expect(screen.getByRole('link', { name: 'Back to the home page' }).getAttribute('href')).toBe('/welcome');
   });
 
-  it('launches the demo account from the guide', () => {
+  it('launches the demo account from the guide (online showcase)', async () => {
+    vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Try the demo first' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Try the demo first' }));
     expect(mockLogin).toHaveBeenCalledWith('demo@glassfolio.com', 'password');
   });
 });

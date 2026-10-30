@@ -56,6 +56,9 @@
     "errors": {
         "failedToLogin": "Failed to login",
         "failedToLoad": "Failed to load data. Please try again.",
+        "appCrashTitle": "Something went wrong",
+        "appCrashDescription": "This page could not be displayed, often because GlassFolio was just updated. Reload to get the latest version; your data is safe.",
+        "appCrashReload": "Reload",
         "passwordsDoNotMatch": "New passwords do not match!",
         "required": "This field is required",
         "auth": {
@@ -103,7 +106,10 @@
             "passwordRequired": "Your password is required.",
             "deleteConfirmationMismatch": "Type DELETE to confirm.",
             "googleAccountMismatch": "That is not the Google account this GlassFolio account uses. Choose the right Google account and try again.",
-            "driveCleanupFailed": "The key file could not be removed from your Google Drive. Nothing was deleted."
+            "driveCleanupFailed": "The key file could not be removed from your Google Drive. Nothing was deleted.",
+            "deleteFailed": "Your account could not be deleted. Nothing was removed; try again in a moment.",
+            "actionFailed": "This action could not be completed. Nothing was changed; try again.",
+            "vaultRecordUnreadable": "This data could not be decrypted, so it was left unchanged. Sign out and back in, or restore a backup."
         },
         "passkey": {
             "UNSUPPORTED": "Passkeys are not supported by this browser.",

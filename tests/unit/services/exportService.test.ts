@@ -3,6 +3,7 @@
  * Covers: objectsToCSV, CSV Formula Injection mitigation, generateBackupData
  */
 
+import { vaultService } from '../../../src/services/security/vaultService';
 import { describe, it, expect, vi } from 'vitest';
 import {
   objectsToCSV,
@@ -137,6 +138,8 @@ describe('exportService - generateBackupData', () => {
 
   it('triggers transactions-only exports without errors', async () => {
     appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify({ isDemo: false }));
+    // An export reads the open vault (a locked one is refused, see the test below)
+    vi.spyOn(vaultService, 'isUnlocked').mockReturnValue(true);
     // Mock document.createElement & click for downloadFile helper
     const clickMock = vi.fn();
     const linkMock = { href: '', download: '', click: clickMock };
@@ -166,5 +169,11 @@ describe('exportService - generateBackupData', () => {
     await exportRGPDZip();
     expect(clickMock).toHaveBeenCalled();
     expect(linkMock.download).toContain('glassfolio-data-export-');
+  });
+
+  it('refuses to export a locked vault, which would read as an empty account (TGLA-188)', async () => {
+    appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify({ isDemo: false }));
+    vi.spyOn(vaultService, 'isUnlocked').mockReturnValue(false);
+    await expect(exportTransactionsCSV()).rejects.toThrow(/locked/i);
   });
 });

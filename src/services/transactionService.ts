@@ -75,14 +75,22 @@ export const transactionService = {
         await delay(500);
 
         const accounts = db.getAccounts();
-        const defaultAccount = accounts[0]?.id || 'acc-bourso-cto';
         const now = new Date().toISOString();
+        /** The account named on the transaction, else one in its currency, else the first one. */
+        const accountFor = (tx: Transaction) => {
+            const named = tx.accountName?.trim().toLowerCase();
+            return (named ? accounts.find(a => a.name.trim().toLowerCase() === named) : undefined)
+                ?? accounts.find(a => a.defaultCurrency?.toUpperCase() === tx.currency?.toUpperCase())
+                ?? accounts[0];
+        };
 
         const newUnifiedTxs: UnifiedTransaction[] = await Promise.all(newTxs.map(async (tx) => {
-            // Find or create instrument
+            const account = accountFor(tx);
+            // Find or create instrument, priced in the currency the trade was made in (never a USD default)
             const instrument = await instrumentService.findOrCreateInstrument({
                 symbol: tx.symbol,
-                name: tx.instrument
+                name: tx.instrument,
+                ...(tx.currency ? { denominationCurrency: tx.currency.toUpperCase() } : {}),
             });
 
             const typeMap: Record<string, TransactionType> = {
@@ -97,7 +105,7 @@ export const transactionService = {
             return {
                 id: tx.id || `utx-manual-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 ownerId: 'default-user',
-                accountId: defaultAccount,
+                accountId: account?.id || 'acc-bourso-cto',
                 instrumentId: instrument.id,
                 batchId: 'batch-manual',
                 rowHash: `hash-manual-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
@@ -115,6 +123,9 @@ export const transactionService = {
                 priceUnit: tx.price.toString(),
                 quantity: tx.amount.toString(),
                 feeAmount: tx.fees.toString(),
+                ...(tx.currency && account?.defaultCurrency && tx.currency.toUpperCase() !== account.defaultCurrency.toUpperCase()
+                    ? { originalCurrency: tx.currency.toUpperCase() }
+                    : {}),
                 createdAt: now,
                 updatedAt: now,
                 version: 1

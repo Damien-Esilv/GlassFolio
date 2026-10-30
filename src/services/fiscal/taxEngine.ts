@@ -28,6 +28,8 @@ import {
 import {
     getFiscalRulesOrThrow,
     calculateIRPerShare,
+    getPEATaxRule,
+    planAgeYears,
     FiscalYearRules,
 } from './taxRules';
 
@@ -39,6 +41,8 @@ import {
 
 import {
     buildRealizedEvents,
+    isBalanceStatement,
+    quantityDelta,
     resolveFee,
     resolveGrossValue,
     resolveQuantity,
@@ -55,6 +59,19 @@ export interface EnrichedTransaction extends UnifiedTransaction {
     institute?: Institute;
     instrument?: Instrument;
     resolvedWrapperType?: WrapperType;
+    /**
+     * Set by `convertToEur`: the amounts are in EUR ('converted' at a known rate, 'estimated' at an
+     * approximate one) or still in their own currency because no rate was found ('missing').
+     */
+    fxStatus?: 'eur' | 'converted' | 'estimated' | 'missing';
+}
+
+/** EUR value of one unit of `currency` on `date` (YYYY-MM-DD); `estimated` when it is not that day's rate */
+export type EurRateLookup = (currency: string, date: string) => { rate: number; estimated: boolean } | undefined;
+
+export interface TaxSummaryOptions {
+    /** Historical exchange rates: French tax converts every amount at the rate of its operation's date */
+    rateToEur?: EurRateLookup;
 }
 
 interface CostBasisEntry {
@@ -146,12 +163,67 @@ function isCryptoToFiatCession(tx: EnrichedTransaction): boolean {
 
 /** Currency of a taxable event: the currency of the row's amounts */
 function eventCurrency(tx: EnrichedTransaction): string {
+    if (tx.fxStatus && tx.fxStatus !== 'missing') return 'EUR';
     return tx.originalCurrency || tx.instrument?.denominationCurrency || 'EUR';
 }
 
 /** Amounts in a foreign currency with no recorded exchange rate cannot be declared in EUR as is */
 function lacksFxRate(currency: string, tx: EnrichedTransaction): boolean {
+    if (tx.fxStatus) return tx.fxStatus === 'missing';
     return currency !== 'EUR' && !tx.fxRate;
+}
+
+/** missingData flags of a row's currency conversion */
+function fxFlags(tx: EnrichedTransaction): string[] {
+    if (lacksFxRate(eventCurrency(tx), tx)) return ['fx_rate_missing'];
+    return tx.fxStatus === 'estimated' ? ['fx_rate_estimated'] : [];
+}
+
+const scaleDecimal = (value: string | undefined, rate: number): string | undefined => {
+    if (value === undefined || value === '') return value;
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? String(n * rate) : value;
+};
+
+/**
+ * Converts every amount to EUR at the rate of the operation's date (art. 150-0 D: acquisition and
+ * cession prices are each converted on their own date). Quantities are left as they are.
+ *
+ * A row's amounts are in its `originalCurrency`, else in its account's currency. The row's own
+ * `fxRate` (original currency → account currency) is used when the account is in EUR.
+ */
+export function convertToEur(txs: EnrichedTransaction[], rateToEur?: EurRateLookup): EnrichedTransaction[] {
+    return txs.map(tx => {
+        const currency = (tx.originalCurrency || tx.account?.defaultCurrency || tx.instrument?.denominationCurrency || 'EUR').toUpperCase();
+        if (currency === 'EUR') return { ...tx, fxStatus: 'eur' };
+
+        const ownRate = parseFloat(tx.fxRate || '');
+        const accountInEur = (tx.account?.defaultCurrency || 'EUR').toUpperCase() === 'EUR';
+        let rate: number | undefined;
+        let estimated = false;
+        if (tx.originalCurrency && accountInEur && Number.isFinite(ownRate) && ownRate > 0) {
+            rate = ownRate;
+        } else {
+            const found = rateToEur?.(currency, tx.transactionDate.slice(0, 10));
+            if (found && found.rate > 0) {
+                rate = found.rate;
+                estimated = found.estimated;
+            }
+        }
+        if (rate === undefined) return { ...tx, fxStatus: 'missing' };
+
+        // A fee paid in another asset (e.g. BNB) is not an amount of this currency
+        const feeInCurrency = !tx.feeAsset || tx.feeAsset.toUpperCase() === currency;
+        return {
+            ...tx,
+            amountPrimary: scaleDecimal(tx.amountPrimary, rate) ?? tx.amountPrimary,
+            priceUnit: scaleDecimal(tx.priceUnit, rate),
+            feeAmount: feeInCurrency ? scaleDecimal(tx.feeAmount, rate) : tx.feeAmount,
+            feeAsset: feeInCurrency && tx.feeAsset ? 'EUR' : tx.feeAsset,
+            taxAmount: scaleDecimal(tx.taxAmount, rate),
+            fxStatus: estimated ? 'estimated' : 'converted',
+        };
+    });
 }
 
 const symbolOf = (tx: EnrichedTransaction): string =>
@@ -215,7 +287,7 @@ export function calculateCTOCapitalGains(
             if (acquisitionCost <= 0) missingData.push('acquisition_cost_unknown');
             if (quantity - sale.quantity > QTY_EPSILON) missingData.push('quantity_exceeds_holdings');
             const currency = eventCurrency(tx);
-            if (lacksFxRate(currency, tx)) missingData.push('fx_rate_missing');
+            missingData.push(...fxFlags(tx));
             const confidence: FiscalConfidence = missingData.length === 0 ? 'determined' : 'estimated';
 
             events.push({
@@ -233,7 +305,9 @@ export function calculateCTOCapitalGains(
                 currency,
                 eventDate: tx.transactionDate,
                 confidence,
-                explanation: `PMP: ${pmp.toFixed(4)} × ${sale.quantity} = ${acquisitionCost.toFixed(2)}€ cost basis. Sale proceeds: ${saleProceeds.toFixed(2)}€. Net: ${taxableAmount.toFixed(2)}€`,
+                explanation: `PMP: ${pmp.toFixed(4)} × ${sale.quantity} = ${acquisitionCost.toFixed(2)} cost basis. Sale proceeds: ${saleProceeds.toFixed(2)}. Net: ${taxableAmount.toFixed(2)}`,
+                explanationKey: 'cto',
+                explanationParams: { pmp, quantity: sale.quantity, cost: acquisitionCost, proceeds: saleProceeds, fees, net: taxableAmount },
                 legalReference: CGI_ARTICLES.ART_150_0_A,
                 missingData: missingData.length > 0 ? missingData : undefined,
             });
@@ -319,6 +393,24 @@ export function calculateCryptoGains(
     let totalAcquisitionCost = 0;
     const holdings = new Map<string, number>();
     const lastPrice = new Map<string, number>();
+    const addHolding = (symbol: string, delta: number): void => {
+        holdings.set(symbol, Math.max(0, (holdings.get(symbol) ?? 0) + delta));
+    };
+    // Coins that left the portfolio without a matching deposit (sent elsewhere, spent, given)
+    let unmatchedExit = false;
+
+    /** Value of every held asset at its last known price */
+    const valuePortfolio = (): { value: number; priceMissing: boolean } => {
+        let value = 0;
+        let priceMissing = false;
+        for (const [asset, held] of holdings) {
+            if (held <= QTY_EPSILON) continue;
+            const price = lastPrice.get(asset);
+            if (price === undefined) priceMissing = true;
+            else value += held * price;
+        }
+        return { value, priceMissing };
+    };
 
     for (const tx of cryptoTxs) {
         if (new Date(tx.transactionDate).getTime() >= yearEnd) break;
@@ -334,17 +426,32 @@ export function calculateCryptoGains(
 
         if (tx.type === 'BUY' || tx.type === 'DEPOSIT') {
             totalAcquisitionCost += gross + fees;
-            holdings.set(symbol, (holdings.get(symbol) ?? 0) + quantity);
+            addHolding(symbol, quantity);
+        } else if (tx.type === 'INCOME') {
+            // Staking, airdrop, mining: the coins join the portfolio at a zero acquisition price
+            // (their value is not a price paid), so they raise its value but not its cost.
+            addHolding(symbol, quantity);
+        } else if (tx.type === 'SWAP') {
+            // Crypto-to-crypto exchange: neutral (no cession, no acquisition price), only the
+            // composition changes. Each leg is a row; its sign says whether the coin leaves or arrives.
+            const signed = parseFloat(tx.quantity || tx.amountPrimary || '0');
+            addHolding(symbol, signed < 0 ? -quantity : quantity);
+        } else if (tx.type === 'EXPENSE') {
+            // Network or platform fee paid in the coin itself
+            addHolding(symbol, -quantity);
+        } else if (tx.type === 'WITHDRAW') {
+            // Sent out of the tracked wallets with no matching deposit: the coins leave the portfolio,
+            // with the share of the acquisition price they carried.
+            const { value } = valuePortfolio();
+            const leaving = unitPrice !== undefined ? quantity * unitPrice : 0;
+            if (value > 0 && leaving > 0) {
+                totalAcquisitionCost = Math.max(0, totalAcquisitionCost * (1 - Math.min(1, leaving / value)));
+            }
+            addHolding(symbol, -quantity);
+            unmatchedExit = true;
         } else if (isCryptoToFiatCession(tx)) {
             // Value of every held asset just before the cession, at its last known price
-            let portfolioValue = 0;
-            let priceMissing = false;
-            for (const [asset, held] of holdings) {
-                if (held <= QTY_EPSILON) continue;
-                const price = lastPrice.get(asset);
-                if (price === undefined) priceMissing = true;
-                else portfolioValue += held * price;
-            }
+            const { value: portfolioValue, priceMissing } = valuePortfolio();
 
             const cessionPrice = gross;
             const fractionOfPortfolio = portfolioValue > 0 ? Math.min(1, cessionPrice / portfolioValue) : 0;
@@ -359,7 +466,8 @@ export function calculateCryptoGains(
                     missingData.push('portfolio_valuation_approximated');
                     if (priceMissing) missingData.push('portfolio_valuation_incomplete');
                 }
-                if (lacksFxRate(currency, tx)) missingData.push('fx_rate_missing');
+                if (unmatchedExit) missingData.push('crypto_withdrawal_unmatched');
+                missingData.push(...fxFlags(tx));
 
                 events.push({
                     transactionIds: [tx.id],
@@ -376,7 +484,9 @@ export function calculateCryptoGains(
                     currency,
                     eventDate: tx.transactionDate,
                     confidence,
-                    explanation: `Art. 150 VH bis: Cession ${cessionPrice.toFixed(2)}€ − (${totalAcquisitionCost.toFixed(2)}€ × ${cessionPrice.toFixed(2)}€ / ${portfolioValue.toFixed(2)}€) = ${taxableAmount.toFixed(2)}€`,
+                    explanation: `Art. 150 VH bis: Cession ${cessionPrice.toFixed(2)} − (${totalAcquisitionCost.toFixed(2)} × ${cessionPrice.toFixed(2)} / ${portfolioValue.toFixed(2)}) = ${taxableAmount.toFixed(2)}`,
+                    explanationKey: 'crypto',
+                    explanationParams: { cession: cessionPrice, totalCost: totalAcquisitionCost, portfolioValue, fees, net: taxableAmount },
                     legalReference: CGI_ARTICLES.ART_150_VH_BIS,
                     missingData: missingData.length > 0 ? missingData : undefined,
                 });
@@ -414,7 +524,11 @@ export function calculateDividendTax(
     });
 
     for (const tx of incomeTxs) {
-        const amount = Math.abs(parseFloat(tx.amountPrimary || '0'));
+        // Income kept inside a tax wrapper (PEA, assurance-vie, PER, livret) is not taxed when received:
+        // the wrapper's own rules apply on withdrawal, if ever.
+        if (!isTaxableWrapper(tx.resolvedWrapperType)) continue;
+        // Signed: a reversed (negative) dividend lowers the year's income instead of adding to it
+        const amount = parseFloat(tx.amountPrimary || '0');
         const withholdingTax = parseFloat(tx.taxAmount || '0');
         const fees = parseFloat(tx.feeAmount || '0');
 
@@ -427,11 +541,9 @@ export function calculateDividendTax(
         else if (tx.rawType?.toLowerCase().includes('coupon')) eventType = 'coupon';
 
         const isDividend = eventType === 'dividend';
-        
-        // For PEA: dividends are not taxable (reinvested internally)
-        if (isPEAWrapper(tx.resolvedWrapperType) && isDividend) continue;
 
-        const confidence: FiscalConfidence = 'determined';
+        const missingData = fxFlags(tx);
+        const confidence: FiscalConfidence = missingData.length === 0 ? 'determined' : 'estimated';
         const symbol = tx.assetSymbol || tx.instrument?.marketIdentifier.symbol || '';
 
         events.push({
@@ -446,14 +558,150 @@ export function calculateDividendTax(
             acquisitionCost: 0,
             taxableAmount: amount, // Gross amount is taxable (PFU or barème applied later)
             fees,
-            currency: tx.originalCurrency || tx.instrument?.denominationCurrency || 'EUR',
+            currency: eventCurrency(tx),
             eventDate: tx.transactionDate,
             confidence,
             explanation: isDividend
-                ? `Dividend: ${amount.toFixed(2)}€ brut. Withholding tax paid: ${withholdingTax.toFixed(2)}€. Eligible for 40% abatement if barème chosen.`
-                : `Income: ${amount.toFixed(2)}€`,
+                ? `Dividend: ${amount.toFixed(2)} gross. Withholding tax paid: ${withholdingTax.toFixed(2)}. Eligible for 40% abatement if barème chosen.`
+                : `Income: ${amount.toFixed(2)}`,
+            explanationKey: isDividend ? 'dividend' : 'income',
+            explanationParams: { amount, withholding: withholdingTax },
             legalReference: isDividend ? `${CGI_ARTICLES.ART_200_A}` : undefined,
+            missingData: missingData.length > 0 ? missingData : undefined,
+            withholdingTax,
         });
+    }
+
+    return events;
+}
+
+// ============================================================================
+// PEA WITHDRAWALS — Art. 150-0 A II-2 and 157 5° bis CGI
+// ============================================================================
+
+const isPEACashRow = (tx: EnrichedTransaction): boolean => {
+    if (tx.instrument) return tx.instrument.type === 'cash';
+    const code = (tx.assetSymbol || '').toUpperCase();
+    return code === '' || code === (tx.account?.defaultCurrency || 'EUR').toUpperCase();
+};
+
+/**
+ * Taxable gain of each cash withdrawal from a PEA / PEA-PME during the fiscal year.
+ *
+ * Gain of a withdrawal = amount withdrawn − net deposits × amount withdrawn / plan value
+ * (art. 150-0 A II-2): the withdrawal carries a share of the deposits and a share of the gain,
+ * in proportion to the plan's value just before it. The deposits left in the plan then shrink by
+ * the share withdrawn.
+ *
+ * The plan value is the cash (deposits, trades, income) plus the securities at their last traded
+ * price: no market quote is stored at past dates, so every event is `estimated`.
+ * Before 5 years the gain bears income tax (12.8 %) and the withdrawal closes the plan; after,
+ * only social contributions are due. Both are collected by the bank, which reports the gain on the IFU.
+ */
+export function calculatePEAWithdrawals(
+    allTransactions: EnrichedTransaction[],
+    fiscalYear: string,
+    rules: FiscalYearRules
+): TaxableEvent[] {
+    const events: TaxableEvent[] = [];
+    const yearEnd = new Date(`${parseInt(fiscalYear) + 1}-01-01T00:00:00Z`).getTime();
+
+    const byAccount = new Map<string, EnrichedTransaction[]>();
+    for (const tx of allTransactions) {
+        if (!isPEAWrapper(tx.resolvedWrapperType)) continue;
+        if (new Date(tx.transactionDate).getTime() >= yearEnd) continue;
+        const list = byAccount.get(tx.accountId) ?? [];
+        list.push(tx);
+        byAccount.set(tx.accountId, list);
+    }
+
+    for (const accountTxs of byAccount.values()) {
+        const sorted = sortChronologically(accountTxs);
+        const account = sorted[0].account;
+        const openDate = account?.openedAt || sorted[0].transactionDate;
+        let netDeposits = 0;
+        let cash = 0;
+        const holdings = new Map<string, number>();
+        const lastPrice = new Map<string, number>();
+
+        for (const tx of sorted) {
+            const quantity = resolveQuantity(tx);
+            const amount = Math.abs(parseFloat(tx.amountPrimary || '0')) || 0;
+
+            if (isPEACashRow(tx)) {
+                if (isBalanceStatement(tx)) { cash = quantity; continue; }
+                if (tx.type === 'DEPOSIT' || tx.type === 'INCOME') {
+                    cash += amount;
+                    if (tx.type === 'DEPOSIT') netDeposits += amount;
+                    continue;
+                }
+                if (tx.type === 'EXPENSE') { cash -= amount; continue; }
+                if (tx.type !== 'WITHDRAW') continue;
+
+                let securities = 0;
+                for (const [key, held] of holdings) {
+                    if (held > QTY_EPSILON) securities += held * (lastPrice.get(key) ?? 0);
+                }
+                // Never below the amount withdrawn: the plan held at least that much
+                const planValue = Math.max(amount, Math.max(0, cash) + securities);
+                const depositShare = planValue > 0 ? netDeposits * amount / planValue : 0;
+                const gain = amount - depositShare;
+                netDeposits = Math.max(0, netDeposits - depositShare);
+                cash -= amount;
+
+                if (getFiscalYearFromDate(tx.transactionDate) !== fiscalYear || amount <= 0) continue;
+
+                const rule = getPEATaxRule(openDate, tx.transactionDate, fiscalYear, rules.country);
+                const ageYears = planAgeYears(openDate, tx.transactionDate);
+                const taxedGain = Math.max(0, gain);
+                const missingData = ['pea_valuation_approximated', ...fxFlags(tx)];
+                if (!account?.openedAt) missingData.push('pea_open_date_missing');
+
+                events.push({
+                    transactionIds: [tx.id],
+                    fiscalYear,
+                    eventType: 'pea_withdrawal',
+                    symbol: account?.name || tx.assetSymbol || '',
+                    instrumentName: account?.name || tx.label || '',
+                    accountId: tx.accountId,
+                    wrapperType: tx.resolvedWrapperType,
+                    grossAmount: amount,
+                    acquisitionCost: depositShare,
+                    taxableAmount: gain,
+                    fees: 0,
+                    currency: eventCurrency(tx),
+                    eventDate: tx.transactionDate,
+                    confidence: 'estimated',
+                    explanation: `PEA withdrawal: ${amount.toFixed(2)} − (${(netDeposits + depositShare).toFixed(2)} × ${amount.toFixed(2)} / ${planValue.toFixed(2)}) = ${gain.toFixed(2)}`,
+                    explanationKey: rule.closesOnWithdrawal ? 'peaBefore5' : 'peaAfter5',
+                    explanationParams: {
+                        amount, deposits: netDeposits + depositShare, planValue, net: gain, age: ageYears,
+                        incomeTaxRate: rule.incomeTaxRate * 100, socialRate: rule.socialRate * 100,
+                    },
+                    legalReference: rule.legalReference,
+                    missingData,
+                    incomeTax: taxedGain * rule.incomeTaxRate,
+                    socialContributions: taxedGain * rule.socialRate,
+                    planAgeYears: ageYears,
+                    closesPlan: rule.closesOnWithdrawal,
+                });
+                continue;
+            }
+
+            // Securities: quantities and last traded price, and the cash they move
+            const key = tx.instrumentId || tx.assetIsin || symbolOf(tx);
+            if (!key) continue;
+            const gross = resolveGrossValue(tx, quantity);
+            const fees = resolveFee(tx);
+            const price = parseFloat(tx.priceUnit || '0');
+            if (price > 0) lastPrice.set(key, price);
+            else if (quantity > 0 && gross > 0 && (tx.type === 'BUY' || tx.type === 'SELL')) lastPrice.set(key, gross / quantity);
+            holdings.set(key, Math.max(0, (holdings.get(key) ?? 0) + quantityDelta(tx)));
+            if (tx.type === 'BUY') cash -= gross + fees;
+            else if (tx.type === 'SELL') cash += gross - fees;
+            else if (tx.type === 'INCOME' && !(tx.subType && quantityDelta(tx) > 0)) cash += amount;
+            else if (tx.type === 'EXPENSE') cash -= amount;
+        }
     }
 
     return events;
@@ -464,57 +712,54 @@ export function calculateDividendTax(
 // ============================================================================
 
 /**
- * Compare PFU (flat tax 30%) vs barème progressif for a fiscal year.
+ * Compare PFU (flat tax) vs barème progressif for a fiscal year.
  * This helps the user decide whether to check box 2OP on their declaration.
- * 
- * Returns the tax amounts under each option so the user can choose.
+ *
+ * Both totals cover the same thing: the tax due because of these investment revenues (social
+ * contributions included). Under the barème that is the income tax with them minus the income tax
+ * the household's other income bears anyway. The 2OP option covers securities gains, dividends,
+ * interest and coupons together; crypto gains have their own option and stay out.
  */
 export function comparePFUvsBareme(
     events: TaxableEvent[],
     profile: FiscalProfile,
-    rules: FiscalYearRules
+    rules: FiscalYearRules,
+    /** Earlier losses still usable this year (see buildTaxSummary) */
+    priorLossCarryforward: number = 0
 ): { pfuTotal: number; baremeTotal: number; recommendation: 'PFU' | 'BAREME' | 'NEUTRAL'; confidence: FiscalConfidence } {
     const shares = profile.fiscalShares || 1;
     const otherIncome = profile.otherTaxableIncome || 0;
+    const gainsSocialRate = rules.socialContributions.totalRate;
+    const incomeSocialRate = rules.socialContributions.placementIncomeRate ?? gainsSocialRate;
 
-    // --- PFU calculation ---
-    let pfuTotal = 0;
-    for (const event of events) {
-        if (event.eventType === 'capital_gain' || event.eventType === 'capital_loss') {
-            pfuTotal += Math.max(0, event.taxableAmount) * rules.pfu.totalRate;
-        } else if (event.eventType === 'dividend' || event.eventType === 'interest') {
-            pfuTotal += event.taxableAmount * rules.pfu.totalRate;
-        }
-    }
+    // Securities: the year's gains and losses net out, then earlier losses apply; a net loss is taxed at 0
+    const yearNet = events
+        .filter(e => e.eventType === 'capital_gain' || e.eventType === 'capital_loss')
+        .reduce((sum, e) => sum + e.taxableAmount, 0);
+    const netGains = Math.max(0, yearNet - Math.max(0, priorLossCarryforward));
+    const sumOf = (types: TaxableEvent['eventType'][]): number => Math.max(0, events
+        .filter(e => types.includes(e.eventType))
+        .reduce((sum, e) => sum + e.taxableAmount, 0));
+    const dividends = sumOf(['dividend']);
+    const interest = sumOf(['interest', 'coupon']);
+    const grossRevenue = netGains + dividends + interest;
 
-    // --- Barème calculation ---
-    // Dividends get 40% abatement under barème
-    let baremeIncome = otherIncome;
-    let socialContribTotal = 0;
+    // Social contributions are the same whichever option is chosen
+    const social = netGains * gainsSocialRate + (dividends + interest) * incomeSocialRate;
 
-    for (const event of events) {
-        if (event.eventType === 'dividend' && rules.dividends.hasAbatement) {
-            baremeIncome += event.taxableAmount * (1 - rules.dividends.abatementRate);
-            socialContribTotal += event.taxableAmount * rules.socialContributions.totalRate;
-        } else if (event.eventType === 'interest') {
-            baremeIncome += event.taxableAmount;
-            socialContribTotal += event.taxableAmount * rules.socialContributions.totalRate;
-        } else if (event.eventType === 'capital_gain') {
-            baremeIncome += event.taxableAmount;
-            socialContribTotal += Math.max(0, event.taxableAmount) * rules.socialContributions.totalRate;
-        } else if (event.eventType === 'capital_loss') {
-            baremeIncome += event.taxableAmount; // Negative value
-        }
-    }
+    // --- PFU: flat income tax on every item ---
+    const pfuTotal = grossRevenue * rules.pfu.irRate + social;
 
-    const irPerShare = calculateIRPerShare(baremeIncome / shares, rules.year, rules.country);
-    const baremeIR = irPerShare * shares;
-    // Deductible CSG reduces taxable income
-    const deductibleCSG = socialContribTotal * (rules.socialContributions.deductibleCSGRate / rules.socialContributions.totalRate);
-    const baremeTotal = baremeIR + socialContribTotal - deductibleCSG;
+    // --- Barème: 40 % abatement on dividends; the deductible CSG lowers the taxable income ---
+    const dividendBase = rules.dividends.hasAbatement ? dividends * (1 - rules.dividends.abatementRate) : dividends;
+    const deductibleCSG = grossRevenue * rules.socialContributions.deductibleCSGRate;
+    const baremeBase = Math.max(0, netGains + dividendBase + interest - deductibleCSG);
+    const irWith = calculateIRPerShare((otherIncome + baremeBase) / shares, rules.year, rules.country) * shares;
+    const irWithout = calculateIRPerShare(otherIncome / shares, rules.year, rules.country) * shares;
+    const baremeTotal = (irWith - irWithout) + social;
 
     const confidence: FiscalConfidence = profile.otherTaxableIncome !== undefined ? 'estimated' : 'insufficient_data';
-    
+
     let recommendation: 'PFU' | 'BAREME' | 'NEUTRAL' = 'NEUTRAL';
     if (confidence !== 'insufficient_data') {
         const diff = pfuTotal - baremeTotal;
@@ -535,14 +780,22 @@ export function comparePFUvsBareme(
  */
 export function detectForeignAccounts(
     institutes: Institute[],
-    accounts: Account[]
+    accounts: Account[],
+    options: {
+        /** Only accounts held during this year: one opened later is not declared for it */
+        fiscalYear?: string;
+        /** Accounts with an operation in that year: a closed one still has to be declared for it */
+        accountsUsedInYear?: Set<string>;
+    } = {}
 ): ForeignAccountObligation[] {
     const obligations: ForeignAccountObligation[] = [];
 
     // Group accounts by institute
     const accountsByInstitute = new Map<string, Account[]>();
     for (const acc of accounts) {
-        if (!acc.isActive) continue;
+        // Form 3916 covers accounts opened, held, used or closed during the year
+        if (!acc.isActive && !options.accountsUsedInYear?.has(acc.id)) continue;
+        if (options.fiscalYear && acc.openedAt && acc.openedAt.slice(0, 4) > options.fiscalYear) continue;
         if (!accountsByInstitute.has(acc.instituteId)) {
             accountsByInstitute.set(acc.instituteId, []);
         }
@@ -569,6 +822,7 @@ export function detectForeignAccounts(
             accountIds: instAccounts.map(a => a.id),
             accountNames: instAccounts.map(a => a.name),
             form,
+            reasonKey: isCrypto ? 'cryptoAccount' : 'bankAccount',
             reason: isCrypto
                 ? `Compte d'actifs numériques détenu à l'étranger (${country}) — déclaration obligatoire formulaire 3916-bis`
                 : `Compte bancaire / financier détenu à l'étranger (${country}) — déclaration obligatoire formulaire 3916`,
@@ -630,7 +884,13 @@ export function assessDataCompleteness(
  */
 export function generateFormMappings(
     events: TaxableEvent[],
-    rules: FiscalYearRules
+    rules: FiscalYearRules,
+    options: {
+        /** Earlier securities losses still usable: 3VG is the gain left after them */
+        priorLossCarryforward?: number;
+        /** Crypto cessions at or under the yearly threshold are exempt: nothing to declare in 3AN/3BN */
+        cryptoExempt?: boolean;
+    } = {}
 ): FormCaseMapping[] {
     const mappings: FormCaseMapping[] = [];
 
@@ -638,10 +898,11 @@ export function generateFormMappings(
     // Pre-build O(1) Map for formCases to replace repeated linear .find() calls
     const formCaseMap = new Map(rules.formCases.map(c => [c.caseId, c]));
 
-    // --- CTO Capital Gains (3VG) ---
-    const ctoGains = events
-        .filter(e => e.eventType === 'capital_gain' && isTaxableWrapper(e.wrapperType))
+    // --- CTO: one net result (form 2074), declared as a net gain (3VG) or a net loss (3VH) ---
+    const ctoNetOfYear = events
+        .filter(e => (e.eventType === 'capital_gain' || e.eventType === 'capital_loss') && isTaxableWrapper(e.wrapperType))
         .reduce((sum, e) => sum + e.taxableAmount, 0);
+    const ctoGains = ctoNetOfYear > 0 ? Math.max(0, ctoNetOfYear - Math.max(0, options.priorLossCarryforward ?? 0)) : 0;
 
     if (ctoGains > 0) {
         const caseDef = formCaseMap.get('3VG');
@@ -658,10 +919,8 @@ export function generateFormMappings(
         }
     }
 
-    // --- CTO Capital Losses (3VH) ---
-    const ctoLosses = Math.abs(events
-        .filter(e => e.eventType === 'capital_loss' && isTaxableWrapper(e.wrapperType))
-        .reduce((sum, e) => sum + e.taxableAmount, 0));
+    // --- CTO net loss of the year (3VH) ---
+    const ctoLosses = ctoNetOfYear < 0 ? Math.abs(ctoNetOfYear) : 0;
 
     if (ctoLosses > 0) {
         const caseDef = formCaseMap.get('3VH');
@@ -697,10 +956,11 @@ export function generateFormMappings(
         }
     }
 
-    // --- Crypto Gains (3AN) ---
-    const cryptoGains = events
-        .filter(e => e.eventType === 'crypto_gain')
+    // --- Crypto: one net result (form 2086): net gain (3AN) or net loss (3BN), none when exempt ---
+    const cryptoNet = options.cryptoExempt ? 0 : events
+        .filter(e => e.eventType === 'crypto_gain' || e.eventType === 'crypto_loss')
         .reduce((sum, e) => sum + e.taxableAmount, 0);
+    const cryptoGains = cryptoNet > 0 ? cryptoNet : 0;
 
     if (cryptoGains > 0) {
         const caseDef = formCaseMap.get('3AN');
@@ -717,10 +977,8 @@ export function generateFormMappings(
         }
     }
 
-    // --- Crypto Losses (3BN) ---
-    const cryptoLosses = Math.abs(events
-        .filter(e => e.eventType === 'crypto_loss')
-        .reduce((sum, e) => sum + e.taxableAmount, 0));
+    // --- Crypto net loss (3BN) ---
+    const cryptoLosses = cryptoNet < 0 ? Math.abs(cryptoNet) : 0;
 
     if (cryptoLosses > 0) {
         const caseDef = formCaseMap.get('3BN');
@@ -755,22 +1013,26 @@ export function buildTaxSummary(
     instruments: Instrument[],
     fiscalYear: string,
     profile: FiscalProfile,
-    country: string = 'FR'
+    country: string = 'FR',
+    options: TaxSummaryOptions = {}
 ): TaxSummaryResult {
     const rules = getFiscalRulesOrThrow(fiscalYear, country);
 
-    // Enrich all transactions with account/instrument metadata
-    const enriched = enrichTransactions(allTransactions, accounts, institutes, instruments);
+    // Enrich all transactions with account/instrument metadata, amounts in EUR
+    const enriched = convertToEur(enrichTransactions(allTransactions, accounts, institutes, instruments), options.rateToEur);
 
     // --- Compute each category ---
     const ctoEvents = calculateCTOCapitalGains(enriched, fiscalYear, rules);
     const cryptoEvents = calculateCryptoGains(enriched, fiscalYear, rules);
     const incomeEvents = calculateDividendTax(enriched, fiscalYear, rules);
-    const foreignAccounts = detectForeignAccounts(institutes, accounts);
+    const peaEvents = calculatePEAWithdrawals(enriched, fiscalYear, rules);
+    const accountsUsedInYear = new Set(
+        enriched.filter(tx => getFiscalYearFromDate(tx.transactionDate) === fiscalYear).map(tx => tx.accountId)
+    );
+    const foreignAccounts = detectForeignAccounts(institutes, accounts, { fiscalYear, accountsUsedInYear });
 
     // All events combined
-    const allEvents = [...ctoEvents, ...cryptoEvents, ...incomeEvents];
-    const formMappings = generateFormMappings(allEvents, rules);
+    const allEvents = [...ctoEvents, ...cryptoEvents, ...incomeEvents, ...peaEvents];
     const dataQuality = assessDataCompleteness(allEvents);
 
     // --- CTO aggregation ---
@@ -778,9 +1040,15 @@ export function buildTaxSummary(
     const ctoLosses = Math.abs(ctoEvents.filter(e => e.taxableAmount < 0).reduce((s, e) => s + e.taxableAmount, 0));
     const ctoNet = ctoGains - ctoLosses;
 
-    // Loss carryforward handling
+    // Loss carryforward handling: a loss can only be used in the following `maxYears` years
+    const oldestUsableYear = parseInt(fiscalYear, 10) - rules.lossCarryforward.maxYears;
     const priorLossCarryforward = profile.lossCarryforwards
-        ? Object.values(profile.lossCarryforwards).reduce((sum, v) => sum + v, 0)
+        ? Object.entries(profile.lossCarryforwards)
+            .filter(([year]) => {
+                const lossYear = parseInt(year, 10);
+                return Number.isFinite(lossYear) && lossYear >= oldestUsableYear && lossYear < parseInt(fiscalYear, 10);
+            })
+            .reduce((sum, [, v]) => sum + v, 0)
         : 0;
     const lossesApplied = ctoNet > 0 ? Math.min(ctoNet, priorLossCarryforward) : 0;
     const remainingCarryforward = ctoNet < 0
@@ -789,6 +1057,11 @@ export function buildTaxSummary(
 
     // --- Crypto aggregation ---
     const cryptoTotalCessions = cryptoEvents.reduce((s, e) => s + e.grossAmount, 0);
+    const cryptoExceedsThreshold = cryptoTotalCessions > rules.crypto.exemptionThreshold;
+    const formMappings = generateFormMappings(allEvents, rules, {
+        priorLossCarryforward,
+        cryptoExempt: !cryptoExceedsThreshold,
+    });
     const cryptoGains = cryptoEvents.filter(e => e.taxableAmount > 0).reduce((s, e) => s + e.taxableAmount, 0);
     const cryptoLosses = Math.abs(cryptoEvents.filter(e => e.taxableAmount < 0).reduce((s, e) => s + e.taxableAmount, 0));
     const cryptoNet = cryptoGains - cryptoLosses;
@@ -813,7 +1086,7 @@ export function buildTaxSummary(
             totalDividends,
             totalInterest,
             totalCoupons,
-            withholdingTaxPaid: 0, // TODO: Sum from transaction taxAmount fields
+            withholdingTaxPaid: incomeEvents.reduce((s, e) => s + Math.abs(e.withholdingTax ?? 0), 0),
             events: incomeEvents,
         },
         crypto: {
@@ -821,14 +1094,15 @@ export function buildTaxSummary(
             totalGains: cryptoGains,
             totalLosses: cryptoLosses,
             netResult: cryptoNet,
-            exceedsThreshold: cryptoTotalCessions > rules.crypto.exemptionThreshold,
+            exceedsThreshold: cryptoExceedsThreshold,
             thresholdAmount: rules.crypto.exemptionThreshold,
             events: cryptoEvents,
         },
         pea: {
-            withdrawals: [],
-            taxableGain: 0,
-            socialContributions: 0,
+            withdrawals: peaEvents,
+            taxableGain: peaEvents.reduce((s, e) => s + Math.max(0, e.taxableAmount), 0),
+            incomeTax: peaEvents.reduce((s, e) => s + (e.incomeTax ?? 0), 0),
+            socialContributions: peaEvents.reduce((s, e) => s + (e.socialContributions ?? 0), 0),
         },
         foreignAccounts,
         formMappings,

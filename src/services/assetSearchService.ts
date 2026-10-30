@@ -223,48 +223,13 @@ interface YahooChartAPIResponse {
   };
 }
 
-/**
- * Génère des séries de données d'historique de secours garanties sans collision (fallback offline)
- */
-function generateFallbackHistory(symbol: string, pointsCount: number): number[] {
-  let hash1 = 0;
-  let hash2 = 0;
-  for (let i = 0; i < symbol.length; i++) {
-    hash1 = (hash1 << 5) - hash1 + symbol.charCodeAt(i);
-    hash2 = (hash2 << 3) ^ symbol.charCodeAt(i);
-  }
-  const seed1 = Math.abs(hash1 % 1000) + 1;
-  const seed2 = Math.abs(hash2 % 1000) + 1;
-
-  const freq1 = 0.15 + (seed1 % 17) * 0.03;
-  const freq2 = 0.35 + (seed2 % 13) * 0.04;
-  const phase1 = (seed1 % 11) * 0.5;
-  const phase2 = (seed2 % 7) * 0.7;
-  const amplitude = 3.0 + (seed1 % 8) * 1.2;
-  const drift = ((seed2 % 15) - 7) * 0.02;
-
-  const returns: number[] = [];
-  const startVal = Math.sin(phase1) * amplitude + Math.cos(phase2) * (amplitude * 0.5);
-
-  for (let i = 0; i < pointsCount; i++) {
-    if (i === 0) {
-      returns.push(0);
-    } else {
-      const val = Math.sin(i * freq1 + phase1) * amplitude + 
-                  Math.cos(i * freq2 + phase2) * (amplitude * 0.5) + 
-                  (i * drift);
-      returns.push(Math.round((val - startVal) * 100) / 100);
-    }
-  }
-  return returns;
-}
 
 /**
  * Interroge les données de prix historiques réelles depuis Yahoo Finance v8 Chart API
  */
 export async function fetchAssetHistory(
   symbol: string,
-  timeRange: '1M' | '3M' | '1Y' | 'ALL',
+  timeRange: '1M' | '3M' | '6M' | '1Y' | '3Y' | 'ALL',
   pointsCount: number = 12
 ): Promise<number[]> {
   let rangeParam = '1y';
@@ -276,9 +241,15 @@ export async function fetchAssetHistory(
   } else if (timeRange === '3M') {
     rangeParam = '3mo';
     intervalParam = '1d';
+  } else if (timeRange === '6M') {
+    rangeParam = '6mo';
+    intervalParam = '1d';
   } else if (timeRange === '1Y') {
     rangeParam = '1y';
     intervalParam = '1d';
+  } else if (timeRange === '3Y') {
+    rangeParam = '3y';
+    intervalParam = '1wk';
   } else if (timeRange === 'ALL') {
     rangeParam = '5y';
     intervalParam = '1mo';
@@ -317,9 +288,9 @@ export async function fetchAssetHistory(
       }
     }
   } catch {
-    // API Chart error handled silently with non-colliding fallback
+    // Market data unreachable: the caller draws no curve rather than an invented one
   }
 
-  return generateFallbackHistory(symbol, pointsCount);
+  return [];
 }
 

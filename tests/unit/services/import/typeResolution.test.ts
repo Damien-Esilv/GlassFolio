@@ -193,3 +193,13 @@ describe('resolveTransactionType — cash lines', () => {
     expect(resolve('Frais de tenue de compte', null, '-2', { isCashAsset: true }).type).toBe('EXPENSE');
   });
 });
+
+describe('credited income (TGLA-188)', () => {
+  it('reads a credited dividend or interest as income, and debited interest as a withdrawal', () => {
+    expect(normalizeTransactionType('Dividende crédité')).toBe('INCOME');
+    expect(normalizeTransactionType('Intérêts crédités')).toBe('INCOME');
+    expect(normalizeTransactionType('Interest credit')).toBe('INCOME');
+    expect(normalizeTransactionType('Intérêts débiteurs')).toBe('WITHDRAW');
+    expect(normalizeTransactionType('Virement crédité')).toBe('DEPOSIT');
+  });
+});
