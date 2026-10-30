@@ -110,16 +110,30 @@
             "noAccounts": "No accounts found. Create one to continue.",
             "createNewAccount": "Create new account",
             "accountNamePlaceholder": "Account name...",
-            "wrapperType": "Tax wrapper",
-            "wrappers": {
-                "CTO": "Standard Account (CTO)",
-                "PEA": "Equity Savings Plan (PEA)",
-                "OTHER": "Other / Crypto / Standard"
+            "accountKindLabel": "Account type",
+            "accountKindHint": "Sets what the account holds by default and its tax regime. Any account can also hold cash.",
+            "currencyLabel": "Currency",
+            "accountKinds": {
+                "CTO": "Securities account (CTO)",
+                "PEA": "Equity savings plan (PEA)",
+                "CRYPTO": "Crypto",
+                "CASH": "Cash / savings",
+                "OTHER": "Other (priced by hand)"
             },
-            "accountTypes": {
-                "checking": "Cash / Savings",
-                "investment": "Stocks / ETFs (PEA, CTO)",
-                "cryptoSpot": "Crypto"
+            "countries": {
+                "FR": "France (FR)",
+                "DE": "Germany (DE)",
+                "NL": "Netherlands (NL)",
+                "IE": "Ireland (IE)",
+                "US": "United States (US)",
+                "GB": "United Kingdom (GB)",
+                "LU": "Luxembourg (LU)",
+                "CH": "Switzerland (CH)",
+                "MT": "Malta (MT)",
+                "CY": "Cyprus (CY)",
+                "SC": "Seychelles (SC)",
+                "SG": "Singapore (SG)",
+                "OTHER": "Other foreign country"
             }
         },
         "mode": {

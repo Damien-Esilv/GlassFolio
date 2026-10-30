@@ -110,16 +110,30 @@
             "noAccounts": "Aucun compte trouvé. Créez-en un pour continuer.",
             "createNewAccount": "Créer un nouveau compte",
             "accountNamePlaceholder": "Nom du compte...",
-            "wrapperType": "Enveloppe fiscale",
-            "wrappers": {
-                "CTO": "Compte-Titres (CTO)",
-                "PEA": "Plan d'Épargne en Actions (PEA)",
-                "OTHER": "Autre / Crypto / Standard"
+            "accountKindLabel": "Type de compte",
+            "accountKindHint": "Définit ce que le compte contient par défaut et son régime fiscal. Tout compte peut aussi contenir du cash.",
+            "currencyLabel": "Devise",
+            "accountKinds": {
+                "CTO": "Compte-titres (CTO)",
+                "PEA": "Plan d’épargne en actions (PEA)",
+                "CRYPTO": "Crypto",
+                "CASH": "Cash / épargne",
+                "OTHER": "Autre (prix saisi à la main)"
             },
-            "accountTypes": {
-                "checking": "Liquidités / Cash",
-                "investment": "Actions / ETF (PEA, CTO)",
-                "cryptoSpot": "Crypto"
+            "countries": {
+                "FR": "France (FR)",
+                "DE": "Allemagne (DE)",
+                "NL": "Pays-Bas (NL)",
+                "IE": "Irlande (IE)",
+                "US": "États-Unis (US)",
+                "GB": "Royaume-Uni (GB)",
+                "LU": "Luxembourg (LU)",
+                "CH": "Suisse (CH)",
+                "MT": "Malte (MT)",
+                "CY": "Chypre (CY)",
+                "SC": "Seychelles (SC)",
+                "SG": "Singapour (SG)",
+                "OTHER": "Autre pays étranger"
             }
         },
         "mode": {
