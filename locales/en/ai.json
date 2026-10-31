@@ -169,6 +169,12 @@
         "e": "You can go back to Supervised at any time. Make a backup first.",
         "confirm": "I understand, turn it on",
         "cancel": "Cancel"
+      },
+      "stillAsks": {
+        "label": "What still asks for confirmation in autonomous mode?",
+        "title": "Still asks for your approval",
+        "intro": "Even in autonomous mode, these requests wait for you. The list is read from the tools of the app, so it updates by itself when a tool is added.",
+        "none": "None: every change runs at once."
       }
     },
     "mcp": {
@@ -340,15 +346,15 @@
     "autonomousOn": "Autonomous mode is on: AI clients change your data without asking you. You can switch it back in the section above.",
     "startTitle": "Start the bridge on this computer",
     "values": {
-      "title": "The two things to paste",
-      "hint": "Your AI leaves two placeholders in its configuration. Replace them with these two values.",
+      "title": "Address and token",
+      "hint": "Your AI client and GlassFolio share these two values. Paste here the ones your AI gives you.",
       "address": "MCP address",
       "copyAddress": "Copy the address",
       "copyToken": "Copy the token"
     },
     "setup": {
       "title": "Let your AI set itself up",
-      "body": "Copy this prompt and send it to your AI client (Antigravity, Cursor, Claude Code, Codex...). It sets everything up itself, then leaves you two steps: paste the token and paste the address where it tells you. The prompt contains no secret.",
+      "body": "Copy this prompt and send it to your AI client (Antigravity, Cursor, Claude Code, Codex...). It starts the bridge if needed, adds the server to its own configuration, then gives you the token and the address to paste here. The prompt contains no secret, and it is always in English. The token will appear in your chat with the AI.",
       "copy": "Copy the prompt",
       "copied": "Prompt copied"
     },
@@ -399,6 +405,10 @@
           "desc": "Removes the /mcp address from this server. Set the variable in the environment of the server (with Docker, in its environment file)."
         }
       }
+    },
+    "tokenWhy": {
+      "label": "Why is the token needed?",
+      "body": "The token is the shared secret between your AI client, the bridge and this page. Without it, any program or web page that can reach the bridge on your computer could connect to it, or pose as your GlassFolio tab and receive your data. It is there for your security: only what you set up with this token can use the bridge, and you can replace it at any time."
     }
   }
 }

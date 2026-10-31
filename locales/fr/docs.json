@@ -66,7 +66,7 @@
   },
   "setup": {
     "title": "Laissez votre IA se configurer",
-    "body": "Le plus rapide : copiez ce prompt dans votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il trouve lui-même son fichier de configuration et écrit la connexion, puis ne vous laisse que deux étapes : coller le jeton et l’adresse là où il vous l’indique. Le prompt ne contient aucun secret. Réglages, IA & MCP vous donne le même prompt et les deux valeurs à copier.",
+    "body": "Le plus rapide : copiez ce prompt dans votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il démarre le pont si besoin et ajoute le serveur à sa propre configuration, puis vous donne le jeton et l’adresse à coller dans GlassFolio (Réglages, IA & MCP). Le prompt ne contient aucun secret et il est toujours en anglais. Le jeton apparaîtra dans votre discussion avec l’IA ; vous pouvez le remplacer à tout moment.",
     "label": "Prompt de configuration"
   }
 }

@@ -1,39 +1,36 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { MCP_PLACEHOLDER_ADDRESS, MCP_PLACEHOLDER_TOKEN, MCP_SETUP_PROMPT } from '../../../src/config/mcpSetupPrompt';
+import { MCP_SETUP_PROMPT } from '../../../src/config/mcpSetupPrompt';
 import { MCP_COMMANDS, commandsFor } from '../../../src/config/mcpCommands';
 
 const aiTexts = (lang: string): any => JSON.parse(readFileSync(join(process.cwd(), `locales/${lang}/ai.json`), 'utf-8')).mcpBridge;
 
 describe('the universal setup prompt', () => {
-  it('leaves exactly two things to the user: a token and an address, as placeholders', () => {
-    [MCP_PLACEHOLDER_ADDRESS, MCP_PLACEHOLDER_TOKEN].forEach((placeholder) => {
-      expect(MCP_SETUP_PROMPT.split(placeholder).length - 1, placeholder).toBeGreaterThanOrEqual(3);
-    });
-    expect(MCP_SETUP_PROMPT).toContain('Step 1');
-    expect(MCP_SETUP_PROMPT).toContain('Step 2');
-    expect(MCP_SETUP_PROMPT).not.toContain('Step 3');
+  it('is one prompt in English, with the three steps: start the bridge, add the server, hand back two values', () => {
+    expect(MCP_SETUP_PROMPT).toMatch(/^Configure and connect the GlassFolio MCP server to your AI client\./);
+    expect(MCP_SETUP_PROMPT).toMatch(/^1\. Start the MCP bridge/m);
+    expect(MCP_SETUP_PROMPT).toMatch(/^2\. Add the MCP server "glassfolio"/m);
+    expect(MCP_SETUP_PROMPT).toMatch(/^3\. Give me only the token and the address to paste into GlassFolio \(Settings > AI & MCP\)/m);
+    expect(MCP_SETUP_PROMPT).not.toMatch(/^4\./m);
   });
 
-  it('holds no secret and no real address, and keeps them out of the conversation', () => {
+  it('gives both ways to start the bridge, and the command that prints the token', () => {
+    expect(MCP_SETUP_PROMPT).toContain('npx -y glassfolio-mcp serve');
+    expect(MCP_SETUP_PROMPT).toContain('node mcp-server/index.mjs serve');
+    expect(MCP_SETUP_PROMPT).toContain('`token`');
+  });
+
+  it('holds no secret and no real address, and no accented letter: it stays English whatever the interface language', () => {
     expect(MCP_SETUP_PROMPT).not.toMatch(/https?:\/\//);
     expect(MCP_SETUP_PROMPT).not.toMatch(/\b[0-9a-f]{32,}\b/);
-    expect(MCP_SETUP_PROMPT).toMatch(/Never ask me for the token or the address/);
-    expect(MCP_SETUP_PROMPT).toMatch(/do not read any token file/);
+    expect(MCP_SETUP_PROMPT).not.toMatch(/[À-ÿ]/);
   });
 
-  it('is one prompt for every client: it asks the AI to find its own file and format', () => {
-    ['Antigravity', 'Cursor', 'Claude Code', 'Codex'].forEach((name) => expect(MCP_SETUP_PROMPT).toContain(name));
-    expect(MCP_SETUP_PROMPT).toMatch(/where and in what format it stores its MCP server configuration/);
-    expect(MCP_SETUP_PROMPT).toContain('X-GlassFolio-Token');
-    expect(MCP_SETUP_PROMPT).toContain('GLASSFOLIO_MCP_URL');
-    expect(MCP_SETUP_PROMPT).toContain('GLASSFOLIO_MCP_TOKEN');
-    expect(MCP_SETUP_PROMPT).toMatch(/Keep the servers that are already there/);
-  });
-
-  it('stays short enough to paste anywhere', () => {
-    expect(MCP_SETUP_PROMPT.length).toBeLessThan(4000);
+  it('is not tied to a client: it names none and lets the AI use its own configuration', () => {
+    ['Antigravity', 'Cursor', 'Claude', 'Codex'].forEach((name) => expect(MCP_SETUP_PROMPT).not.toContain(name));
+    expect(MCP_SETUP_PROMPT).toContain('your local MCP configuration');
+    expect(MCP_SETUP_PROMPT.length).toBeLessThan(700);
   });
 });
 

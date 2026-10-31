@@ -169,6 +169,12 @@
         "e": "Vous pouvez revenir à Supervisé à tout moment. Faites d’abord une sauvegarde.",
         "confirm": "J’ai compris, l’activer",
         "cancel": "Annuler"
+      },
+      "stillAsks": {
+        "label": "Qu’est-ce qui demande encore une confirmation en mode autonome ?",
+        "title": "Demande encore votre approbation",
+        "intro": "Même en mode autonome, ces demandes vous attendent. La liste est lue depuis les outils de l’application : elle se met à jour toute seule quand un outil est ajouté.",
+        "none": "Aucune : toute modification s’exécute tout de suite."
       }
     },
     "mcp": {
@@ -340,15 +346,15 @@
     "autonomousOn": "Le mode autonome est activé : les clients IA modifient vos données sans vous demander. Vous pouvez le changer dans la section ci-dessus.",
     "startTitle": "Démarrer le pont sur cet ordinateur",
     "values": {
-      "title": "Les deux choses à coller",
-      "hint": "Votre IA laisse deux marqueurs dans sa configuration. Remplacez-les par ces deux valeurs.",
+      "title": "Adresse et jeton",
+      "hint": "Votre client IA et GlassFolio partagent ces deux valeurs. Collez ici celles que votre IA vous donne.",
       "address": "Adresse MCP",
       "copyAddress": "Copier l’adresse",
       "copyToken": "Copier le jeton"
     },
     "setup": {
       "title": "Laissez votre IA se configurer",
-      "body": "Copiez ce prompt et envoyez-le à votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il configure tout lui-même, puis ne vous laisse que deux étapes : coller le jeton et coller l’adresse là où il vous l’indique. Le prompt ne contient aucun secret.",
+      "body": "Copiez ce prompt et envoyez-le à votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il démarre le pont si besoin, ajoute le serveur à sa propre configuration, puis vous donne le jeton et l’adresse à coller ici. Le prompt ne contient aucun secret, et il est toujours en anglais. Le jeton apparaîtra dans votre discussion avec l’IA.",
       "copy": "Copier le prompt",
       "copied": "Prompt copié"
     },
@@ -399,6 +405,10 @@
           "desc": "Retire l’adresse /mcp de ce serveur. Définissez la variable dans l’environnement du serveur (avec Docker, dans son fichier d’environnement)."
         }
       }
+    },
+    "tokenWhy": {
+      "label": "Pourquoi le jeton est-il nécessaire ?",
+      "body": "Le jeton est le secret partagé entre votre client IA, le pont et cette page. Sans lui, n’importe quel programme ou page web qui peut joindre le pont sur votre ordinateur pourrait s’y connecter, ou se faire passer pour votre onglet GlassFolio et recevoir vos données. Il est là pour votre sécurité : seul ce que vous avez configuré avec ce jeton peut utiliser le pont, et vous pouvez le remplacer à tout moment."
     }
   }
 }
