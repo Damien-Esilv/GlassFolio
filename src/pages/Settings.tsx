@@ -349,7 +349,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= PROFILE TAB ================= */}
                     {activeTab === 'profile' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:profile.publicProfile')}</h2>
 
@@ -432,7 +432,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= PREFERENCES TAB ================= */}
                     {activeTab === 'preferences' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             {/* App Settings */}
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:preferences.applicationSettings')}</h2>
@@ -638,7 +638,7 @@ const Settings: React.FC = () => {
                                         </div>
 
                                         {prefData.notifications && (
-                                            <div className="space-y-5 animate-in fade-in slide-in-from-top-1">
+                                            <div className="space-y-5">
                                                 {/* Live Toasts Toggle */}
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -1012,8 +1012,8 @@ const Settings: React.FC = () => {
 
                     {/* Delete Account GDPR Confirmation Modal (Portal) */}
                     {showDeleteAccountModal && typeof document !== 'undefined' && createPortal(
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                            <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5 animate-scale-up">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                            <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1120,7 +1120,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= FISCAL TAB ================= */}
                     {activeTab === 'fiscal' && (
-                        <div className="animate-fade-in">
+                        <div>
                             <div className={cardStyle}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
@@ -1128,7 +1128,7 @@ const Settings: React.FC = () => {
                                         <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
                                     </div>
                                     {successMsg && (
-                                        <span className="text-success text-xs font-medium animate-fade-in flex items-center gap-1">
+                                        <span className="text-success text-xs font-medium flex items-center gap-1">
                                             <Check size={14} />
                                             {successMsg}
                                         </span>
@@ -1277,7 +1277,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= AI & MCP TAB ================= */}
                     {activeTab === 'ai' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             <AISettingsTab />
                         </div>
                     )}

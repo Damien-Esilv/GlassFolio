@@ -37,7 +37,7 @@ const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean; 
     const isBaremeBetter = data.recommendation === 'BAREME';
 
     return (
-        <div className="bg-card border border-subtle rounded-2xl p-6 space-y-5 animate-fade-in-up">
+        <div className="rounded-2xl bg-card border border-subtle p-6 space-y-5 shadow-md">
             <div>
                 <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.pfuVsBareme.title')}</h3>
                 <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle', rates)}</p>
@@ -109,10 +109,7 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
     };
 
     return (
-        <div 
-            className="bg-card border border-subtle rounded-xl p-5 flex gap-4 hover:border-strong transition-all animate-fade-in-up"
-            style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
-        >
+        <div className="group rounded-xl bg-card border border-subtle p-5 flex gap-4 hover:border-strong transition-all shadow-sm hover:shadow-md">
             <div className={`p-2 rounded-lg shrink-0 h-fit ${categoryColors[suggestion.category]}`}>
                 {categoryIcons[suggestion.category]}
             </div>
@@ -142,7 +139,7 @@ const EnvelopeTable: React.FC = () => {
     const cols = ['gains', 'dividends', 'flexibility', 'ceiling'] as const;
 
     return (
-        <div className="bg-card border border-subtle rounded-2xl p-6">
+        <div className="rounded-2xl bg-card border border-subtle p-6 shadow-md">
             <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.envelope.title')}</h3>
             <p className="text-xs text-secondary mb-5">{t('tax:optimization.envelope.subtitle')}</p>
             <div className="overflow-x-auto">
@@ -186,14 +183,21 @@ const TaxOptimization: React.FC = () => {
     const profileKey = JSON.stringify(profile);
     const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
 
-    const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(null);
-    const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const cachedOpt = taxService.getCachedTaxOptimization(fiscalYear, profile);
+    const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(cachedOpt?.pfuComparison ?? null);
+    const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(cachedOpt?.suggestions ?? []);
+    const [isLoading, setIsLoading] = useState<boolean>(!cachedOpt);
 
-    // No "already fetched" guard: under StrictMode the first run is cancelled and the second must
-    // still load (the guard left the skeleton on forever). taxService dedupes identical requests.
     useEffect(() => {
         let isMounted = true;
+        const cached = taxService.getCachedTaxOptimization(fiscalYear, profile);
+        if (cached) {
+            setPFUComparison(cached.pfuComparison);
+            setSuggestions(cached.suggestions);
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
 
         (async () => {
@@ -203,6 +207,7 @@ const TaxOptimization: React.FC = () => {
                     taxService.comparePFUvsBareme(fiscalYear, profile, undefined, summary),
                     taxService.getOptimizationSuggestions(fiscalYear, profile, undefined, summary),
                 ]);
+                taxService.setCachedTaxOptimization(fiscalYear, profile, undefined, pfuResult, sugResult);
                 if (isMounted) {
                     setPFUComparison(pfuResult);
                     setSuggestions(sugResult);
@@ -222,7 +227,7 @@ const TaxOptimization: React.FC = () => {
     }, [fiscalYear, profileKey]);
 
     return (
-        <div className="space-y-6 w-full animate-fade-in">
+        <div className="space-y-6 w-full">
             {/* Header */}
             <div>
                 <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
@@ -233,14 +238,17 @@ const TaxOptimization: React.FC = () => {
             </div>
 
             {/* Disclaimer */}
-            <div className="rounded-xl bg-warning/10 border border-warning/30 p-4 flex gap-3">
+            <div className="animate-slide-in-left rounded-xl bg-warning/10 border border-warning/30 p-4 flex gap-3">
                 <AlertTriangle size={18} className="text-warning shrink-0 mt-0.5" />
                 <p className="text-xs text-secondary leading-relaxed">{t('tax:hub.disclaimer')}</p>
             </div>
 
             {/* Incomplete Fiscal Profile Warning Banner */}
             {!hasFiscalProfile && (
-                <div className="rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div
+                    className="animate-slide-in-left rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    style={{ animationDelay: `${STAGGER_DELAY_MS}ms` }}
+                >
                     <div className="flex-1">
                         <h3 className="text-sm font-semibold text-primary mb-1">{t('tax:hub.profileRequired')}</h3>
                         <p className="text-xs text-secondary">{t('tax:hub.profileRequiredDesc')}</p>
@@ -255,10 +263,18 @@ const TaxOptimization: React.FC = () => {
             )}
 
             {/* PFU vs Barème */}
-            <PFUCard data={pfuComparison} isLoading={isLoading} fiscalYear={fiscalYear} />
+            <div
+                className="animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 1 : 2) * STAGGER_DELAY_MS}ms` }}
+            >
+                <PFUCard data={pfuComparison} isLoading={isLoading} fiscalYear={fiscalYear} />
+            </div>
 
             {/* Personalized suggestions */}
-            <div className="space-y-4">
+            <div
+                className="space-y-4 animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 2 : 3) * STAGGER_DELAY_MS}ms` }}
+            >
                 <h2 className="text-lg font-bold text-primary">{t('tax:optimization.suggestions.title')}</h2>
                 {isLoading ? (
                     <div className="space-y-3 animate-pulse">
@@ -271,13 +287,24 @@ const TaxOptimization: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {suggestions.map((s, idx) => <SuggestionCard key={s.id} suggestion={s} index={idx} />)}
+                        {suggestions.map((s, idx) => (
+                            <div
+                                key={s.id}
+                                className="animate-slide-in-left"
+                                style={{ animationDelay: `${((hasFiscalProfile ? 2 : 3) + idx + 1) * STAGGER_DELAY_MS}ms` }}
+                            >
+                                <SuggestionCard suggestion={s} index={idx} />
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
             {/* Tax-Loss Harvesting info */}
-            <div className="bg-card border border-subtle rounded-2xl p-6 space-y-3">
+            <div
+                className="animate-slide-in-left bg-card border border-subtle rounded-2xl p-6 space-y-3 shadow-md"
+                style={{ animationDelay: `${(hasFiscalProfile ? 3 : 4) * STAGGER_DELAY_MS}ms` }}
+            >
                 <h3 className="text-lg font-bold text-primary">{t('tax:optimization.harvesting.title')}</h3>
                 <p className="text-xs text-secondary">{t('tax:optimization.harvesting.subtitle')}</p>
                 <div className="rounded-xl bg-brand/5 border border-brand/20 p-3 flex gap-2">
@@ -287,7 +314,12 @@ const TaxOptimization: React.FC = () => {
             </div>
 
             {/* Envelope comparison */}
-            <EnvelopeTable />
+            <div
+                className="animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 4 : 5) * STAGGER_DELAY_MS}ms` }}
+            >
+                <EnvelopeTable />
+            </div>
         </div>
     );
 };

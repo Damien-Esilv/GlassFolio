@@ -18,11 +18,14 @@ import {
   getLastPriceFetchTime,
   getManualPriceHistory,
   saveManualPrice,
+  getCachedRealPriceHistory,
+  HISTORICAL_PRICE_CACHE_KEY,
 } from '../../../src/services/priceService';
 import {
   MANUAL_PRICE_HISTORY_KEY,
   LEGACY_MANUAL_PRICE_HISTORY_KEY,
 } from '../../../src/services/storage/storageKeys';
+import { appStorage } from '../../../src/services/storage/appStorage';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const makePosition = (overrides: Partial<Position> = {}): Position => ({
@@ -279,5 +282,44 @@ describe('priceService manual price encryption & migration (Finding #8)', () => 
     clearPriceCache();
     expect(localStorage.getItem(MANUAL_PRICE_HISTORY_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY)).toBeNull();
+  });
+});
+
+describe('priceService.getCachedRealPriceHistory', () => {
+  const pos = makePosition({ symbol: 'BTC', currency: 'EUR', type: 'Crypto' });
+
+  beforeEach(() => {
+    appStorage.removeItem(HISTORICAL_PRICE_CACHE_KEY);
+  });
+
+  it('returns null on cache miss', () => {
+    expect(getCachedRealPriceHistory(pos, '1Y')).toBeNull();
+  });
+
+  it('returns cached historical points when cache is fresh', () => {
+    const cacheData = {
+      fetchedAt: new Date().toISOString(),
+      data: {
+        'BTC-USD_1Y': [
+          { date: '2026-01-01', price: 60000 },
+          { date: '2026-01-02', price: 61000 },
+        ],
+      },
+      currencies: { 'BTC-USD_1Y': 'EUR' },
+      estimated: {},
+    };
+    appStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(cacheData));
+
+    const result = getCachedRealPriceHistory(pos, '1Y');
+    expect(result).not.toBeNull();
+    expect(result).toHaveLength(2);
+    expect(result![0].price).toBe(60000);
+  });
+
+  it('returns null for Cash or Other positions', () => {
+    const cashPos = makePosition({ type: 'Cash' });
+    const otherPos = makePosition({ type: 'Other' });
+    expect(getCachedRealPriceHistory(cashPos, '1Y')).toBeNull();
+    expect(getCachedRealPriceHistory(otherPos, '1Y')).toBeNull();
   });
 });

@@ -148,7 +148,7 @@ export const SecuritySettingsTab: React.FC = () => {
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border space-y-4";
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6">
             {/* 1. Encrypted Vault (E2EE) Section */}
             <div className={cardStyle}>
                 <div className="flex flex-col gap-4">
@@ -330,7 +330,7 @@ export const SecuritySettingsTab: React.FC = () => {
 
             {/* Change Master Password Modal */}
             {showChangePassword && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
                     <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
                         <button
                             type="button"

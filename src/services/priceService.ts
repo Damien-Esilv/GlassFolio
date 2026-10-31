@@ -471,7 +471,7 @@ export interface HistoricalPricePoint {
     price: number;
 }
 
-const HISTORICAL_PRICE_CACHE_KEY = 'gf_historical_price_cache';
+export const HISTORICAL_PRICE_CACHE_KEY = 'gf_historical_price_cache';
 
 interface HistoricalPriceCache {
     data: Record<string, HistoricalPricePoint[]>;
@@ -487,6 +487,44 @@ async function inPositionCurrency(points: HistoricalPricePoint[], quoteCurrency:
     const rate = await quoteToPositionRate(quoteCurrency, pos);
     if (rate === 1) return points;
     return points.map(point => ({ timestamp: point.timestamp, price: Math.round(point.price * rate * 100) / 100 }));
+}
+
+/**
+ * Synchronous lookup in the historical prices cache.
+ * Returns null if cache miss or expired, without triggering any network requests.
+ */
+export function getCachedRealPriceHistory(
+    pos: Position | null | undefined,
+    timeRange: '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL' | string = '1Y',
+    options: { allowEstimate?: boolean } = {}
+): HistoricalPricePoint[] | null {
+    if (!pos || pos.type === 'Cash' || pos.type === 'Other') return null;
+    const allowEstimate = options.allowEstimate ?? true;
+    const ticker = toYahooTicker(pos) || pos.symbol.trim().toUpperCase();
+    const cacheKey = `${ticker}_${timeRange}`;
+
+    try {
+        const raw = appStorage.getItem(HISTORICAL_PRICE_CACHE_KEY);
+        if (raw) {
+            const parsed: HistoricalPriceCache = JSON.parse(raw);
+            const age = Date.now() - new Date(parsed.fetchedAt).getTime();
+            if (age < CACHE_TTL_MS && parsed.data[cacheKey]?.length > 0 && (allowEstimate || !parsed.estimated?.[cacheKey])) {
+                const points = parsed.data[cacheKey];
+                const quoteCurrency = parsed.currencies?.[cacheKey] ?? quoteCurrencyOf(ticker, undefined);
+                const posCurrency = (pos.currency || 'EUR').trim().toUpperCase();
+                if (!quoteCurrency || quoteCurrency.toUpperCase() === posCurrency) {
+                    return points;
+                }
+                return points.map(pt => ({
+                    timestamp: pt.timestamp,
+                    price: Math.round(currencyService.convertAmount(pt.price, quoteCurrency, posCurrency) * 100) / 100,
+                }));
+            }
+        }
+    } catch {
+        // Storage fallback
+    }
+    return null;
 }
 
 /**
