@@ -5,11 +5,9 @@ import {
   Key,
   Shield,
   Check,
-  Copy,
   Eye,
   EyeOff,
   RefreshCw,
-  Cpu,
   Brain,
   Cloud,
   Info,
@@ -18,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { aiSettingsService } from '../../services/ai/aiSettingsService';
 import { AIProviderType, AIExecutionMode, AISettings } from '../../services/ai/types';
 import Button from '../Button';
+import { McpBridgeSettings } from '../settings/McpBridgeSettings';
 
 type AICategory = 'ollama' | 'cloud' | 'mock';
 
@@ -43,7 +42,6 @@ export const AISettingsTab: React.FC = () => {
     ok: boolean;
     error?: string;
   } | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const updateAISettings = (newSettings: AISettings) => {
@@ -183,25 +181,6 @@ export const AISettingsTab: React.FC = () => {
     } finally {
       setIsTestingCloud(false);
     }
-  };
-
-  const mcpConfigJson = JSON.stringify(
-    {
-      mcpServers: {
-        glassfolio: {
-          command: 'node',
-          args: [`${window.location.origin ? '/absolute/path/to/GlassFolio' : '.'}/mcp-server/index.mjs`],
-        },
-      },
-    },
-    null,
-    2
-  );
-
-  const handleCopyMcpConfig = () => {
-    navigator.clipboard.writeText(mcpConfigJson);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2500);
   };
 
   const categoryCards: Array<{
@@ -592,38 +571,8 @@ export const AISettingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 6. External MCP Server Section */}
-      <div className="p-6 rounded-2xl bg-card border border-subtle space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Cpu size={18} className="text-primary" />
-            <h3 className="text-sm font-semibold text-primary">{t('ai:settings.mcp.title')}</h3>
-          </div>
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
-            {t('ai:settings.mcp.statusReady')}
-          </span>
-        </div>
-
-        <p className="text-xs text-secondary">{t('ai:settings.mcp.description')}</p>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-secondary">{t('ai:settings.mcp.configLabel')}</span>
-            <button
-              type="button"
-              onClick={handleCopyMcpConfig}
-              className="flex items-center gap-1.5 text-xs text-secondary hover:text-primary transition-colors"
-            >
-              {isCopied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-              <span>{isCopied ? t('ai:settings.mcp.copied') : t('ai:settings.mcp.copyConfig')}</span>
-            </button>
-          </div>
-
-          <pre className="p-3 rounded-xl bg-subtle border border-subtle text-[11px] font-mono text-primary overflow-x-auto">
-            {mcpConfigJson}
-          </pre>
-        </div>
-      </div>
+      {/* 6. MCP bridge: AI clients use the tools of this tab */}
+      <McpBridgeSettings />
     </div>
   );
 };

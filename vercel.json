@@ -47,7 +47,7 @@
       "destination": "/app-shell.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/).*)",
       "has": [
         {
           "type": "header",

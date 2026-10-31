@@ -12,8 +12,8 @@
       "title": "Documentation, contact et revue de référencement",
       "highlights": {
         "seoReview": "Une revue complète de la façon dont GlassFolio apparaît dans les moteurs de recherche et pour les assistants IA : titres et descriptions plus clairs, un plan du site par langue, et des pages lisibles sans JavaScript.",
-        "mcpDocs": "Une page de documentation du serveur MCP : comment le vérifier, comment connecter Claude Desktop ou Cursor, et la liste de ses outils.",
-        "mcpSampleData": "Le serveur MCP et les textes qui l'entourent indiquent désormais clairement qu'il répond avec des données d'exemple tant qu'il ne peut pas lire votre propre portefeuille.",
+        "mcpBridge": "Connectez Claude Code, Codex, Cursor ou Antigravity à GlassFolio : ils appellent ses outils sur vos propres données via votre onglet ouvert et déverrouillé, et chaque modification attend votre approbation.",
+        "mcpDocs": "Une page de documentation du serveur MCP : comment il fonctionne, comment connecter votre client IA, et la liste de ses 35 outils.",
         "contactPage": "Une page de contact qui indique où écrire pour vos données, un bogue ou un problème de sécurité."
       }
     },

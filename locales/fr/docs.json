@@ -1,75 +1,65 @@
 {
   "title": "Documentation du serveur MCP",
-  "intro": "GlassFolio inclut un petit serveur Model Context Protocol (MCP). Des clients MCP comme Claude Desktop ou Cursor peuvent le démarrer, lister les outils de GlassFolio et les appeler. Cette page explique ce qu’il fait aujourd’hui, comment le connecter et à quoi sert chaque outil.",
-  "sampleData": {
-    "title": "Il répond avec des données d’exemple",
-    "body": "Le serveur renvoie un portefeuille fictif intégré. Il n’est pas connecté à vos propres données. Votre coffre est chiffré dans votre navigateur et sa clé n’en sort jamais : un programme séparé n’a aucun moyen de le lire. L’assistant de l’application, lui, travaille sur vos vraies données. Utilisez ce serveur pour essayer les outils et construire une intégration : lire votre propre portefeuille via MCP n’est pas encore possible."
+  "intro": "GlassFolio laisse des clients IA comme Claude Code, Codex, Cursor ou Antigravity utiliser ses outils sur vos propres données. Cette page explique comment cela fonctionne, comment connecter un client, et ce que font les outils.",
+  "howItWorks": {
+    "title": "Comment ça fonctionne",
+    "body": "Votre coffre est chiffré dans votre navigateur, et seul votre onglet GlassFolio ouvert détient la clé : aucun programme ne peut le lire de l’extérieur. Le serveur MCP est donc un pont qui tourne sur votre propre ordinateur. Votre client IA lui envoie un appel d’outil, le pont le transmet à votre onglet, l’onglet exécute l’outil sur vos données et renvoie le résultat. Rien ne passe par les serveurs de GlassFolio, et le pont ne conserve rien."
   },
-  "about": {
-    "title": "Ce que c’est",
-    "body": "Un programme local qui parle MCP sur l’entrée et la sortie standard (stdio). Il demande Node.js 22 et une copie du dépôt, ne fait aucune requête réseau et n’envoie rien nulle part. Il liste {{tools}} outils et {{resources}} ressources en lecture seule."
+  "needs": {
+    "title": "Ce qu’il faut",
+    "a": "Node.js 22 et une copie du dépôt : le pont est mcp-server/index.mjs et n’a aucune dépendance.",
+    "b": "GlassFolio ouvert dans un onglet du navigateur, connecté, avec votre coffre déverrouillé.",
+    "c": "« Autoriser les clients IA » activé dans Réglages, IA & MCP.",
+    "d": "Un client IA qui prend en charge MCP en stdio ou en Streamable HTTP.",
+    "checkLabel": "Vérifier que le pont démarre et liste ses outils"
   },
-  "verify": {
-    "title": "Vérifier qu’il fonctionne",
-    "body": "Clonez le dépôt, puis demandez au serveur ce qu’il propose. Vous ne le lancez pas à la main : votre client MCP le démarre avec la commande de sa configuration.",
-    "label": "Lister les outils et les ressources"
+  "modes": {
+    "title": "En local ou en ligne",
+    "local": {
+      "title": "GlassFolio sur votre machine (Docker ou npm run dev)",
+      "body": "Le serveur de l’application contient déjà le pont, à son adresse /mcp : il n’y a rien d’autre à démarrer. Réglages, IA & MCP affiche l’adresse et le jeton à donner à votre client."
+    },
+    "online": {
+      "title": "GlassFolio en ligne (app.glassfolio.dev)",
+      "body": "Démarrez le pont sur votre ordinateur. Votre onglet s’y connecte alors en 127.0.0.1, comme il le fait pour un modèle Ollama local, donc rien ne quitte votre machine. Collez son jeton dans Réglages, IA & MCP. Certains navigateurs demandent votre autorisation avant qu’une page web atteigne une adresse locale, et certains peuvent la bloquer : si c’est le cas du vôtre, utilisez le mode local.",
+      "label": "Démarrer le pont et afficher son jeton"
+    }
   },
   "connect": {
-    "title": "Connecter un client",
-    "body": "Ajoutez le serveur à la configuration de votre client MCP, avec le chemin absolu de votre copie. Pour Claude Desktop, le fichier est claude_desktop_config.json ; pour Cursor, c’est .cursor/mcp.json. Redémarrez ensuite le client.",
-    "label": "Configuration du client MCP"
+    "title": "Connecter votre client IA",
+    "body": "Donnez à votre client l’adresse du pont et son jeton (en-tête X-GlassFolio-Token), ou laissez-le démarrer la commande lui-même. Réglages, IA & MCP prépare ces extraits avec vos propres valeurs.",
+    "claudeCode": "Claude Code",
+    "stdio": "Clients qui démarrent une commande (Claude Desktop et autres)",
+    "codex": "Codex (~/.codex/config.toml)",
+    "note": "Remplacez le chemin par le dossier de votre copie du dépôt. Les autres clients, comme Cursor ou Antigravity, prennent les mêmes informations dans leurs propres réglages MCP : l’adresse et le jeton, ou la commande."
+  },
+  "approvals": {
+    "title": "Les modifications demandent votre approbation",
+    "body": "Un outil qui modifie vos données, comme enregistrer une transaction ou créer un objectif, ne s’exécute pas quand le client le demande. GlassFolio affiche une carte dans votre onglet ouvert, et la modification n’est faite que si vous l’approuvez là. Sans réponse de votre part pendant environ une minute et demie, rien n’est modifié. En mode lecture seule, ces outils sont bloqués."
+  },
+  "privacy": {
+    "title": "Ce qui quitte votre ordinateur",
+    "body": "Les résultats des outils vont à votre client IA, puis au modèle qu’il utilise, comme lorsque vous collez des chiffres dans une conversation. Les clés d’API, les clés de récupération et les secrets d’authentification sont retirés avant qu’un résultat ne quitte GlassFolio. Si rien ne doit quitter votre machine, connectez un client qui utilise un modèle local."
+  },
+  "limits": {
+    "title": "Limites",
+    "a": "L’onglet doit rester ouvert et déverrouillé. Si vous verrouillez le coffre ou fermez l’onglet, le client est invité à vous demander d’ouvrir GlassFolio de nouveau.",
+    "b": "Un seul onglet sert les clients à la fois : en ouvrir un second prend le relais.",
+    "c": "Le pont n’écoute que sur votre propre ordinateur et n’accepte que le jeton que vous partagez."
+  },
+  "clients": {
+    "title": "Clients compatibles",
+    "body": "Tout client qui prend en charge MCP en stdio ou en Streamable HTTP peut l’utiliser. {{tested}}"
   },
   "tools": {
     "title": "Outils",
-    "intro": "Un outil qui modifie quelque chose indique qu’il demande une confirmation. Dans ce serveur, il ne modifie que les données d’exemple en mémoire, perdues à l’arrêt du serveur.",
-    "groups": {
-      "portfolio": "Portefeuille et imports",
-      "tax": "Fiscalité",
-      "progress": "Objectifs et progression",
-      "alerts": "Alertes",
-      "security": "Sécurité et vie privée"
-    },
-    "items": {
-      "get_portfolio_summary": "Patrimoine net, prix de revient et plus ou moins-value latente.",
-      "get_asset_allocation": "Répartition par classe d’actifs, avec valeurs et pourcentages.",
-      "list_positions": "Positions ouvertes avec quantité, coût moyen, cours et plus-value latente.",
-      "list_transactions": "Transactions récentes, filtrables par symbole ou par type.",
-      "get_cost_basis_method": "Méthode de prix de revient de chaque compte : coût moyen pondéré (PRU) ou FIFO.",
-      "preview_csv_import": "Détecte le séparateur, la ligne d’en-tête et le nombre de lignes d’un export CSV. Rien n’est enregistré.",
-      "get_tax_summary": "Plus-values et estimation de la flat tax (PFU) face au barème progressif pour une année fiscale.",
-      "list_goals": "Objectifs financiers avec leur cible, leur montant actuel et leur avancement.",
-      "get_gamification_status": "Niveau, XP, rang d’investisseur, série et succès débloqués.",
-      "list_quests": "Missions actives avec leur avancement, leur cible et leur récompense en XP.",
-      "list_notifications": "Notifications et alertes, filtrables par catégorie, état de lecture et limite.",
-      "manage_notifications": "Marque comme lues, supprime ou efface des notifications. Demande une confirmation.",
-      "list_alert_rules": "Règles d’alerte personnalisées avec leur historique de déclenchement et leur état.",
-      "create_alert_rule": "Crée une règle d’alerte sur un cours, un gain ou un ratio de liquidités. Demande une confirmation.",
-      "get_security_status": "État du coffre, de la double authentification, des passkeys et événements de sécurité récents.",
-      "get_storage_status": "Où les données sont conservées en mode local et si les changements récents sont enregistrés.",
-      "list_auth_methods": "Les méthodes de connexion et de double authentification configurées.",
-      "list_vault_secrets": "Fournisseurs enregistrés dans le coffre de secrets chiffré, valeurs masquées.",
-      "lock_vault": "Verrouille le coffre et efface les données déchiffrées de la mémoire. Demande une confirmation.",
-      "rotate_encryption_key": "Lance la rotation de la clé de chiffrement des données via une invite dans l’application.",
-      "get_email_verification_status": "Indique si l’adresse e-mail du compte est vérifiée.",
-      "resend_verification_email": "Envoie un nouvel e-mail de vérification. Demande une confirmation.",
-      "get_privacy_status": "Version des documents légaux, contact vie privée, état du consentement et où exercer vos droits RGPD.",
-      "export_gdpr_archive": "Lance l’export RGPD d’accès et de portabilité dans l’application. Demande une confirmation."
-    }
-  },
-  "resources": {
-    "title": "Ressources",
-    "intro": "Données en lecture seule qu’un client MCP peut joindre à une conversation.",
-    "items": {
-      "summary": "Synthèse du patrimoine net et de la répartition des actifs.",
-      "positions": "Positions ouvertes avec prix de revient et plus-value latente.",
-      "transactions": "Les 20 dernières transactions.",
-      "gamification": "Niveau, XP, rang et nombre de badges débloqués.",
-      "notifications": "Notifications et alertes de l’application, avec le nombre de non lues."
-    }
+    "intro": "Les {{count}} outils que propose le pont, tels que votre client les voit (les descriptions sont en anglais). Ceux marqués « Demande votre approbation » modifient vos données et l’attendent.",
+    "readOnly": "Lecture seule",
+    "needsApproval": "Demande votre approbation"
   },
   "more": {
     "title": "Aller plus loin",
-    "body": "L’assistant de l’application appelle le même genre d’outils sur vos vraies données : voir Réglages, puis IA et MCP. Pour faire tourner toute l’application sur votre machine, lisez le guide d’auto-hébergement.",
+    "body": "L’assistant de l’application utilise les mêmes outils. Pour faire tourner toute l’application sur votre machine, lisez le guide d’auto-hébergement.",
     "selfHost": "Guide d’auto-hébergement",
     "contact": "Poser une question"
   }

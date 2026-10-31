@@ -12,8 +12,8 @@
       "title": "Documentation, contact and a search review",
       "highlights": {
         "seoReview": "A full review of how GlassFolio appears in search engines and to AI assistants: clearer titles and descriptions, a sitemap for each language, and pages that read well without JavaScript.",
-        "mcpDocs": "A documentation page for the MCP server: how to check it, how to connect Claude Desktop or Cursor, and the list of its tools.",
-        "mcpSampleData": "The MCP server and the texts around it now say plainly that it answers with sample data until it can reach your own portfolio.",
+        "mcpBridge": "Connect Claude Code, Codex, Cursor or Antigravity to GlassFolio: they call its tools on your own data through your open, unlocked tab, and every change waits for your approval.",
+        "mcpDocs": "A documentation page for the MCP server: how it works, how to connect your AI client, and the list of its 35 tools.",
         "contactPage": "A contact page that tells you where to write for your data, a bug or a security concern."
       }
     },

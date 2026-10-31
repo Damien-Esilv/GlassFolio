@@ -41,7 +41,7 @@
   },
   "docs": {
     "title": "Documentation du serveur MCP | GlassFolio",
-    "description": "Vérifier le serveur MCP de GlassFolio, le connecter à Claude Desktop ou Cursor, et outils proposés. Il répond pour l’instant avec des données d’exemple."
+    "description": "Connecter Claude Code, Codex, Cursor ou Antigravity à GlassFolio via un pont sur votre ordinateur, et la liste de ses outils."
   },
   "contact": {
     "title": "Contacter GlassFolio : vie privée, bogues et sécurité",

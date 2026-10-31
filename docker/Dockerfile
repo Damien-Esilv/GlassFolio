@@ -16,6 +16,7 @@ COPY index.html vite.config.ts tsconfig.json tailwind.config.ts postcss.config.j
 COPY public ./public
 COPY locales ./locales
 COPY server ./server
+COPY mcp-server ./mcp-server
 COPY src ./src
 
 ENV VITE_DEPLOYMENT_MODE=local \
@@ -41,6 +42,7 @@ RUN mkdir -p /data && chown node:node /data
 
 COPY --from=builder /app/dist ./dist
 COPY server ./server
+COPY mcp-server ./mcp-server
 
 USER node
 VOLUME ["/data"]

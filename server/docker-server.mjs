@@ -8,6 +8,7 @@
  *     source of truth for the encrypted vault records, so browser cache/browser changes never lose data.
  *  3. Exposes health check endpoint at `/health` and `/api/health`.
  *  4. Proxies allow-listed Yahoo Finance endpoints at `/yf/*` (no CORS from the browser otherwise).
+ *  5. Exposes the MCP bridge at `/mcp` (server/mcpBridgeSetup.mjs): AI clients call the tools of the open tab.
  */
 
 import http from 'node:http';
@@ -18,6 +19,7 @@ import { createLocalVaultHandler, createLocalVaultStore, isLocalVaultPath } from
 import { createAccessControl } from './accessControl.mjs';
 import { buildSecurityHeaders } from './securityHeaders.mjs';
 import { handleYahooProxy, isYahooProxyPath } from './yahooProxy.mjs';
+import { createLocalMcpBridge } from './mcpBridgeSetup.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +67,7 @@ const SECURITY_HEADERS = buildSecurityHeaders('local', { extraConnectSrc: EXTRA_
 
 // GLASSFOLIO_DEMO=1: the app opens on the demo account instead of offering it on every visit
 const DEMO = process.env.GLASSFOLIO_DEMO === '1';
+const mcpBridge = createLocalMcpBridge({ dataDir: DATA_DIR, headers: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS });
 const handleLocalVault = createLocalVaultHandler(vaultStore, { securityHeaders: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS, demo: DEMO });
 
 /** Hashed build output (Vite `assets/`): its name changes with its content, so it can be cached for good. */
@@ -106,6 +109,12 @@ async function handleRequest(req, res) {
   }
 
   if (!(await access.authorize(req, res, SECURITY_HEADERS))) return;
+
+  // 2a. MCP bridge: AI clients reach the open GlassFolio tab here (its own token, on top of the access control)
+  if (mcpBridge?.isBridgePath(pathname)) {
+    await mcpBridge.handle(req, res, parsedUrl);
+    return;
+  }
 
   // 2. Market data proxy (same-origin /yf/*)
   if (isYahooProxyPath(pathname)) {

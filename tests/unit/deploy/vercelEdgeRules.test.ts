@@ -15,7 +15,9 @@ const sourceToRegExp = (source: string): RegExp => new RegExp(`^${source}$`);
 
 describe('vercel.json edge rules', () => {
   it('leaves the www and apex redirect to the Vercel domain settings, where a second rule would loop', () => {
-    expect(config.redirects.some((entry) => entry.has?.some((match) => match.value.includes('glassfolio.dev')))).toBe(false);
+    // A redirect to an absolute address would fight the domain settings; the language redirects stay on the same host
+    expect(config.redirects.some((entry) => /^https?:/.test(entry.destination))).toBe(false);
+    expect(config.redirects.some((entry) => entry.source === '/:path*')).toBe(false);
   });
 
   it('sends noindex on the app and test hosts and the internal files, never on public URLs', () => {

@@ -1,12 +1,13 @@
 {
   "name": "glassfolio-mcp",
-  "version": "0.1.0",
-  "description": "GlassFolio's MCP server (stdio). Lists the app's tools for Claude Desktop, Cursor and other MCP clients, and answers with sample data, not with your portfolio.",
+  "version": "0.2.0",
+  "description": "GlassFolio's MCP server for Claude Code, Codex, Cursor, Antigravity and other MCP clients. It relays tool calls to your open GlassFolio tab, so the tools run on your own data and nothing is stored here.",
   "keywords": [
     "mcp",
     "model-context-protocol",
     "glassfolio",
-    "claude-desktop",
+    "claude-code",
+    "codex",
     "cursor"
   ],
   "homepage": "https://glassfolio.dev/en/docs",
@@ -26,6 +27,8 @@
   },
   "files": [
     "index.mjs",
+    "bridge.mjs",
+    "tools.json",
     "README.md"
   ],
   "engines": {
