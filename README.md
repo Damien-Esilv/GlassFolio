@@ -64,7 +64,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 - In-app assistant with streaming, visible reasoning blocks and approval cards for sensitive actions.
 - Local models through Ollama (no data leaves your machine), or OpenAI, Anthropic, OpenRouter and Groq with keys stored in your encrypted vault.
 - Guardrails redact secrets (keys, recovery codes, TOTP seeds) before anything reaches a model.
-- A standalone [MCP server](mcp-server/index.mjs) (`npm run mcp`, stdio) for Claude Desktop, Cursor and other MCP clients.
+- A standalone [MCP server](mcp-server/index.mjs) (`npm run mcp`, stdio) that lists GlassFolio's tools for Claude Desktop, Cursor and other MCP clients. It answers with sample data and is not connected to your portfolio yet.
 
 ### Security and privacy
 - Passwords checked against NIST SP 800-63B guidance, TOTP two-factor authentication with backup codes, WebAuthn passkeys, and an emergency recovery key.

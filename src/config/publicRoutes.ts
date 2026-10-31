@@ -6,7 +6,7 @@ export const SITE_ORIGIN = 'https://glassfolio.dev';
 
 export type PublicSeoKey =
   | 'home' | 'selfHost' | 'about' | 'roadmap' | 'changelog'
-  | 'legal' | 'privacy' | 'terms' | 'cookies' | 'accessibility';
+  | 'docs' | 'legal' | 'privacy' | 'terms' | 'cookies' | 'accessibility' | 'contact';
 
 export interface PublicRoute {
   path: string;
@@ -22,6 +22,7 @@ export interface PublicRoute {
 export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/', file: 'index', seoKey: 'home', softwareSchema: true, datedByChangelog: true },
   { path: '/self-host', file: 'self-host', seoKey: 'selfHost', softwareSchema: true, datedByChangelog: false },
+  { path: '/docs', file: 'docs', seoKey: 'docs', softwareSchema: false, datedByChangelog: false },
   { path: '/about', file: 'about', seoKey: 'about', softwareSchema: false, datedByChangelog: false },
   { path: '/roadmap', file: 'roadmap', seoKey: 'roadmap', softwareSchema: false, datedByChangelog: true },
   { path: '/changelog', file: 'changelog', seoKey: 'changelog', softwareSchema: false, datedByChangelog: true },
@@ -30,6 +31,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/terms', file: 'terms', seoKey: 'terms', softwareSchema: false, datedByChangelog: false },
   { path: '/cookies', file: 'cookies', seoKey: 'cookies', softwareSchema: false, datedByChangelog: false },
   { path: '/accessibility', file: 'accessibility', seoKey: 'accessibility', softwareSchema: false, datedByChangelog: false },
+  { path: '/contact', file: 'contact', seoKey: 'contact', softwareSchema: false, datedByChangelog: false },
 ];
 
 /** Every public language lives under its own prefix. Adding one starts here, then locales and vercel.json. */

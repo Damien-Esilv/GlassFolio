@@ -147,7 +147,7 @@ export default [
 
   // ── Node.js scripts ────────────────────────────────────────────────────────
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}', 'server/**/*.{js,mjs,cjs}'],
+    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}', 'server/**/*.{js,mjs,cjs}', 'api/**/*.{js,mjs,cjs}'],
     languageOptions: {
       globals: {
         console: 'readonly',

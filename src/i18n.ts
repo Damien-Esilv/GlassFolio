@@ -24,6 +24,8 @@ import roadmapEN from '../locales/en/roadmap.json';
 import changelogEN from '../locales/en/changelog.json';
 import notificationsEN from '../locales/en/notifications.json';
 import seoEN from '../locales/en/seo.json';
+import docsEN from '../locales/en/docs.json';
+import contactEN from '../locales/en/contact.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -46,6 +48,8 @@ import roadmapFR from '../locales/fr/roadmap.json';
 import changelogFR from '../locales/fr/changelog.json';
 import notificationsFR from '../locales/fr/notifications.json';
 import seoFR from '../locales/fr/seo.json';
+import docsFR from '../locales/fr/docs.json';
+import contactFR from '../locales/fr/contact.json';
 
 const resources = {
     en: {
@@ -70,6 +74,8 @@ const resources = {
         changelog: changelogEN,
         notifications: notificationsEN,
         seo: seoEN,
+        docs: docsEN,
+        contact: contactEN,
     },
     fr: {
         common: commonFR,
@@ -93,6 +99,8 @@ const resources = {
         changelog: changelogFR,
         notifications: notificationsFR,
         seo: seoFR,
+        docs: docsFR,
+        contact: contactFR,
     },
 };
 

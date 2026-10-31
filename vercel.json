@@ -27,7 +27,7 @@
       "destination": "/_p/:lang/index.html"
     },
     {
-      "source": "/:lang(en|fr)/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:lang(en|fr)/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/_p/:lang/:page.html"
     },
     {
@@ -35,7 +35,7 @@
       "destination": "/_p/en/index.html"
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/_p/en/:page.html"
     },
     {
@@ -45,6 +45,17 @@
     {
       "source": "/auth/(.*)",
       "destination": "/app-shell.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": ".*text/markdown.*"
+        }
+      ],
+      "destination": "/api/not-found"
     }
   ],
   "redirects": [
@@ -54,7 +65,7 @@
       "statusCode": 301
     },
     {
-      "source": "/welcome/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/welcome/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/:page",
       "statusCode": 301
     },
@@ -150,7 +161,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -166,7 +177,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -182,7 +193,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -198,7 +209,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -300,7 +311,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -316,7 +327,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -332,7 +343,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -348,7 +359,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",

@@ -39,6 +39,14 @@
     "title": "Accessibility Statement | GlassFolio",
     "description": "GlassFolio's accessibility commitment, current status and how to report a problem."
   },
+  "docs": {
+    "title": "MCP Server Documentation | GlassFolio",
+    "description": "How to check GlassFolio’s MCP server, connect it to Claude Desktop or Cursor, and which tools it lists. It answers with sample data for now."
+  },
+  "contact": {
+    "title": "Contact GlassFolio: Privacy, Bugs and Security",
+    "description": "Where to write for your privacy rights, a bug report, a feature request or a security concern about GlassFolio."
+  },
   "notFound": {
     "title": "Page Not Found | GlassFolio",
     "description": "This page doesn't exist on GlassFolio."

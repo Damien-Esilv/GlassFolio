@@ -21,6 +21,19 @@ interface VercelConfig { buildCommand: string; rewrites: Rewrite[]; redirects: R
 const read = (file: string): string => readFileSync(join(process.cwd(), file), 'utf-8');
 const config = JSON.parse(read('vercel.json')) as VercelConfig;
 const compile = (source: string): RegExp => new RegExp(`^${source.replace(/:(page|lang)\(/g, '(')}$`);
+/** The first rewrite that applies, in file order (static files are served before any rewrite). */
+const rewriteFor = (host: string, url: string, accept?: string): string | undefined => {
+  const { pathname } = new URL(url, 'https://x');
+  for (const rule of config.rewrites) {
+    if (!compile(rule.source).test(pathname)) continue;
+    const applies = (rule.has ?? []).every((has) =>
+      has.type === 'host' ? has.value === host
+      : has.type === 'header' ? accept !== undefined && new RegExp(`^(?:${has.value})$`).test(accept)
+      : false);
+    if (applies) return rule.destination;
+  }
+  return undefined;
+};
 const SHOWCASE_HOSTS = ['glassfolio.dev', 'dev-showcase.glassfolio.dev'];
 const APP_HOSTS = ['app.glassfolio.dev', 'dev-app.glassfolio.dev'];
 
@@ -141,6 +154,23 @@ describe('vercel.json serves both Vercel projects', () => {
     PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
       expect(destinationFor(route.path), route.path).toBe(`/_p/${DEFAULT_PUBLIC_LANGUAGE}/:page.html`);
     });
+  });
+
+  it('routes unknown paths to the Markdown 404 only for clients that ask for Markdown', () => {
+    const markdown = 'text/markdown, text/html;q=0.9';
+    expect(rewriteFor('glassfolio.dev', '/some-path-that-does-not-exist', markdown)).toBe('/api/not-found');
+    expect(rewriteFor('glassfolio.dev', '/some-path-that-does-not-exist', 'text/html')).toBeUndefined();
+    expect(rewriteFor('glassfolio.dev', '/some-path-that-does-not-exist')).toBeUndefined();
+    // Known pages keep their own file, whatever the client asks for
+    PUBLIC_LANGUAGES.forEach((language) => {
+      PUBLIC_ROUTES.forEach((route) => {
+        expect(rewriteFor('glassfolio.dev', localizedPath(route.path, language), markdown), route.path).toMatch(/^\/_p\//);
+      });
+    });
+    // The app hosts never reach it
+    APP_HOSTS.forEach((host) => expect(rewriteFor(host, '/whatever', markdown)).toBe('/app-shell.html'));
+    const last = config.rewrites[config.rewrites.length - 1];
+    expect(last.destination).toBe('/api/not-found');
   });
 
   it('routes every app page to the shell on the other hosts', () => {

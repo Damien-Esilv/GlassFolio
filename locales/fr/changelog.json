@@ -8,6 +8,15 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-2": {
+      "title": "Documentation, contact et revue de référencement",
+      "highlights": {
+        "seoReview": "Une revue complète de la façon dont GlassFolio apparaît dans les moteurs de recherche et pour les assistants IA : titres et descriptions plus clairs, un plan du site par langue, et des pages lisibles sans JavaScript.",
+        "mcpDocs": "Une page de documentation du serveur MCP : comment le vérifier, comment connecter Claude Desktop ou Cursor, et la liste de ses outils.",
+        "mcpSampleData": "Le serveur MCP et les textes qui l'entourent indiquent désormais clairement qu'il répond avec des données d'exemple tant qu'il ne peut pas lire votre propre portefeuille.",
+        "contactPage": "Une page de contact qui indique où écrire pour vos données, un bogue ou un problème de sécurité."
+      }
+    },
     "v1-1": {
       "title": "Un site public plus clair et plus rapide",
       "highlights": {

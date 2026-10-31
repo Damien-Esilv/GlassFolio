@@ -7,6 +7,7 @@
  */
 
 import readline from 'readline';
+import { readFileSync } from 'node:fs';
 
 // Standard MCP tools definition
 const TOOLS = [
@@ -658,6 +659,42 @@ async function handleResourceRead(uri) {
   throw new Error(`Resource not found: ${uri}`);
 }
 
+const SERVER_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
+
+/** Told to the MCP client at initialization, so the assistant says so to the user. */
+const SAMPLE_DATA_NOTICE =
+  'This server answers with built-in sample data (a fictional portfolio). It is not connected to the ' +
+  "user's GlassFolio vault, which is encrypted in the browser. Present any figure as an example, not as the user's own.";
+
+const HELP = `glassfolio-mcp ${SERVER_VERSION}: GlassFolio's MCP server (stdio).
+
+It lists ${TOOLS.length} tools and ${RESOURCES.length} resources and answers with sample data, not with your portfolio.
+Your MCP client starts it: add { "command": "node", "args": ["<path>/index.mjs"] } to its configuration.
+
+Options:
+  --list       print the tool names and resource URIs as JSON, then exit
+  --version    print the version, then exit
+  --help       print this help, then exit
+
+Documentation: https://glassfolio.dev/en/docs`;
+
+const cliArgs = process.argv.slice(2);
+if (cliArgs.includes('--version') || cliArgs.includes('-v')) {
+  console.log(SERVER_VERSION);
+  process.exit(0);
+}
+if (cliArgs.includes('--list')) {
+  console.log(JSON.stringify({ tools: TOOLS.map((tool) => tool.name), resources: RESOURCES.map((resource) => resource.uri) }, null, 2));
+  process.exit(0);
+}
+if (cliArgs.includes('--help') || cliArgs.includes('-h')) {
+  console.log(HELP);
+  process.exit(0);
+}
+
+// stderr is the log channel of a stdio server: stdout carries the protocol only
+process.stderr.write(`glassfolio-mcp ${SERVER_VERSION}: answering with sample data, not with your portfolio.\n`);
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -688,8 +725,9 @@ rl.on('line', async (line) => {
         },
         serverInfo: {
           name: 'glassfolio-mcp-server',
-          version: '1.0.0'
-        }
+          version: SERVER_VERSION
+        },
+        instructions: SAMPLE_DATA_NOTICE
       });
       return;
     }
