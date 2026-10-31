@@ -95,7 +95,7 @@
         "tagline": "Auto-hébergé avec Docker",
         "points": {
           "p1": "Vos données restent sur votre machine",
-          "p2": "Code open source, contrôle total"
+          "p2": "Code source-available, contrôle total"
         },
         "cta": "L'installer en local"
       },
@@ -295,7 +295,7 @@
       "tagline": "Docker sur votre ordinateur ou serveur",
       "points": {
         "p1": "Contrôle total : vos données ne quittent jamais votre disque",
-        "p2": "Code open source que vous pouvez auditer",
+        "p2": "Code source-available que vous pouvez auditer",
         "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
       },
       "ctaGithub": "Voir le code sur GitHub",
@@ -372,7 +372,7 @@
         "body": "Exportez depuis un mode et importez dans l'autre à tout moment."
       },
       "source": {
-        "title": "Un seul code ouvert",
+        "title": "Un seul code source-available",
         "body": "Les deux modes exécutent le même code source, public sur GitHub."
       }
     },

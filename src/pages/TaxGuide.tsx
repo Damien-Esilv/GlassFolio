@@ -358,6 +358,8 @@ const DynamicCalendarSection: React.FC = () => {
 const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topicId, onBack }) => {
     const { t, i18n } = useTranslation();
     const rules = getFiscalRules(DEFAULT_FISCAL_YEAR, DEFAULT_TAX_COUNTRY);
+    const formatRate = (rate: number | undefined): string =>
+        rate === undefined ? '' : (rate * 100).toLocaleString(i18n.language, { maximumFractionDigits: 1 });
 
     // Render topic-specific content
     const renderContent = () => {
@@ -369,10 +371,11 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                         <div className="space-y-3">
                             <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.keyRules')}</h3>
                             <ul className="space-y-2 text-sm text-secondary">
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule1')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule1', { rate: formatRate(rules?.pfu.totalRate), ir: formatRate(rules?.pfu.irRate), social: formatRate(rules?.pfu.socialRate) })}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule2')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule3')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule4')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rateExceptions')}</li>
                             </ul>
                         </div>
                         {rules && (
@@ -451,7 +454,7 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                             <ul className="space-y-2 text-sm text-secondary">
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.threshold', { amount: rules?.crypto.exemptionThreshold ?? 305 })}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule1Prefix')} <strong className="text-success">{t('tax:guide.topicContent.crypto.rule1Highlight')}</strong> {t('tax:guide.topicContent.crypto.rule1Suffix')}</li>
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule2')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule2', { rate: formatRate(rules?.crypto.pfuRate) })}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule3')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.crypto.rule4')}</li>
                             </ul>

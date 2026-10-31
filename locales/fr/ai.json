@@ -288,7 +288,7 @@
       "netTaxable": "Plus-value nette imposable",
       "estimatedTax": "Estimation d'impôt (PFU)",
       "regime": "Régime recommandé",
-      "defaultRegime": "PFU (Flat-tax 30%)",
+      "defaultRegime": "PFU (flat tax)",
       "savings": "Économie potentielle : {{amount}} €"
     },
     "goals": {

@@ -170,7 +170,7 @@
         "pfuVsBareme": {
             "title": "PFU vs Barème (Option 2OP)",
             "subtitle": "Compare the flat tax ({{total}}%) with progressive income tax",
-            "pfuLabel": "PFU (Flat Tax 30%)",
+            "pfuLabel": "PFU (Flat Tax {{total}}%)",
             "baremeLabel": "Barème Progressif",
             "pfuAmount": "Tax under PFU",
             "baremeAmount": "Tax under Barème",
@@ -202,14 +202,14 @@
             "ceiling": "Deposit Ceiling",
             "cto": {
                 "name": "CTO (Ordinary)",
-                "gains": "PFU 30% or Barème",
-                "dividends": "PFU 30% or Barème",
+                "gains": "PFU {{pfu}}% or Barème",
+                "dividends": "PFU {{dividendPfu}}% or Barème",
                 "flexibility": "Full — no restrictions",
                 "ceiling": "None"
             },
             "pea": {
                 "name": "PEA",
-                "gains": "0% IR after 5 years (17.2% PS only)",
+                "gains": "0% IR after 5 years ({{peaSocial}}% PS only)",
                 "dividends": "Exempt (internal)",
                 "flexibility": "Restricted — withdrawal before 5Y closes plan",
                 "ceiling": "150,000€"
@@ -340,7 +340,8 @@
         },
         "topicContent": {
             "cto": {
-                "rule1": "Flat Tax (PFU 30%) or optional progressive income tax scale",
+                "rule1": "Flat Tax (PFU {{rate}}%: {{ir}}% income tax + {{social}}% social contributions) or optional progressive income tax scale",
+                "rateExceptions": "Rate exceptions: income from life insurance and capitalisation contracts (except rente-survie and épargne-handicap contracts), interest on CEL and PEL accounts opened up to 31 December 2017 (first 12 years for PEL) and income-tax-exempt PEP income stay at 17.2% social contributions. Dividends and interest paid and withheld in 2025 stayed at 17.2%. Source: impots.gouv.fr, 2026.",
                 "rule2": "Cost basis calculated using Weighted Average Price (PMP)",
                 "rule3": "Capital losses can offset capital gains of the same nature, carried forward for 10 years",
                 "rule4": "Form 2074 for detailed sales reporting, Form 2042 boxes 3VG / 3VH"
@@ -368,7 +369,7 @@
                 "rule1Prefix": "Crypto-to-crypto exchanges:",
                 "rule1Highlight": "tax-neutral",
                 "rule1Suffix": "(no taxation)",
-                "rule2": "Sales to fiat currency (€, $) or real-world goods: taxable at 30%",
+                "rule2": "Sales to fiat currency (€, $) or real-world goods: taxable at {{rate}}%",
                 "rule3": "Capital losses cannot be carried forward to future years (unlike CTO)",
                 "rule4": "Form 2042-C boxes 3AN (gain) / 3BN (loss)"
             },
