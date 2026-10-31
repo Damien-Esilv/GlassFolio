@@ -27,6 +27,18 @@ export const generateQrMatrix = (text: string): boolean[][] => {
 };
 
 /**
+ * Sanitizes SVG color/background attributes to prevent SVG/XSS attribute injection
+ * when rendered via TrustedHTML.
+ */
+const sanitizeSvgAttribute = (val: string, fallback: string): string => {
+    if (!val || typeof val !== 'string') return fallback;
+    if (/^[a-zA-Z0-9#(),.\s%-]+$/.test(val)) {
+        return val;
+    }
+    return fallback;
+};
+
+/**
  * Returns a standalone, responsive, ISO-compliant SVG string for the QR code.
  * Uses a standard quiet zone margin (minimum 4 modules) to guarantee immediate scanning.
  */
@@ -36,10 +48,11 @@ export const generateQrSvg = (
 ): string => {
     const matrix = generateQrMatrix(text);
     const size = matrix.length;
-    const margin = options?.margin ?? 4;
+    const rawMargin = options?.margin ?? 4;
+    const margin = typeof rawMargin === 'number' && Number.isFinite(rawMargin) && rawMargin >= 0 ? Math.floor(rawMargin) : 4;
     const totalSize = size + margin * 2;
-    const fg = options?.color || 'black';
-    const bg = options?.bg || 'white';
+    const fg = sanitizeSvgAttribute(options?.color || 'black', 'black');
+    const bg = sanitizeSvgAttribute(options?.bg || 'white', 'white');
 
     let pathData = '';
     for (let r = 0; r < size; r++) {

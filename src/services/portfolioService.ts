@@ -350,7 +350,6 @@ export const portfolioService = {
         };
         const unifiedWithTime = unifiedTxs.map(tx => ({ tx, time: new Date(tx.transactionDate).getTime() }));
         const ledgerStates = new Map<string, LedgerState>();
-        const ledgerSymbols = new Map<string, string>();
         const accountMethods = new Map(db.getAccounts().map(a => [a.id, a.costBasisMethod ?? 'WAC']));
         let unifiedIdx = 0;
 
@@ -362,16 +361,15 @@ export const portfolioService = {
                 const { tx } = unifiedWithTime[unifiedIdx];
                 const key = defaultLedgerKey(tx);
                 if (key) {
-                    const next = applyTransaction(ledgerStates.get(key) ?? emptyLedgerState(), tx, accountMethods.get(tx.accountId) ?? 'WAC');
+                    const prev = ledgerStates.get(key) ?? emptyLedgerState();
+                    const next = applyTransaction(prev, tx, accountMethods.get(tx.accountId) ?? 'WAC');
                     ledgerStates.set(key, next);
                     const symbol = instrumentSymbols.get(tx.instrumentId) || rowSymbol(tx) || tx.assetSymbol;
-                    ledgerSymbols.set(key, symbol);
-                    // Re-aggregate this symbol across accounts
-                    const states = Array.from(ledgerStates.entries()).filter(([k]) => ledgerSymbols.get(k) === symbol);
+                    // Incrementally update this symbol across accounts in O(1)
                     const previousQuantity = assetQuantities[symbol] ?? 0;
-                    assetQuantities[symbol] = states.reduce((sum, [, st]) => sum + st.quantity, 0);
+                    assetQuantities[symbol] = previousQuantity + (next.quantity - prev.quantity);
                     noteQuantity(symbol, previousQuantity, unifiedWithTime[unifiedIdx].time);
-                    assetCost[symbol] = states.reduce((sum, [, st]) => sum + st.costBasis, 0);
+                    assetCost[symbol] = (assetCost[symbol] ?? 0) + (next.costBasis - prev.costBasis);
                     const tradePrice = parseFloat(tx.priceUnit || '');
                     if (tradePrice > 0) lastTradePrice[symbol] = tradePrice;
                     const currency = instrumentCurrencies.get(tx.instrumentId) || accountCurrencies.get(tx.accountId);

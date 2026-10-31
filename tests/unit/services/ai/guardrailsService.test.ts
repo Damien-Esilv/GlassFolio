@@ -77,4 +77,18 @@ describe('guardrailsService', () => {
       `Action '${proposal.id}' is already executed`
     );
   });
+
+  it('redacts and blocks OpenAI, Gemini, AWS, Groq, and CoinGecko API keys', () => {
+    const groqKey = `gsk_${'a'.repeat(24)}`;
+    const coinGeckoKey = `CG-${'b'.repeat(24)}`;
+    const awsKey = `AKIA${'C'.repeat(16)}`;
+
+    expect(guardrailsService.redactSensitiveExfiltrations(`Key: ${groqKey}`)).toBe('Key: [REDACTED_API_KEY]');
+    expect(guardrailsService.redactSensitiveExfiltrations(`Key: ${coinGeckoKey}`)).toBe('Key: [REDACTED_API_KEY]');
+    expect(guardrailsService.redactSensitiveExfiltrations(`Key: ${awsKey}`)).toBe('Key: [REDACTED_API_KEY]');
+
+    expect(() => guardrailsService.assertSafeContext(groqKey)).toThrow(/API key exfiltration/i);
+    expect(() => guardrailsService.assertSafeContext(coinGeckoKey)).toThrow(/API key exfiltration/i);
+    expect(() => guardrailsService.assertSafeContext(awsKey)).toThrow(/API key exfiltration/i);
+  });
 });

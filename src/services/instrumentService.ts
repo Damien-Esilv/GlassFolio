@@ -495,7 +495,7 @@ export const instrumentService = {
         const validation = validateMarketReadiness(type, marketIdentifier);
 
         const newInstrument: Instrument = {
-            id: `instr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `instr-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             ownerId: 'default-user',
             name: hint.name || classification?.name || upperSymbol,
             type,

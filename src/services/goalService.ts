@@ -15,10 +15,32 @@ export const goalService = {
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
         const rates = await currencyService.getExchangeRates(uniqueCurrencies, baseCurrency);
 
-        // Helper to get position market value converted to base currency
-        const getPosValueInBase = (p: typeof positions[0]) => {
-            return currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
+        // Pre-compute position market values in base currency and O(1) lookup maps
+        const valueBySymbol = new Map<string, number>();
+        const valueById = new Map<string, number>();
+        const posValues = positions.map(p => {
+            const val = currencyService.convertAmount(p.marketValue, p.currency || 'EUR', baseCurrency, rates);
+            valueBySymbol.set(p.symbol, (valueBySymbol.get(p.symbol) ?? 0) + val);
+            valueById.set(p.id, (valueById.get(p.id) ?? 0) + val);
+            return { symbol: p.symbol, id: p.id, type: p.type, val };
+        });
+
+        const valueByClass = new Map<string, number>();
+        const getClassValue = (classId: string): number => {
+            const cached = valueByClass.get(classId);
+            if (cached !== undefined) return cached;
+            let sum = 0;
+            for (const p of posValues) {
+                if (isAssetClassMatch(p.type, classId)) sum += p.val;
+            }
+            valueByClass.set(classId, sum);
+            return sum;
         };
+
+        const groupSymbolSets = new Map<string, Set<string>>();
+        for (const g of assetGroups) {
+            groupSymbolSets.set(g.id, new Set(g.symbols));
+        }
 
         // Perform the heavy lifting "server-side"
         const processedGoals = goals.map(goal => {
@@ -29,23 +51,20 @@ export const goalService = {
                     if (link.type === 'asset') {
                         // Linked by symbol (position ids change on every recalculation; older goals
                         // stored one); the same asset held on several accounts counts in full.
-                        const assetValue = positions
-                            .filter(p => p.symbol === link.id || p.id === link.id)
-                            .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        const assetValue = valueBySymbol.get(link.id) ?? valueById.get(link.id) ?? 0;
                         currentAmount += assetValue * (link.percentage / 100);
                     } else if (link.type === 'class') {
                         // Sum all assets of this class converted to base currency
-                        const classTotal = positions
-                            .filter(p => isAssetClassMatch(p.type, link.id))
-                            .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        const classTotal = getClassValue(link.id);
                         currentAmount += classTotal * (link.percentage / 100);
                     } else if (link.type === 'group') {
                         // Sum all assets in this group converted to base currency
-                        const group = assetGroups.find(g => g.id === link.id);
-                        if (group) {
-                            const groupTotal = positions
-                                .filter(p => group.symbols.includes(p.symbol))
-                                .reduce((sum, p) => sum + getPosValueInBase(p), 0);
+                        const symbolSet = groupSymbolSets.get(link.id);
+                        if (symbolSet) {
+                            let groupTotal = 0;
+                            for (const p of posValues) {
+                                if (symbolSet.has(p.symbol)) groupTotal += p.val;
+                            }
                             currentAmount += groupTotal * (link.percentage / 100);
                         }
                     }

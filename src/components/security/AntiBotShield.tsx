@@ -36,6 +36,7 @@ interface WindowWithTurnstile extends Window {
 }
 
 const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const INITIAL_POW_DATA = { challenge: '', nonce: 0, hash: '' };
 
 function loadTurnstileScript(): Promise<void> {
     if (typeof window === 'undefined') return Promise.resolve();
@@ -73,19 +74,11 @@ function loadTurnstileScript(): Promise<void> {
 export const AntiBotShield = forwardRef<AntiBotShieldHandle, AntiBotShieldProps>(
     ({ onPayloadChange, skipTurnstile = false }, ref) => {
         const [honeypot, setHoneypot] = useState('');
-        const [powData, setPowData] = useState<{ challenge: string; nonce: number; hash: string }>({
-            challenge: '',
-            nonce: 0,
-            hash: '',
-        });
+        const [powData, setPowData] = useState<{ challenge: string; nonce: number; hash: string }>(INITIAL_POW_DATA);
         const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
 
         const mountedAtRef = useRef<number>(Date.now());
-        const powDataRef = useRef<{ challenge: string; nonce: number; hash: string }>({
-            challenge: '',
-            nonce: 0,
-            hash: '',
-        });
+        const powDataRef = useRef<{ challenge: string; nonce: number; hash: string }>(INITIAL_POW_DATA);
         const captchaTokenRef = useRef<string | undefined>(undefined);
         const powPromiseRef = useRef<Promise<void> | null>(null);
         const turnstileContainerRef = useRef<HTMLDivElement | null>(null);

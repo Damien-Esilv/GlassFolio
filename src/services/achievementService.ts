@@ -70,16 +70,16 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
     let maxMonths = 0;
     const now = Date.now();
 
-    activeSymbols.forEach(sym => {
-        const symTxs = transactions.filter(t => t.symbol === sym && (t.type === 'Buy' || t.type === 'Deposit'));
-        symTxs.forEach(t => {
+    for (let i = 0; i < transactions.length; i++) {
+        const t = transactions[i];
+        if ((t.type === 'Buy' || t.type === 'Deposit') && activeSymbols.has(t.symbol)) {
             const txTime = new Date(t.date).getTime();
             if (!isNaN(txTime) && txTime <= now) {
                 const months = Math.floor((now - txTime) / (1000 * 60 * 60 * 24 * 30.4375));
                 if (months > maxMonths) maxMonths = months;
             }
-        });
-    });
+        }
+    }
 
     return maxMonths;
 }

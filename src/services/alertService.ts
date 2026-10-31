@@ -205,8 +205,21 @@ export const alertService = {
 
     // 1. Portfolio Custom Rules Evaluation
     if (categoryFlags.portfolio) {
-      const activeRules = db.getAlertRules().filter((r) => r.enabled);
-      const triggeredRuleIds: string[] = [];
+      const allRules = db.getAlertRules();
+      const activeRules = allRules.filter((r) => r.enabled);
+      const triggeredRuleIds = new Set<string>();
+
+      let totalCashValue = 0;
+      const positionsBySymbol = new Map<string, Position>();
+      for (const p of positions) {
+        if (p.type === 'Cash') {
+          totalCashValue += p.marketValue || 0;
+        }
+        const upperSym = p.symbol.toUpperCase();
+        if (!positionsBySymbol.has(upperSym)) {
+          positionsBySymbol.set(upperSym, p);
+        }
+      }
 
       for (const rule of activeRules) {
         let isTriggered = false;
@@ -217,9 +230,7 @@ export const alertService = {
         let targetUrl = '/positions';
 
         if (rule.metric === 'cash_ratio_above') {
-          const cashPos = positions.filter((p) => p.type === 'Cash');
-          const cashValue = cashPos.reduce((sum, p) => sum + (p.marketValue || 0), 0);
-          const ratio = totalPortfolioValue > 0 ? (cashValue / totalPortfolioValue) * 100 : 0;
+          const ratio = totalPortfolioValue > 0 ? (totalCashValue / totalPortfolioValue) * 100 : 0;
           if (ratio >= rule.threshold) {
             isTriggered = true;
             alertTitle = rule.name;
@@ -229,7 +240,7 @@ export const alertService = {
             targetUrl = '/portfolio/summary';
           }
         } else if (rule.symbol) {
-          const pos = positions.find((p) => p.symbol.toUpperCase() === rule.symbol!.toUpperCase());
+          const pos = positionsBySymbol.get(rule.symbol.toUpperCase());
           if (pos) {
             if (rule.metric === 'price_above' && pos.lastPrice >= rule.threshold) {
               isTriggered = true;
@@ -253,7 +264,7 @@ export const alertService = {
         }
 
         if (isTriggered) {
-          triggeredRuleIds.push(rule.id);
+          triggeredRuleIds.add(rule.id);
           const dedupKey = `rule-${rule.id}-${rule.lastTriggeredAt ? rule.lastTriggeredAt.slice(0, 10) : nowIso.slice(0, 10)}`;
           generatedCandidates.push({
             id: generateId('rule-alert'),
@@ -273,28 +284,25 @@ export const alertService = {
       }
 
       // Update lastTriggeredAt on rules
-      if (triggeredRuleIds.length > 0) {
-        const allRules = db.getAlertRules();
+      if (triggeredRuleIds.size > 0) {
         const updatedRules = allRules.map((r) =>
-          triggeredRuleIds.includes(r.id) ? { ...r, lastTriggeredAt: nowIso } : r
+          triggeredRuleIds.has(r.id) ? { ...r, lastTriggeredAt: nowIso } : r
         );
         db.saveAlertRules(updatedRules);
       }
 
       // Built-in Smart Dormant Cash Check
-      const cashPositions = positions.filter((p) => p.type === 'Cash');
-      const totalCash = cashPositions.reduce((sum, p) => sum + (p.marketValue || 0), 0);
-      const cashPct = totalPortfolioValue > 0 ? (totalCash / totalPortfolioValue) * 100 : 0;
+      const cashPct = totalPortfolioValue > 0 ? (totalCashValue / totalPortfolioValue) * 100 : 0;
       if (cashPct >= dormantCashThreshold && totalPortfolioValue > 1000) {
         generatedCandidates.push({
           id: generateId('cash-alert'),
           type: 'warning',
           category: 'portfolio',
           title: 'High idle cash',
-          message: `${cashPct.toFixed(1)}% of your wealth (${Math.round(totalCash)} ${baseCurrency}) is not invested.`,
+          message: `${cashPct.toFixed(1)}% of your wealth (${Math.round(totalCashValue)} ${baseCurrency}) is not invested.`,
           titleKey: 'notifications:engine.dormantCashTitle',
           messageKey: 'notifications:engine.dormantCash',
-          params: { percent: cashPct, amount: Math.round(totalCash), currency: baseCurrency },
+          params: { percent: cashPct, amount: Math.round(totalCashValue), currency: baseCurrency },
           date: nowIso,
           read: false,
           dedupKey: `smart-dormant-cash-${nowIso.slice(0, 7)}`,

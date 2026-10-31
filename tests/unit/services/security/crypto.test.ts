@@ -15,6 +15,10 @@ import {
     serializeEnvelope,
     unwrapDek,
     wrapDek,
+    createPowChallenge,
+    solveProofOfWork,
+    verifyProofOfWork,
+    POW_MAX_AGE_MS,
 } from '../../../../src/services/security/crypto';
 import { fromBase64, toBase64 } from '../../../../src/services/security/encoding';
 
@@ -221,6 +225,24 @@ describe('Crypto Primitives & Adversarial Security (TGLA-041)', () => {
             expect(parseEnvelope('plain text data')).toBeNull();
             expect(parseEnvelope('{"id":"legacy_object"}')).toBeNull();
             expect(parseEnvelope(null)).toBeNull();
+        });
+    });
+
+    describe('Proof-of-Work Anti-Bot Challenge & Timestamp Validation', () => {
+        it('validates fresh PoW solutions and rejects expired or future-dated challenges', async () => {
+            const challenge = createPowChallenge('test-pow');
+            const { nonce, hash } = await solveProofOfWork(challenge, 2);
+
+            // Fresh challenge is valid
+            expect(await verifyProofOfWork(challenge, nonce, hash, 2)).toBe(true);
+
+            // Expired challenge (simulated clock in the future beyond POW_MAX_AGE_MS)
+            const expiredNow = Date.now() + POW_MAX_AGE_MS + 5_000;
+            expect(await verifyProofOfWork(challenge, nonce, hash, 2, { now: expiredNow })).toBe(false);
+
+            // Future-skewed challenge (> 60s ahead of server/verifier clock)
+            const pastNow = Date.now() - 120_000;
+            expect(await verifyProofOfWork(challenge, nonce, hash, 2, { now: pastNow })).toBe(false);
         });
     });
 });

@@ -653,7 +653,7 @@ export async function generateReconciliationTransactions(
         );
 
         const tx: UnifiedTransaction = {
-            id: `utx-adj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `utx-adj-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             ownerId: userId,
             batchId,
             accountId,
@@ -742,7 +742,7 @@ export async function createPositionTransactions(
         );
 
         const tx: UnifiedTransaction = {
-            id: `utx-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `utx-snap-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             ownerId: userId,
             batchId,
             accountId,
@@ -842,7 +842,7 @@ export interface CommitSnapshotParams extends Omit<SnapshotCommitParams, 'batchI
  * refresh derived positions. Shared by the wizard and the AI / MCP tool.
  */
 export async function commitSnapshotImport(params: CommitSnapshotParams): Promise<CommitResult & { batch?: ImportBatch }> {
-    const batchId = `batch-snap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const batchId = `batch-snap-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const now = params.date || new Date().toISOString();
 
     persistedByCommit = [];

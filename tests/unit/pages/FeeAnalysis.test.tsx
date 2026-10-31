@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '../../../src/i18n';
 import FeeAnalysis from '../../../src/pages/FeeAnalysis';
+import { etfFeeService } from '../../../src/services/etfFeeService';
 
 const mockState = vi.hoisted(() => ({
   language: 'en' as 'en' | 'fr',
@@ -83,5 +84,10 @@ describe('<FeeAnalysis /> i18n', () => {
     expect(text).not.toContain('asset to optimise');
     expect(text).not.toContain('/ year');
     expect(text).not.toContain('Global view');
+  });
+
+  it('encodes untrusted symbol characters in fallback yahooUrl', () => {
+    const info = etfFeeService.getEtfInfo('TEST" onload="alert(1)');
+    expect(info.yahooUrl).toBe('https://finance.yahoo.com/quote/TEST%22%20onload%3D%22alert(1)');
   });
 });

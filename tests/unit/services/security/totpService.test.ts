@@ -8,7 +8,7 @@ import {
     verifyBackupCode,
     totpService,
 } from '../../../../src/services/security/totpService';
-import { toBase32, utf8Encode } from '../../../../src/services/security/encoding';
+import { constantTimeCompare, toBase32, utf8Encode } from '../../../../src/services/security/encoding';
 import { appStorage } from '../../../../src/services/storage/appStorage';
 
 describe('totpService (RFC 6238 & Anti-Replay)', () => {
@@ -125,5 +125,12 @@ describe('totpService (RFC 6238 & Anti-Replay)', () => {
         // Bogus code fails
         const resInvalid = await verifyBackupCode('INVALID-CODE', hashedCodes);
         expect(resInvalid.valid).toBe(false);
+    });
+
+    it('compares strings in constant time via constantTimeCompare', () => {
+        expect(constantTimeCompare('287082', '287082')).toBe(true);
+        expect(constantTimeCompare('287082', '287083')).toBe(false);
+        expect(constantTimeCompare('short', 'longer-string')).toBe(false);
+        expect(constantTimeCompare('', '')).toBe(true);
     });
 });
