@@ -7,8 +7,14 @@
 
 export const DEFAULT_SMOKE_HOSTS = ['https://glassfolio.dev', 'https://app.glassfolio.dev'];
 
-/** A path that is not a real asset: a healthy SPA rewrite must still answer 200 + HTML. */
+/** A path that doesn't exist: the app host's SPA rewrite answers 200 + HTML, the public site a real 404 page. */
 export const DEEP_LINK_PATH = '/__smoke-deep-link__';
+
+/**
+ * @param {string} base
+ * @returns {number}
+ */
+export const expectedDeepLinkStatus = (base) => (new URL(base).hostname.startsWith('app.') ? 200 : 404);
 
 const CATCH_ALL_SOURCE = '/(.*)';
 
@@ -32,12 +38,13 @@ export function expectedHeadersFromVercelConfig(config) {
  * Evaluates one HTTP response and returns the list of failures (empty when healthy).
  * @param {{ path: string, status: number, headers: Record<string, string> }} response
  * @param {Record<string, string>} expectedHeaders
+ * @param {number} [expectedStatus]
  * @returns {string[]}
  */
-export function evaluateSmokeResponse(response, expectedHeaders) {
+export function evaluateSmokeResponse(response, expectedHeaders, expectedStatus = 200) {
   const failures = [];
-  if (response.status !== 200) {
-    failures.push(`${response.path}: expected HTTP 200, got ${response.status}`);
+  if (response.status !== expectedStatus) {
+    failures.push(`${response.path}: expected HTTP ${expectedStatus}, got ${response.status}`);
   }
   const contentType = response.headers['content-type'] ?? '';
   if (!contentType.toLowerCase().includes('text/html')) {

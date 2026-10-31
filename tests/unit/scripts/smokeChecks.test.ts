@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import {
     expectedHeadersFromVercelConfig,
     evaluateSmokeResponse,
+    expectedDeepLinkStatus,
+    DEEP_LINK_PATH,
     DEFAULT_SMOKE_HOSTS,
 } from '../../../scripts/lib/smokeChecks.mjs';
 
@@ -37,6 +39,14 @@ describe('Production smoke checks (Epic E19 — TGLA-132)', () => {
             expected,
         ) as string[];
         expect(failures).toEqual([]);
+    });
+
+    it('expects a real 404 on the public site and the SPA fallback on the app host', () => {
+      expect(expectedDeepLinkStatus('https://glassfolio.dev')).toBe(404);
+      expect(expectedDeepLinkStatus('https://app.glassfolio.dev')).toBe(200);
+      const notFound = { path: DEEP_LINK_PATH, status: 404, headers: { 'content-type': 'text/html' } };
+      expect(evaluateSmokeResponse(notFound, {}, 404)).toEqual([]);
+      expect(evaluateSmokeResponse(notFound, {})).toHaveLength(1);
     });
 
     it('reports a non-200 status, a non-HTML body and a missing or altered header', () => {

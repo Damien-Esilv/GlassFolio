@@ -1,0 +1,46 @@
+{
+  "home": {
+    "title": "GlassFolio : suivi de patrimoine chiffré, auto-hébergé ou cloud",
+    "description": "Suivez PEA, CTO, crypto et assurance-vie dans un coffre chiffré AES-256-GCM, avec la fiscalité française intégrée. Auto-hébergez avec Docker ou utilisez le cloud."
+  },
+  "selfHost": {
+    "title": "Auto-héberger GlassFolio avec Docker : guide d'installation",
+    "description": "Faites tourner GlassFolio sur votre machine ou votre serveur avec Docker. Votre coffre chiffré reste sur un volume que vous contrôlez."
+  },
+  "about": {
+    "title": "À propos de GlassFolio : le projet et son auteur",
+    "description": "Pourquoi GlassFolio existe, qui le construit et comment ce suivi de patrimoine chiffré est développé."
+  },
+  "roadmap": {
+    "title": "Feuille de route de GlassFolio : les prochaines étapes",
+    "description": "Les fonctionnalités en cours et prévues pour GlassFolio, le suivi de patrimoine multi-actifs chiffré."
+  },
+  "changelog": {
+    "title": "Nouveautés de GlassFolio : dernières mises à jour",
+    "description": "Les nouvelles fonctionnalités et améliorations de chaque version de GlassFolio."
+  },
+  "legal": {
+    "title": "Mentions légales | GlassFolio",
+    "description": "Éditeur, propriété intellectuelle et conditions de licence de GlassFolio."
+  },
+  "privacy": {
+    "title": "Politique de confidentialité | GlassFolio",
+    "description": "Comment GlassFolio traite vos données : coffre chiffré, droits RGPD, mesure d'audience optionnelle sans cookie et durées de conservation."
+  },
+  "terms": {
+    "title": "Conditions d'utilisation | GlassFolio",
+    "description": "Les conditions d'utilisation de GlassFolio, dont sa licence et le fait qu'il ne constitue pas un conseil financier, juridique ou fiscal."
+  },
+  "cookies": {
+    "title": "Politique de cookies | GlassFolio",
+    "description": "Ce que GlassFolio stocke dans votre navigateur, la mesure d'audience optionnelle sans cookie et comment changer votre choix."
+  },
+  "accessibility": {
+    "title": "Déclaration d'accessibilité | GlassFolio",
+    "description": "L'engagement d'accessibilité de GlassFolio, son état actuel et comment signaler un problème."
+  },
+  "notFound": {
+    "title": "Page introuvable | GlassFolio",
+    "description": "Cette page n'existe pas sur GlassFolio."
+  }
+}

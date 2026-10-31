@@ -1,5 +1,9 @@
 {
   "appUnavailable": "L’application GlassFolio n’est pas disponible depuis cette adresse.",
+  "notFound": {
+    "title": "Page introuvable",
+    "intro": "Cette adresse ne correspond à aucune page de GlassFolio. Elle a peut-être changé, ou le lien est erroné."
+  },
   "appUnavailableBack": "Retour à l’accueil",
   "common": {
     "demoDataBadge": "Données d'exemple",

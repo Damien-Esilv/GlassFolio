@@ -1,6 +1,10 @@
 {
   "appUnavailable": "The GlassFolio app is not available from this address.",
   "appUnavailableBack": "Back to the home page",
+  "notFound": {
+    "title": "Page not found",
+    "intro": "This address doesn't match any page on GlassFolio. It may have moved, or the link may be wrong."
+  },
   "common": {
     "demoDataBadge": "Demo data",
     "tryLiveDemo": "Try Live Demo (1-Click)",
