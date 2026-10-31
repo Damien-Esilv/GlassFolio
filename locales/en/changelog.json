@@ -8,34 +8,6 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
-    "v1-3": {
-      "title": "Autonomous mode and an easier MCP setup",
-      "highlights": {
-        "autonomousMode": "A third AI mode, Autonomous: the assistant, a local Ollama model and your AI clients can create and change goals, transactions and alerts without asking you each time. A warning explains the risks before you turn it on.",
-        "mcpSetupPrompt": "One prompt to copy into Antigravity, Cursor, Claude Code or Codex: it sets up the connection by itself and leaves you two things to paste, the address and the token.",
-        "mcpClientPicker": "The MCP settings show one AI client at a time, with its own configuration, and the commands to manage the connection are always in view.",
-        "mcpHelp": "Small info bubbles explain why the token is needed and which requests still ask for your confirmation in autonomous mode, a list that updates by itself."
-      }
-    },
-    "v1-2": {
-      "title": "Documentation, contact and a search review",
-      "highlights": {
-        "seoReview": "A full review of how GlassFolio appears in search engines and to AI assistants: clearer titles and descriptions, a sitemap for each language, and pages that read well without JavaScript.",
-        "mcpBridge": "Connect Claude Code, Codex, Cursor or Antigravity to GlassFolio: they call its tools on your own data through your open, unlocked tab, and every change waits for your approval.",
-        "mcpDocs": "A documentation page for the MCP server: how it works, how to connect your AI client, and the list of its 35 tools.",
-        "contactPage": "A contact page that tells you where to write for your data, a bug or a security concern."
-      }
-    },
-    "v1-1": {
-      "title": "A clearer, faster public site",
-      "highlights": {
-        "frenchPages": "The public site now has its own French pages, at addresses you can share and bookmark.",
-        "findablePublicPages": "Public pages now reach search engines complete, with their own title and description, so GlassFolio is easier to find.",
-        "taxRates": "The tax guide and optimization table show the flat-tax and social contribution rates of each year, with their exceptions.",
-        "consentSwitch": "The cookies page has a simple switch to turn audience measurement on or off at any time.",
-        "readability": "Better text contrast and larger tap targets on the public site, including on mobile."
-      }
-    },
     "v1-0": {
       "title": "GlassFolio 1.0 — Flagship Release",
       "highlights": {
@@ -46,7 +18,18 @@
         "taxReporting": "French tax assistant with Cerfa 2042 & 3916-bis simulation, capital gains calculation on PEA withdrawals, and flat-tax vs progressive scale comparison.",
         "animationHarmonization": "Harmonized global animation clock across all dashboard metrics and analytics, instant timeline range switching, and responsive Progress hub navigation.",
         "assetAllocationExtensible": "Extensible asset allocation supporting alternative asset categories with dynamic, theme-stable color generation.",
-        "smartNotifications": "Real-time notifications and intelligent alerts center for balance variations, quest achievements, and security events."
+        "smartNotifications": "Real-time notifications and intelligent alerts center for balance variations, quest achievements, and security events.",
+        "frenchPages": "The public site now has its own French pages, at addresses you can share and bookmark.",
+        "findablePublicPages": "Public pages now reach search engines complete, with their own title and description, so GlassFolio is easier to find. A full review of how it appears to AI assistants too, with a sitemap for each language.",
+        "taxRates": "The tax guide and optimization table show the flat-tax and social contribution rates of each year, with their exceptions.",
+        "consentSwitch": "The cookies page has a simple switch to turn audience measurement on or off at any time.",
+        "readability": "Better text contrast and larger tap targets on the public site, including on mobile.",
+        "mcpBridge": "Connect Claude Code, Codex, Cursor or Antigravity to GlassFolio: they call its tools on your own data through your open, unlocked tab, and every change waits for your approval.",
+        "mcpDocs": "A documentation page for the MCP server: how it works, how to connect your AI client, and the list of its 35 tools.",
+        "mcpSetupPrompt": "One prompt to copy into Antigravity, Cursor, Claude Code or Codex: it sets up the connection by itself and leaves you two things to paste, the address and the token.",
+        "mcpClientPicker": "The MCP settings show one AI client at a time, with its own configuration, and the commands to manage the connection are always in view. Small info bubbles explain why the token is needed and which requests still ask for your confirmation in autonomous mode, a list that updates by itself.",
+        "autonomousMode": "A third AI mode, Autonomous: the assistant, a local Ollama model and your AI clients can create and change goals, transactions and alerts without asking you each time. A warning explains the risks before you turn it on.",
+        "contactPage": "A contact page that tells you where to write for your data, a bug or a security concern."
       }
     },
     "v0-4": {
