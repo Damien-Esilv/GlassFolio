@@ -257,7 +257,7 @@
       },
       "mcp": {
         "title": "Your AI tools",
-        "body": "Let Claude Desktop, Cursor and other MCP clients call GlassFolio's tools through the local MCP server. It answers with sample data for now, not with your portfolio.",
+        "body": "Let Claude Code, Codex, Cursor or Antigravity use GlassFolio's tools on your own data, through a bridge on your computer. Your open, unlocked tab does the work, and you approve every change.",
         "examples": "Claude Desktop • Cursor"
       }
     },
@@ -410,7 +410,7 @@
       },
       "q4": {
         "question": "How does the AI assistant protect my privacy?",
-        "answer": "You choose where it runs: a local Ollama model so nothing leaves your machine, or your own API key with the provider of your choice. Secrets are removed before any prompt leaves the app, and every change to your data waits for your approval. The local MCP server lets Claude Desktop or Cursor call GlassFolio's tools, but it answers with sample data for now."
+        "answer": "You choose where it runs: a local Ollama model so nothing leaves your machine, or your own API key with the provider of your choice. Secrets are removed before any prompt leaves the app, and every change to your data waits for your approval. Your AI tools (Claude Code, Codex, Cursor) can also call GlassFolio's tools through a bridge on your computer, while your tab is open and unlocked: the results then go to the model of that tool."
       },
       "q5": {
         "question": "What is the difference between the cloud edition and the Docker edition?",

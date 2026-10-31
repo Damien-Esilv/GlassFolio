@@ -31,8 +31,8 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
     date: '2026-10-31',
     highlights: [
       { key: 'seoReview', kind: 'improved' },
+      { key: 'mcpBridge', kind: 'new' },
       { key: 'mcpDocs', kind: 'new' },
-      { key: 'mcpSampleData', kind: 'improved' },
       { key: 'contactPage', kind: 'new' },
     ],
   },

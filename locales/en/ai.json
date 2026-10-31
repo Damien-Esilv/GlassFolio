@@ -159,12 +159,7 @@
     },
     "mcp": {
       "title": "Model Context Protocol (MCP) Server",
-      "description": "Try GlassFolio's tools from Claude Desktop, Cursor or Antigravity. The server answers with sample data and is not connected to your portfolio yet.",
-      "statusReady": "Ready for connection",
-      "serverCommand": "Execution command",
-      "configLabel": "Claude Desktop configuration (claude_desktop_config.json)",
-      "copyConfig": "Copy Configuration",
-      "copied": "Copied!"
+      "description": "Let Claude Code, Codex, Cursor, Antigravity or another MCP client use GlassFolio's tools on your own data, through a bridge on this computer."
     },
     "save": "Save AI Preferences",
     "saved": "AI configuration saved successfully.",
@@ -301,5 +296,40 @@
     },
     "rawData": "Data retrieved successfully:",
     "rawResult": "Result received from the {{tool}} tool: {{content}}"
+  },
+  "mcpBridge": {
+    "toggleLabel": "Allow AI clients",
+    "toggleInfo": "The tools run in this tab, on your own data, only while your vault is unlocked and this tab stays open. Any change waits for your approval here.",
+    "status": {
+      "off": "Off",
+      "locked": "Unlock your vault to connect",
+      "needsToken": "Enter the bridge token",
+      "connecting": "Connecting…",
+      "connected": "Connected",
+      "unauthorized": "Token refused",
+      "unreachable": "Bridge not reachable",
+      "replaced": "Another tab took over"
+    },
+    "ownServerAddress": "MCP address of this server:",
+    "addressLabel": "Bridge address",
+    "addressHelp": "Where the bridge runs on this computer. Only localhost and 127.0.0.1 are accepted.",
+    "addressInvalid": "Use an address such as http://127.0.0.1:47831.",
+    "tokenLabel": "Bridge token",
+    "startBridge": "Start the bridge from your copy of the repository, then paste its token above:",
+    "showToken": "Show the token",
+    "hideToken": "Hide the token",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "clients": {
+      "title": "Connect your AI client",
+      "claudeCode": "Claude Code (command)",
+      "urlJson": "Clients that take a URL, such as Cursor (JSON)",
+      "stdioJson": "Clients that start a command, such as Claude Desktop (JSON)",
+      "codex": "Codex (~/.codex/config.toml)",
+      "note": "Replace /absolute/path/to/GlassFolio with the folder of your copy of the repository. These formats follow each client’s documentation; if one does not match your version, the address and the token are all it needs."
+    },
+    "approval": {
+      "title": "An AI client asks to change your data"
+    }
   }
 }

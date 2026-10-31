@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { appStorage } from '../services/storage/appStorage';
 import { AIChatDrawer } from './ai/AIChatDrawer';
+import { McpBridgeHost } from './mcp/McpBridgeHost';
 import { ConsentBanner } from './ConsentBanner';
 import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
@@ -637,6 +638,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* In-App AI Assistant Drawer */}
       <AIChatDrawer isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
+
+      {/* AI clients (Claude Code, Codex...) calling the tools of this tab, and the changes they ask for */}
+      <McpBridgeHost />
 
       {/* Real-time Floating Notification Toasts */}
       <NotificationToastContainer />

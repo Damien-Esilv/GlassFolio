@@ -73,7 +73,8 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
 - **AI-First & Compatibilité MCP Systématique** :
   - **Toute nouvelle fonctionnalité ou entité métier** (ex: emprunts, actifs, alertes, budgets) **DOIT obligatoirement** déclarer ses outils IA correspondants dans `src/services/ai/tools/` et les enregistrer dans `aiToolRegistry`.
   - **Human-in-the-loop obligatoire** : Toute action provoquant une modification ou création de données financières réelles **DOIT** définir `requiresConfirmation: true` afin d'exiger une validation explicite de l'utilisateur avant exécution.
-  - **Objectif zéro rétro-ingénierie** : Tout nouveau développement doit être immédiatement exploitable par l'assistant In-App et les clients MCP externes (Claude Desktop, Cursor, Antigravity) dès son implémentation.
+  - **Objectif zéro rétro-ingénierie** : Tout nouveau développement doit être immédiatement exploitable par l'assistant In-App et les clients MCP externes (Claude Code, Codex, Cursor, Antigravity, Claude Desktop) dès son implémentation.
+  - **Pont MCP** : les clients MCP appellent les outils de `aiToolRegistry` via le pont `mcp-server/` (HTTP `/mcp` dans le serveur local, ou `node mcp-server/index.mjs serve|stdio`), qui les relaie à l'onglet ouvert et déverrouillé (`src/services/mcpBridge/`) : le coffre reste chiffré, rien n'est lu côté serveur. Après tout ajout ou modification d'un outil, lancer `npm run mcp:catalog` pour régénérer `mcp-server/tools.json` (`tests/unit/mcp/catalog.test.ts` échoue sinon) ; la documentation `/docs` en dérive.
 
 ---
 

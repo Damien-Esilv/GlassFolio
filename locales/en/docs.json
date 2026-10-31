@@ -1,75 +1,65 @@
 {
   "title": "MCP server documentation",
-  "intro": "GlassFolio includes a small Model Context Protocol (MCP) server. MCP clients such as Claude Desktop or Cursor can start it, list GlassFolio’s tools and call them. This page explains what it does today, how to connect it and what each tool is for.",
-  "sampleData": {
-    "title": "It answers with sample data",
-    "body": "The server returns a built-in, fictional portfolio. It is not connected to your own data. Your vault is encrypted in your browser and its key never leaves it, so a separate program has no way to read it. The assistant inside the app does work on your real data. Use this server to try the tools and to build an integration: reading your own portfolio through MCP is not available yet."
+  "intro": "GlassFolio lets AI clients such as Claude Code, Codex, Cursor or Antigravity use its tools on your own data. This page explains how it works, how to connect a client, and what the tools do.",
+  "howItWorks": {
+    "title": "How it works",
+    "body": "Your vault is encrypted in your browser, and only your open GlassFolio tab holds the key: no program can read it from outside. The MCP server is therefore a bridge that runs on your own computer. Your AI client sends it a tool call, the bridge passes the call to your tab, the tab runs the tool on your data and sends the result back. Nothing goes through GlassFolio’s servers, and the bridge stores nothing."
   },
-  "about": {
-    "title": "What it is",
-    "body": "A local program that speaks MCP over standard input and output (stdio). It needs Node.js 22 and a copy of the repository, makes no network request and sends nothing anywhere. It lists {{tools}} tools and {{resources}} read-only resources."
+  "needs": {
+    "title": "What you need",
+    "a": "Node.js 22 and a copy of the repository: the bridge is mcp-server/index.mjs and has no dependency.",
+    "b": "GlassFolio open in a browser tab, signed in, with your vault unlocked.",
+    "c": "“Allow AI clients” turned on in Settings, AI & MCP.",
+    "d": "An AI client that supports MCP over stdio or Streamable HTTP.",
+    "checkLabel": "Check that the bridge starts and lists its tools"
   },
-  "verify": {
-    "title": "Check that it runs",
-    "body": "Clone the repository, then ask the server what it offers. You do not start it by hand: your MCP client launches it with the command of its configuration.",
-    "label": "List the tools and resources"
+  "modes": {
+    "title": "Local or online",
+    "local": {
+      "title": "GlassFolio running on your machine (Docker or npm run dev)",
+      "body": "The server of the app already contains the bridge, at its /mcp address: there is nothing else to start. Settings, AI & MCP shows the address and the token to give to your client."
+    },
+    "online": {
+      "title": "GlassFolio online (app.glassfolio.dev)",
+      "body": "Start the bridge on your computer. Your tab then connects to it at 127.0.0.1, the way it does for a local Ollama model, so nothing leaves your machine. Paste its token in Settings, AI & MCP. Some browsers ask for your permission before a web page reaches a local address, and some may block it: if yours does, use the local mode.",
+      "label": "Start the bridge and print its token"
+    }
   },
   "connect": {
-    "title": "Connect a client",
-    "body": "Add the server to the configuration of your MCP client, with the absolute path of your copy. For Claude Desktop the file is claude_desktop_config.json, for Cursor it is .cursor/mcp.json. Restart the client afterwards.",
-    "label": "MCP client configuration"
+    "title": "Connect your AI client",
+    "body": "Give your client the address of the bridge and its token (header X-GlassFolio-Token), or let it start the command itself. Settings, AI & MCP prepares these snippets with your own values.",
+    "claudeCode": "Claude Code",
+    "stdio": "Clients that start a command (Claude Desktop and others)",
+    "codex": "Codex (~/.codex/config.toml)",
+    "note": "Replace the path with the folder of your copy of the repository. Other clients, such as Cursor or Antigravity, take the same information in their own MCP settings: the address and the token, or the command."
+  },
+  "approvals": {
+    "title": "Changes need your approval",
+    "body": "A tool that changes your data, such as recording a transaction or creating a goal, does not run when the client asks. GlassFolio shows a card in your open tab, and the change is made only if you approve it there. If you do not answer within about a minute and a half, nothing is changed. In read-only mode, these tools are blocked."
+  },
+  "privacy": {
+    "title": "What leaves your computer",
+    "body": "The results of the tools go to your AI client, and from there to the model it uses, as when you paste figures into a chat. API keys, recovery keys and authenticator seeds are removed before a result leaves GlassFolio. If nothing must leave your machine, connect a client that runs a local model."
+  },
+  "limits": {
+    "title": "Limits",
+    "a": "The tab has to stay open and unlocked. If you lock the vault or close the tab, the client is told to ask you to open GlassFolio again.",
+    "b": "One tab serves the clients at a time: opening a second tab takes over.",
+    "c": "The bridge listens on your own computer only and accepts only the token that you share."
+  },
+  "clients": {
+    "title": "Compatible clients",
+    "body": "Any client that supports MCP over stdio or Streamable HTTP can use it. {{tested}}"
   },
   "tools": {
     "title": "Tools",
-    "intro": "A tool that changes something says that it requires confirmation. In this server it only changes the in-memory sample data, which is lost when the server stops.",
-    "groups": {
-      "portfolio": "Portfolio and imports",
-      "tax": "Tax",
-      "progress": "Goals and progress",
-      "alerts": "Alerts",
-      "security": "Security and privacy"
-    },
-    "items": {
-      "get_portfolio_summary": "Net worth, cost basis and unrealized gain or loss.",
-      "get_asset_allocation": "Breakdown by asset class, with values and percentages.",
-      "list_positions": "Open positions with quantity, average cost, price and unrealized gain.",
-      "list_transactions": "Recent transactions, filterable by ticker or type.",
-      "get_cost_basis_method": "Cost basis method of each account: weighted average cost (PRU) or FIFO.",
-      "preview_csv_import": "Detects the delimiter, header row and row count of a CSV export. Nothing is saved.",
-      "get_tax_summary": "Capital gains and an estimate of flat tax (PFU) against the progressive scale for a fiscal year.",
-      "list_goals": "Financial goals with their target, current amount and progress.",
-      "get_gamification_status": "Level, XP, investor rank, streak and unlocked achievements.",
-      "list_quests": "Active quests with their progress, target and XP reward.",
-      "list_notifications": "Notifications and alerts, filterable by category, read state and limit.",
-      "manage_notifications": "Marks notifications as read, deletes or clears them. Requires confirmation.",
-      "list_alert_rules": "Custom alert rules with their trigger history and state.",
-      "create_alert_rule": "Creates a price, gain or cash-ratio alert rule. Requires confirmation.",
-      "get_security_status": "Vault status, two-factor state, passkeys and recent security events.",
-      "get_storage_status": "Where data is kept in local mode and whether recent changes were saved.",
-      "list_auth_methods": "The configured sign-in and two-factor methods.",
-      "list_vault_secrets": "Providers stored in the encrypted secrets vault, with values masked.",
-      "lock_vault": "Locks the vault and wipes decrypted data from memory. Requires confirmation.",
-      "rotate_encryption_key": "Starts the rotation of the data encryption key through a prompt in the app.",
-      "get_email_verification_status": "Whether the email address of the account is verified.",
-      "resend_verification_email": "Sends a new verification email. Requires confirmation.",
-      "get_privacy_status": "Version of the legal documents, privacy contact, consent state and where to exercise your GDPR rights.",
-      "export_gdpr_archive": "Starts the GDPR access and portability export in the app. Requires confirmation."
-    }
-  },
-  "resources": {
-    "title": "Resources",
-    "intro": "Read-only data that an MCP client can attach to a conversation.",
-    "items": {
-      "summary": "Net worth and asset allocation summary.",
-      "positions": "Open positions with cost basis and unrealized gain.",
-      "transactions": "The last 20 transactions.",
-      "gamification": "Level, XP, rank and number of unlocked badges.",
-      "notifications": "In-app notifications and alerts, with the unread count."
-    }
+    "intro": "The {{count}} tools that the bridge offers, as your client sees them (the descriptions are in English). The ones marked “Needs your approval” change your data and wait for it.",
+    "readOnly": "Read-only",
+    "needsApproval": "Needs your approval"
   },
   "more": {
     "title": "Going further",
-    "body": "The assistant inside the app calls the same kind of tools on your real data: see Settings, then AI and MCP. To run the whole app on your own machine, read the self-hosting guide.",
+    "body": "The assistant inside the app uses the same tools. To run the whole app on your own machine, read the self-hosting guide.",
     "selfHost": "Self-hosting guide",
     "contact": "Ask a question"
   }

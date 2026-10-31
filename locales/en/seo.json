@@ -41,7 +41,7 @@
   },
   "docs": {
     "title": "MCP Server Documentation | GlassFolio",
-    "description": "How to check GlassFolio’s MCP server, connect it to Claude Desktop or Cursor, and which tools it lists. It answers with sample data for now."
+    "description": "How to connect Claude Code, Codex, Cursor or Antigravity to GlassFolio through a bridge on your computer, and the list of its tools."
   },
   "contact": {
     "title": "Contact GlassFolio: Privacy, Bugs and Security",

@@ -1,44 +1,56 @@
 # glassfolio-mcp
 
-The [Model Context Protocol](https://modelcontextprotocol.io) server of [GlassFolio](https://glassfolio.dev), over stdio.
+The [Model Context Protocol](https://modelcontextprotocol.io) server of [GlassFolio](https://glassfolio.dev), for
+Claude Code, Codex, Cursor, Antigravity and other MCP clients.
 
-> **It answers with sample data.** The server returns a built-in, fictional portfolio. It is not
-> connected to your GlassFolio vault: your data is encrypted in your browser and the key never leaves
-> it, so a separate program cannot read it. Use this server to try the 24 tools and to build an
-> integration, not to read your own figures.
+GlassFolio encrypts your vault in your browser, and only your open, unlocked GlassFolio tab holds the key, so no
+program can read it from outside. This server is therefore a **bridge** that runs on your own computer: your AI
+client sends it a tool call, the bridge passes the call to your tab, the tab runs the tool on your own data and
+sends the result back. Nothing goes through GlassFolio's servers, and the bridge stores nothing. A tool that
+changes data waits for your approval in GlassFolio.
 
 ## Use
 
-Your MCP client starts the server. Add it to `claude_desktop_config.json` (Claude Desktop) or
-`.cursor/mcp.json` (Cursor):
+1. In GlassFolio, open Settings > AI & MCP and turn on "Allow AI clients". Keep the tab open and unlocked.
+2. Give your client the bridge. Settings > AI & MCP prepares these snippets with your own values.
+
+A client that starts a command (Claude Desktop, Codex...):
 
 ```json
 {
   "mcpServers": {
-    "glassfolio": {
-      "command": "npx",
-      "args": ["-y", "glassfolio-mcp"]
-    }
+    "glassfolio": { "command": "npx", "args": ["-y", "glassfolio-mcp"] }
   }
 }
 ```
 
-Or from a clone of the repository: `"command": "node"`, `"args": ["/absolute/path/to/GlassFolio/mcp-server/index.mjs"]`.
+A client that takes a URL (Claude Code, Cursor...): start `npx glassfolio-mcp serve`, then
+
+```bash
+claude mcp add --transport http glassfolio http://127.0.0.1:47831/mcp --header "X-GlassFolio-Token: <token>"
+```
+
+The token is printed by `serve`, and by `npx glassfolio-mcp token`. Paste it in Settings > AI & MCP too.
+
+With GlassFolio running on your machine (Docker or `npm run dev`), its server already contains the bridge at
+`/mcp`: nothing to start. From a clone of the repository, replace `npx -y glassfolio-mcp` with
+`node /absolute/path/to/GlassFolio/mcp-server/index.mjs`.
 
 ## Command line
 
 ```bash
-npx glassfolio-mcp --list      # tool names and resource URIs, as JSON
-npx glassfolio-mcp --version
-npx glassfolio-mcp --help
+glassfolio-mcp            # stdio server (the client starts it)
+glassfolio-mcp serve      # HTTP server on 127.0.0.1:47831
+glassfolio-mcp token      # print the shared token
+glassfolio-mcp --list     # tool names, as JSON
+glassfolio-mcp --version
 ```
 
-Without an option it speaks MCP on standard input and output. It needs Node.js 22, makes no network
-request and sends nothing anywhere.
+It needs Node.js 22, listens on your own computer only, and accepts only the token that you share.
 
 ## Documentation
 
-Tools, resources and configuration: <https://glassfolio.dev/en/docs>
+How it works, the clients, the approvals and the 35 tools: <https://glassfolio.dev/en/docs>
 
 ## License
 

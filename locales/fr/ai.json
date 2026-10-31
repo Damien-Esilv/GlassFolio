@@ -159,12 +159,7 @@
     },
     "mcp": {
       "title": "Serveur Model Context Protocol (MCP)",
-      "description": "Essayez les outils de GlassFolio depuis Claude Desktop, Cursor ou Antigravity. Le serveur répond avec des données d'exemple et n'est pas encore connecté à votre portefeuille.",
-      "statusReady": "Prêt pour la connexion",
-      "serverCommand": "Commande d'exécution",
-      "configLabel": "Configuration Claude Desktop (claude_desktop_config.json)",
-      "copyConfig": "Copier la configuration",
-      "copied": "Copié !"
+      "description": "Laissez Claude Code, Codex, Cursor, Antigravity ou un autre client MCP utiliser les outils de GlassFolio sur vos propres données, via un pont sur cet ordinateur."
     },
     "save": "Enregistrer les Préférences IA",
     "saved": "Configuration IA enregistrée avec succès.",
@@ -301,5 +296,40 @@
     },
     "rawData": "Données obtenues avec succès :",
     "rawResult": "Résultat reçu de l'outil {{tool}} : {{content}}"
+  },
+  "mcpBridge": {
+    "toggleLabel": "Autoriser les clients IA",
+    "toggleInfo": "Les outils s’exécutent dans cet onglet, sur vos propres données, uniquement tant que votre coffre est déverrouillé et que cet onglet reste ouvert. Toute modification attend votre approbation ici.",
+    "status": {
+      "off": "Désactivé",
+      "locked": "Déverrouillez votre coffre pour vous connecter",
+      "needsToken": "Saisissez le jeton du pont",
+      "connecting": "Connexion…",
+      "connected": "Connecté",
+      "unauthorized": "Jeton refusé",
+      "unreachable": "Pont injoignable",
+      "replaced": "Un autre onglet a pris le relais"
+    },
+    "ownServerAddress": "Adresse MCP de ce serveur :",
+    "addressLabel": "Adresse du pont",
+    "addressHelp": "L’endroit où le pont tourne sur cet ordinateur. Seuls localhost et 127.0.0.1 sont acceptés.",
+    "addressInvalid": "Utilisez une adresse comme http://127.0.0.1:47831.",
+    "tokenLabel": "Jeton du pont",
+    "startBridge": "Démarrez le pont depuis votre copie du dépôt, puis collez son jeton ci-dessus :",
+    "showToken": "Afficher le jeton",
+    "hideToken": "Masquer le jeton",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "clients": {
+      "title": "Connecter votre client IA",
+      "claudeCode": "Claude Code (commande)",
+      "urlJson": "Clients qui prennent une URL, comme Cursor (JSON)",
+      "stdioJson": "Clients qui démarrent une commande, comme Claude Desktop (JSON)",
+      "codex": "Codex (~/.codex/config.toml)",
+      "note": "Remplacez /absolute/path/to/GlassFolio par le dossier de votre copie du dépôt. Ces formats suivent la documentation de chaque client ; si l’un ne correspond pas à votre version, l’adresse et le jeton sont tout ce qu’il lui faut."
+    },
+    "approval": {
+      "title": "Un client IA demande à modifier vos données"
+    }
   }
 }

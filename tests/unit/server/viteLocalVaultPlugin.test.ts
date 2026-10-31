@@ -42,19 +42,39 @@ describe('vite dev/preview vault API exposure guard', () => {
     });
 });
 
-describe('server/ is self-contained (the Docker image copies server/ but not scripts/)', () => {
-    it('never imports a relative path outside server/', async () => {
+describe('server/ is self-contained (the Docker image copies server/ and mcp-server/, not scripts/)', () => {
+    it('never imports a relative path outside server/ and mcp-server/', async () => {
         const { readdirSync, readFileSync } = await import('node:fs');
         const { join, resolve, sep } = await import('node:path');
         const dir = resolve(__dirname, '../../../server');
+        const mcp = resolve(__dirname, '../../../mcp-server');
         const offenders: string[] = [];
         for (const file of readdirSync(dir).filter((f) => f.endsWith('.mjs'))) {
             const source = readFileSync(join(dir, file), 'utf8');
             for (const match of source.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
                 const target = resolve(dir, match[1]);
-                if (!target.startsWith(dir + sep)) offenders.push(`${file} -> ${match[1]}`);
+                if (!target.startsWith(dir + sep) && !target.startsWith(mcp + sep)) offenders.push(`${file} -> ${match[1]}`);
             }
         }
         expect(offenders).toEqual([]);
+    });
+
+    it('keeps mcp-server/ standalone, since it is also an npm package', async () => {
+        const { readdirSync, readFileSync } = await import('node:fs');
+        const { join, resolve } = await import('node:path');
+        const dir = resolve(__dirname, '../../../mcp-server');
+        for (const file of readdirSync(dir).filter((f) => f.endsWith('.mjs'))) {
+            const source = readFileSync(join(dir, file), 'utf8');
+            for (const match of source.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
+                expect(match[1].startsWith('node:') || match[1].startsWith('./'), `${file} -> ${match[1]}`).toBe(true);
+            }
+        }
+    });
+
+    it('copies mcp-server/ into both stages of the Docker image', async () => {
+        const { readFileSync } = await import('node:fs');
+        const { join, resolve } = await import('node:path');
+        const dockerfile = readFileSync(join(resolve(__dirname, '../../..'), 'docker/Dockerfile'), 'utf8');
+        expect(dockerfile.match(/^COPY mcp-server \.\/mcp-server$/gm)).toHaveLength(2);
     });
 });
