@@ -1,10 +1,10 @@
 {
   "banner": {
     "title": "Confidentialité & Consentement Cookies RGPD",
-    "description": "GlassFolio utilise un stockage local strictement nécessaire au fonctionnement de votre coffre chiffré côté client et de vos préférences d'interface. Nous n'utilisons aucun cookie publicitaire tiers. La mesure d'audience anonyme (Vercel Web Analytics, sans cookie) n'est chargée qu'avec votre accord explicite ; votre choix est conservé 13 mois puis redemandé.",
-    "acceptButton": "Accepter la mesure d'audience optionnelle",
-    "refuseButton": "Refuser la mesure d'audience optionnelle",
-    "customizeLink": "En savoir plus dans les Paramètres Cookies"
+    "description": "Mesure d'audience anonyme et sans cookie, uniquement avec votre accord.",
+    "acceptButton": "Accepter la mesure d'audience",
+    "refuseButton": "Refuser la mesure d'audience",
+    "customizeLink": "En savoir plus"
   },
   "center": {
     "pageTitle": "Centre Légal & Gouvernance RGPD",
@@ -287,7 +287,7 @@
         "id": "disclaimer",
         "title": "5. Avertissement Légal : Absence de Conseil Financier et Fiscal (AMF / DGFiP)",
         "paragraphs": [
-          "Les simulations fiscales (PFU 30 % vs Barème Progressif Case 2OP, cases Cerfa 2042 / 2074 / 3916) et les projections d'érosion des frais ETF sont calculées à partir des données saisies par l'utilisateur et des barèmes légaux connus. L'utilisateur demeure seul responsable de la vérification de ses déclarations officielles auprès de la DGFiP ou d'un professionnel qualifié (expert-comptable, avocat fiscaliste)."
+          "Les simulations fiscales (PFU vs Barème Progressif Case 2OP, cases Cerfa 2042 / 2074 / 3916) et les projections d'érosion des frais ETF sont calculées à partir des données saisies par l'utilisateur et des barèmes légaux connus. L'utilisateur demeure seul responsable de la vérification de ses déclarations officielles auprès de la DGFiP ou d'un professionnel qualifié (expert-comptable, avocat fiscaliste)."
         ],
         "callout": {
           "tone": "warning",

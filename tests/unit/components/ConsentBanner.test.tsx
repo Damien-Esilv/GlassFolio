@@ -137,7 +137,7 @@ describe('<ConsentBanner />', () => {
       </MemoryRouter>
     );
 
-    const customizeLink = screen.getByRole('link', { name: /Learn more in Cookie Settings/i });
+    const customizeLink = screen.getByRole('link', { name: /Learn more/i });
     expect(customizeLink.getAttribute('href')).toBe('/welcome/cookies');
 
     fireEvent.click(customizeLink);
@@ -154,7 +154,7 @@ describe('<ConsentBanner />', () => {
       </MemoryRouter>
     );
 
-    const customizeLink = screen.getByRole('link', { name: /Learn more in Cookie Settings/i });
+    const customizeLink = screen.getByRole('link', { name: /Learn more/i });
     expect(customizeLink.getAttribute('href')).toBe('/cookies');
   });
 });

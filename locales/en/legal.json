@@ -1,10 +1,10 @@
 {
   "banner": {
     "title": "Privacy & GDPR Cookie Consent",
-    "description": "GlassFolio uses strictly necessary local storage to operate your client-side encrypted vault and interface preferences. We do not use third-party advertising cookies. Anonymous audience measurement (Vercel Web Analytics, cookieless) is loaded only with your explicit consent; your choice is kept for 13 months and then asked again.",
+    "description": "Anonymous, cookieless analytics load only if you agree.",
     "acceptButton": "Accept optional analytics",
     "refuseButton": "Refuse optional analytics",
-    "customizeLink": "Learn more in Cookie Settings"
+    "customizeLink": "Learn more"
   },
   "center": {
     "pageTitle": "Legal & GDPR Governance Center",
@@ -287,7 +287,7 @@
         "id": "disclaimer",
         "title": "5. Non-Financial & Non-Tax Advice Disclaimer (AMF / DGFiP)",
         "paragraphs": [
-          "Tax simulations (30% flat tax vs progressive scale Box 2OP, Cerfa forms 2042 / 2074 / 3916) and ETF fee erosion projections are computed from user-entered data and known legal brackets. The user remains solely responsible for verifying official declarations with the DGFiP or a qualified professional (chartered accountant, tax lawyer)."
+          "Tax simulations (PFU flat tax vs progressive scale Box 2OP, Cerfa forms 2042 / 2074 / 3916) and ETF fee erosion projections are computed from user-entered data and known legal brackets. The user remains solely responsible for verifying official declarations with the DGFiP or a qualified professional (chartered accountant, tax lawyer)."
         ],
         "callout": {
           "tone": "warning",
