@@ -25,6 +25,39 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * Sidebar nav item. Kept at module level: declared inside Layout it was a new component type on every
+ * render, so every link was unmounted and rebuilt each time the layout re-rendered.
+ */
+const NavItem: React.FC<{
+  path: string;
+  icon: React.ElementType;
+  name: string;
+  indent?: boolean;
+  onClick?: () => void;
+  collapsed?: boolean;
+}> = ({ path, icon: Icon, name, indent = false, onClick, collapsed = false }) => {
+  const { pathname } = useLocation();
+  return (
+    <Link
+      to={path}
+      onClick={onClick}
+      title={name}
+      aria-label={name}
+      className={`flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+        collapsed ? 'justify-center px-2' : `px-4 ${indent ? 'ml-6' : ''}`
+      } ${
+        pathname === path
+          ? 'bg-primary/10 text-primary font-semibold'
+          : 'text-secondary hover:bg-subtle hover:text-primary'
+      }`}
+    >
+      <Icon size={18} className="shrink-0" />
+      {!collapsed && <span className="truncate">{name}</span>}
+    </Link>
+  );
+};
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -141,7 +174,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     );
   }
 
-  const isActive = (path: string) => location.pathname === path;
   const isPortfolioActive = ['/portfolio', '/portfolio/summary', '/positions', '/transactions'].includes(location.pathname);
   const isAnalyticsActive = location.pathname.startsWith('/analytics');
   const isFiscaliteActive = location.pathname.startsWith('/tax');
@@ -156,35 +188,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     await lockVault();
   };
 
-  // Sidebar nav item component
-  const NavItem: React.FC<{
-    path: string;
-    icon: React.ElementType;
-    name: string;
-    indent?: boolean;
-    onClick?: () => void;
-    collapsed?: boolean;
-  }> = ({ path, icon: Icon, name, indent = false, onClick, collapsed = false }) => (
-    <Link
-      to={path}
-      onClick={onClick}
-      title={name}
-      aria-label={name}
-      className={`flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-        collapsed ? 'justify-center px-2' : `px-4 ${indent ? 'ml-6' : ''}`
-      } ${
-        isActive(path)
-          ? 'bg-primary/10 text-primary font-semibold'
-          : 'text-secondary hover:bg-subtle hover:text-primary'
-      }`}
-    >
-      <Icon size={18} className="shrink-0" />
-      {!collapsed && <span className="truncate">{name}</span>}
-    </Link>
-  );
-
   // Sidebar content (shared between desktop and mobile)
-  const SidebarContent: React.FC<{ collapsed?: boolean }> = ({ collapsed = false }) => (
+  // A render function, not a component: a component declared here would be rebuilt on every render.
+  const renderSidebarContent = (collapsed = false): React.ReactNode => (
     <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       {/* 1. Dashboard */}
       <NavItem
@@ -455,7 +461,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        <SidebarContent collapsed={isSidebarCollapsed} />
+        {renderSidebarContent(isSidebarCollapsed)}
       </aside>
 
       {/* Sidebar - Mobile (Slide in) */}
@@ -479,7 +485,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        <SidebarContent collapsed={false} />
+        {renderSidebarContent(false)}
       </aside>
 
       {/* Main Content Area */}

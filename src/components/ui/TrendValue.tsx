@@ -4,6 +4,7 @@ import { getTrendTokens } from '../../constants/themeTokens';
 import { formatCurrency } from '../../utils/currency';
 import { useCountUp } from '../../hooks/useCountUp';
 import { ANIMATION_DURATION_MS } from '../../constants/animations';
+import StableNumber from './StableNumber';
 
 export interface TrendValueProps {
   value: number;
@@ -80,7 +81,7 @@ export const TrendValue: React.FC<TrendValueProps> = ({
       aria-label={animated ? formattedFinal : undefined}
     >
       {showIcon && <IconComponent size={iconSize} className="shrink-0" />}
-      <span aria-hidden={animated ? 'true' : undefined}>{formattedDisplay}</span>
+      <StableNumber display={formattedDisplay} final={formattedFinal} hidden={animated} />
     </span>
   );
 };
