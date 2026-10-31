@@ -2,7 +2,7 @@
 /**
  * Turns the showcase build into its Vercel layout (TGLA-193). Static files win over rewrites, and "/"
  * must be the prerendered home, so nothing may sit at dist/index.html:
- *   dist/_p/<page>.html   prerendered public pages (rewritten from their URLs by vercel.json)
+ *   dist/_p/<lang>/<page>.html   prerendered public pages (rewritten from their URLs by vercel.json)
  *   dist/404.html         real 404 of the public site
  *   dist/app-shell.html   empty shell for app URLs, which the showcase redirects to the app host
  *   dist/sitemap.xml      generated from src/config/publicRoutes.ts
@@ -33,7 +33,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const serverDir = join(root, '.prerender');
 
-const { PUBLIC_ROUTES, canonicalUrl, latestReleaseDate, localizedPath, renderPublicPage, seoTexts } = await import(
+const { PUBLIC_LANGUAGES, PUBLIC_ROUTES, alternateUrls, canonicalUrl, latestReleaseDate, localizedPath, renderPublicPage, seoTexts } = await import(
   pathToFileURL(join(serverDir, 'entry-prerender.js')).href
 );
 
@@ -87,14 +87,8 @@ const assertRendered = (path, body) => {
 const shell = readFileSync(join(dist, 'index.html'), 'utf-8');
 mkdirSync(join(dist, '_p'), { recursive: true });
 
-const alternatesOf = (path) => [
-  { lang: 'en', href: canonicalUrl(path, 'en') },
-  { lang: 'fr', href: canonicalUrl(path, 'fr') },
-  { lang: 'x-default', href: canonicalUrl(path, 'en') },
-];
-mkdirSync(join(dist, '_p', 'fr'), { recursive: true });
-
-for (const language of ['en', 'fr']) {
+for (const language of PUBLIC_LANGUAGES) {
+  mkdirSync(join(dist, '_p', language), { recursive: true });
   for (const route of PUBLIC_ROUTES) {
     const body = await renderPublicPage(route.path, language);
     assertRendered(localizedPath(route.path, language), body);
@@ -104,11 +98,11 @@ for (const language of ['en', 'fr']) {
       language,
       path: localizedPath(route.path, language),
       canonical: canonicalUrl(route.path, language),
-      alternates: alternatesOf(route.path),
+      alternates: alternateUrls(route.path),
       softwareSchema: route.softwareSchema,
       ...seoTexts(route.seoKey, language),
     });
-    writeFileSync(join(dist, '_p', language === 'fr' ? 'fr' : '', `${route.file}.html`), page);
+    writeFileSync(join(dist, '_p', language, `${route.file}.html`), page);
   }
 }
 
@@ -121,9 +115,9 @@ writeFileSync(
 );
 
 const releaseDate = latestReleaseDate();
-const urls = ['en', 'fr'].flatMap((language) => PUBLIC_ROUTES.map((route) => {
+const urls = PUBLIC_LANGUAGES.flatMap((language) => PUBLIC_ROUTES.map((route) => {
   const lastmod = route.datedByChangelog ? `\n    <lastmod>${releaseDate}</lastmod>` : '';
-  const links = alternatesOf(route.path).map(({ lang, href }) => `\n    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`).join('');
+  const links = alternateUrls(route.path).map(({ lang, href }) => `\n    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`).join('');
   return `  <url>\n    <loc>${canonicalUrl(route.path, language)}</loc>${lastmod}${links}\n  </url>`;
 }));
 writeFileSync(
@@ -133,4 +127,4 @@ writeFileSync(
 
 renameSync(join(dist, 'index.html'), join(dist, 'app-shell.html'));
 rmSync(serverDir, { recursive: true, force: true });
-console.log(`Prerendered ${PUBLIC_ROUTES.length} public pages in EN and FR, and the 404 page, into dist/`);
+console.log(`Prerendered ${PUBLIC_ROUTES.length} public pages in ${PUBLIC_LANGUAGES.join(', ')}, and the 404 page, into dist/`);

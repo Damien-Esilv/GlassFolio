@@ -24,9 +24,10 @@
     root.setAttribute('data-theme', theme);
     root.classList.toggle('dark', theme !== 'light');
   }
-  // French URLs ship French HTML; elsewhere a visitor who chose French waits for the app
-  var languageDiffers = !/^\/fr(\/|$)/.test(location.pathname) && read('gf_public_lang') === 'fr';
-  if (languageDiffers) root.lang = 'fr';
+  // A URL with a language prefix ships its own HTML; elsewhere a visitor who chose another language waits for the app
+  var chosen = read('gf_public_lang');
+  var languageDiffers = !/^\/[a-z]{2}(\/|$)/.test(location.pathname) && !!chosen && chosen !== 'en';
+  if (languageDiffers) root.lang = chosen;
   // Nothing to wait for when the visitor asked for less motion, unless the text must change
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (languageDiffers || !reducedMotion) root.classList.add('prerender-pending');

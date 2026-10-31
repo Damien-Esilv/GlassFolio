@@ -10,7 +10,7 @@ import { bootstrapLocalPersistence } from './services/storage/localPersistenceBo
 import { installChunkReloadHandler } from './services/storage/chunkReload';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 import { getSyncedPublicLanguage } from './services/storage/publicPreferencesSync';
-import { languageFromPath } from './config/publicRoutes';
+import { DEFAULT_PUBLIC_LANGUAGE, languageFromPath } from './config/publicRoutes';
 
 // Synchronous preference & URL handoff bootstrap before any render
 consumeUrlBootstrapParams();
@@ -85,7 +85,9 @@ const renderPrerendered = async (): Promise<void> => {
   const tree = wrapTree(<LoadedShowcaseApp prerendered onVisible={hideLoader} />);
   // With reduced motion, Motion's first render differs from the static HTML
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!reducedMotion && getSyncedPublicLanguage() === languageFromPath(window.location.pathname)) {
+  // The static HTML is in the language of its own address (the 404 page is always the default one)
+  const staticLanguage = languageFromPath(rootElement.getAttribute('data-prerendered') ?? '') ?? DEFAULT_PUBLIC_LANGUAGE;
+  if (!reducedMotion && getSyncedPublicLanguage() === staticLanguage) {
     root = ReactDOM.hydrateRoot(rootElement, tree);
   } else {
     root = ReactDOM.createRoot(rootElement);

@@ -8,21 +8,21 @@ Key facts:
 - Tax engine: French rules built in; compares flat tax (PFU) with the progressive scale; prepares Cerfa 2042, 2074 and 3916 boxes. Designed to add other jurisdictions.
 - Imports: CSV from BoursoBank, Trade Republic, Binance, Kraken, Bitget and Coinbase; duplicates skipped; imports can be rolled back.
 - AI: tools callable by the in-app assistant and by MCP clients such as Claude Desktop and Cursor; read-only unless the user confirms. Models: local Ollama, or your own API key (OpenAI, Anthropic, Gemini, Groq, OpenRouter).
-- Languages: English and French. Themes: light, dark, midnight.
+- Languages: English and French, one URL per language (https://glassfolio.dev/en and https://glassfolio.dev/fr). Themes: light, dark, midnight.
 
 ## Docs
-- [Home and FAQ](https://glassfolio.dev/): product overview, security model, editions comparison, FAQ
-- [Self-hosting guide](https://glassfolio.dev/self-host): Docker quick start, requirements (Docker Engine 24+, Compose v2, Node.js 22), configuration variables, network access, backup, restore, update, local AI with Ollama
-- [About](https://glassfolio.dev/about): project background and how it is built
-- [Roadmap](https://glassfolio.dev/roadmap)
-- [Changelog](https://glassfolio.dev/changelog)
+- [Home and FAQ](https://glassfolio.dev/en/en): product overview, security model, editions comparison, FAQ
+- [Self-hosting guide](https://glassfolio.dev/en/self-host): Docker quick start, requirements (Docker Engine 24+, Compose v2, Node.js 22), configuration variables, network access, backup, restore, update, local AI with Ollama
+- [About](https://glassfolio.dev/en/about): project background and how it is built
+- [Roadmap](https://glassfolio.dev/en/roadmap)
+- [Changelog](https://glassfolio.dev/en/changelog)
 
 ## Legal
-- [Privacy](https://glassfolio.dev/privacy)
-- [Terms](https://glassfolio.dev/terms)
-- [Legal notice](https://glassfolio.dev/legal)
-- [Cookies](https://glassfolio.dev/cookies)
-- [Accessibility](https://glassfolio.dev/accessibility)
+- [Privacy](https://glassfolio.dev/en/privacy)
+- [Terms](https://glassfolio.dev/en/terms)
+- [Legal notice](https://glassfolio.dev/en/legal)
+- [Cookies](https://glassfolio.dev/en/cookies)
+- [Accessibility](https://glassfolio.dev/en/accessibility)
 
 ## Optional
 - [Cloud app](https://app.glassfolio.dev)

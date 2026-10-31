@@ -14,7 +14,7 @@ import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 import { PullToRefresh } from './components/ui/PullToRefresh';
 import { PublicPageHead } from './components/landing/PublicPageHead';
-import { FR_BASENAME, findPublicRoute, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
+import { findPublicRoute, languageBasename, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
 
 type PageModule = { default: React.ComponentType };
 
@@ -179,8 +179,9 @@ interface ShowcaseAppProps {
 }
 
 export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false, onVisible }) => {
-  // Router basename: every internal link and route of a French page stays under /fr
-  const basename = languageFromPath(window.location.pathname) === 'fr' ? FR_BASENAME : undefined;
+  // Router basename: every internal link and route of a public page stays under its language prefix
+  const pathLanguage = languageFromPath(window.location.pathname);
+  const basename = pathLanguage ? languageBasename(pathLanguage) : undefined;
   const [pageReady, setPageReady] = useState(false);
   const markReady = React.useCallback(() => setPageReady(true), []);
 

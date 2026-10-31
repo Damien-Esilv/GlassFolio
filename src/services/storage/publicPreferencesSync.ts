@@ -1,4 +1,5 @@
 import { appStorage } from './appStorage';
+import { languageFromPath } from '../../config/publicRoutes';
 import {
   PUBLIC_LANG_STORAGE_KEY,
   PUBLIC_THEME_STORAGE_KEY,
@@ -129,8 +130,9 @@ export function setSyncedPublicTheme(theme: string): void {
  */
 export function getSyncedPublicLanguage(): SupportedLanguage {
   if (typeof window !== 'undefined' && window.location) {
-    // French public pages have their own URLs: the address decides, whatever was saved before
-    if (/^\/fr(\/|$)/.test(window.location.pathname ?? '')) return 'fr';
+    // Public pages have one URL per language: the address decides, whatever was saved before
+    const pathLanguage = languageFromPath(window.location.pathname ?? '');
+    if (pathLanguage) return pathLanguage;
     try {
       const params = new URLSearchParams(window.location.search);
       const urlLang = params.get('lang')?.toLowerCase();
