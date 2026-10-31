@@ -17,6 +17,7 @@ import { aiSettingsService } from '../../services/ai/aiSettingsService';
 import { AIProviderType, AIExecutionMode, AISettings } from '../../services/ai/types';
 import Button from '../Button';
 import { McpBridgeSettings } from '../settings/McpBridgeSettings';
+import { ExecutionModeSelector } from './ExecutionModeSelector';
 
 type AICategory = 'ollama' | 'cloud' | 'mock';
 
@@ -538,37 +539,7 @@ export const AISettingsTab: React.FC = () => {
         </div>
         <p className="text-xs text-secondary">{t('ai:settings.security.description')}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            onClick={() => handleModeSelect('supervised')}
-            className={`cursor-pointer p-4 rounded-xl border transition-all text-left space-y-1.5 ${
-              settings.executionMode === 'supervised'
-                ? 'bg-primary/10 border-primary'
-                : 'bg-subtle/50 hover:bg-subtle border-subtle'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-primary">{t('ai:settings.security.supervised')}</span>
-              {settings.executionMode === 'supervised' && <Check size={14} className="text-primary" />}
-            </div>
-            <p className="text-[11px] text-tertiary leading-relaxed">{t('ai:settings.security.supervisedDesc')}</p>
-          </div>
-
-          <div
-            onClick={() => handleModeSelect('read_only')}
-            className={`cursor-pointer p-4 rounded-xl border transition-all text-left space-y-1.5 ${
-              settings.executionMode === 'read_only'
-                ? 'bg-primary/10 border-primary'
-                : 'bg-subtle/50 hover:bg-subtle border-subtle'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-primary">{t('ai:settings.security.readOnly')}</span>
-              {settings.executionMode === 'read_only' && <Check size={14} className="text-primary" />}
-            </div>
-            <p className="text-[11px] text-tertiary leading-relaxed">{t('ai:settings.security.readOnlyDesc')}</p>
-          </div>
-        </div>
+        <ExecutionModeSelector mode={settings.executionMode} onChange={handleModeSelect} />
       </div>
 
       {/* 6. MCP bridge: AI clients use the tools of this tab */}

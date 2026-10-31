@@ -74,7 +74,8 @@ export interface ChatMessage {
 
 export type AIProviderType = 'mock' | 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'openrouter';
 
-export type AIExecutionMode = 'supervised' | 'read_only';
+/** supervised: changes wait for approval; read_only: no change; autonomous: changes run without asking (see executionPolicy.ts) */
+export type AIExecutionMode = 'supervised' | 'read_only' | 'autonomous';
 
 export interface AISettings {
   activeProvider: AIProviderType;

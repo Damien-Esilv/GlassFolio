@@ -187,6 +187,15 @@ describe('backupRestoreService', () => {
             expect(mergeResult.importedCount).toBeGreaterThanOrEqual(0);
         });
 
+        it('never switches the assistant to autonomous mode from a backup', async () => {
+            appStorage.setItem('glassfolio_ai_settings_v1', JSON.stringify({ executionMode: 'supervised' }));
+
+            await restoreBackupReset({ aiSettings: [{ executionMode: 'autonomous' }] } as any);
+
+            const aiSettings = JSON.parse(appStorage.getItem('glassfolio_ai_settings_v1') || '{}');
+            expect(aiSettings.executionMode).toBe('supervised');
+        });
+
         it('restores non-financial account data (user profile, gamification, AI, audit logs)', async () => {
             appStorage.setItem('glassfolio_user', JSON.stringify({
                 id: 'active-user',

@@ -35,7 +35,8 @@
   },
   "approvals": {
     "title": "Les modifications demandent votre approbation",
-    "body": "Un outil qui modifie vos données, comme enregistrer une transaction ou créer un objectif, ne s’exécute pas quand le client le demande. GlassFolio affiche une carte dans votre onglet ouvert, et la modification n’est faite que si vous l’approuvez là. Sans réponse de votre part pendant environ une minute et demie, rien n’est modifié. En mode lecture seule, ces outils sont bloqués."
+    "body": "Un outil qui modifie vos données, comme enregistrer une transaction ou créer un objectif, ne s’exécute pas quand le client le demande. GlassFolio affiche une carte dans votre onglet ouvert, et la modification n’est faite que si vous l’approuvez là. Sans réponse de votre part pendant environ une minute et demie, rien n’est modifié. En mode lecture seule, ces outils sont bloqués.",
+    "autonomous": "Le mode autonome (Réglages, IA & MCP) supprime cette confirmation : l’assistant, un modèle local et les clients IA modifient alors vos données tout de suite. Un avertissement explique les risques avant de l’activer, par exemple un agent qui suit une instruction cachée dans un document qu’il lit. Les actions sur le compte lui-même (verrouiller le coffre, changer la clé, exporter vos données, renvoyer l’e-mail de vérification) demandent toujours."
   },
   "privacy": {
     "title": "Ce qui quitte votre ordinateur",
@@ -62,5 +63,10 @@
     "body": "L’assistant de l’application utilise les mêmes outils. Pour faire tourner toute l’application sur votre machine, lisez le guide d’auto-hébergement.",
     "selfHost": "Guide d’auto-hébergement",
     "contact": "Poser une question"
+  },
+  "setup": {
+    "title": "Laissez votre IA se configurer",
+    "body": "Le plus rapide : copiez ce prompt dans votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il trouve lui-même son fichier de configuration et écrit la connexion, puis ne vous laisse que deux étapes : coller le jeton et l’adresse là où il vous l’indique. Le prompt ne contient aucun secret. Réglages, IA & MCP vous donne le même prompt et les deux valeurs à copier.",
+    "label": "Prompt de configuration"
   }
 }

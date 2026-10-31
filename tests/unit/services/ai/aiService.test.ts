@@ -57,6 +57,52 @@ describe('aiService', () => {
     expect(lastMsg.content).toContain('Lecture Seule Stricte');
   });
 
+  it('runs a change at once, with no card, when the mode is autonomous', async () => {
+    aiSettingsService.saveSettings({ executionMode: 'autonomous' });
+
+    const messages = await aiService.sendMessage('Enregistre un ordre d’achat de 10 actions Apple');
+
+    expect(messages.some((message) => message.pendingAction)).toBe(false);
+    const toolResult = messages.find((message) => message.role === 'tool' && message.toolName === 'record_transaction');
+    expect(toolResult).toBeDefined();
+    expect(toolResult?.content).not.toContain('awaiting_user_confirmation');
+  });
+
+  describe('with a local Ollama model asking to create a goal', () => {
+    const ollamaAsks = () => {
+      const reply = (message: Record<string, unknown>) =>
+        new Response(JSON.stringify({ message }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(reply({ role: 'assistant', content: '', tool_calls: [{ id: 'call_1', function: { name: 'create_goal', arguments: { title: 'Ollama goal', targetAmount: 1000 } } }] }))
+        .mockResolvedValue(reply({ role: 'assistant', content: 'Done.' }));
+    };
+
+    it('asks for approval in supervised mode', async () => {
+      aiSettingsService.saveSettings({ activeProvider: 'ollama', executionMode: 'supervised' });
+      ollamaAsks();
+      const messages = await aiService.sendMessage('Crée un objectif de 1000 euros');
+      expect(messages.some((message) => message.pendingAction?.toolName === 'create_goal')).toBe(true);
+    });
+
+    it('creates it at once in autonomous mode: the mode does not depend on the model', async () => {
+      aiSettingsService.saveSettings({ activeProvider: 'ollama', executionMode: 'autonomous' });
+      ollamaAsks();
+      const messages = await aiService.sendMessage('Crée un objectif de 1000 euros');
+      expect(messages.some((message) => message.pendingAction)).toBe(false);
+      const result = messages.find((message) => message.role === 'tool' && message.toolName === 'create_goal');
+      expect(result?.content).not.toContain('awaiting_user_confirmation');
+      expect(result?.content).toContain('Ollama goal');
+    });
+
+    it('still refuses the change in read-only mode', async () => {
+      aiSettingsService.saveSettings({ activeProvider: 'ollama', executionMode: 'read_only' });
+      ollamaAsks();
+      const messages = await aiService.sendMessage('Crée un objectif de 1000 euros');
+      expect(messages.some((message) => message.pendingAction)).toBe(false);
+      expect(messages[messages.length - 1].content).toContain('Lecture Seule Stricte');
+    });
+  });
+
   it('allows editing a previous message, forks history and regenerates the response', async () => {
     // 1. Initial conversation turn
     const turn1 = await aiService.sendMessage('Question 1 initiale');

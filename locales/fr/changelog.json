@@ -8,6 +8,14 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-3": {
+      "title": "Mode autonome et configuration MCP simplifiée",
+      "highlights": {
+        "autonomousMode": "Un troisième mode IA, Autonome : l’assistant, un modèle Ollama local et vos clients IA peuvent créer et modifier objectifs, transactions et alertes sans vous demander à chaque fois. Un avertissement explique les risques avant de l’activer.",
+        "mcpSetupPrompt": "Un seul prompt à copier dans Antigravity, Cursor, Claude Code ou Codex : il configure la connexion tout seul et ne vous laisse que deux choses à coller, l’adresse et le jeton.",
+        "mcpClientPicker": "Les réglages MCP montrent un client IA à la fois, avec sa propre configuration, et les commandes pour gérer la connexion restent toujours visibles."
+      }
+    },
     "v1-2": {
       "title": "Documentation, contact et revue de référencement",
       "highlights": {

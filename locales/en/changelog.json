@@ -8,6 +8,14 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-3": {
+      "title": "Autonomous mode and an easier MCP setup",
+      "highlights": {
+        "autonomousMode": "A third AI mode, Autonomous: the assistant, a local Ollama model and your AI clients can create and change goals, transactions and alerts without asking you each time. A warning explains the risks before you turn it on.",
+        "mcpSetupPrompt": "One prompt to copy into Antigravity, Cursor, Claude Code or Codex: it sets up the connection by itself and leaves you two things to paste, the address and the token.",
+        "mcpClientPicker": "The MCP settings show one AI client at a time, with its own configuration, and the commands to manage the connection are always in view."
+      }
+    },
     "v1-2": {
       "title": "Documentation, contact and a search review",
       "highlights": {

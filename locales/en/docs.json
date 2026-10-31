@@ -35,7 +35,8 @@
   },
   "approvals": {
     "title": "Changes need your approval",
-    "body": "A tool that changes your data, such as recording a transaction or creating a goal, does not run when the client asks. GlassFolio shows a card in your open tab, and the change is made only if you approve it there. If you do not answer within about a minute and a half, nothing is changed. In read-only mode, these tools are blocked."
+    "body": "A tool that changes your data, such as recording a transaction or creating a goal, does not run when the client asks. GlassFolio shows a card in your open tab, and the change is made only if you approve it there. If you do not answer within about a minute and a half, nothing is changed. In read-only mode, these tools are blocked.",
+    "autonomous": "Autonomous mode (Settings, AI & MCP) turns this confirmation off: the assistant, a local model and AI clients then change your data at once. A warning explains the risks before you turn it on, such as an agent following an instruction hidden in a document it reads. The actions on the account itself (locking the vault, changing the key, exporting your data, resending the verification email) still ask."
   },
   "privacy": {
     "title": "What leaves your computer",
@@ -62,5 +63,10 @@
     "body": "The assistant inside the app uses the same tools. To run the whole app on your own machine, read the self-hosting guide.",
     "selfHost": "Self-hosting guide",
     "contact": "Ask a question"
+  },
+  "setup": {
+    "title": "Let your AI set itself up",
+    "body": "The quickest way: copy this prompt into your AI client (Antigravity, Cursor, Claude Code, Codex...). It finds its own configuration file and writes the connection, then leaves you two steps: paste the token and the address where it says. The prompt holds no secret. Settings, AI & MCP gives you the same prompt and the two values to copy.",
+    "label": "Setup prompt"
   }
 }

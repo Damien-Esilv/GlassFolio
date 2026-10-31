@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_MCP_CLIENT_ID } from '../../../../src/config/mcpClients';
 import { appStorage } from '../../../../src/services/storage/appStorage';
 import * as deployment from '../../../../src/config/deployment';
 import {
@@ -32,7 +33,7 @@ describe('bridge address', () => {
 
 describe('bridge settings of the device', () => {
   it('starts off, with no address and no token', () => {
-    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '' });
+    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '', client: DEFAULT_MCP_CLIENT_ID });
   });
 
   it('saves a part of the settings, trims the token and tells the subscribers', () => {
@@ -40,7 +41,7 @@ describe('bridge settings of the device', () => {
     const unsubscribe = subscribeMcpBridgeSettings(listener);
     saveMcpBridgeSettings({ enabled: true });
     saveMcpBridgeSettings({ token: '  abc  ', url: 'http://127.0.0.1:47831/' });
-    expect(getMcpBridgeSettings()).toEqual({ enabled: true, url: 'http://127.0.0.1:47831', token: 'abc' });
+    expect(getMcpBridgeSettings()).toEqual({ enabled: true, url: 'http://127.0.0.1:47831', token: 'abc', client: DEFAULT_MCP_CLIENT_ID });
     expect(listener).toHaveBeenCalledTimes(2);
     unsubscribe();
     saveMcpBridgeSettings({ enabled: false });
@@ -60,17 +61,26 @@ describe('bridge settings of the device', () => {
 
   it('falls back to the defaults on a corrupt or hostile value', () => {
     appStorage.setItem('gf_mcp_bridge', '{not json');
-    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '' });
+    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '', client: DEFAULT_MCP_CLIENT_ID });
     appStorage.setItem('gf_mcp_bridge', JSON.stringify({ enabled: 'yes', url: 'https://evil.example', token: 5 }));
-    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '' });
+    expect(getMcpBridgeSettings()).toEqual({ enabled: false, url: '', token: '', client: DEFAULT_MCP_CLIENT_ID });
+  });
+
+  it('remembers the AI client that was picked, and ignores an unknown one', () => {
+    saveMcpBridgeSettings({ client: 'cursor' });
+    expect(getMcpBridgeSettings().client).toBe('cursor');
+    saveMcpBridgeSettings({ client: 'does-not-exist' });
+    expect(getMcpBridgeSettings().client).toBe('cursor');
+    appStorage.setItem('gf_mcp_bridge', JSON.stringify({ enabled: true, client: 'removed-client' }));
+    expect(getMcpBridgeSettings().client).toBe(DEFAULT_MCP_CLIENT_ID);
   });
 
   it('uses the server of the app in local mode and the standalone bridge online', () => {
     vi.spyOn(deployment, 'getDeploymentMode').mockReturnValue('local');
-    expect(resolveBridgeBaseUrl({ enabled: true, url: '', token: '' })).toBe('');
+    expect(resolveBridgeBaseUrl({ enabled: true, url: '', token: '', client: 'cursor' })).toBe('');
     vi.spyOn(deployment, 'getDeploymentMode').mockReturnValue('cloud');
-    expect(resolveBridgeBaseUrl({ enabled: true, url: '', token: '' })).toBe(STANDALONE_BRIDGE_URL);
-    expect(resolveBridgeBaseUrl({ enabled: true, url: 'http://localhost:1234', token: '' })).toBe('http://localhost:1234');
+    expect(resolveBridgeBaseUrl({ enabled: true, url: '', token: '', client: 'cursor' })).toBe(STANDALONE_BRIDGE_URL);
+    expect(resolveBridgeBaseUrl({ enabled: true, url: 'http://localhost:1234', token: '', client: 'cursor' })).toBe('http://localhost:1234');
   });
 });
 
