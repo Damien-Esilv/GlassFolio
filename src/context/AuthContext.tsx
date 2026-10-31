@@ -244,8 +244,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Language Effect - Sync i18n with user language preference
   useEffect(() => {
     const loadLanguage = async () => {
-      // A French public URL decides, or the page would switch away from the language of its address
-      const urlLang = languageFromPath(window.location.pathname) === 'fr' ? 'fr' : undefined;
+      // A public URL with a language prefix decides, or the page would switch away from the language of its address
+      const urlLang = languageFromPath(window.location.pathname);
       const lang = urlLang || user?.preferences?.language || getSyncedPublicLanguage();
       const i18n = (await import('../i18n')).default;
       if (i18n.language !== lang) {

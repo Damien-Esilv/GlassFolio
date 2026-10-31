@@ -367,8 +367,8 @@ jobs:
             sleep 1
           done
           curl -fsS http://localhost:4173/app-shell.html | grep -qi "<div id=\"root\"" || (echo "::error::SPA shell missing" && exit 1)
-          curl -fsS http://localhost:4173/_p/index.html | grep -qi "<h1" || (echo "::error::Prerendered home has no content" && exit 1)
-          ! curl -fsS http://localhost:4173/_p/index.html | sed -n '/<div id="root"/,$p' | grep -qi "<script" || (echo "::error::Inline script in prerendered HTML" && exit 1)
+          curl -fsS http://localhost:4173/_p/en/index.html | grep -qi "<h1" || (echo "::error::Prerendered home has no content" && exit 1)
+          ! curl -fsS http://localhost:4173/_p/en/index.html | sed -n '/<div id="root"/,$p' | grep -qi "<script" || (echo "::error::Inline script in prerendered HTML" && exit 1)
           echo "✅ vite preview serves the SPA shell and the prerendered pages."
 
       - name: Upload build artifact

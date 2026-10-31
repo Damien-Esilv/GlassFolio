@@ -1,17 +1,54 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { PUBLIC_ROUTES, canonicalUrl, findPublicRoute, languageFromPath, localizedPath } from '../../../src/config/publicRoutes';
+import {
+  DEFAULT_PUBLIC_LANGUAGE,
+  PUBLIC_LANGUAGES,
+  PUBLIC_ROUTES,
+  alternateUrls,
+  canonicalUrl,
+  findPublicRoute,
+  languageFromPath,
+  localizedPath,
+} from '../../../src/config/publicRoutes';
 import { resolveVercelBuildTarget } from '../../../scripts/lib/vercelBuildTarget.mjs';
 
-interface HostMatch { type: string; value: string }
+interface HostMatch { type: string; key?: string; value: string }
 interface Rewrite { source: string; destination: string; has?: HostMatch[] }
 interface Redirect { source: string; destination: string; statusCode?: number; has?: HostMatch[] }
 interface VercelConfig { buildCommand: string; rewrites: Rewrite[]; redirects: Redirect[] }
 
 const read = (file: string): string => readFileSync(join(process.cwd(), file), 'utf-8');
 const config = JSON.parse(read('vercel.json')) as VercelConfig;
-const compile = (source: string): RegExp => new RegExp(`^${source.replace(/:page\(/, '(')}$`);
+const compile = (source: string): RegExp => new RegExp(`^${source.replace(/:(page|lang)\(/g, '(')}$`);
+const SHOWCASE_HOSTS = ['glassfolio.dev', 'dev-showcase.glassfolio.dev'];
+const APP_HOSTS = ['app.glassfolio.dev', 'dev-app.glassfolio.dev'];
+
+/** What a visitor's request carries that the redirects look at */
+interface RequestHints { cookie?: string; acceptLanguage?: string }
+
+/** The first redirect that applies, in file order, like the Vercel router: `to` and `status`. */
+const redirectFor = (host: string, url: string, hints: RequestHints = {}): { to: string; status: number } | undefined => {
+  const { pathname, searchParams } = new URL(url, 'https://x');
+  for (const rule of config.redirects) {
+    const match = compile(rule.source).exec(pathname);
+    if (!match) continue;
+    const applies = (rule.has ?? []).every((has) => {
+      const actual =
+        has.type === 'host' ? host
+        : has.type === 'query' ? searchParams.get(has.key ?? '')
+        : has.type === 'cookie' ? hints.cookie
+        : has.type === 'header' ? hints.acceptLanguage
+        : undefined;
+      return actual !== undefined && actual !== null && new RegExp(`^(?:${has.value})$`).test(actual);
+    });
+    if (!applies) continue;
+    const names = [...rule.source.matchAll(/:(\w+)\(/g)].map((name) => name[1]);
+    const to = names.reduce((destination, name, index) => destination.replace(`:${name}`, match[index + 1]), rule.destination);
+    return { to, status: rule.statusCode ?? 308 };
+  }
+  return undefined;
+};
 const publicHostRewrites = config.rewrites.filter((rule) => !rule.has);
 const destinationFor = (path: string): string | undefined =>
   publicHostRewrites.find((rule) => compile(rule.source).test(path))?.destination;
@@ -28,19 +65,36 @@ describe('public routes manifest', () => {
     descriptions.forEach((description) => expect(description.length).toBeLessThanOrEqual(170));
   });
 
-  it('builds canonicals on the apex, and treats /welcome paths as the same pages', () => {
-    expect(canonicalUrl('/')).toBe('https://glassfolio.dev/');
-    expect(canonicalUrl('/about')).toBe('https://glassfolio.dev/about');
-    expect(findPublicRoute('/welcome')?.path).toBe('/');
-    expect(findPublicRoute('/welcome/about')?.path).toBe('/about');
-    expect(findPublicRoute('/fr')?.path).toBe('/');
-    expect(findPublicRoute('/fr/about')?.path).toBe('/about');
-    expect(findPublicRoute('/nope')).toBeUndefined();
+  it('gives every language its own URL, and treats /welcome paths as the same pages', () => {
+    expect(PUBLIC_LANGUAGES).toContain(DEFAULT_PUBLIC_LANGUAGE);
+    expect(canonicalUrl('/')).toBe('https://glassfolio.dev/en');
+    expect(canonicalUrl('/about')).toBe('https://glassfolio.dev/en/about');
     expect(canonicalUrl('/', 'fr')).toBe('https://glassfolio.dev/fr');
     expect(canonicalUrl('/about', 'fr')).toBe('https://glassfolio.dev/fr/about');
-    expect(languageFromPath('/fr/about')).toBe('fr');
-    expect(languageFromPath('/france')).toBe('en');
-    expect(localizedPath('/about', 'en')).toBe('/about');
+    expect(localizedPath('/about', 'en')).toBe('/en/about');
+    expect(findPublicRoute('/welcome')?.path).toBe('/');
+    expect(findPublicRoute('/welcome/about')?.path).toBe('/about');
+    PUBLIC_LANGUAGES.forEach((language) => {
+      expect(findPublicRoute(`/${language}`)?.path).toBe('/');
+      expect(findPublicRoute(`/${language}/about`)?.path).toBe('/about');
+      expect(languageFromPath(`/${language}/about`)).toBe(language);
+    });
+    expect(findPublicRoute('/about')?.path).toBe('/about');
+    expect(findPublicRoute('/nope')).toBeUndefined();
+    expect(languageFromPath('/france')).toBeUndefined();
+    expect(languageFromPath('/about')).toBeUndefined();
+    expect(languageFromPath('/')).toBeUndefined();
+  });
+
+  it('declares every language and x-default on each page', () => {
+    expect(alternateUrls('/about')).toEqual([
+      { lang: 'en', href: 'https://glassfolio.dev/en/about' },
+      { lang: 'fr', href: 'https://glassfolio.dev/fr/about' },
+      { lang: 'x-default', href: 'https://glassfolio.dev/en/about' },
+    ]);
+    PUBLIC_LANGUAGES.forEach((language) => {
+      expect(JSON.parse(read(`locales/${language}/seo.json`))).toHaveProperty('home.title');
+    });
   });
 
   it('keeps the product schema off the legal pages', () => {
@@ -74,18 +128,18 @@ describe('vercel.json serves both Vercel projects', () => {
     });
   });
 
-  it('serves every public route from its prerendered file', () => {
-    expect(destinationFor('/')).toBe('/_p/index.html');
+  it.each(PUBLIC_LANGUAGES)('serves the %s pages from their own URLs', (language) => {
+    expect(destinationFor(`/${language}`)).toBe('/_p/:lang/index.html');
     PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
-      expect(destinationFor(route.path), route.path).toBe('/_p/:page.html');
+      expect(destinationFor(`/${language}${route.path}`), route.path).toBe('/_p/:lang/:page.html');
       expect(route.file).toBe(route.path.slice(1));
     });
   });
 
-  it('serves the French pages from their own URLs', () => {
-    expect(destinationFor('/fr')).toBe('/_p/fr/index.html');
+  it('serves the default language on hosts that do not redirect, such as a preview URL', () => {
+    expect(destinationFor('/')).toBe(`/_p/${DEFAULT_PUBLIC_LANGUAGE}/index.html`);
     PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
-      expect(destinationFor(`/fr${route.path}`), route.path).toBe('/_p/fr/:page.html');
+      expect(destinationFor(route.path), route.path).toBe(`/_p/${DEFAULT_PUBLIC_LANGUAGE}/:page.html`);
     });
   });
 
@@ -98,7 +152,7 @@ describe('vercel.json serves both Vercel projects', () => {
   });
 
   it('leaves unknown paths and fake discovery files to the 404 page', () => {
-    ['/nope', '/llms.txt', '/sw.js', '/ai-catalog.json', '/assets/old.js', '/.well-known/ai-plugin.json'].forEach((path) => {
+    ['/nope', '/llms.txt', '/sw.js', '/ai-catalog.json', '/assets/old.js', '/.well-known/ai-plugin.json', '/en/nope', '/fr/nope', '/de', '/de/about'].forEach((path) => {
       expect(destinationFor(path), path).toBeUndefined();
     });
   });
@@ -109,6 +163,49 @@ describe('vercel.json serves both Vercel projects', () => {
     welcome.forEach((rule) => expect(rule.statusCode).toBe(301));
     PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
       expect(welcome.some((rule) => compile(rule.source).test(`/welcome${route.path}`)), route.path).toBe(true);
+    });
+  });
+
+  it.each(SHOWCASE_HOSTS)('sends visitors of %s to the page of their language', (host) => {
+    // The home page picks by what the visitor said, most explicit first: address, saved choice, browser
+    expect(redirectFor(host, '/')).toEqual({ to: `/${DEFAULT_PUBLIC_LANGUAGE}`, status: 307 });
+    expect(redirectFor(host, '/', { acceptLanguage: 'fr-FR,fr;q=0.9,en;q=0.8' })?.to).toBe('/fr');
+    expect(redirectFor(host, '/', { acceptLanguage: 'en-US,en;q=0.9,fr;q=0.8' })?.to).toBe('/en');
+    expect(redirectFor(host, '/', { acceptLanguage: 'de-DE,de;q=0.9' })?.to).toBe('/en');
+    expect(redirectFor(host, '/', { cookie: 'fr', acceptLanguage: 'en-US' })?.to).toBe('/fr');
+    expect(redirectFor(host, '/', { cookie: 'en', acceptLanguage: 'fr-FR' })?.to).toBe('/en');
+    expect(redirectFor(host, '/?lang=fr', { cookie: 'en' })?.to).toBe('/fr');
+    expect(redirectFor(host, '/?lang=en', { cookie: 'fr' })?.to).toBe('/en');
+    PUBLIC_LANGUAGES.forEach((language) => {
+      expect(redirectFor(host, '/', { cookie: language })?.to, `cookie ${language}`).toBe(`/${language}`);
+      expect(redirectFor(host, `/?lang=${language}`)?.to, `query ${language}`).toBe(`/${language}`);
+      expect(redirectFor(host, '/', { acceptLanguage: `${language}-XX,${language};q=0.9` })?.to, `browser ${language}`).toBe(`/${language}`);
+    });
+  });
+
+  it.each(SHOWCASE_HOSTS)('moves the old English URLs of %s to their language page, permanently by default', (host) => {
+    PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
+      expect(redirectFor(host, route.path), route.path).toEqual({ to: `/${DEFAULT_PUBLIC_LANGUAGE}${route.path}`, status: 301 });
+      expect(redirectFor(host, `${route.path}?lang=fr`)?.to, route.path).toBe(`/fr${route.path}`);
+      expect(redirectFor(host, route.path, { cookie: 'fr' })?.to, route.path).toBe(`/fr${route.path}`);
+      PUBLIC_LANGUAGES.forEach((language) => {
+        expect(redirectFor(host, `${route.path}?lang=${language}`)?.to, `${route.path} ${language}`).toBe(`/${language}${route.path}`);
+      });
+    });
+  });
+
+  it.each(APP_HOSTS)('never redirects the app host %s', (host) => {
+    ['/', '/about', '/privacy', '/login', '/dashboard', '/?lang=fr'].forEach((path) => {
+      expect(redirectFor(host, path, { cookie: 'fr', acceptLanguage: 'fr' }), path).toBeUndefined();
+    });
+  });
+
+  it('leaves the addresses that already carry a language alone', () => {
+    PUBLIC_LANGUAGES.forEach((language) => {
+      SHOWCASE_HOSTS.forEach((host) => {
+        expect(redirectFor(host, `/${language}`, { cookie: 'fr' })).toBeUndefined();
+        expect(redirectFor(host, `/${language}/about`, { cookie: 'fr' })).toBeUndefined();
+      });
     });
   });
 });

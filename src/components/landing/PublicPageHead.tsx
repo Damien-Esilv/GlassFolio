@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useHref, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { SITE_ORIGIN, canonicalUrl, findPublicRoute } from '../../config/publicRoutes';
+import { SITE_ORIGIN, alternateUrls, findPublicRoute } from '../../config/publicRoutes';
 
 const setHeadAttribute = (selector: string, tag: string, attributes: Record<string, string>, name: string, value: string): void => {
   let element = document.head.querySelector(selector);
@@ -17,7 +17,7 @@ const setHeadAttribute = (selector: string, tag: string, attributes: Record<stri
 export const PublicPageHead: React.FC = () => {
   const { pathname } = useLocation();
   const { t, i18n } = useTranslation();
-  // Includes the router basename, so a French page declares its own /fr address
+  // Includes the router basename, so a page declares the address of its own language
   const href = useHref(findPublicRoute(pathname)?.path ?? '/');
 
   useEffect(() => {
@@ -33,9 +33,8 @@ export const PublicPageHead: React.FC = () => {
     setHeadAttribute('meta[name="twitter:description"]', 'meta', { name: 'twitter:description' }, 'content', description);
     if (route) {
       const url = `${SITE_ORIGIN}${href}`;
-      const alternates = { en: canonicalUrl(route.path, 'en'), fr: canonicalUrl(route.path, 'fr'), 'x-default': canonicalUrl(route.path, 'en') };
-      Object.entries(alternates).forEach(([lang, value]) => {
-        setHeadAttribute(`link[rel="alternate"][hreflang="${lang}"]`, 'link', { rel: 'alternate', hreflang: lang }, 'href', value);
+      alternateUrls(route.path).forEach(({ lang, href: alternate }) => {
+        setHeadAttribute(`link[rel="alternate"][hreflang="${lang}"]`, 'link', { rel: 'alternate', hreflang: lang }, 'href', alternate);
       });
       setHeadAttribute('link[rel="canonical"]', 'link', { rel: 'canonical' }, 'href', url);
       setHeadAttribute('meta[property="og:url"]', 'meta', { property: 'og:url' }, 'content', url);
