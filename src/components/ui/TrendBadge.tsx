@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { getTrendTokens } from '../../constants/themeTokens';
 import { useCountUp } from '../../hooks/useCountUp';
 import { ANIMATION_DURATION_MS } from '../../constants/animations';
+import StableNumber from './StableNumber';
 
 export interface TrendBadgeProps {
   value: number;
@@ -57,7 +58,7 @@ export const TrendBadge: React.FC<TrendBadgeProps> = ({
       aria-label={animated ? labelFinal : undefined}
     >
       {showIcon && <IconComponent size={iconSize} className="shrink-0" />}
-      <span aria-hidden={animated ? 'true' : undefined}>{labelDisplay}</span>
+      <StableNumber display={labelDisplay} final={labelFinal} hidden={animated} />
     </span>
   );
 };

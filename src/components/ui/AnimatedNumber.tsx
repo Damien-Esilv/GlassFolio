@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCountUp } from '../../hooks/useCountUp';
+import StableNumber from './StableNumber';
 
 interface AnimatedNumberProps {
     value: number;
@@ -30,7 +31,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
 
     return (
         <span className={className} aria-label={format(value)}>
-            <span aria-hidden="true">{format(shown)}</span>
+            <StableNumber display={format(shown)} final={format(value)} hidden />
         </span>
     );
 };

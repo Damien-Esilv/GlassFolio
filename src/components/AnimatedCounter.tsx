@@ -2,6 +2,7 @@ import React from 'react';
 import { formatCurrency } from '../utils/currency';
 import { ANIMATION_DURATION_MS } from '../constants/animations';
 import { useCountUp } from '../hooks/useCountUp';
+import StableNumber from './ui/StableNumber';
 
 interface AnimatedCounterProps {
   value: number;
@@ -24,7 +25,10 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
 
   return (
     <span className={className}>
-      {formatCurrency(displayValue, currency, locale, options)}
+      <StableNumber
+        display={formatCurrency(displayValue, currency, locale, options)}
+        final={formatCurrency(value, currency, locale, options)}
+      />
     </span>
   );
 };
