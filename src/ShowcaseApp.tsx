@@ -14,7 +14,7 @@ import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 import { PullToRefresh } from './components/ui/PullToRefresh';
 import { PublicPageHead } from './components/landing/PublicPageHead';
-import { FR_BASENAME, findPublicRoute, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
+import { findPublicRoute, languageBasename, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
 
 type PageModule = { default: React.ComponentType };
 
@@ -38,6 +38,8 @@ const SelfHost = lazyPage(() => import('./pages/SelfHost'));
 const About = lazyPage(() => import('./pages/About'));
 const Roadmap = lazyPage(() => import('./pages/Roadmap'));
 const Changelog = lazyPage(() => import('./pages/Changelog'));
+const Docs = lazyPage(() => import('./pages/Docs'));
+const Contact = lazyPage(() => import('./pages/Contact'));
 const NotFound = lazyPage(() => import('./pages/NotFound'));
 
 const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> = {
@@ -51,6 +53,8 @@ const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> =
   terms: LegalCenter,
   cookies: LegalCenter,
   accessibility: LegalCenter,
+  docs: Docs,
+  contact: Contact,
 };
 
 export const preloadPublicPage = (pathname: string): Promise<void> => {
@@ -133,6 +137,10 @@ export const ShowcaseRoutes: React.FC<ShowcaseRoutesProps> = ({ onPageReady }) =
             <Route path="/welcome/roadmap" element={<Roadmap />} />
             <Route path="/changelog" element={<Changelog />} />
             <Route path="/welcome/changelog" element={<Changelog />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/welcome/docs" element={<Docs />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/welcome/contact" element={<Contact />} />
             <Route path="/legal" element={<LegalCenter />} />
             <Route path="/privacy" element={<LegalCenter />} />
             <Route path="/terms" element={<LegalCenter />} />
@@ -179,8 +187,9 @@ interface ShowcaseAppProps {
 }
 
 export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false, onVisible }) => {
-  // Router basename: every internal link and route of a French page stays under /fr
-  const basename = languageFromPath(window.location.pathname) === 'fr' ? FR_BASENAME : undefined;
+  // Router basename: every internal link and route of a public page stays under its language prefix
+  const pathLanguage = languageFromPath(window.location.pathname);
+  const basename = pathLanguage ? languageBasename(pathLanguage) : undefined;
   const [pageReady, setPageReady] = useState(false);
   const markReady = React.useCallback(() => setPageReady(true), []);
 

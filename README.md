@@ -64,7 +64,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 - In-app assistant with streaming, visible reasoning blocks and approval cards for sensitive actions.
 - Local models through Ollama (no data leaves your machine), or OpenAI, Anthropic, OpenRouter and Groq with keys stored in your encrypted vault.
 - Guardrails redact secrets (keys, recovery codes, TOTP seeds) before anything reaches a model.
-- A standalone [MCP server](mcp-server/index.mjs) (`npm run mcp`, stdio) for Claude Desktop, Cursor and other MCP clients.
+- An [MCP bridge](mcp-server/index.mjs): Claude Code, Codex, Cursor, Antigravity and other MCP clients call the tools of the app on your own data, through your open and unlocked tab, and every change waits for your approval. A local server (Docker or `npm run dev`) includes it at `/mcp`; for GlassFolio online, start it on your computer with `npm run mcp -- serve`. See the [documentation](https://glassfolio.dev/en/docs).
 
 ### Security and privacy
 - Passwords checked against NIST SP 800-63B guidance, TOTP two-factor authentication with backup codes, WebAuthn passkeys, and an emergency recovery key.
@@ -212,7 +212,8 @@ To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLI
 | `npm run dev` / `dev:demo` / `dev:cloud` | Dev server in local mode / local mode on the demo account / cloud (Supabase) mode |
 | `npm run build` | Production build (`build:local`, `build:app`, `build:showcase` for specific targets) |
 | `npm run preview` | Preview the production build |
-| `npm run mcp` | Start the MCP server (stdio) |
+| `npm run mcp` | Start the MCP bridge (stdio; `-- serve` for HTTP) |
+| `npm run mcp:catalog` | Regenerate `mcp-server/tools.json` after changing an AI tool |
 | `npm run docker:up` / `docker:down` / `docker:logs` / `docker:smoke` | Self-hosting helpers |
 
 ## ✅ Quality and security

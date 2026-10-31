@@ -121,6 +121,16 @@ export const LandingFooter: React.FC = () => {
                   {t('landing:header.pageChangelog')}
                 </Link>
               </li>
+              <li>
+                <Link to={buildPublicPagePath('/docs')} className="inline-block py-1 hover:text-primary transition-colors">
+                  {t('landing:header.pageDocs')}
+                </Link>
+              </li>
+              <li>
+                <Link to={buildPublicPagePath('/contact')} className="inline-block py-1 hover:text-primary transition-colors">
+                  {t('landing:header.pageContact')}
+                </Link>
+              </li>
             </ul>
           </div>
 

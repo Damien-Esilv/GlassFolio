@@ -1,6 +1,7 @@
 import { AILanguage, ChatMessage, AIExecutionContext, PendingActionProposal } from './types';
 import { aiToolRegistry } from './aiToolRegistry';
 import { guardrailsService } from './guardrailsService';
+import { decideConfirmation } from './executionPolicy';
 import { aiSettingsService } from './aiSettingsService';
 import i18n from '../../i18n';
 import { AIProvider } from './providers/types';
@@ -199,8 +200,9 @@ class AIService {
           let toolResultStr = '';
 
           // Check if tool requires human approval (or if in strict read-only mode)
-          if (toolDef?.requiresConfirmation) {
-            if (settings.executionMode === 'read_only') {
+          const decision = toolDef ? decideConfirmation(toolDef, settings.executionMode) : 'run';
+          if (decision !== 'run') {
+            if (decision === 'block') {
               toolResultStr = JSON.stringify({ error: 'Blocked: the assistant is in read-only mode.' });
               followUps.push({
                 id: `msg_${Date.now()}_${followUps.length}_a`,
@@ -226,7 +228,7 @@ class AIService {
               });
             }
           } else {
-            // Read-only tool execution
+            // Runs at once: a tool that changes nothing, or any tool in autonomous mode
             try {
               const result = await aiToolRegistry.executeTool(
                 toolCall.name,

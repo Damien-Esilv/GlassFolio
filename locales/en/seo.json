@@ -39,6 +39,14 @@
     "title": "Accessibility Statement | GlassFolio",
     "description": "GlassFolio's accessibility commitment, current status and how to report a problem."
   },
+  "docs": {
+    "title": "MCP Server Documentation | GlassFolio",
+    "description": "How to connect Claude Code, Codex, Cursor or Antigravity to GlassFolio through a bridge on your computer, and the list of its tools."
+  },
+  "contact": {
+    "title": "Contact GlassFolio: Privacy, Bugs and Security",
+    "description": "Where to write for your privacy rights, a bug report, a feature request or a security concern about GlassFolio."
+  },
   "notFound": {
     "title": "Page Not Found | GlassFolio",
     "description": "This page doesn't exist on GlassFolio."

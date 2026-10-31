@@ -1,0 +1,72 @@
+{
+  "title": "Documentation du serveur MCP",
+  "intro": "GlassFolio laisse des clients IA comme Claude Code, Codex, Cursor ou Antigravity utiliser ses outils sur vos propres données. Cette page explique comment cela fonctionne, comment connecter un client, et ce que font les outils.",
+  "howItWorks": {
+    "title": "Comment ça fonctionne",
+    "body": "Votre coffre est chiffré dans votre navigateur, et seul votre onglet GlassFolio ouvert détient la clé : aucun programme ne peut le lire de l’extérieur. Le serveur MCP est donc un pont qui tourne sur votre propre ordinateur. Votre client IA lui envoie un appel d’outil, le pont le transmet à votre onglet, l’onglet exécute l’outil sur vos données et renvoie le résultat. Rien ne passe par les serveurs de GlassFolio, et le pont ne conserve rien."
+  },
+  "needs": {
+    "title": "Ce qu’il faut",
+    "a": "Node.js 22 et une copie du dépôt : le pont est mcp-server/index.mjs et n’a aucune dépendance.",
+    "b": "GlassFolio ouvert dans un onglet du navigateur, connecté, avec votre coffre déverrouillé.",
+    "c": "« Autoriser les clients IA » activé dans Réglages, IA & MCP.",
+    "d": "Un client IA qui prend en charge MCP en stdio ou en Streamable HTTP.",
+    "checkLabel": "Vérifier que le pont démarre et liste ses outils"
+  },
+  "modes": {
+    "title": "En local ou en ligne",
+    "local": {
+      "title": "GlassFolio sur votre machine (Docker ou npm run dev)",
+      "body": "Le serveur de l’application contient déjà le pont, à son adresse /mcp : il n’y a rien d’autre à démarrer. Réglages, IA & MCP affiche l’adresse et le jeton à donner à votre client."
+    },
+    "online": {
+      "title": "GlassFolio en ligne (app.glassfolio.dev)",
+      "body": "Démarrez le pont sur votre ordinateur. Votre onglet s’y connecte alors en 127.0.0.1, comme il le fait pour un modèle Ollama local, donc rien ne quitte votre machine. Collez son jeton dans Réglages, IA & MCP. Certains navigateurs demandent votre autorisation avant qu’une page web atteigne une adresse locale, et certains peuvent la bloquer : si c’est le cas du vôtre, utilisez le mode local.",
+      "label": "Démarrer le pont et afficher son jeton"
+    }
+  },
+  "connect": {
+    "title": "Connecter votre client IA",
+    "body": "Donnez à votre client l’adresse du pont et son jeton (en-tête X-GlassFolio-Token), ou laissez-le démarrer la commande lui-même. Réglages, IA & MCP prépare ces extraits avec vos propres valeurs.",
+    "claudeCode": "Claude Code",
+    "stdio": "Clients qui démarrent une commande (Claude Desktop et autres)",
+    "codex": "Codex (~/.codex/config.toml)",
+    "note": "Remplacez le chemin par le dossier de votre copie du dépôt. Les autres clients, comme Cursor ou Antigravity, prennent les mêmes informations dans leurs propres réglages MCP : l’adresse et le jeton, ou la commande."
+  },
+  "approvals": {
+    "title": "Les modifications demandent votre approbation",
+    "body": "Un outil qui modifie vos données, comme enregistrer une transaction ou créer un objectif, ne s’exécute pas quand le client le demande. GlassFolio affiche une carte dans votre onglet ouvert, et la modification n’est faite que si vous l’approuvez là. Sans réponse de votre part pendant environ une minute et demie, rien n’est modifié. En mode lecture seule, ces outils sont bloqués.",
+    "autonomous": "Le mode autonome (Réglages, IA & MCP) supprime cette confirmation : l’assistant, un modèle local et les clients IA modifient alors vos données tout de suite. Un avertissement explique les risques avant de l’activer, par exemple un agent qui suit une instruction cachée dans un document qu’il lit. Les actions sur le compte lui-même (verrouiller le coffre, changer la clé, exporter vos données, renvoyer l’e-mail de vérification) demandent toujours."
+  },
+  "privacy": {
+    "title": "Ce qui quitte votre ordinateur",
+    "body": "Les résultats des outils vont à votre client IA, puis au modèle qu’il utilise, comme lorsque vous collez des chiffres dans une conversation. Les clés d’API, les clés de récupération et les secrets d’authentification sont retirés avant qu’un résultat ne quitte GlassFolio. Si rien ne doit quitter votre machine, connectez un client qui utilise un modèle local."
+  },
+  "limits": {
+    "title": "Limites",
+    "a": "L’onglet doit rester ouvert et déverrouillé. Si vous verrouillez le coffre ou fermez l’onglet, le client est invité à vous demander d’ouvrir GlassFolio de nouveau.",
+    "b": "Un seul onglet sert les clients à la fois : en ouvrir un second prend le relais.",
+    "c": "Le pont n’écoute que sur votre propre ordinateur et n’accepte que le jeton que vous partagez."
+  },
+  "clients": {
+    "title": "Clients compatibles",
+    "body": "Tout client qui prend en charge MCP en stdio ou en Streamable HTTP peut l’utiliser. {{tested}}"
+  },
+  "tools": {
+    "title": "Outils",
+    "intro": "Les {{count}} outils que propose le pont, tels que votre client les voit (les descriptions sont en anglais). Ceux marqués « Demande votre approbation » modifient vos données et l’attendent.",
+    "readOnly": "Lecture seule",
+    "needsApproval": "Demande votre approbation"
+  },
+  "more": {
+    "title": "Aller plus loin",
+    "body": "L’assistant de l’application utilise les mêmes outils. Pour faire tourner toute l’application sur votre machine, lisez le guide d’auto-hébergement.",
+    "selfHost": "Guide d’auto-hébergement",
+    "contact": "Poser une question"
+  },
+  "setup": {
+    "title": "Laissez votre IA se configurer",
+    "body": "Le plus rapide : copiez ce prompt dans votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il démarre le pont si besoin et ajoute le serveur à sa propre configuration, puis vous donne le jeton et l’adresse à coller dans GlassFolio (Réglages, IA & MCP). Le prompt ne contient aucun secret et il est toujours en anglais. Le jeton apparaîtra dans votre discussion avec l’IA ; vous pouvez le remplacer à tout moment.",
+    "label": "Prompt de configuration"
+  }
+}

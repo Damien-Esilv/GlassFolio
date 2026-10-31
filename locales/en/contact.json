@@ -1,0 +1,34 @@
+{
+  "title": "Contact",
+  "intro": "GlassFolio is an independent project, built and maintained by one person. This page tells you where to send what, so that your message reaches the right place.",
+  "sections": {
+    "privacy": {
+      "title": "Your data and privacy",
+      "body": "To access, correct, export or erase your personal data, or to ask a question about privacy, write to the address below. The Privacy Policy explains what is stored and how your rights apply.",
+      "mail": "Write to {{email}}",
+      "policy": "Read the Privacy Policy"
+    },
+    "issues": {
+      "title": "Bugs and feature requests",
+      "body": "Open an issue on GitHub. Say what you did, what you expected and what happened, and mention the version shown on the changelog page. Never put a password, a recovery key or financial data in a public issue.",
+      "link": "Open an issue on GitHub"
+    },
+    "security": {
+      "title": "Security concerns",
+      "body": "If you think you found a vulnerability, please do not open a public issue. Write to the privacy address with the subject “Security” and describe how to reproduce it.",
+      "subject": "Security",
+      "mail": "Report a security concern"
+    },
+    "project": {
+      "title": "The project and its author",
+      "body": "To know who builds GlassFolio and how, read the About page. The roadmap and the changelog show what is coming and what has changed.",
+      "about": "About the project",
+      "roadmap": "Roadmap",
+      "changelog": "Changelog"
+    }
+  },
+  "limits": {
+    "title": "Good to know",
+    "body": "Replies are written by hand, so please allow some time. GlassFolio gives no personalised tax, legal or investment advice and cannot answer questions about your own tax return: for those, turn to a qualified professional or to the tax administration."
+  }
+}

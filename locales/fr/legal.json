@@ -434,6 +434,12 @@
         "category": "Strictement nécessaire (session)",
         "purpose": "Heure du dernier rechargement automatique après une mise à jour de GlassFolio, pour qu’une page qui ne se charge pas ne soit rechargée qu’une fois et jamais en boucle. Ne contient aucune donnée personnelle.",
         "lifespan": "Jusqu’à la fermeture de l’onglet"
+      },
+      "mcpBridge": {
+        "key": "gf_mcp_bridge",
+        "category": "Strictement nécessaire (Préférences)",
+        "purpose": "Mémorise sur cet appareil si vous avez autorisé les clients IA, l’adresse du pont MCP sur cet ordinateur et son jeton. Il reste dans ce navigateur.",
+        "lifespan": "Persistant jusqu’à la désactivation ou l’effacement des données du site"
       }
     },
     "managerTitle": "Gestionnaire Interactif du Consentement",

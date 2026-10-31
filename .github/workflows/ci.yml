@@ -288,25 +288,28 @@ jobs:
         include:
           - label: local
             build_cmd: npm run build:local
-            limit_kb: 2560
+            # 2560 -> 2592: MCP bridge (settings, tab client, executor) and its texts, TGLA-198
+            limit_kb: 2592
             landing: absent
             smoke: false
           - label: cloud-app
             build_cmd: npm run build:app
-            limit_kb: 2560
+            # 2560 -> 2592: same MCP bridge code as the local build, TGLA-198
+            limit_kb: 2592
             landing: absent
             smoke: false
           - label: showcase
             build_cmd: npm run build:showcase
             # 1408 -> 1440: prerender runtime and French URLs (SEO texts, head updates, 404 page, TGLA-193, TGLA-194)
-            limit_kb: 1440
+            # 1440 -> 1536: contact and MCP documentation pages with the tool catalog, TGLA-197, TGLA-198
+            limit_kb: 1536
             landing: present
             smoke: false
           - label: vercel-parity
             build_cmd: GLASSFOLIO_BUILD_TARGET=showcase npm run build:vercel
             # 2560 -> 2624: Google Drive split-trust (OIDC, Drive key, device key, recovery modal) adds ~35 KB.
             # The showcase project's real build (TGLA-193); the app project matches cloud-app
-            limit_kb: 1440
+            limit_kb: 1536
             landing: present
             smoke: true
     steps:
@@ -367,8 +370,8 @@ jobs:
             sleep 1
           done
           curl -fsS http://localhost:4173/app-shell.html | grep -qi "<div id=\"root\"" || (echo "::error::SPA shell missing" && exit 1)
-          curl -fsS http://localhost:4173/_p/index.html | grep -qi "<h1" || (echo "::error::Prerendered home has no content" && exit 1)
-          ! curl -fsS http://localhost:4173/_p/index.html | sed -n '/<div id="root"/,$p' | grep -qi "<script" || (echo "::error::Inline script in prerendered HTML" && exit 1)
+          curl -fsS http://localhost:4173/_p/en/index.html | grep -qi "<h1" || (echo "::error::Prerendered home has no content" && exit 1)
+          ! curl -fsS http://localhost:4173/_p/en/index.html | sed -n '/<div id="root"/,$p' | grep -qi "<script" || (echo "::error::Inline script in prerendered HTML" && exit 1)
           echo "✅ vite preview serves the SPA shell and the prerendered pages."
 
       - name: Upload build artifact

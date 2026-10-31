@@ -53,7 +53,8 @@
     "mcp": "node mcp-server/index.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs",
     "ollama:proxy": "node scripts/ollama-proxy.mjs",
-    "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434"
+    "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434",
+    "mcp:catalog": "UPDATE_MCP_CATALOG=1 vitest run tests/unit/mcp/catalog.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

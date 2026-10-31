@@ -1,0 +1,80 @@
+{
+  "$comment": "AI clients that can be connected to the MCP bridge. To add one, add an entry here: id (unique, lowercase), name (shown in the selector), where (the file or menu that holds its MCP servers) and one or more snippets. A snippet has a transport (http or stdio), a format (command, json or toml) and a template using {{endpoint}}, {{token}} and {{entry}} (the path of mcp-server/index.mjs). 'templateOwnServer' replaces 'template' when the bridge belongs to the server of the app (local mode). No code change is needed.",
+  "clients": [
+    {
+      "id": "antigravity",
+      "name": "Antigravity",
+      "where": "Agent panel > MCP servers > Manage MCP Servers > View raw config (mcp_config.json)",
+      "snippets": [
+        {
+          "transport": "stdio",
+          "format": "json",
+          "template": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"]\n    }\n  }\n}",
+          "templateOwnServer": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"],\n      \"env\": {\n        \"GLASSFOLIO_MCP_URL\": \"{{endpoint}}\",\n        \"GLASSFOLIO_MCP_TOKEN\": \"{{token}}\"\n      }\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "where": "~/.cursor/mcp.json (or .cursor/mcp.json in a project)",
+      "snippets": [
+        {
+          "transport": "http",
+          "format": "json",
+          "template": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"url\": \"{{endpoint}}\",\n      \"headers\": {\n        \"X-GlassFolio-Token\": \"{{token}}\"\n      }\n    }\n  }\n}"
+        },
+        {
+          "transport": "stdio",
+          "format": "json",
+          "template": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"]\n    }\n  }\n}",
+          "templateOwnServer": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"],\n      \"env\": {\n        \"GLASSFOLIO_MCP_URL\": \"{{endpoint}}\",\n        \"GLASSFOLIO_MCP_TOKEN\": \"{{token}}\"\n      }\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "where": "A terminal (the command registers the server for you)",
+      "snippets": [
+        {
+          "transport": "http",
+          "format": "command",
+          "template": "claude mcp add --transport http glassfolio {{endpoint}} --header \"X-GlassFolio-Token: {{token}}\""
+        },
+        {
+          "transport": "stdio",
+          "format": "command",
+          "template": "claude mcp add glassfolio -- node {{entry}}",
+          "templateOwnServer": "claude mcp add glassfolio --env GLASSFOLIO_MCP_URL={{endpoint}} --env GLASSFOLIO_MCP_TOKEN={{token}} -- node {{entry}}"
+        }
+      ]
+    },
+    {
+      "id": "claude-desktop",
+      "name": "Claude Desktop",
+      "where": "claude_desktop_config.json (Settings > Developer > Edit Config)",
+      "snippets": [
+        {
+          "transport": "stdio",
+          "format": "json",
+          "template": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"]\n    }\n  }\n}",
+          "templateOwnServer": "{\n  \"mcpServers\": {\n    \"glassfolio\": {\n      \"command\": \"node\",\n      \"args\": [\"{{entry}}\"],\n      \"env\": {\n        \"GLASSFOLIO_MCP_URL\": \"{{endpoint}}\",\n        \"GLASSFOLIO_MCP_TOKEN\": \"{{token}}\"\n      }\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "where": "~/.codex/config.toml",
+      "snippets": [
+        {
+          "transport": "stdio",
+          "format": "toml",
+          "template": "[mcp_servers.glassfolio]\ncommand = \"node\"\nargs = [\"{{entry}}\"]",
+          "templateOwnServer": "[mcp_servers.glassfolio]\ncommand = \"node\"\nargs = [\"{{entry}}\"]\nenv = { GLASSFOLIO_MCP_URL = \"{{endpoint}}\", GLASSFOLIO_MCP_TOKEN = \"{{token}}\" }"
+        }
+      ]
+    }
+  ]
+}

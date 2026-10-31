@@ -1,0 +1,34 @@
+{
+  "title": "Contact",
+  "intro": "GlassFolio est un projet indépendant, construit et maintenu par une seule personne. Cette page indique où écrire selon votre sujet, pour que votre message arrive au bon endroit.",
+  "sections": {
+    "privacy": {
+      "title": "Vos données et votre vie privée",
+      "body": "Pour accéder à vos données personnelles, les corriger, les exporter ou les effacer, ou pour poser une question sur la vie privée, écrivez à l’adresse ci-dessous. La Politique de confidentialité explique ce qui est conservé et comment s’appliquent vos droits.",
+      "mail": "Écrire à {{email}}",
+      "policy": "Lire la Politique de confidentialité"
+    },
+    "issues": {
+      "title": "Bogues et demandes de fonctionnalités",
+      "body": "Ouvrez un ticket sur GitHub. Indiquez ce que vous avez fait, ce que vous attendiez et ce qui s’est passé, et précisez la version affichée sur la page des nouveautés. Ne mettez jamais de mot de passe, de clé de récupération ni de donnée financière dans un ticket public.",
+      "link": "Ouvrir un ticket sur GitHub"
+    },
+    "security": {
+      "title": "Problèmes de sécurité",
+      "body": "Si vous pensez avoir trouvé une faille, n’ouvrez pas de ticket public. Écrivez à l’adresse vie privée avec l’objet « Sécurité » et décrivez comment la reproduire.",
+      "subject": "Sécurité",
+      "mail": "Signaler un problème de sécurité"
+    },
+    "project": {
+      "title": "Le projet et son auteur",
+      "body": "Pour savoir qui construit GlassFolio et comment, lisez la page Le projet. La feuille de route et les nouveautés montrent ce qui arrive et ce qui a changé.",
+      "about": "Le projet",
+      "roadmap": "Feuille de route",
+      "changelog": "Nouveautés"
+    }
+  },
+  "limits": {
+    "title": "Bon à savoir",
+    "body": "Les réponses sont écrites à la main : merci de patienter un peu. GlassFolio ne donne aucun conseil fiscal, juridique ou en investissement personnalisé et ne peut pas répondre aux questions sur votre propre déclaration : pour cela, adressez-vous à un professionnel qualifié ou à l’administration fiscale."
+  }
+}

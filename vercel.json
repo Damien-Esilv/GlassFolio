@@ -23,20 +23,20 @@
       "destination": "/app-shell.html"
     },
     {
+      "source": "/:lang(en|fr)",
+      "destination": "/_p/:lang/index.html"
+    },
+    {
+      "source": "/:lang(en|fr)/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "destination": "/_p/:lang/:page.html"
+    },
+    {
       "source": "/",
-      "destination": "/_p/index.html"
+      "destination": "/_p/en/index.html"
     },
     {
-      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
-      "destination": "/_p/:page.html"
-    },
-    {
-      "source": "/fr",
-      "destination": "/_p/fr/index.html"
-    },
-    {
-      "source": "/fr/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
-      "destination": "/_p/fr/:page.html"
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "destination": "/_p/en/:page.html"
     },
     {
       "source": "/(login|signup|forgot-password|reset-password|dashboard|portfolio|positions|transactions|analytics|tax|reports|goals|alerts|notifications|settings|progress|import|import-history)(/.*)?",
@@ -45,6 +45,17 @@
     {
       "source": "/auth/(.*)",
       "destination": "/app-shell.html"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": ".*text/markdown.*"
+        }
+      ],
+      "destination": "/api/not-found"
     }
   ],
   "redirects": [
@@ -54,8 +65,308 @@
       "statusCode": 301
     },
     {
-      "source": "/welcome/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "source": "/welcome/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/:page",
+      "statusCode": 301
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "header",
+          "key": "accept-language",
+          "value": "^fr.*"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "glassfolio.dev"
+        }
+      ],
+      "destination": "/en/:page",
+      "statusCode": 301
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "header",
+          "key": "accept-language",
+          "value": "^fr.*"
+        }
+      ],
+      "destination": "/fr",
+      "statusCode": 307
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        }
+      ],
+      "destination": "/en",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "en"
+        }
+      ],
+      "destination": "/en/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "query",
+          "key": "lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        },
+        {
+          "type": "cookie",
+          "key": "gf_public_lang",
+          "value": "fr"
+        }
+      ],
+      "destination": "/fr/:page",
+      "statusCode": 307
+    },
+    {
+      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
+        }
+      ],
+      "destination": "/en/:page",
       "statusCode": 301
     }
   ],

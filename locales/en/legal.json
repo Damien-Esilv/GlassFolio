@@ -434,6 +434,12 @@
         "category": "Strictly Necessary (Session)",
         "purpose": "Time of the last automatic reload after a GlassFolio update, so a page that cannot load is reloaded only once instead of in a loop. Contains no personal data.",
         "lifespan": "Until the tab is closed"
+      },
+      "mcpBridge": {
+        "key": "gf_mcp_bridge",
+        "category": "Strictly Necessary (Preferences)",
+        "purpose": "Remembers on this device whether you allowed AI clients, the address of the MCP bridge on this computer and its token. It stays in this browser.",
+        "lifespan": "Persistent until you turn it off or clear site data"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",

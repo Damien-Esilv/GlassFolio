@@ -8,16 +8,6 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
-    "v1-1": {
-      "title": "Un site public plus clair et plus rapide",
-      "highlights": {
-        "frenchPages": "Le site public a désormais ses propres pages en français, à des adresses que vous pouvez partager et garder en favori.",
-        "findablePublicPages": "Les pages publiques arrivent complètes aux moteurs de recherche, avec leur propre titre et description, pour que GlassFolio soit plus facile à trouver.",
-        "taxRates": "Le guide fiscal et le tableau d'optimisation indiquent les taux de flat tax et de prélèvements sociaux de chaque année, avec leurs exceptions.",
-        "consentSwitch": "La page cookies propose un interrupteur simple pour activer ou désactiver la mesure d'audience à tout moment.",
-        "readability": "Meilleur contraste des textes et zones tactiles plus grandes sur le site public, y compris sur mobile."
-      }
-    },
     "v1-0": {
       "title": "GlassFolio 1.0 — Version Majeure Officielle",
       "highlights": {
@@ -28,7 +18,18 @@
         "taxReporting": "Aide à la déclaration fiscale française avec simulation Cerfa 2042 / 3916-bis, calcul des gains sur retraits PEA et arbitrage flat-tax / barème.",
         "animationHarmonization": "Horloge d'animation harmonisée sur l'ensemble du tableau de bord et des analyses, changement de période instantané et navigation fluide dans le hub Progrès.",
         "assetAllocationExtensible": "Répartition d'actifs extensible supportant les catégories alternatives avec génération dynamique de couleurs stables.",
-        "smartNotifications": "Centre de notifications en temps réel et alertes intelligentes pour les variations de solde, quêtes et événements importants."
+        "smartNotifications": "Centre de notifications en temps réel et alertes intelligentes pour les variations de solde, quêtes et événements importants.",
+        "frenchPages": "Le site public a désormais ses propres pages en français, à des adresses que vous pouvez partager et garder en favori.",
+        "findablePublicPages": "Les pages publiques arrivent complètes aux moteurs de recherche, avec leur propre titre et description, pour que GlassFolio soit plus facile à trouver. Une revue complète de son apparence pour les assistants IA, avec un plan du site par langue.",
+        "taxRates": "Le guide fiscal et le tableau d'optimisation indiquent les taux de flat tax et de prélèvements sociaux de chaque année, avec leurs exceptions.",
+        "consentSwitch": "La page cookies propose un interrupteur simple pour activer ou désactiver la mesure d'audience à tout moment.",
+        "readability": "Meilleur contraste des textes et zones tactiles plus grandes sur le site public, y compris sur mobile.",
+        "mcpBridge": "Connectez Claude Code, Codex, Cursor ou Antigravity à GlassFolio : ils appellent ses outils sur vos propres données via votre onglet ouvert et déverrouillé, et chaque modification attend votre approbation.",
+        "mcpDocs": "Une page de documentation du serveur MCP : comment il fonctionne, comment connecter votre client IA, et la liste de ses 35 outils.",
+        "mcpSetupPrompt": "Un seul prompt à copier dans Antigravity, Cursor, Claude Code ou Codex : il configure la connexion tout seul et ne vous laisse que deux choses à coller, l’adresse et le jeton.",
+        "mcpClientPicker": "Les réglages MCP montrent un client IA à la fois, avec sa propre configuration, et les commandes pour gérer la connexion restent toujours visibles. De petites bulles d’information expliquent pourquoi le jeton est nécessaire et quelles demandes demandent encore votre confirmation en mode autonome, une liste qui se met à jour toute seule.",
+        "autonomousMode": "Un troisième mode IA, Autonome : l’assistant, un modèle Ollama local et vos clients IA peuvent créer et modifier objectifs, transactions et alertes sans vous demander à chaque fois. Un avertissement explique les risques avant de l’activer.",
+        "contactPage": "Une page de contact qui indique où écrire pour vos données, un bogue ou un problème de sécurité."
       }
     },
     "v0-4": {

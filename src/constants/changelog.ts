@@ -4,9 +4,11 @@
  * Release notes shown on the changelog page, newest first. Texts live in
  * locales/{en,fr}/changelog.json under `entries.<id>`.
  *
- * Rule (AGENTS.md, Git protocol): every merge into `main` adds an entry here and its EN + FR
- * texts in the same squashed commit. tests/unit/constants/changelog.test.ts checks the order,
- * the unique versions and the translations.
+ * Rule (AGENTS.md, Git protocol): only the promotion into `main` writes here. Merges into
+ * `develop` never touch this file. Until a release is announced, add to the newest version
+ * instead of opening a new one; its EN + FR texts go in the same commit.
+ * tests/unit/constants/changelog.test.ts checks the order, the unique versions and the
+ * translations.
  */
 export type ChangeKind = 'new' | 'improved';
 
@@ -26,18 +28,6 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
-    id: 'v1-1',
-    version: '1.1',
-    date: '2026-10-31',
-    highlights: [
-      { key: 'frenchPages', kind: 'new' },
-      { key: 'findablePublicPages', kind: 'improved' },
-      { key: 'taxRates', kind: 'improved' },
-      { key: 'consentSwitch', kind: 'new' },
-      { key: 'readability', kind: 'improved' },
-    ],
-  },
-  {
     id: 'v1-0',
     version: '1.0',
     date: '2026-10-31',
@@ -50,6 +40,17 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
       { key: 'animationHarmonization', kind: 'improved' },
       { key: 'assetAllocationExtensible', kind: 'new' },
       { key: 'smartNotifications', kind: 'improved' },
+      { key: 'frenchPages', kind: 'new' },
+      { key: 'findablePublicPages', kind: 'improved' },
+      { key: 'taxRates', kind: 'improved' },
+      { key: 'consentSwitch', kind: 'new' },
+      { key: 'readability', kind: 'improved' },
+      { key: 'mcpBridge', kind: 'new' },
+      { key: 'mcpDocs', kind: 'new' },
+      { key: 'mcpSetupPrompt', kind: 'new' },
+      { key: 'mcpClientPicker', kind: 'improved' },
+      { key: 'autonomousMode', kind: 'new' },
+      { key: 'contactPage', kind: 'new' },
     ],
   },
   {

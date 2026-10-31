@@ -8,10 +8,10 @@ import { StaticRouter } from 'react-router-dom';
 import i18n from './i18n';
 import { AuthProvider } from './context/AuthContext';
 import { PrerenderedMotion, ShowcaseRoutes } from './ShowcaseApp';
-import { FR_BASENAME, PUBLIC_ROUTES, canonicalUrl, localizedPath, type PublicLanguage, type PublicSeoKey } from './config/publicRoutes';
+import { PUBLIC_LANGUAGES, PUBLIC_ROUTES, alternateUrls, canonicalUrl, languageBasename, localizedPath, type PublicLanguage, type PublicSeoKey } from './config/publicRoutes';
 import { CHANGELOG } from './constants/changelog';
 
-export { PUBLIC_ROUTES, canonicalUrl, localizedPath };
+export { PUBLIC_LANGUAGES, PUBLIC_ROUTES, alternateUrls, canonicalUrl, localizedPath };
 
 export const latestReleaseDate = (): string => CHANGELOG[0].date;
 
@@ -29,7 +29,7 @@ export const renderPublicPage = async (path: string, language: PublicLanguage = 
         <AuthProvider>
           <PrerenderedMotion>
             <React.Fragment key="hydration">
-              <StaticRouter location={localizedPath(path, language)} basename={language === 'fr' ? FR_BASENAME : undefined}>
+              <StaticRouter location={localizedPath(path, language)} basename={languageBasename(language)}>
                 <ShowcaseRoutes />
               </StaticRouter>
             </React.Fragment>

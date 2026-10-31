@@ -11,6 +11,8 @@ export const VAULT_HEADER_KEY = 'gf_vault_header';
 export const CONSENT_STORAGE_KEY = 'gf_consent_v1';
 export const PUBLIC_THEME_STORAGE_KEY = 'gf_public_theme';
 export const PUBLIC_LANG_STORAGE_KEY = 'gf_public_lang';
+/** Device preference: AI clients allowed, address and token of the MCP bridge on this computer. */
+export const MCP_BRIDGE_STORAGE_KEY = 'gf_mcp_bridge';
 /** Manually entered prices (encrypted sensitive user data). */
 export const MANUAL_PRICE_HISTORY_KEY = 'glassfolio_manual_price_history';
 export const LEGACY_MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
