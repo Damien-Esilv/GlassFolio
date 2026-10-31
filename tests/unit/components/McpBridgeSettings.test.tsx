@@ -41,7 +41,7 @@ describe('<McpBridgeSettings /> online', () => {
   it('shows the two things to paste, each with its own copy button', () => {
     enable();
     fireEvent.change(screen.getByLabelText('Bridge token'), { target: { value: 'secrettoken123' } });
-    expect(screen.getByText('The two things to paste')).toBeTruthy();
+    expect(screen.getByText('Address and token')).toBeTruthy();
     expect(screen.getByText('http://127.0.0.1:47831/mcp')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy the address' }));
     expect(writeText).toHaveBeenLastCalledWith('http://127.0.0.1:47831/mcp');
@@ -52,7 +52,7 @@ describe('<McpBridgeSettings /> online', () => {
   it('gives one universal prompt that is copied as it is', () => {
     enable();
     expect(screen.getByRole('heading', { name: 'Let your AI set itself up' })).toBeTruthy();
-    expect(screen.getAllByText(/PASTE_THE_TOKEN_HERE/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Configure and connect the GlassFolio MCP server to your AI client/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Copy the prompt' }));
     expect(writeText).toHaveBeenLastCalledWith(MCP_SETUP_PROMPT);
     expect(screen.getByRole('button', { name: 'Prompt copied' })).toBeTruthy();
@@ -99,6 +99,18 @@ describe('<McpBridgeSettings /> online', () => {
     expect(writeText).toHaveBeenLastCalledWith(expect.stringContaining('X-GlassFolio-Token: secrettoken123'));
     fireEvent.click(screen.getByRole('button', { name: 'Show the token' }));
     expect(screen.getAllByText(/secrettoken123/).length).toBeGreaterThan(0);
+  });
+
+  it('explains in a small "i" why the token is needed', () => {
+    enable();
+    expect(screen.queryByRole('note')).toBeNull();
+    const info = screen.getByRole('button', { name: 'Why is the token needed?' });
+    fireEvent.click(info);
+    expect(info.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('note').textContent).toMatch(/shared secret/);
+    expect(screen.getByRole('note').textContent).toMatch(/for your security/);
+    fireEvent.click(info);
+    expect(screen.queryByRole('note')).toBeNull();
   });
 
   it('keeps the commands to manage the bridge in view, each one copyable', () => {

@@ -33,6 +33,7 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
       { key: 'autonomousMode', kind: 'new' },
       { key: 'mcpSetupPrompt', kind: 'new' },
       { key: 'mcpClientPicker', kind: 'improved' },
+      { key: 'mcpHelp', kind: 'improved' },
     ],
   },
   {

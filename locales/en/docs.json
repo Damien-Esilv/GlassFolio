@@ -66,7 +66,7 @@
   },
   "setup": {
     "title": "Let your AI set itself up",
-    "body": "The quickest way: copy this prompt into your AI client (Antigravity, Cursor, Claude Code, Codex...). It finds its own configuration file and writes the connection, then leaves you two steps: paste the token and the address where it says. The prompt holds no secret. Settings, AI & MCP gives you the same prompt and the two values to copy.",
+    "body": "The quickest way: copy this prompt into your AI client (Antigravity, Cursor, Claude Code, Codex...). It starts the bridge if needed and adds the server to its own configuration, then gives you the token and the address to paste into GlassFolio (Settings, AI & MCP). The prompt holds no secret and is always in English. The token will appear in your conversation with the AI; you can replace it at any time.",
     "label": "Setup prompt"
   }
 }

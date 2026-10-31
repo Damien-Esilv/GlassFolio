@@ -13,7 +13,8 @@
       "highlights": {
         "autonomousMode": "A third AI mode, Autonomous: the assistant, a local Ollama model and your AI clients can create and change goals, transactions and alerts without asking you each time. A warning explains the risks before you turn it on.",
         "mcpSetupPrompt": "One prompt to copy into Antigravity, Cursor, Claude Code or Codex: it sets up the connection by itself and leaves you two things to paste, the address and the token.",
-        "mcpClientPicker": "The MCP settings show one AI client at a time, with its own configuration, and the commands to manage the connection are always in view."
+        "mcpClientPicker": "The MCP settings show one AI client at a time, with its own configuration, and the commands to manage the connection are always in view.",
+        "mcpHelp": "Small info bubbles explain why the token is needed and which requests still ask for your confirmation in autonomous mode, a list that updates by itself."
       }
     },
     "v1-2": {

@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, TriangleAlert } from 'lucide-react';
-import type { AIExecutionMode } from '../../services/ai/types';
+import type { AIExecutionMode, AIToolDefinition } from '../../services/ai/types';
+import { aiToolRegistry } from '../../services/ai/aiToolRegistry';
+import { toolsThatAsk } from '../../services/ai/executionPolicy';
+import '../../services/ai/tools';
+import { InfoTip } from '../ui/InfoTip';
+
+type ToolInfo = Pick<AIToolDefinition, 'name' | 'description' | 'requiresConfirmation'>;
 
 interface ExecutionModeSelectorProps {
   mode: AIExecutionMode;
   onChange: (mode: AIExecutionMode) => void;
+  /** The tools of the app; read from the registry unless a test provides its own. */
+  tools?: readonly ToolInfo[];
 }
+
+/** The tool descriptions are written for AI clients and run long: the list shows their first sentence. */
+const firstSentence = (text: string): string => {
+  const end = text.search(/\.(\s|$)/);
+  return end < 0 ? text : text.slice(0, end + 1);
+};
 
 const WARNING_POINTS = ['a', 'b', 'c', 'd', 'e'] as const;
 
@@ -15,9 +29,10 @@ const WARNING_POINTS = ['a', 'b', 'c', 'd', 'e'] as const;
  * confirmation of any change, for the in-app assistant, a local model and MCP clients alike) first shows what it
  * implies, and applies only after the user confirms.
  */
-export const ExecutionModeSelector: React.FC<ExecutionModeSelectorProps> = ({ mode, onChange }) => {
+export const ExecutionModeSelector: React.FC<ExecutionModeSelectorProps> = ({ mode, onChange, tools }) => {
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
+  const stillAsking = toolsThatAsk<ToolInfo>(tools ?? aiToolRegistry.getAllTools(), 'autonomous');
 
   const select = (next: AIExecutionMode): void => {
     if (next === 'autonomous' && mode !== 'autonomous') {
@@ -29,8 +44,8 @@ export const ExecutionModeSelector: React.FC<ExecutionModeSelectorProps> = ({ mo
   };
 
   const cards: Array<{ id: AIExecutionMode; label: string; description: string }> = [
-    { id: 'supervised', label: t('ai:settings.security.supervised'), description: t('ai:settings.security.supervisedDesc') },
     { id: 'read_only', label: t('ai:settings.security.readOnly'), description: t('ai:settings.security.readOnlyDesc') },
+    { id: 'supervised', label: t('ai:settings.security.supervised'), description: t('ai:settings.security.supervisedDesc') },
     { id: 'autonomous', label: t('ai:settings.security.autonomous'), description: t('ai:settings.security.autonomousDesc') },
   ];
 
@@ -99,10 +114,26 @@ export const ExecutionModeSelector: React.FC<ExecutionModeSelectorProps> = ({ mo
       )}
 
       {mode === 'autonomous' && !confirming && (
-        <p role="status" className="flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/30 rounded-xl p-3">
-          <TriangleAlert size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+        <div role="status" className="flex flex-wrap items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/30 rounded-xl p-3">
+          <TriangleAlert size={14} className="shrink-0" aria-hidden="true" />
           <span>{t('ai:settings.security.active')}</span>
-        </p>
+          <InfoTip label={t('ai:settings.security.stillAsks.label')}>
+            <span className="block font-semibold text-primary mb-1">{t('ai:settings.security.stillAsks.title')}</span>
+            <span className="block mb-2">{t('ai:settings.security.stillAsks.intro')}</span>
+            {stillAsking.length === 0 ? (
+              <span className="block">{t('ai:settings.security.stillAsks.none')}</span>
+            ) : (
+              <ul className="space-y-1.5">
+                {stillAsking.map((tool) => (
+                  <li key={tool.name}>
+                    <code className="font-mono font-semibold text-primary">{tool.name}</code>
+                    <span className="block text-tertiary">{firstSentence(tool.description)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </InfoTip>
+        </div>
       )}
     </div>
   );

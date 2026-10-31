@@ -13,6 +13,7 @@ import {
   subscribeMcpBridgeSettings,
 } from '../../services/mcpBridge/mcpBridgeSettings';
 import { getMcpBridgeStatus, subscribeMcpBridgeStatus, type McpBridgeStatus } from '../../services/mcpBridge/mcpBridgeStatus';
+import { InfoTip } from '../ui/InfoTip';
 import { CopyBlock } from '../mcp/CopyBlock';
 import { McpClientPicker } from '../mcp/McpClientPicker';
 import { McpCommandList } from '../mcp/McpCommandList';
@@ -131,7 +132,10 @@ export const McpBridgeSettings: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-medium text-secondary">{t('ai:mcpBridge.tokenLabel')}</span>
+              <span className="flex flex-wrap items-center gap-2 text-xs font-medium text-secondary">
+                {t('ai:mcpBridge.tokenLabel')}
+                <InfoTip label={t('ai:mcpBridge.tokenWhy.label')}>{t('ai:mcpBridge.tokenWhy.body')}</InfoTip>
+              </span>
               <div className="flex items-center gap-2">
                 {ownServer ? (
                   <code className="flex-1 min-w-0 truncate px-3 py-2 rounded-lg bg-subtle border border-subtle text-xs font-mono text-primary">
