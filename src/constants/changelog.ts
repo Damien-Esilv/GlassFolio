@@ -31,9 +31,9 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
     date: '2026-10-31',
     highlights: [
       { key: 'frenchPages', kind: 'new' },
-      { key: 'fasterPublicPages', kind: 'improved' },
+      { key: 'findablePublicPages', kind: 'improved' },
       { key: 'taxRates', kind: 'improved' },
-      { key: 'compactConsent', kind: 'improved' },
+      { key: 'consentSwitch', kind: 'new' },
       { key: 'readability', kind: 'improved' },
     ],
   },

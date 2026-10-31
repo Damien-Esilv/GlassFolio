@@ -531,7 +531,18 @@ input[type="range"]::-moz-range-thumb {
   border: none;
 }
 
-/* Prerendered English text stays hidden until the app renders another language (public/prerender-gate.js) */
+/* Prerendered HTML stays hidden until the app plays its entry animations (public/prerender-gate.js) */
 .prerender-pending #root {
   visibility: hidden;
+}
+
+#prerender-loader {
+  display: none;
+}
+
+.prerender-pending #prerender-loader {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
 }

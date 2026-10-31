@@ -40,6 +40,9 @@ const ShowcaseApp = isAppBuild ? null : React.lazy(() => import('./ShowcaseApp')
 const FullApp = isShowcaseBuild ? null : React.lazy(() => import('./App'));
 const StartupFailure = React.lazy(() => import('./components/security/LocalVaultStartupFailure'));
 
+const PrerenderLoader = React.lazy(() => import('./components/ui/LoadingScreen'));
+const PRERENDER_LOADER_DELAY_MS = 150;
+
 const fallback = <div className="min-h-screen bg-canvas" />;
 
 const wrapTree = (content: React.ReactNode): React.ReactElement => (
@@ -57,13 +60,32 @@ const renderApp = (): void => {
   root.render(wrapTree(isShowcase && ShowcaseApp ? <ShowcaseApp /> : FullApp && <FullApp />));
 };
 
+/** The orb while a hidden prerendered page loads, skipped on a connection fast enough not to need it. */
+const showPrerenderLoader = (): (() => void) => {
+  let loaderRoot: ReactDOM.Root | null = null;
+  const timer = window.setTimeout(() => {
+    const host = document.createElement('div');
+    host.id = 'prerender-loader';
+    document.body.append(host);
+    loaderRoot = ReactDOM.createRoot(host);
+    loaderRoot.render(<React.Suspense fallback={fallback}><PrerenderLoader /></React.Suspense>);
+  }, PRERENDER_LOADER_DELAY_MS);
+  return () => {
+    window.clearTimeout(timer);
+    loaderRoot?.unmount();
+  };
+};
+
 /** Static HTML has the language of its URL: a visitor who chose another one replaces it instead of hydrating it. */
 const renderPrerendered = async (): Promise<void> => {
   if (isAppBuild) return;
+  const hideLoader = showPrerenderLoader();
   const { ShowcaseApp: LoadedShowcaseApp, preloadPublicPage } = await import('./ShowcaseApp');
   await preloadPublicPage(window.location.pathname);
-  const tree = wrapTree(<LoadedShowcaseApp prerendered />);
-  if (getSyncedPublicLanguage() === languageFromPath(window.location.pathname)) {
+  const tree = wrapTree(<LoadedShowcaseApp prerendered onVisible={hideLoader} />);
+  // With reduced motion, Motion's first render differs from the static HTML
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reducedMotion && getSyncedPublicLanguage() === languageFromPath(window.location.pathname)) {
     root = ReactDOM.hydrateRoot(rootElement, tree);
   } else {
     root = ReactDOM.createRoot(rootElement);

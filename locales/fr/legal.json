@@ -441,8 +441,11 @@
     "statusAccepted": "Mesure d'audience acceptée",
     "statusRefused": "Mesure d'audience refusée",
     "statusUnset": "Aucun choix enregistré pour le moment",
-    "grantAnalyticsBtn": "Accepter la Mesure d'Audience",
-    "revokeAnalyticsBtn": "Révoquer / Refuser la Mesure d'Audience",
+    "necessaryTitle": "Strictement nécessaires",
+    "necessaryInfo": "Connexion, données chiffrées, langue et thème. GlassFolio ne peut pas fonctionner sans eux.",
+    "alwaysOn": "Toujours actifs",
+    "analyticsTitle": "Mesure d'audience",
+    "analyticsInfo": "Visites de pages anonymes via Vercel Web Analytics, pour savoir quelles pages sont utiles. Aucune publicité, désactivée tant que vous ne l'activez pas.",
     "resetConsentBtn": "Réinitialiser le Choix"
   },
   "accessibility": {

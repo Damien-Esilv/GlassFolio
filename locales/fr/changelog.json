@@ -12,9 +12,9 @@
       "title": "Un site public plus clair et plus rapide",
       "highlights": {
         "frenchPages": "Le site public a désormais ses propres pages en français, à des adresses que vous pouvez partager et garder en favori.",
-        "fasterPublicPages": "Les pages publiques affichent leur contenu tout de suite, sans attendre le chargement de l'application.",
+        "findablePublicPages": "Les pages publiques arrivent complètes aux moteurs de recherche, avec leur propre titre et description, pour que GlassFolio soit plus facile à trouver.",
         "taxRates": "Le guide fiscal et le tableau d'optimisation indiquent les taux de flat tax et de prélèvements sociaux de chaque année, avec leurs exceptions.",
-        "compactConsent": "Le message de consentement devient une petite barre qui ne recouvre plus la page.",
+        "consentSwitch": "La page cookies propose un interrupteur simple pour activer ou désactiver la mesure d'audience à tout moment.",
         "readability": "Meilleur contraste des textes et zones tactiles plus grandes sur le site public, y compris sur mobile."
       }
     },
