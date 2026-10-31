@@ -12,4 +12,5 @@
 !public
 !locales
 !server
+!mcp-server
 **/.DS_Store
