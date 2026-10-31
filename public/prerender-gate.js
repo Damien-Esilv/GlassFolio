@@ -1,9 +1,10 @@
 /*
  * Loaded by the prerendered pages only (TGLA-193), before first paint. The static HTML is English on
- * the night theme: apply the visitor's theme now, and hide the English text from a visitor who chose
- * another language until the app replaces it. Mirrors publicPreferencesSync.ts.
+ * the night theme: apply the visitor's theme now, and keep the page hidden until the app is ready to
+ * play its entry animations. Crawlers read the HTML either way, and without JavaScript this file never
+ * runs, so the page stays visible. Mirrors publicPreferencesSync.ts.
  */
-/* global URLSearchParams, location, document, localStorage, setTimeout */
+/* global URLSearchParams, location, document, localStorage, setTimeout, window */
 (function () {
   var read = function (name) {
     try {
@@ -24,10 +25,11 @@
     root.classList.toggle('dark', theme !== 'light');
   }
   // French URLs ship French HTML; elsewhere a visitor who chose French waits for the app
-  if (!/^\/fr(\/|$)/.test(location.pathname) && read('gf_public_lang') === 'fr') {
-    root.lang = 'fr';
-    root.classList.add('prerender-pending');
-    // Never leave a page hidden if the app fails to start
-    setTimeout(function () { root.classList.remove('prerender-pending'); }, 4000);
-  }
+  var languageDiffers = !/^\/fr(\/|$)/.test(location.pathname) && read('gf_public_lang') === 'fr';
+  if (languageDiffers) root.lang = 'fr';
+  // Nothing to wait for when the visitor asked for less motion, unless the text must change
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (languageDiffers || !reducedMotion) root.classList.add('prerender-pending');
+  // Never leave a page hidden if the app fails to start
+  setTimeout(function () { root.classList.remove('prerender-pending'); }, 4000);
 })();

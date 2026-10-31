@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence } from 'motion/react';
@@ -162,8 +162,8 @@ export const ShowcaseRoutes: React.FC<ShowcaseRoutesProps> = ({ onPageReady }) =
 };
 
 /**
- * Prerendered HTML has no entry animations: without this, `initial` styles would ship every
- * animated block at opacity 0, invisible until JavaScript runs.
+ * Keeps the prerendered HTML and its hydration free of entry styles: without this, `initial` styles
+ * would ship every animated block at opacity 0, invisible to anything that doesn't run JavaScript.
  */
 export const PrerenderedMotion: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <AnimatePresence initial={false}>
@@ -174,16 +174,22 @@ export const PrerenderedMotion: React.FC<{ children: React.ReactNode }> = ({ chi
 interface ShowcaseAppProps {
   /** The page was served as prerendered HTML (dist/_p) */
   prerendered?: boolean;
+  /** The page is on screen, so the loader can go */
+  onVisible?: () => void;
 }
 
-export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false }) => {
+export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false, onVisible }) => {
   // Router basename: every internal link and route of a French page stays under /fr
   const basename = languageFromPath(window.location.pathname) === 'fr' ? FR_BASENAME : undefined;
   const [pageReady, setPageReady] = useState(false);
-  const markReady = React.useCallback(() => {
+  const markReady = React.useCallback(() => setPageReady(true), []);
+
+  // Before paint, once the remounted page has its `initial` styles: its entry animations start hidden
+  useLayoutEffect(() => {
+    if (!pageReady) return;
     document.documentElement.classList.remove('prerender-pending');
-    setPageReady(true);
-  }, []);
+    onVisible?.();
+  }, [pageReady, onVisible]);
 
   if (!prerendered) {
     return (
@@ -196,15 +202,24 @@ export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false })
   }
 
   // Remounted once hydrated: React keeps the server's attributes on hydration, and links, theme and
-  // app URLs depend on the visitor (preferences, host), which the static HTML can't know.
+  // app URLs depend on the visitor (preferences, host), which the static HTML can't know. The
+  // remount is also what plays the entry and scroll animations.
+  if (pageReady) {
+    return (
+      <AuthProvider>
+        <Router basename={basename}>
+          <ShowcaseRoutes />
+        </Router>
+      </AuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <PrerenderedMotion>
-        <React.Fragment key={pageReady ? 'client' : 'hydration'}>
-          <Router basename={basename}>
-            <ShowcaseRoutes onPageReady={pageReady ? undefined : markReady} />
-          </Router>
-        </React.Fragment>
+        <Router basename={basename}>
+          <ShowcaseRoutes onPageReady={markReady} />
+        </Router>
       </PrerenderedMotion>
     </AuthProvider>
   );

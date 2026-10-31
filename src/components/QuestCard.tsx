@@ -30,7 +30,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClaim }) => {
     };
 
     return (
-        <div className={`p-5 rounded-2xl border transition-all ${
+        <div className={`p-5 rounded-xl border transition-all ${
             quest.completed 
                 ? 'bg-card border-brand/40 shadow-sm' 
                 : 'bg-card/70 border-subtle'

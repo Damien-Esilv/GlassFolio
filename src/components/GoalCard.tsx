@@ -75,7 +75,7 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
                 <div className={`p-3 rounded-xl ${iconBgClass}`}>
                     <Icon size={24} />
                 </div>
-                <div className="pr-24">
+                <div className="pr-24 min-w-0">
                     <h3 className="text-lg font-bold text-primary truncate" title={goal.title}>{goal.title}</h3>
                     {goal.method === 'dynamic' && (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-accent-green mt-0.5">

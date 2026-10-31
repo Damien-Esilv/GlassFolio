@@ -273,8 +273,8 @@ const Progress: React.FC = () => {
                 </div>
             </div>
 
-            {/* Tab switcher: full width, ergonomic, all 5 tabs visible at a glance */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-subtle p-1.5 rounded-2xl border border-subtle">
+            {/* Tab switcher: same size as the selectors of the other pages */}
+            <div className="flex flex-wrap items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle w-fit max-w-full">
                 {PROGRESS_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -282,13 +282,13 @@ const Progress: React.FC = () => {
                         <button 
                             key={tab.id}
                             onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }); }} 
-                            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+                            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                 isActive 
                                     ? 'bg-card text-primary shadow-sm border border-subtle' 
                                     : 'text-secondary hover:text-primary hover:bg-card/40'
                             }`}
                         >
-                            <Icon size={16} className={isActive ? 'text-brand' : 'text-secondary'} />
+                            <Icon size={14} className={isActive ? 'text-brand' : 'text-secondary'} />
                             <span className="truncate">{t(tab.labelKey)}</span>
                         </button>
                     );
@@ -297,7 +297,7 @@ const Progress: React.FC = () => {
 
             {/* Featured Showcase (if any badges pinned) */}
             {pinnedAchievementsList.length > 0 && activeTab === 'achievements' && (
-                <div className="p-5 rounded-3xl bg-card border border-subtle space-y-3">
+                <div className="p-5 rounded-xl bg-card border border-subtle space-y-3">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-black uppercase text-secondary flex items-center gap-1.5">
                             <Pin size={14} className="text-brand" />
@@ -409,8 +409,8 @@ const Progress: React.FC = () => {
             {/* --- MISSIONS / QUESTS VIEW --- */}
             {activeTab === 'quests' && (
                 <div className="space-y-6">
-                    <div className="p-6 rounded-3xl bg-card border border-subtle">
-                        <h3 className="text-xl font-black text-primary mb-1">
+                    <div className="p-6 rounded-xl bg-card border border-subtle">
+                        <h3 className="text-lg font-bold text-primary mb-1">
                             {t('gamification:quests.title')}
                         </h3>
                         <p className="text-sm text-secondary">

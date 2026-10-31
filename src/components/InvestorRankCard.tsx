@@ -36,19 +36,19 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
     return (
         <div className="space-y-6">
             {/* Current Rank Showcase Hero */}
-            <div className="p-6 md:p-8 rounded-3xl bg-card border border-subtle relative overflow-hidden shadow-lg">
+            <div className="p-6 rounded-xl bg-card border border-subtle relative overflow-hidden shadow-lg">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
                     <div className="flex items-center gap-5">
-                        <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand shrink-0 shadow-inner">
-                            <Award size={36} />
+                        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand shrink-0 shadow-inner">
+                            <Award size={24} />
                         </div>
                         <div>
                             <span className="text-xs font-black uppercase tracking-wider text-secondary">
                                 {t('gamification:ranks.currentRank')}
                             </span>
-                            <h2 className="text-2xl font-black text-primary flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-primary flex items-center gap-2">
                                 {t(currentRank.titleKey)}
                                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-subtle text-primary border border-subtle">
                                     {t('gamification:level')} {currentLevel}
@@ -85,7 +85,7 @@ const InvestorRankCard: React.FC<InvestorRankCardProps> = ({
             </div>
 
             {/* Ranks Ladder */}
-            <div className="p-6 rounded-3xl bg-card border border-subtle space-y-4">
+            <div className="p-6 rounded-xl bg-card border border-subtle space-y-4">
                 <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                     <Sparkles size={18} className="text-brand" />
                     {t('gamification:ranks.title')}

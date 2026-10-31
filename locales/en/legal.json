@@ -441,8 +441,11 @@
     "statusAccepted": "Analytics Opt-in Accepted",
     "statusRefused": "Analytics Opt-in Refused",
     "statusUnset": "No Choice Recorded Yet",
-    "grantAnalyticsBtn": "Accept Optional Analytics",
-    "revokeAnalyticsBtn": "Revoke / Refuse Optional Analytics",
+    "necessaryTitle": "Strictly necessary",
+    "necessaryInfo": "Sign-in, encrypted data, language and theme. GlassFolio can't work without them.",
+    "alwaysOn": "Always on",
+    "analyticsTitle": "Audience measurement",
+    "analyticsInfo": "Anonymous page visits through Vercel Web Analytics, to see which pages are useful. No advertising, off until you turn it on.",
     "resetConsentBtn": "Reset to Prompt State"
   },
   "accessibility": {
