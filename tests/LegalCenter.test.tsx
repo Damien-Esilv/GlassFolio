@@ -84,14 +84,15 @@ describe('<LegalCenter /> Suite', () => {
     expect(screen.getByText('gf_consent_v1')).toBeTruthy();
 
     // Check Interactive Consent Manager
-    const acceptBtn = screen.getByRole('button', { name: /Accept Optional Analytics/i });
-    fireEvent.click(acceptBtn);
+    const analyticsSwitch = screen.getByRole('switch', { name: /Audience measurement/i });
+    expect(analyticsSwitch.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(analyticsSwitch);
 
     expect(getConsent()?.analytics).toBe(true);
+    expect(analyticsSwitch.getAttribute('aria-checked')).toBe('true');
     expect(screen.getByText(/Analytics Opt-in Accepted/i)).toBeTruthy();
 
-    const revokeBtn = screen.getByRole('button', { name: /Revoke \/ Refuse Optional Analytics/i });
-    fireEvent.click(revokeBtn);
+    fireEvent.click(analyticsSwitch);
 
     expect(getConsent()?.analytics).toBe(false);
     expect(screen.getByText(/Analytics Opt-in Refused/i)).toBeTruthy();

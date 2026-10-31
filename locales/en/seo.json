@@ -1,0 +1,46 @@
+{
+  "home": {
+    "title": "GlassFolio: Encrypted Wealth Tracker, Self-Hosted or Cloud",
+    "description": "Track PEA, CTO, crypto and life insurance in an AES-256-GCM encrypted vault, with French tax rules built in. Self-host with Docker or use the cloud."
+  },
+  "selfHost": {
+    "title": "Self-Host GlassFolio with Docker: Install Guide",
+    "description": "Run the full GlassFolio wealth tracker on your own machine or server with Docker. Your encrypted vault stays on a volume you control."
+  },
+  "about": {
+    "title": "About GlassFolio: The Project and Its Author",
+    "description": "Why GlassFolio exists, who builds it and how the encrypted wealth tracker is developed."
+  },
+  "roadmap": {
+    "title": "GlassFolio Roadmap: What's Planned Next",
+    "description": "Features in progress and planned for GlassFolio, the encrypted multi-asset wealth tracker."
+  },
+  "changelog": {
+    "title": "GlassFolio Changelog: Latest Updates",
+    "description": "New features and improvements in each GlassFolio release."
+  },
+  "legal": {
+    "title": "Legal Notice | GlassFolio",
+    "description": "Publisher information, intellectual property and license terms for GlassFolio."
+  },
+  "privacy": {
+    "title": "Privacy Policy | GlassFolio",
+    "description": "How GlassFolio handles your data: encrypted vault, GDPR rights, optional cookieless analytics and retention periods."
+  },
+  "terms": {
+    "title": "Terms of Use | GlassFolio",
+    "description": "Terms for using GlassFolio, including its license and the fact that it isn't investment, legal or tax advice."
+  },
+  "cookies": {
+    "title": "Cookie Policy | GlassFolio",
+    "description": "What GlassFolio stores in your browser, the optional cookieless analytics and how to change your choice."
+  },
+  "accessibility": {
+    "title": "Accessibility Statement | GlassFolio",
+    "description": "GlassFolio's accessibility commitment, current status and how to report a problem."
+  },
+  "notFound": {
+    "title": "Page Not Found | GlassFolio",
+    "description": "This page doesn't exist on GlassFolio."
+  }
+}

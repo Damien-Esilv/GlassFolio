@@ -288,7 +288,7 @@
       "netTaxable": "Net taxable gain",
       "estimatedTax": "Estimated tax (flat tax)",
       "regime": "Recommended regime",
-      "defaultRegime": "PFU (30% flat tax)",
+      "defaultRegime": "PFU (flat tax)",
       "savings": "Potential savings: {{amount}} €"
     },
     "goals": {

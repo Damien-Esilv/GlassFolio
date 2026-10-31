@@ -19,6 +19,7 @@
     "build:local": "VITE_DEPLOYMENT_MODE=local VITE_APP_TARGET=app vite build",
     "build:app": "VITE_DEPLOYMENT_MODE=cloud VITE_APP_TARGET=app vite build",
     "build:showcase": "VITE_DEPLOYMENT_MODE=cloud VITE_APP_TARGET=showcase vite build",
+    "build:vercel": "node scripts/vercel-build.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -22,11 +22,14 @@ interface PFUComparisonResult {
     confidence: FiscalConfidence;
 }
 
+const formatRate = (rate: number | undefined, language: string): string =>
+    rate === undefined ? '' : (rate * 100).toLocaleString(language, { maximumFractionDigits: 1 });
+
 const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean; fiscalYear: string }> = ({ data, isLoading, fiscalYear }) => {
     const { t, i18n } = useTranslation();
     // The flat tax rate depends on the year (31.4 % from income 2025, LFSS 2026)
     const rules = getFiscalRules(fiscalYear);
-    const pct = (rate: number | undefined) => rate === undefined ? '' : (rate * 100).toLocaleString(i18n.language, { maximumFractionDigits: 1 });
+    const pct = (rate: number | undefined) => formatRate(rate, i18n.language);
     const rates = { total: pct(rules?.pfu.totalRate), ir: pct(rules?.pfu.irRate), social: pct(rules?.pfu.socialRate) };
 
     if (isLoading) return <div className="h-48 bg-card border border-subtle rounded-2xl animate-pulse" />;
@@ -133,8 +136,16 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
 };
 
 // ── Envelope comparison table ────────────────────────────────────────────────
-const EnvelopeTable: React.FC = () => {
-    const { t } = useTranslation();
+const EnvelopeTable: React.FC<{ fiscalYear: string }> = ({ fiscalYear }) => {
+    const { t, i18n } = useTranslation();
+    const rules = getFiscalRules(fiscalYear);
+    // Dividends and interest paid in 2025 keep 17.2 % social contributions (placementIncomeRate)
+    const dividendSocialRate = rules?.socialContributions.placementIncomeRate ?? rules?.pfu.socialRate;
+    const rates = {
+        pfu: formatRate(rules?.pfu.totalRate, i18n.language),
+        dividendPfu: formatRate(rules && dividendSocialRate !== undefined ? rules.pfu.irRate + dividendSocialRate : undefined, i18n.language),
+        peaSocial: formatRate(rules?.pea.taxByAge[0]?.socialRate, i18n.language),
+    };
     const rows = ['cto', 'pea', 'av'] as const;
     const cols = ['gains', 'dividends', 'flexibility', 'ceiling'] as const;
 
@@ -158,7 +169,7 @@ const EnvelopeTable: React.FC = () => {
                             <tr key={row} className="hover:bg-subtle/40 transition-colors">
                                 <td className="py-3 pr-4 font-semibold text-primary">{t(`tax:optimization.envelope.${row}.name`)}</td>
                                 {cols.map(col => (
-                                    <td key={col} className="py-3 pr-4 text-xs text-secondary">{t(`tax:optimization.envelope.${row}.${col}`)}</td>
+                                    <td key={col} className="py-3 pr-4 text-xs text-secondary">{t(`tax:optimization.envelope.${row}.${col}`, rates)}</td>
                                 ))}
                             </tr>
                         ))}
@@ -318,7 +329,7 @@ const TaxOptimization: React.FC = () => {
                 className="animate-slide-in-left"
                 style={{ animationDelay: `${(hasFiscalProfile ? 4 : 5) * STAGGER_DELAY_MS}ms` }}
             >
-                <EnvelopeTable />
+                <EnvelopeTable fiscalYear={fiscalYear} />
             </div>
         </div>
     );

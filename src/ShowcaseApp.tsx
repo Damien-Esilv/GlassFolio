@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { AnimatePresence } from 'motion/react';
 import { AuthProvider } from './context/AuthContext';
 import { ConsentBanner } from './components/ConsentBanner';
 import { buildAppDestinationUrl, getAppUrl } from './config/deployment';
@@ -12,13 +13,50 @@ import { ScrollToTop } from './components/ui/ScrollToTop';
 import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 import { PullToRefresh } from './components/ui/PullToRefresh';
+import { PublicPageHead } from './components/landing/PublicPageHead';
+import { FR_BASENAME, findPublicRoute, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
 
-const Landing = React.lazy(() => import('./pages/Landing'));
-const LegalCenter = React.lazy(() => import('./pages/LegalCenter'));
-const SelfHost = React.lazy(() => import('./pages/SelfHost'));
-const About = React.lazy(() => import('./pages/About'));
-const Roadmap = React.lazy(() => import('./pages/Roadmap'));
-const Changelog = React.lazy(() => import('./pages/Changelog'));
+type PageModule = { default: React.ComponentType };
+
+/**
+ * A lazy page that can load ahead of the first render. Hydration must finish in one pass: if a page
+ * is still loading when AuthProvider updates, React drops the static HTML and shows the fallback.
+ */
+const lazyPage = (load: () => Promise<PageModule>): React.FC & { preload: () => Promise<void> } => {
+  let Loaded: React.ComponentType | null = null;
+  const Lazy = React.lazy(load);
+  const Page = (): React.ReactElement => (Loaded ? <Loaded /> : <Lazy />);
+  Page.preload = async (): Promise<void> => {
+    Loaded = (await load()).default;
+  };
+  return Page;
+};
+
+const Landing = lazyPage(() => import('./pages/Landing'));
+const LegalCenter = lazyPage(() => import('./pages/LegalCenter'));
+const SelfHost = lazyPage(() => import('./pages/SelfHost'));
+const About = lazyPage(() => import('./pages/About'));
+const Roadmap = lazyPage(() => import('./pages/Roadmap'));
+const Changelog = lazyPage(() => import('./pages/Changelog'));
+const NotFound = lazyPage(() => import('./pages/NotFound'));
+
+const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> = {
+  home: Landing,
+  selfHost: SelfHost,
+  about: About,
+  roadmap: Roadmap,
+  changelog: Changelog,
+  legal: LegalCenter,
+  privacy: LegalCenter,
+  terms: LegalCenter,
+  cookies: LegalCenter,
+  accessibility: LegalCenter,
+};
+
+export const preloadPublicPage = (pathname: string): Promise<void> => {
+  const route = findPublicRoute(pathname);
+  return (route ? PAGES_BY_SEO_KEY[route.seoKey] : NotFound).preload();
+};
 
 const AppRedirectHandler: React.FC = () => {
   const location = useLocation();
@@ -64,14 +102,26 @@ const AppRedirectHandler: React.FC = () => {
   return <LoadingScreen />;
 };
 
-export const ShowcaseApp: React.FC = () => {
+/** Runs once the page's lazy chunk has hydrated, so a later remount never shows the fallback. */
+const PageReady: React.FC<{ onReady: () => void }> = ({ onReady }) => {
+  useEffect(onReady, [onReady]);
+  return null;
+};
+
+interface ShowcaseRoutesProps {
+  onPageReady?: () => void;
+}
+
+/** The public pages, without a router so the prerender can wrap them in a StaticRouter. */
+export const ShowcaseRoutes: React.FC<ShowcaseRoutesProps> = ({ onPageReady }) => {
   return (
-    <AuthProvider>
-      <Router>
+    <>
+        <PublicPageHead />
         <ScrollToTop />
         <LegacyHashRedirect />
         <PullToRefresh>
           <React.Suspense fallback={<LoadingScreen />}>
+            {onPageReady && <PageReady onReady={onPageReady} />}
             <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/welcome" element={<Landing />} />
@@ -101,13 +151,76 @@ export const ShowcaseApp: React.FC = () => {
             <Route path="/forgot-password" element={<AppRedirectHandler />} />
             <Route path="/reset-password" element={<AppRedirectHandler />} />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </React.Suspense>
         </PullToRefresh>
         <ConsentBanner />
         <ConsentGatedAnalytics />
-      </Router>
+    </>
+  );
+};
+
+/**
+ * Keeps the prerendered HTML and its hydration free of entry styles: without this, `initial` styles
+ * would ship every animated block at opacity 0, invisible to anything that doesn't run JavaScript.
+ */
+export const PrerenderedMotion: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <AnimatePresence initial={false}>
+    <React.Fragment key="prerendered">{children}</React.Fragment>
+  </AnimatePresence>
+);
+
+interface ShowcaseAppProps {
+  /** The page was served as prerendered HTML (dist/_p) */
+  prerendered?: boolean;
+  /** The page is on screen, so the loader can go */
+  onVisible?: () => void;
+}
+
+export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false, onVisible }) => {
+  // Router basename: every internal link and route of a French page stays under /fr
+  const basename = languageFromPath(window.location.pathname) === 'fr' ? FR_BASENAME : undefined;
+  const [pageReady, setPageReady] = useState(false);
+  const markReady = React.useCallback(() => setPageReady(true), []);
+
+  // Before paint, once the remounted page has its `initial` styles: its entry animations start hidden
+  useLayoutEffect(() => {
+    if (!pageReady) return;
+    document.documentElement.classList.remove('prerender-pending');
+    onVisible?.();
+  }, [pageReady, onVisible]);
+
+  if (!prerendered) {
+    return (
+      <AuthProvider>
+        <Router basename={basename}>
+          <ShowcaseRoutes />
+        </Router>
+      </AuthProvider>
+    );
+  }
+
+  // Remounted once hydrated: React keeps the server's attributes on hydration, and links, theme and
+  // app URLs depend on the visitor (preferences, host), which the static HTML can't know. The
+  // remount is also what plays the entry and scroll animations.
+  if (pageReady) {
+    return (
+      <AuthProvider>
+        <Router basename={basename}>
+          <ShowcaseRoutes />
+        </Router>
+      </AuthProvider>
+    );
+  }
+
+  return (
+    <AuthProvider>
+      <PrerenderedMotion>
+        <Router basename={basename}>
+          <ShowcaseRoutes onPageReady={markReady} />
+        </Router>
+      </PrerenderedMotion>
     </AuthProvider>
   );
 };

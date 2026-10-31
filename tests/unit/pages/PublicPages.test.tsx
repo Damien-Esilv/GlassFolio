@@ -38,7 +38,7 @@ describe('Public pages', () => {
 
   it('About explains the name, the story and how the project is built', () => {
     renderAt('/about');
-    expect(screen.getByRole('heading', { level: 1, name: 'The project' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'About GlassFolio' })).toBeTruthy();
     expect(screen.getByText('Glass')).toBeTruthy();
     expect(screen.getByText('Folio')).toBeTruthy();
     expect(screen.getByText(/engineering student at ESILV/)).toBeTruthy();

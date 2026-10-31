@@ -1,6 +1,10 @@
 {
   "appUnavailable": "The GlassFolio app is not available from this address.",
   "appUnavailableBack": "Back to the home page",
+  "notFound": {
+    "title": "Page not found",
+    "intro": "This address doesn't match any page on GlassFolio. It may have moved, or the link may be wrong."
+  },
   "common": {
     "demoDataBadge": "Demo data",
     "tryLiveDemo": "Try Live Demo (1-Click)",
@@ -44,7 +48,7 @@
   },
   "hero": {
     "badge": "Private, encrypted wealth tracking",
-    "title": "Master your multi-asset wealth with mathematical rigor & total privacy.",
+    "title": "The encrypted wealth tracker for multi-asset rigor & total privacy.",
     "subtitle": "Track PEA, CTO, crypto, life insurance and savings accounts in an AES-256-GCM encrypted vault. Prepare your tax return, measure what fees cost you and ask your portfolio questions with the AI of your choice.",
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Multi-Envelope Wealth Overview",
@@ -95,7 +99,7 @@
         "tagline": "Self-hosted with Docker",
         "points": {
           "p1": "Your data stays on your machine",
-          "p2": "Open source code, full control"
+          "p2": "Source-available code, full control"
         },
         "cta": "Install it locally"
       },
@@ -295,7 +299,7 @@
       "tagline": "Docker on your computer or server",
       "points": {
         "p1": "Full control: your data never leaves your disk",
-        "p2": "Open source code you can audit",
+        "p2": "Source-available code you can audit",
         "p3": "Works offline, except for market prices"
       },
       "ctaGithub": "View the code on GitHub",
@@ -372,7 +376,7 @@
         "body": "Export from one mode and import into the other at any time."
       },
       "source": {
-        "title": "One open codebase",
+        "title": "One source-available codebase",
         "body": "Both modes run the same source code, public on GitHub."
       }
     },

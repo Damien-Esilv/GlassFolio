@@ -170,7 +170,7 @@
         "pfuVsBareme": {
             "title": "PFU vs Barème (Option 2OP)",
             "subtitle": "Comparez la flat tax ({{total}} %) avec le barème progressif de l'IR",
-            "pfuLabel": "PFU (Flat Tax 30 %)",
+            "pfuLabel": "PFU (Flat Tax {{total}} %)",
             "baremeLabel": "Barème Progressif",
             "pfuAmount": "Impôt avec le PFU",
             "baremeAmount": "Impôt avec le Barème",
@@ -202,14 +202,14 @@
             "ceiling": "Plafond de versement",
             "cto": {
                 "name": "CTO (Ordinaire)",
-                "gains": "PFU 30 % ou Barème",
-                "dividends": "PFU 30 % ou Barème",
+                "gains": "PFU {{pfu}} % ou Barème",
+                "dividends": "PFU {{dividendPfu}} % ou Barème",
                 "flexibility": "Totale — aucune restriction",
                 "ceiling": "Aucun"
             },
             "pea": {
                 "name": "PEA",
-                "gains": "0 % IR après 5 ans (17,2 % PS uniquement)",
+                "gains": "0 % IR après 5 ans ({{peaSocial}} % PS uniquement)",
                 "dividends": "Exonérés (capitalisation interne)",
                 "flexibility": "Restreinte — retrait avant 5 ans = clôture",
                 "ceiling": "150 000 €"
@@ -340,7 +340,9 @@
         },
         "topicContent": {
             "cto": {
-                "rule1": "Imposition au PFU (30 %) ou sur option au barème progressif",
+                "rule1": "Imposition au PFU ({{rate}} % : {{ir}} % d'impôt sur le revenu + {{social}} % de prélèvements sociaux) ou sur option au barème progressif",
+                "rulesNotice": "Règles appliquées pour l'année fiscale {{year}}. Ce guide est informatif et ne constitue pas un conseil fiscal : vérifiez sur impots.gouv.fr ou auprès d'un professionnel avant de déclarer.",
+                "rateExceptions": "Exceptions de taux : les produits d'assurance-vie et de contrats de capitalisation (hors contrats de rente-survie et d'épargne-handicap), les intérêts des CEL et PEL ouverts jusqu'au 31 décembre 2017 (12 premières années pour les PEL) et les produits de PEP exonérés d'impôt restent à 17,2 % de prélèvements sociaux. Les dividendes et intérêts versés et prélevés en 2025 restent à 17,2 %. Source : impots.gouv.fr, 2026.",
                 "rule2": "Prix de revient calculé selon la méthode du Prix Moyen Pondéré (PMP)",
                 "rule3": "Moins-values imputables sur les plus-values de même nature, reportables pendant 10 ans",
                 "rule4": "Formulaire 2074 pour le détail des cessions, 2042 cases 3VG / 3VH"
@@ -368,7 +370,7 @@
                 "rule1Prefix": "Échanges crypto-crypto :",
                 "rule1Highlight": "fiscalement neutres",
                 "rule1Suffix": "(pas d'imposition)",
-                "rule2": "Cessions vers monnaie fiduciaire (€, $) ou bien réel: imposables à 30 %",
+                "rule2": "Cessions vers monnaie fiduciaire (€, $) ou bien réel : imposables à {{rate}} %",
                 "rule3": "Moins-values non reportables (contrairement au CTO)",
                 "rule4": "Formulaire 2042-C cases 3AN (gain) / 3BN (perte)"
             },

@@ -9,7 +9,6 @@
   <link rel="apple-touch-icon" href="/logo120.png" />
   <title>GlassFolio — Encrypted Wealth Tracker, Self-Hosted or Cloud</title>
   <meta name="description" content="Track PEA, CTO, crypto, life insurance and savings accounts in an AES-256-GCM encrypted vault. Modular tax engine with French rules built in, ETF fee analysis and the AI of your choice. Self-host it with Docker or use the cloud version." />
-  <meta name="keywords" content="GlassFolio, FinTech, Wealth Tracker, Self-Hosted, Docker, Tax Engine, Cerfa 2042, PFU, PEA, CTO, Crypto, ETF, Fee Drag, E2EE, MCP, Model Context Protocol" />
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
@@ -28,21 +27,78 @@
   <meta name="twitter:title" content="GlassFolio — Encrypted Wealth Tracker, Self-Hosted or Cloud" />
   <meta name="twitter:description" content="Encrypted multi-asset wealth tracker with a modular tax engine (French rules built in), ETF fee analysis and the AI of your choice. Self-hosted or cloud." />
 
-  <!-- Schema.org SoftwareApplication JSON-LD -->
+  <!-- Schema.org Organization, WebSite and SoftwareApplication JSON-LD -->
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "GlassFolio",
-    "applicationCategory": "FinanceApplication",
-    "operatingSystem": "Web, Windows, macOS, Linux",
-    "description": "Encrypted multi-asset wealth tracking, modular tax engine with French rules built in, ETF fee analysis and AI assistant. Self-hosted or cloud.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "EUR"
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://glassfolio.dev/#organization",
+      "name": "GlassFolio",
+      "url": "https://glassfolio.dev/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://glassfolio.dev/logo512.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://github.com/Damien-Esilv/GlassFolio"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://glassfolio.dev/#website",
+      "url": "https://glassfolio.dev/",
+      "name": "GlassFolio",
+      "inLanguage": [
+        "en",
+        "fr"
+      ],
+      "publisher": {
+        "@id": "https://glassfolio.dev/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://glassfolio.dev/#software",
+      "name": "GlassFolio",
+      "url": "https://glassfolio.dev/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web, Windows, macOS, Linux",
+      "description": "Encrypted multi-asset wealth tracking, modular tax engine with French rules built in, ETF fee analysis and AI assistant. Self-hosted or cloud.",
+      "image": "https://glassfolio.dev/screenshots/og-cover.png",
+      "inLanguage": [
+        "en",
+        "fr"
+      ],
+      "isAccessibleForFree": true,
+      "license": "https://polyformproject.org/licenses/noncommercial/1.0.0",
+      "softwareHelp": {
+        "@type": "WebPage",
+        "url": "https://glassfolio.dev/self-host"
+      },
+      "featureList": [
+        "AES-256-GCM encrypted vault",
+        "Modular tax engine with French rules (Cerfa 2042, 2074, 3916)",
+        "ETF fee drag analysis",
+        "CSV import from BoursoBank, Trade Republic, Binance, Kraken, Bitget and Coinbase",
+        "AI assistant and MCP tools",
+        "Self-hosted with Docker or managed cloud"
+      ],
+      "publisher": {
+        "@id": "https://glassfolio.dev/#organization"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock"
+      }
     }
-  }
+  ]
+}
   </script>
   <script type="module" src="/src/main.tsx"></script>
 </head>

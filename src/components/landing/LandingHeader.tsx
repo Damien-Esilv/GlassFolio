@@ -153,7 +153,7 @@ export const LandingHeader: React.FC = () => {
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
             aria-label={t('landing:header.mobileMenuAria')}
             aria-expanded={isMobileMenuOpen}
-            className="xl:hidden p-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-secondary hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            className="xl:hidden p-3 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-secondary hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>

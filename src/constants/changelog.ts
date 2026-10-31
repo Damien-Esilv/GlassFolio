@@ -26,6 +26,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-1',
+    version: '1.1',
+    date: '2026-10-31',
+    highlights: [
+      { key: 'frenchPages', kind: 'new' },
+      { key: 'findablePublicPages', kind: 'improved' },
+      { key: 'taxRates', kind: 'improved' },
+      { key: 'consentSwitch', kind: 'new' },
+      { key: 'readability', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-0',
     version: '1.0',
     date: '2026-10-31',

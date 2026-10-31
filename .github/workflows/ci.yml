@@ -298,13 +298,15 @@ jobs:
             smoke: false
           - label: showcase
             build_cmd: npm run build:showcase
-            limit_kb: 1408
+            # 1408 -> 1440: prerender runtime and French URLs (SEO texts, head updates, 404 page, TGLA-193, TGLA-194)
+            limit_kb: 1440
             landing: present
             smoke: false
           - label: vercel-parity
-            build_cmd: VITE_DEPLOYMENT_MODE=cloud npm run build
+            build_cmd: GLASSFOLIO_BUILD_TARGET=showcase npm run build:vercel
             # 2560 -> 2624: Google Drive split-trust (OIDC, Drive key, device key, recovery modal) adds ~35 KB.
-            limit_kb: 2624
+            # The showcase project's real build (TGLA-193); the app project matches cloud-app
+            limit_kb: 1440
             landing: present
             smoke: true
     steps:
@@ -328,7 +330,9 @@ jobs:
         run: |
           # Code and product screenshots are budgeted separately: images must not hide code growth.
           SCREENSHOTS_KB=$( [ -d dist/screenshots ] && du -sk dist/screenshots | cut -f1 || echo 0 )
-          BUNDLE_SIZE=$(( $(du -sk dist/ | cut -f1) - SCREENSHOTS_KB ))
+          # Prerendered HTML holds page text, not code
+          PRERENDER_KB=$( [ -d dist/_p ] && du -sk dist/_p dist/404.html | cut -f1 | paste -sd+ - | bc || echo 0 )
+          BUNDLE_SIZE=$(( $(du -sk dist/ | cut -f1) - SCREENSHOTS_KB - PRERENDER_KB ))
           echo "${LABEL} bundle size: ${BUNDLE_SIZE}KB (limit ${LIMIT_KB}KB), screenshots: ${SCREENSHOTS_KB}KB (limit ${SCREENSHOTS_LIMIT_KB}KB)"
           if [ "$BUNDLE_SIZE" -gt "$LIMIT_KB" ]; then
             echo "::error::${LABEL} bundle size ${BUNDLE_SIZE}KB exceeds the ${LIMIT_KB}KB limit"
@@ -352,19 +356,20 @@ jobs:
             echo "✅ ${LABEL} build verified: showcase chunk emitted."
           fi
 
-      # Serve the built output the way a static host does and make sure the entry
-      # document and an SPA deep link both answer 200.
-      - name: Smoke test the built output (vite preview)
+      # The Vercel layout has no dist/index.html (vercel.json rewrites to these files): check they
+      # are served, hold their content and need no inline script (script-src 'self').
+      - name: Smoke test the prerendered output (vite preview)
         if: ${{ matrix.smoke }}
         run: |
           npx vite preview --port 4173 --strictPort > preview.log 2>&1 &
           for i in $(seq 1 30); do
-            curl -fsS -o /dev/null http://localhost:4173/ && break
+            curl -fsS -o /dev/null http://localhost:4173/app-shell.html && break
             sleep 1
           done
-          curl -fsS http://localhost:4173/ | grep -qi "<div id=\"root\"" || (echo "::error::Entry document has no #root mount point" && cat preview.log && exit 1)
-          curl -fsS -o /dev/null http://localhost:4173/__smoke-deep-link__ || (echo "::error::SPA deep link did not answer 200" && cat preview.log && exit 1)
-          echo "✅ vite preview serves the entry document and the SPA fallback."
+          curl -fsS http://localhost:4173/app-shell.html | grep -qi "<div id=\"root\"" || (echo "::error::SPA shell missing" && exit 1)
+          curl -fsS http://localhost:4173/_p/index.html | grep -qi "<h1" || (echo "::error::Prerendered home has no content" && exit 1)
+          ! curl -fsS http://localhost:4173/_p/index.html | sed -n '/<div id="root"/,$p' | grep -qi "<script" || (echo "::error::Inline script in prerendered HTML" && exit 1)
+          echo "✅ vite preview serves the SPA shell and the prerendered pages."
 
       - name: Upload build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

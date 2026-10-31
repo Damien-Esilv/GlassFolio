@@ -90,7 +90,7 @@ const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
             <button
                 type="button"
                 onClick={onClick}
-                className={`relative flex flex-col items-center justify-between p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] text-left w-full ${
+                className={`relative flex flex-col items-center justify-between p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] text-left w-full ${
                     compact ? 'min-h-[140px]' : 'p-6'
                 } ${
                     ach.unlocked 

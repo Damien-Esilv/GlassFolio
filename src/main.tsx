@@ -9,6 +9,8 @@ import { installTrustedTypesDefaultPolicy } from './services/security/trustedTyp
 import { bootstrapLocalPersistence } from './services/storage/localPersistenceBootstrap';
 import { installChunkReloadHandler } from './services/storage/chunkReload';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
+import { getSyncedPublicLanguage } from './services/storage/publicPreferencesSync';
+import { languageFromPath } from './config/publicRoutes';
 
 // Synchronous preference & URL handoff bootstrap before any render
 consumeUrlBootstrapParams();
@@ -25,29 +27,74 @@ if (!rootElement) {
 }
 
 // @ts-expect-error import.meta.env is injected by Vite at compile time
-const isShowcase = import.meta.env.VITE_APP_TARGET === 'showcase';
+const isShowcaseBuild = import.meta.env.VITE_APP_TARGET === 'showcase';
+// @ts-expect-error import.meta.env is injected by Vite at compile time
+const isAppBuild = import.meta.env.VITE_APP_TARGET === 'app';
 
-const RootComponent = isShowcase
-  ? React.lazy(() => import('./ShowcaseApp'))
-  : React.lazy(() => import('./App'));
+// Static HTML from dist/_p (showcase project only)
+const isPrerendered = !isAppBuild && rootElement.hasAttribute('data-prerendered');
+const isShowcase = isShowcaseBuild || isPrerendered;
+
+// Resolved at build time so each target's bundle leaves the other one out (Docker has no showcase)
+const ShowcaseApp = isAppBuild ? null : React.lazy(() => import('./ShowcaseApp'));
+const FullApp = isShowcaseBuild ? null : React.lazy(() => import('./App'));
 const StartupFailure = React.lazy(() => import('./components/security/LocalVaultStartupFailure'));
 
-const root = ReactDOM.createRoot(rootElement);
+const PrerenderLoader = React.lazy(() => import('./components/ui/LoadingScreen'));
+const PRERENDER_LOADER_DELAY_MS = 150;
+
 const fallback = <div className="min-h-screen bg-canvas" />;
 
+const wrapTree = (content: React.ReactNode): React.ReactElement => (
+  <React.StrictMode>
+    <AppErrorBoundary>
+      <React.Suspense fallback={fallback}>{content}</React.Suspense>
+    </AppErrorBoundary>
+  </React.StrictMode>
+);
+
+let root: ReactDOM.Root | null = null;
+
 const renderApp = (): void => {
-  root.render(
-    <React.StrictMode>
-      <AppErrorBoundary>
-        <React.Suspense fallback={fallback}>
-          <RootComponent />
-        </React.Suspense>
-      </AppErrorBoundary>
-    </React.StrictMode>
-  );
+  root ??= ReactDOM.createRoot(rootElement);
+  root.render(wrapTree(isShowcase && ShowcaseApp ? <ShowcaseApp /> : FullApp && <FullApp />));
+};
+
+/** The orb while a hidden prerendered page loads, skipped on a connection fast enough not to need it. */
+const showPrerenderLoader = (): (() => void) => {
+  let loaderRoot: ReactDOM.Root | null = null;
+  const timer = window.setTimeout(() => {
+    const host = document.createElement('div');
+    host.id = 'prerender-loader';
+    document.body.append(host);
+    loaderRoot = ReactDOM.createRoot(host);
+    loaderRoot.render(<React.Suspense fallback={fallback}><PrerenderLoader /></React.Suspense>);
+  }, PRERENDER_LOADER_DELAY_MS);
+  return () => {
+    window.clearTimeout(timer);
+    loaderRoot?.unmount();
+  };
+};
+
+/** Static HTML has the language of its URL: a visitor who chose another one replaces it instead of hydrating it. */
+const renderPrerendered = async (): Promise<void> => {
+  if (isAppBuild) return;
+  const hideLoader = showPrerenderLoader();
+  const { ShowcaseApp: LoadedShowcaseApp, preloadPublicPage } = await import('./ShowcaseApp');
+  await preloadPublicPage(window.location.pathname);
+  const tree = wrapTree(<LoadedShowcaseApp prerendered onVisible={hideLoader} />);
+  // With reduced motion, Motion's first render differs from the static HTML
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reducedMotion && getSyncedPublicLanguage() === languageFromPath(window.location.pathname)) {
+    root = ReactDOM.hydrateRoot(rootElement, tree);
+  } else {
+    root = ReactDOM.createRoot(rootElement);
+    root.render(tree);
+  }
 };
 
 const renderStartupFailure = (message: string): void => {
+  root ??= ReactDOM.createRoot(rootElement);
   root.render(
     <React.Suspense fallback={fallback}>
       <StartupFailure initialDetail={message} onRecovered={renderApp} />
@@ -58,6 +105,10 @@ const renderStartupFailure = (message: string): void => {
 // Local mode: the server's vault snapshot must be in memory before any service reads storage.
 // The showcase build has no app data, so it starts immediately.
 const start = async (): Promise<void> => {
+  if (!isAppBuild && isPrerendered) {
+    await renderPrerendered();
+    return;
+  }
   if (isShowcase) {
     renderApp();
     return;

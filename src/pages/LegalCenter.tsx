@@ -207,8 +207,9 @@ const LegalCenter: React.FC = () => {
 
         {/* Page Heading */}
         <div className="mb-10 text-center sm:text-left">
+          <p className="text-xs font-semibold text-brand mb-2">{t('legal:center.pageTitle')}</p>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-primary tracking-tight mb-2">
-            {t('legal:center.pageTitle')}
+            {t(`legal:center.headings.${activeTab}`)}
           </h1>
           <p className="text-sm sm:text-base text-secondary">
             {t('legal:center.pageSubtitle')}
@@ -321,31 +322,40 @@ const LegalCenter: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setConsent(true)}
-                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all shadow-sm"
-                  >
-                    {t('legal:cookies.grantAnalyticsBtn')}
-                  </button>
+                <div className="divide-y divide-subtle mb-4">
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-primary">{t('legal:cookies.necessaryTitle')}</p>
+                      <p className="text-xs text-secondary mt-0.5">{t('legal:cookies.necessaryInfo')}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-tertiary shrink-0">{t('legal:cookies.alwaysOn')}</span>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setConsent(false)}
-                    className="px-4 py-2 rounded-xl bg-card hover:bg-card-hover text-secondary hover:text-primary border border-subtle text-xs font-bold transition-all"
-                  >
-                    {t('legal:cookies.revokeAnalyticsBtn')}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={resetConsent}
-                    className="px-4 py-2 rounded-xl bg-subtle hover:bg-card-hover text-tertiary hover:text-secondary border border-subtle text-xs font-medium transition-all"
-                  >
-                    {t('legal:cookies.resetConsentBtn')}
-                  </button>
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-primary">{t('legal:cookies.analyticsTitle')}</p>
+                      <p className="text-xs text-secondary mt-0.5">{t('legal:cookies.analyticsInfo')}</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={consentState?.analytics === true}
+                      aria-label={t('legal:cookies.analyticsTitle')}
+                      onClick={() => setConsent(consentState?.analytics !== true)}
+                      className={`w-10 h-5 rounded-full transition-colors relative p-0.5 inline-flex items-center shrink-0 ${consentState?.analytics === true ? 'bg-primary' : 'bg-card border border-strong'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${consentState?.analytics === true ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={resetConsent}
+                  className="px-4 py-2 rounded-xl bg-subtle hover:bg-card-hover text-tertiary hover:text-secondary border border-subtle text-xs font-medium transition-all"
+                >
+                  {t('legal:cookies.resetConsentBtn')}
+                </button>
               </div>
             </article>
           )}

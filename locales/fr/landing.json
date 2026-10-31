@@ -1,5 +1,9 @@
 {
   "appUnavailable": "L’application GlassFolio n’est pas disponible depuis cette adresse.",
+  "notFound": {
+    "title": "Page introuvable",
+    "intro": "Cette adresse ne correspond à aucune page de GlassFolio. Elle a peut-être changé, ou le lien est erroné."
+  },
   "appUnavailableBack": "Retour à l’accueil",
   "common": {
     "demoDataBadge": "Données d'exemple",
@@ -44,7 +48,7 @@
   },
   "hero": {
     "badge": "Suivi de patrimoine privé et chiffré",
-    "title": "Pilotez votre patrimoine multi-actifs avec rigueur mathématique et confidentialité absolue.",
+    "title": "Le suivi de patrimoine chiffré : rigueur multi-actifs et confidentialité totale.",
     "subtitle": "Suivez PEA, CTO, crypto, assurance-vie et livrets dans un coffre chiffré AES-256-GCM. Préparez votre déclaration, mesurez ce que vous coûtent les frais et interrogez votre portefeuille avec l'IA de votre choix.",
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Synthèse Patrimoniale Multi-Enveloppes",
@@ -95,7 +99,7 @@
         "tagline": "Auto-hébergé avec Docker",
         "points": {
           "p1": "Vos données restent sur votre machine",
-          "p2": "Code open source, contrôle total"
+          "p2": "Code source-available, contrôle total"
         },
         "cta": "L'installer en local"
       },
@@ -295,7 +299,7 @@
       "tagline": "Docker sur votre ordinateur ou serveur",
       "points": {
         "p1": "Contrôle total : vos données ne quittent jamais votre disque",
-        "p2": "Code open source que vous pouvez auditer",
+        "p2": "Code source-available que vous pouvez auditer",
         "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
       },
       "ctaGithub": "Voir le code sur GitHub",
@@ -372,7 +376,7 @@
         "body": "Exportez depuis un mode et importez dans l'autre à tout moment."
       },
       "source": {
-        "title": "Un seul code ouvert",
+        "title": "Un seul code source-available",
         "body": "Les deux modes exécutent le même code source, public sur GitHub."
       }
     },

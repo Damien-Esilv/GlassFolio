@@ -26,7 +26,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ lines, label }) => {
       <CopyButton
         text={lines.join('\n')}
         label={t('selfhost:copyLabel', { what: label })}
-        className="absolute top-2.5 right-2.5"
+        className="absolute top-2.5 right-2.5 bg-card"
       />
     </div>
   );

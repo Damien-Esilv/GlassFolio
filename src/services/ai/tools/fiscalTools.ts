@@ -1,5 +1,7 @@
 import { AIToolDefinition } from '../types';
 import { taxService } from '../../fiscal/taxService';
+import { getFiscalRulesOrThrow } from '../../fiscal/taxRules';
+import { DEFAULT_FISCAL_YEAR } from '../../../constants/fiscalConstants';
 import { FiscalProfile } from '../../../types/types.backend';
 import { userRepository } from '../../repositories';
 
@@ -60,12 +62,12 @@ export const getTaxSummaryTool: AIToolDefinition<
 };
 
 export const simulateTaxImpactTool: AIToolDefinition<
-  { grossGain: number; assetType?: 'stock' | 'crypto' },
+  { grossGain: number; assetType?: 'stock' | 'crypto'; fiscalYear?: string },
   { grossGain: number; estimatedFlatTax: number; socialContributions: number; incomeTaxPart: number; netGainAfterTax: number }
 > = {
   name: 'simulate_tax_impact',
   description:
-    'Simulate French flat-tax (PFU 30% - 12.8% income tax + 17.2% social contributions) impact for a hypothetical capital gain.',
+    'Simulate French flat-tax (PFU: income tax + social contributions, at the rates of the fiscal year) impact for a hypothetical capital gain.',
   parameters: {
     type: 'object',
     properties: {
@@ -78,13 +80,18 @@ export const simulateTaxImpactTool: AIToolDefinition<
         enum: ['stock', 'crypto'],
         description: 'Asset type, defaults to stock',
       },
+      fiscalYear: {
+        type: 'string',
+        description: 'Fiscal year whose rates apply, defaults to the current year',
+      },
     },
     required: ['grossGain'],
   },
   execute: async (params) => {
     const gain = Math.max(0, params.grossGain);
-    const social = Math.round(gain * 0.172 * 100) / 100;
-    const income = Math.round(gain * 0.128 * 100) / 100;
+    const { pfu } = getFiscalRulesOrThrow(params.fiscalYear ?? DEFAULT_FISCAL_YEAR);
+    const social = Math.round(gain * pfu.socialRate * 100) / 100;
+    const income = Math.round(gain * pfu.irRate * 100) / 100;
     const totalTax = Math.round((social + income) * 100) / 100;
     const net = Math.round((gain - totalTax) * 100) / 100;
 

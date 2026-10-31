@@ -209,6 +209,15 @@ describe('Dual-Entry Deployment & URL Handoff (TGLA-058)', () => {
       (window as any).location = originalLocation;
     });
 
+    it('pairs the develop test domains of the two Vercel projects', () => {
+      window.location = new URL('https://dev-showcase.glassfolio.dev/') as any;
+      expect(getAppTarget()).toBe('showcase');
+      expect(getAppUrl()).toBe('https://dev-app.glassfolio.dev');
+      window.location = new URL('https://dev-app.glassfolio.dev/') as any;
+      expect(getAppTarget()).toBe('app');
+      expect(getShowcaseUrl()).toBe('https://dev-showcase.glassfolio.dev');
+    });
+
     it('resolves showcase target and app URL when on glassfolio.dev', () => {
       delete (window as any).location;
       window.location = new URL('https://glassfolio.dev/') as any;

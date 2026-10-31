@@ -342,7 +342,7 @@ Tout outil doit comporter :
 
 ### 9.1. Règle de Branching Systématique
 - **Deux branches permanentes, jamais supprimées** :
-  - `develop` : branche d'intégration et de test en conditions réelles. Elle est rattachée sur Vercel à un domaine de branche stable (`develop.glassfolio.dev`, à confirmer) dont l'URL ne change jamais : les URI de redirection Google, les hôtes autorisés Turnstile et les URL Supabase n'ont donc à être déclarés qu'une fois.
+  - `develop` : branche d'intégration et de test en conditions réelles. Elle est rattachée sur Vercel à un domaine de branche stable (`dev-showcase.glassfolio.dev` et `dev-app.glassfolio.dev`) dont l'URL ne change jamais : les URI de redirection Google, les hôtes autorisés Turnstile et les URL Supabase n'ont donc à être déclarés qu'une fois.
   - `main` : production uniquement (`glassfolio.dev` / `app.glassfolio.dev`), alimentée exclusivement depuis `develop` (cf. 9.4).
 - **Interdiction formelle de commiter directement sur `main` ou `develop`** : `main` est strictement réservé aux livraisons testées, validées sur `develop` et prêtes pour la production ; `develop` ne reçoit que des branches de travail intégrées (cf. 9.4).
 - **Convention de nommage des branches** : Chaque nouvelle tâche (`TGLA-XXX`) ou sprint doit faire l'objet d'une branche dédiée créée depuis `develop` à jour (depuis `main` uniquement pour un hotfix de production) :
