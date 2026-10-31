@@ -11,6 +11,8 @@ import {
   type PublicBaseTheme,
   type SupportedLanguage,
 } from '../services/storage/publicPreferencesSync';
+import { getAppTarget } from '../config/deployment';
+import { findPublicRoute, localizedPath } from '../config/publicRoutes';
 
 export type ShowcaseTheme = PublicBaseTheme;
 export type ShowcaseLanguage = SupportedLanguage;
@@ -127,6 +129,13 @@ export function usePublicThemeLang() {
   const setLanguage = useCallback(
     (nextLang: ShowcaseLanguage) => {
       setSyncedPublicLanguage(nextLang);
+      // On the public site each language has its own URL
+      const { pathname, search, hash } = window.location;
+      const route = getAppTarget() === 'showcase' ? findPublicRoute(pathname) : undefined;
+      if (route) {
+        window.location.assign(`${localizedPath(route.path, nextLang)}${search}${hash}`);
+        return;
+      }
       if (typeof i18n.changeLanguage === 'function') {
         i18n.changeLanguage(nextLang);
       }

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useHref, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { canonicalUrl, findPublicRoute } from '../../config/publicRoutes';
+import { SITE_ORIGIN, canonicalUrl, findPublicRoute } from '../../config/publicRoutes';
 
 const setHeadAttribute = (selector: string, tag: string, attributes: Record<string, string>, name: string, value: string): void => {
   let element = document.head.querySelector(selector);
@@ -17,6 +17,8 @@ const setHeadAttribute = (selector: string, tag: string, attributes: Record<stri
 export const PublicPageHead: React.FC = () => {
   const { pathname } = useLocation();
   const { t, i18n } = useTranslation();
+  // Includes the router basename, so a French page declares its own /fr address
+  const href = useHref(findPublicRoute(pathname)?.path ?? '/');
 
   useEffect(() => {
     const route = findPublicRoute(pathname);
@@ -30,13 +32,17 @@ export const PublicPageHead: React.FC = () => {
     setHeadAttribute('meta[name="twitter:title"]', 'meta', { name: 'twitter:title' }, 'content', title);
     setHeadAttribute('meta[name="twitter:description"]', 'meta', { name: 'twitter:description' }, 'content', description);
     if (route) {
-      const url = canonicalUrl(route.path);
+      const url = `${SITE_ORIGIN}${href}`;
+      const alternates = { en: canonicalUrl(route.path, 'en'), fr: canonicalUrl(route.path, 'fr'), 'x-default': canonicalUrl(route.path, 'en') };
+      Object.entries(alternates).forEach(([lang, value]) => {
+        setHeadAttribute(`link[rel="alternate"][hreflang="${lang}"]`, 'link', { rel: 'alternate', hreflang: lang }, 'href', value);
+      });
       setHeadAttribute('link[rel="canonical"]', 'link', { rel: 'canonical' }, 'href', url);
       setHeadAttribute('meta[property="og:url"]', 'meta', { property: 'og:url' }, 'content', url);
     } else {
-      document.head.querySelector('link[rel="canonical"]')?.remove();
+      document.head.querySelectorAll('link[rel="canonical"], link[rel="alternate"][hreflang]').forEach((link) => link.remove());
     }
-  }, [pathname, t, i18n.language]);
+  }, [pathname, href, t, i18n.language]);
 
   return null;
 };

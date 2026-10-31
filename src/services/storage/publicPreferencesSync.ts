@@ -129,6 +129,8 @@ export function setSyncedPublicTheme(theme: string): void {
  */
 export function getSyncedPublicLanguage(): SupportedLanguage {
   if (typeof window !== 'undefined' && window.location) {
+    // French public pages have their own URLs: the address decides, whatever was saved before
+    if (/^\/fr(\/|$)/.test(window.location.pathname ?? '')) return 'fr';
     try {
       const params = new URLSearchParams(window.location.search);
       const urlLang = params.get('lang')?.toLowerCase();

@@ -1,4 +1,4 @@
-# AI Search & Discovery Agents (Showcase & Documentation)
+# AI search and discovery agents
 User-agent: GPTBot
 User-agent: ChatGPT-User
 User-agent: ClaudeBot
@@ -7,14 +7,6 @@ User-agent: PerplexityBot
 User-agent: Google-Extended
 User-agent: CCBot
 Allow: /
-Allow: /welcome
-Allow: /legal
-Allow: /privacy
-Allow: /terms
-Allow: /cookies
-Allow: /accessibility
-Allow: /roadmap
-Allow: /changelog
 Disallow: /login
 Disallow: /signup
 Disallow: /forgot-password
@@ -22,21 +14,21 @@ Disallow: /reset-password
 Disallow: /auth/
 Disallow: /portfolio
 Disallow: /dashboard
+Disallow: /positions
 Disallow: /transactions
 Disallow: /analytics
+Disallow: /tax
+Disallow: /reports
+Disallow: /goals
+Disallow: /alerts
+Disallow: /notifications
+Disallow: /progress
+Disallow: /import
 Disallow: /settings
 
-# General Search Engines and Web Crawlers
+# Other crawlers
 User-agent: *
 Allow: /
-Allow: /welcome
-Allow: /legal
-Allow: /privacy
-Allow: /terms
-Allow: /cookies
-Allow: /accessibility
-Allow: /roadmap
-Allow: /changelog
 Disallow: /login
 Disallow: /signup
 Disallow: /forgot-password
@@ -44,8 +36,16 @@ Disallow: /reset-password
 Disallow: /auth/
 Disallow: /portfolio
 Disallow: /dashboard
+Disallow: /positions
 Disallow: /transactions
 Disallow: /analytics
+Disallow: /tax
+Disallow: /reports
+Disallow: /goals
+Disallow: /alerts
+Disallow: /notifications
+Disallow: /progress
+Disallow: /import
 Disallow: /settings
 
 Sitemap: https://glassfolio.dev/sitemap.xml

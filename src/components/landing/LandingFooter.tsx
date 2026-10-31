@@ -105,19 +105,19 @@ export const LandingFooter: React.FC = () => {
             <h4 className="text-xs font-bold text-primary mb-3">
               {t('landing:footer.projectHeading')}
             </h4>
-            <ul className="space-y-2 text-xs text-secondary font-medium">
+            <ul className="space-y-1 text-xs text-secondary font-medium">
               <li>
-                <Link to={buildPublicPagePath('/about')} className="hover:text-primary transition-colors">
+                <Link to={buildPublicPagePath('/about')} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:header.pageAbout')}
                 </Link>
               </li>
               <li>
-                <Link to={buildPublicPagePath('/roadmap')} className="hover:text-primary transition-colors">
+                <Link to={buildPublicPagePath('/roadmap')} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:header.pageRoadmap')}
                 </Link>
               </li>
               <li>
-                <Link to={buildPublicPagePath('/changelog')} className="hover:text-primary transition-colors">
+                <Link to={buildPublicPagePath('/changelog')} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:header.pageChangelog')}
                 </Link>
               </li>
@@ -129,20 +129,20 @@ export const LandingFooter: React.FC = () => {
             <h4 className="text-xs font-bold text-primary mb-3">
               {t('landing:footer.sourceHeading')}
             </h4>
-            <ul className="space-y-2 text-xs text-secondary font-medium">
+            <ul className="space-y-1 text-xs text-secondary font-medium">
               <li>
-                <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 py-1 hover:text-primary transition-colors">
                   <Github size={13} />
                   <span>{t('landing:footer.githubRepo')}</span>
                 </a>
               </li>
               <li>
-                <Link to={buildPublicPagePath('/self-host')} className="hover:text-primary transition-colors">
+                <Link to={buildPublicPagePath('/self-host')} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.selfHostGuide')}
                 </Link>
               </li>
               <li>
-                <a href={GITHUB_LICENSE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                <a href={GITHUB_LICENSE_URL} target="_blank" rel="noopener noreferrer" className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.license')}
                 </a>
               </li>
@@ -154,29 +154,29 @@ export const LandingFooter: React.FC = () => {
             <h4 className="text-xs font-bold text-primary mb-3">
               {t('landing:footer.legalHeading')}
             </h4>
-            <ul className="space-y-2 text-xs text-secondary font-medium">
+            <ul className="space-y-1 text-xs text-secondary font-medium">
               <li>
-                <Link to={`${legalBasePath}/legal`} className="hover:text-primary transition-colors">
+                <Link to={`${legalBasePath}/legal`} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.legalNotice')}
                 </Link>
               </li>
               <li>
-                <Link to={`${legalBasePath}/privacy`} className="hover:text-primary transition-colors">
+                <Link to={`${legalBasePath}/privacy`} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.privacyPolicy')}
                 </Link>
               </li>
               <li>
-                <Link to={`${legalBasePath}/terms`} className="hover:text-primary transition-colors">
+                <Link to={`${legalBasePath}/terms`} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.termsOfUse')}
                 </Link>
               </li>
               <li>
-                <Link to={`${legalBasePath}/cookies`} className="hover:text-primary transition-colors">
+                <Link to={`${legalBasePath}/cookies`} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.cookiesStorage')}
                 </Link>
               </li>
               <li>
-                <Link to={`${legalBasePath}/accessibility`} className="hover:text-primary transition-colors">
+                <Link to={`${legalBasePath}/accessibility`} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.accessibility')}
                 </Link>
               </li>

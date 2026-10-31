@@ -341,6 +341,7 @@
         "topicContent": {
             "cto": {
                 "rule1": "Imposition au PFU ({{rate}} % : {{ir}} % d'impôt sur le revenu + {{social}} % de prélèvements sociaux) ou sur option au barème progressif",
+                "rulesNotice": "Règles appliquées pour l'année fiscale {{year}}. Ce guide est informatif et ne constitue pas un conseil fiscal : vérifiez sur impots.gouv.fr ou auprès d'un professionnel avant de déclarer.",
                 "rateExceptions": "Exceptions de taux : les produits d'assurance-vie et de contrats de capitalisation (hors contrats de rente-survie et d'épargne-handicap), les intérêts des CEL et PEL ouverts jusqu'au 31 décembre 2017 (12 premières années pour les PEL) et les produits de PEP exonérés d'impôt restent à 17,2 % de prélèvements sociaux. Les dividendes et intérêts versés et prélevés en 2025 restent à 17,2 %. Source : impots.gouv.fr, 2026.",
                 "rule2": "Prix de revient calculé selon la méthode du Prix Moyen Pondéré (PMP)",
                 "rule3": "Moins-values imputables sur les plus-values de même nature, reportables pendant 10 ans",

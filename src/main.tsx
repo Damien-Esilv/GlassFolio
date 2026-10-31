@@ -10,6 +10,7 @@ import { bootstrapLocalPersistence } from './services/storage/localPersistenceBo
 import { installChunkReloadHandler } from './services/storage/chunkReload';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 import { getSyncedPublicLanguage } from './services/storage/publicPreferencesSync';
+import { languageFromPath } from './config/publicRoutes';
 
 // Synchronous preference & URL handoff bootstrap before any render
 consumeUrlBootstrapParams();
@@ -56,13 +57,13 @@ const renderApp = (): void => {
   root.render(wrapTree(isShowcase && ShowcaseApp ? <ShowcaseApp /> : FullApp && <FullApp />));
 };
 
-/** The static HTML is in English: another language replaces it instead of hydrating it. */
+/** Static HTML has the language of its URL: a visitor who chose another one replaces it instead of hydrating it. */
 const renderPrerendered = async (): Promise<void> => {
   if (isAppBuild) return;
   const { ShowcaseApp: LoadedShowcaseApp, preloadPublicPage } = await import('./ShowcaseApp');
   await preloadPublicPage(window.location.pathname);
   const tree = wrapTree(<LoadedShowcaseApp prerendered />);
-  if (getSyncedPublicLanguage() === 'en') {
+  if (getSyncedPublicLanguage() === languageFromPath(window.location.pathname)) {
     root = ReactDOM.hydrateRoot(rootElement, tree);
   } else {
     root = ReactDOM.createRoot(rootElement);

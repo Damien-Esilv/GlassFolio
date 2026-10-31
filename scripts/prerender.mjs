@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 // Same links as the production public host: the browser build resolves it from the hostname
 process.env.VITE_APP_TARGET = 'showcase';
 process.env.VITE_DEPLOYMENT_MODE = 'cloud';
+process.env.VITE_APP_URL = process.env.VITE_APP_URL || 'https://app.glassfolio.dev';
 
 // Node has no web storage: the app reads preferences from it while rendering, and finds them empty
 const emptyStorage = {
@@ -32,7 +33,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const serverDir = join(root, '.prerender');
 
-const { PUBLIC_ROUTES, canonicalUrl, latestReleaseDate, renderPublicPage, seoTexts } = await import(
+const { PUBLIC_ROUTES, canonicalUrl, latestReleaseDate, localizedPath, renderPublicPage, seoTexts } = await import(
   pathToFileURL(join(serverDir, 'entry-prerender.js')).href
 );
 
@@ -51,8 +52,9 @@ const setMeta = (html, attribute, name, value) =>
     `<meta ${attribute}="${name}" content="${escapeAttribute(value)}" />`,
   );
 
-const buildPage = ({ shell, body, title, description, canonical, softwareSchema, path }) => {
-  let html = replaceOnce(shell, /<title>[^<]*<\/title>/, `<title>${escapeAttribute(title)}</title>`);
+const buildPage = ({ shell, body, title, description, canonical, alternates, softwareSchema, path, language = 'en' }) => {
+  let html = replaceOnce(shell, /<html lang="en"/, `<html lang="${language}"`);
+  html = replaceOnce(html, /<title>[^<]*<\/title>/, `<title>${escapeAttribute(title)}</title>`);
   html = setMeta(html, 'name', 'description', description);
   html = setMeta(html, 'property', 'og:title', title);
   html = setMeta(html, 'property', 'og:description', description);
@@ -60,7 +62,8 @@ const buildPage = ({ shell, body, title, description, canonical, softwareSchema,
   html = setMeta(html, 'name', 'twitter:description', description);
   if (canonical) {
     html = setMeta(html, 'property', 'og:url', canonical);
-    html = replaceOnce(html, /<\/title>/, `</title>\n  <link rel="canonical" href="${canonical}" />`);
+    const links = [`<link rel="canonical" href="${canonical}" />`, ...alternates.map(({ lang, href }) => `<link rel="alternate" hreflang="${lang}" href="${href}" />`)];
+    html = replaceOnce(html, /<\/title>/, `</title>\n  ${links.join('\n  ')}`);
   } else {
     html = replaceOnce(html, /\s*<meta property="og:url" content="[^"]*"\s*\/?>/, '');
   }
@@ -84,18 +87,29 @@ const assertRendered = (path, body) => {
 const shell = readFileSync(join(dist, 'index.html'), 'utf-8');
 mkdirSync(join(dist, '_p'), { recursive: true });
 
-for (const route of PUBLIC_ROUTES) {
-  const body = await renderPublicPage(route.path);
-  assertRendered(route.path, body);
-  const page = buildPage({
-    shell,
-    body,
-    path: route.path,
-    canonical: canonicalUrl(route.path),
-    softwareSchema: route.softwareSchema,
-    ...seoTexts(route.seoKey),
-  });
-  writeFileSync(join(dist, '_p', `${route.file}.html`), page);
+const alternatesOf = (path) => [
+  { lang: 'en', href: canonicalUrl(path, 'en') },
+  { lang: 'fr', href: canonicalUrl(path, 'fr') },
+  { lang: 'x-default', href: canonicalUrl(path, 'en') },
+];
+mkdirSync(join(dist, '_p', 'fr'), { recursive: true });
+
+for (const language of ['en', 'fr']) {
+  for (const route of PUBLIC_ROUTES) {
+    const body = await renderPublicPage(route.path, language);
+    assertRendered(localizedPath(route.path, language), body);
+    const page = buildPage({
+      shell,
+      body,
+      language,
+      path: localizedPath(route.path, language),
+      canonical: canonicalUrl(route.path, language),
+      alternates: alternatesOf(route.path),
+      softwareSchema: route.softwareSchema,
+      ...seoTexts(route.seoKey, language),
+    });
+    writeFileSync(join(dist, '_p', language === 'fr' ? 'fr' : '', `${route.file}.html`), page);
+  }
 }
 
 const notFoundPath = '/404';
@@ -107,15 +121,16 @@ writeFileSync(
 );
 
 const releaseDate = latestReleaseDate();
-const urls = PUBLIC_ROUTES.map((route) => {
+const urls = ['en', 'fr'].flatMap((language) => PUBLIC_ROUTES.map((route) => {
   const lastmod = route.datedByChangelog ? `\n    <lastmod>${releaseDate}</lastmod>` : '';
-  return `  <url>\n    <loc>${canonicalUrl(route.path)}</loc>${lastmod}\n  </url>`;
-});
+  const links = alternatesOf(route.path).map(({ lang, href }) => `\n    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`).join('');
+  return `  <url>\n    <loc>${canonicalUrl(route.path, language)}</loc>${lastmod}${links}\n  </url>`;
+}));
 writeFileSync(
   join(dist, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`,
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join('\n')}\n</urlset>\n`,
 );
 
 renameSync(join(dist, 'index.html'), join(dist, 'app-shell.html'));
 rmSync(serverDir, { recursive: true, force: true });
-console.log(`Prerendered ${PUBLIC_ROUTES.length} public pages and the 404 page into dist/`);
+console.log(`Prerendered ${PUBLIC_ROUTES.length} public pages in EN and FR, and the 404 page, into dist/`);

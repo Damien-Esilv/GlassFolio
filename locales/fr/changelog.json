@@ -8,6 +8,16 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-1": {
+      "title": "Un site public plus clair et plus rapide",
+      "highlights": {
+        "frenchPages": "Le site public a désormais ses propres pages en français, à des adresses que vous pouvez partager et garder en favori.",
+        "fasterPublicPages": "Les pages publiques affichent leur contenu tout de suite, sans attendre le chargement de l'application.",
+        "taxRates": "Le guide fiscal et le tableau d'optimisation indiquent les taux de flat tax et de prélèvements sociaux de chaque année, avec leurs exceptions.",
+        "compactConsent": "Le message de consentement devient une petite barre qui ne recouvre plus la page.",
+        "readability": "Meilleur contraste des textes et zones tactiles plus grandes sur le site public, y compris sur mobile."
+      }
+    },
     "v1-0": {
       "title": "GlassFolio 1.0 — Version Majeure Officielle",
       "highlights": {

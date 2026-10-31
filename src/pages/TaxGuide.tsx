@@ -376,6 +376,7 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule3')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rule4')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rateExceptions')}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.cto.rulesNotice', { year: DEFAULT_FISCAL_YEAR })}</li>
                             </ul>
                         </div>
                         {rules && (

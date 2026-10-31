@@ -1,3 +1,5 @@
+import { languageFromPath } from '../config/publicRoutes';
+import { getSyncedPublicLanguage } from '../services/storage/publicPreferencesSync';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { User, UserPreferences } from '../types';
 import { userRepository } from '../services/repositories';
@@ -242,9 +244,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Language Effect - Sync i18n with user language preference
   useEffect(() => {
     const loadLanguage = async () => {
-      const storedPublicLang = appStorage.getItem(PUBLIC_LANG_STORAGE_KEY);
-      const fallbackLang = storedPublicLang === 'fr' || storedPublicLang === 'en' ? storedPublicLang : 'en';
-      const lang = user?.preferences?.language || fallbackLang;
+      // A French public URL decides, or the page would switch away from the language of its address
+      const urlLang = languageFromPath(window.location.pathname) === 'fr' ? 'fr' : undefined;
+      const lang = urlLang || user?.preferences?.language || getSyncedPublicLanguage();
       const i18n = (await import('../i18n')).default;
       if (i18n.language !== lang) {
         i18n.changeLanguage(lang);

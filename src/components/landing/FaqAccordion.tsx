@@ -58,16 +58,16 @@ export const FaqAccordion: React.FC = () => {
                   />
                 </button>
 
-                {isOpen && (
-                  <div
-                    id={contentId}
-                    role="region"
-                    aria-labelledby={buttonId}
-                    className="px-5 pb-5 pt-1 text-xs sm:text-sm text-secondary leading-relaxed"
-                  >
-                    {t(`landing:faq.items.${key}.answer`)}
-                  </div>
-                )}
+                {/* Hidden, not unmounted: closed answers stay in the prerendered HTML for crawlers */}
+                <div
+                  id={contentId}
+                  role="region"
+                  aria-labelledby={buttonId}
+                  hidden={!isOpen}
+                  className="px-5 pb-5 pt-1 text-xs sm:text-sm text-secondary leading-relaxed"
+                >
+                  {t(`landing:faq.items.${key}.answer`)}
+                </div>
               </div>
             );
           })}

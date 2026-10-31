@@ -32,10 +32,24 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/accessibility', file: 'accessibility', seoKey: 'accessibility', softwareSchema: false, datedByChangelog: false },
 ];
 
-export const canonicalUrl = (path: string): string => `${SITE_ORIGIN}${path}`;
+export type PublicLanguage = 'en' | 'fr';
+
+export const FR_BASENAME = '/fr';
+
+/** A public path in a given language: French pages live under /fr, English ones at the root. */
+export const localizedPath = (path: string, language: PublicLanguage): string => {
+  if (language === 'en') return path;
+  return path === '/' ? FR_BASENAME : `${FR_BASENAME}${path}`;
+};
+
+export const languageFromPath = (pathname: string): PublicLanguage =>
+  pathname === FR_BASENAME || pathname.startsWith(`${FR_BASENAME}/`) ? 'fr' : 'en';
+
+export const canonicalUrl = (path: string, language: PublicLanguage = 'en'): string =>
+  `${SITE_ORIGIN}${localizedPath(path, language)}`;
 
 /** `/welcome/about` and `/welcome` are the same pages as `/about` and `/` */
 export const findPublicRoute = (pathname: string): PublicRoute | undefined => {
-  const short = pathname.replace(/^\/welcome(?=\/|$)/, '').replace(/\/+$/, '') || '/';
+  const short = pathname.replace(/^\/(welcome|fr)(?=\/|$)/, '').replace(/\/+$/, '') || '/';
   return PUBLIC_ROUTES.find((route) => route.path === short);
 };

@@ -8,6 +8,13 @@
   },
   "center": {
     "pageTitle": "Legal & GDPR Governance Center",
+    "headings": {
+      "legal": "Legal Notice",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use",
+      "cookies": "Cookies & Local Storage",
+      "accessibility": "Accessibility Statement"
+    },
     "pageSubtitle": "Transparency, privacy-by-design architecture, and regulatory compliance disclosures for GlassFolio.",
     "backToApp": "Back to Application",
     "backToHome": "Back to Home",

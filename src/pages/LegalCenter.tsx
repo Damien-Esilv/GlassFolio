@@ -207,8 +207,9 @@ const LegalCenter: React.FC = () => {
 
         {/* Page Heading */}
         <div className="mb-10 text-center sm:text-left">
+          <p className="text-xs font-semibold text-brand mb-2">{t('legal:center.pageTitle')}</p>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-primary tracking-tight mb-2">
-            {t('legal:center.pageTitle')}
+            {t(`legal:center.headings.${activeTab}`)}
           </h1>
           <p className="text-sm sm:text-base text-secondary">
             {t('legal:center.pageSubtitle')}

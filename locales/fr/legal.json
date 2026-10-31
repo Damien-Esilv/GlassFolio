@@ -8,6 +8,13 @@
   },
   "center": {
     "pageTitle": "Centre Légal & Gouvernance RGPD",
+    "headings": {
+      "legal": "Mentions légales",
+      "privacy": "Politique de confidentialité",
+      "terms": "Conditions d'utilisation",
+      "cookies": "Cookies et stockage local",
+      "accessibility": "Déclaration d'accessibilité"
+    },
     "pageSubtitle": "Transparence, architecture Privacy-by-Design et conformité réglementaire de GlassFolio.",
     "backToApp": "Retour à l'Application",
     "backToHome": "Retour à l'Accueil",
