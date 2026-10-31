@@ -442,8 +442,8 @@ const PortfolioPerformance: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-            <ChartModeToggle mode={chartMode} onChange={mode => void setChartMode(mode)} />
-            {/* Time Period Selector */}
+               <ChartModeToggle mode={chartMode} onChange={mode => void setChartMode(mode)} size="md" />
+               {/* Time Period Selector */}
             <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle">
                {(['1M', '3M', 'YTD', '1Y', 'ALL'] as const).map((range) => (
                   <button

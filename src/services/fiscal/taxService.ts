@@ -80,9 +80,24 @@ interface CachedTaxSummary {
 const taxSummaryCache = new Map<string, CachedTaxSummary>();
 const inFlightSummaries = new Map<string, Promise<TaxSummaryResult>>();
 
+interface CachedTaxOptimization {
+    pfuComparison: {
+        pfuTotal: number;
+        baremeTotal: number;
+        recommendation: 'PFU' | 'BAREME' | 'NEUTRAL';
+        confidence: import('../../types/types.backend').FiscalConfidence;
+    };
+    suggestions: OptimizationSuggestion[];
+    dataVersion: number;
+    cachedAt: number;
+}
+
+const taxOptimizationCache = new Map<string, CachedTaxOptimization>();
+
 export const clearTaxSummaryCache = (): void => {
     taxSummaryCache.clear();
     inFlightSummaries.clear();
+    taxOptimizationCache.clear();
 };
 
 vaultService.subscribeStatus((status) => {
@@ -98,6 +113,55 @@ vaultService.subscribeStatus((status) => {
 export const taxService = {
     /** Clear in-memory tax summary cache (e.g. after import or transaction edit). */
     clearCache: clearTaxSummaryCache,
+
+    /**
+     * Synchronously returns cached tax optimization results if available and up to date.
+     * Prevents loading flicker/double-load in Tax Optimization page.
+     */
+    getCachedTaxOptimization: (
+        fiscalYear: string,
+        profile: FiscalProfile,
+        country: string = DEFAULT_TAX_COUNTRY
+    ): {
+        pfuComparison: {
+            pfuTotal: number;
+            baremeTotal: number;
+            recommendation: 'PFU' | 'BAREME' | 'NEUTRAL';
+            confidence: import('../../types/types.backend').FiscalConfidence;
+        };
+        suggestions: OptimizationSuggestion[];
+    } | null => {
+        const cacheKey = `${fiscalYear}:${country}:${JSON.stringify(profile)}`;
+        const cached = taxOptimizationCache.get(cacheKey);
+        if (cached && cached.dataVersion === db.getDataVersion()) {
+            return {
+                pfuComparison: cached.pfuComparison,
+                suggestions: cached.suggestions,
+            };
+        }
+        return null;
+    },
+
+    setCachedTaxOptimization: (
+        fiscalYear: string,
+        profile: FiscalProfile,
+        country: string = DEFAULT_TAX_COUNTRY,
+        pfuComparison: {
+            pfuTotal: number;
+            baremeTotal: number;
+            recommendation: 'PFU' | 'BAREME' | 'NEUTRAL';
+            confidence: import('../../types/types.backend').FiscalConfidence;
+        },
+        suggestions: OptimizationSuggestion[]
+    ): void => {
+        const cacheKey = `${fiscalYear}:${country}:${JSON.stringify(profile)}`;
+        taxOptimizationCache.set(cacheKey, {
+            pfuComparison,
+            suggestions,
+            dataVersion: db.getDataVersion(),
+            cachedAt: Date.now(),
+        });
+    },
 
     /**
      * Synchronously returns cached tax summary if available and up to date.

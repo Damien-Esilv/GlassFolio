@@ -8,6 +8,15 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-4": {
+      "title": "Animations harmonisées, hub de progrès fluide et répartition d'actifs extensible",
+      "highlights": {
+        "animationHarmonization": "Tous les écrans partagent désormais une horloge d'animation unifiée. Les chiffres et barres de progression s'animent avec fluidité sans scintillement des cartes, et les paramètres s'ouvrent instantanément.",
+        "progressHubNavigation": "La navigation du hub Progrès & Gamification est maintenant accessible en un clic sur tous les écrans, sans défilement horizontal nécessaire.",
+        "assetAllocationExtensible": "La répartition du patrimoine intègre dynamiquement la catégorie Autre et s'adapte automatiquement à toute nouvelle classe d'actifs avec des couleurs stables.",
+        "dashboardTimelineSmoothness": "Le changement de période sur le tableau de bord est instantané et sans coupure, supprimant le double chargement des courbes de performance."
+      }
+    },
     "v1-3": {
       "title": "Une fiscalité plus juste, des quêtes qui avancent",
       "highlights": {

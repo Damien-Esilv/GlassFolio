@@ -94,7 +94,7 @@ const StatCard: React.FC<{ label: string; value: number; isNegative?: boolean; h
     const { i18n } = useTranslation();
     return (
     <div 
-        className={`rounded-xl p-4 border transition-all animate-slide-in-left ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
+        className={`rounded-xl p-4 border animate-slide-in-left ${highlight ? 'bg-brand/5 border-brand/20' : 'bg-card border-subtle'}`}
         style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
     >
         <p className="text-xs text-secondary mb-1">{label}</p>
@@ -132,7 +132,7 @@ const DeclarationAssistant: React.FC = () => {
     const loadSummary = useCallback(async (isCancelled: () => boolean = () => false) => {
         const cached = taxService.getCachedTaxSummary(fiscalYear, profile);
         if (cached) {
-            setSummary(cached);
+            setSummary(prev => (prev === cached ? prev : cached));
             setIsLoading(false);
             return;
         }
@@ -158,7 +158,7 @@ const DeclarationAssistant: React.FC = () => {
     }, [loadSummary]);
 
     return (
-        <div className="space-y-6 w-full animate-fade-in">
+        <div className="space-y-6 w-full">
             {/* Header */}
             <div>
                 <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
@@ -212,7 +212,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── CTO Tab ── */}
             {!isLoading && summary && activeTab === 'cto' && (
-                <div key="cto" className="space-y-6 animate-fade-in">
+                <div key="cto" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.cto.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.cto.subtitle')}</p>
@@ -238,7 +238,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Dividends Tab ── */}
             {!isLoading && summary && activeTab === 'dividends' && (
-                <div key="dividends" className="space-y-6 animate-fade-in">
+                <div key="dividends" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.dividends.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.dividends.subtitle')}</p>
@@ -258,7 +258,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── PEA Tab ── */}
             {!isLoading && summary && activeTab === 'pea' && (
-                <div key="pea" className="space-y-6 animate-fade-in">
+                <div key="pea" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.pea.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.pea.subtitle')}</p>
@@ -296,7 +296,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Crypto Tab ── */}
             {!isLoading && summary && activeTab === 'crypto' && (
-                <div key="crypto" className="space-y-6 animate-fade-in">
+                <div key="crypto" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.crypto.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.crypto.subtitle')}</p>
@@ -337,7 +337,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Foreign Accounts Tab ── */}
             {!isLoading && summary && activeTab === 'foreign' && (
-                <div key="foreign" className="space-y-6 animate-fade-in">
+                <div key="foreign" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.foreign.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.foreign.subtitle')}</p>
@@ -386,7 +386,7 @@ const DeclarationAssistant: React.FC = () => {
 
             {/* ── Forms Tab ── */}
             {!isLoading && summary && activeTab === 'forms' && (
-                <div key="forms" className="space-y-6 animate-fade-in">
+                <div key="forms" className="space-y-6">
                     <div>
                         <h2 className="text-lg font-semibold text-primary mb-1">{t('tax:declaration.forms.title')}</h2>
                         <p className="text-xs text-secondary">{t('tax:declaration.forms.subtitle')}</p>

@@ -36,8 +36,7 @@ const Positions: React.FC = () => {
     ...ASSET_CLASSES_CONFIG.map(ac => ({
         value: ac.id,
         label: t(`categories.${ac.i18nKey}`, { defaultValue: ac.id })
-    })),
-    { value: 'Other', label: t('categories.other') }
+    }))
   ]), [t]);
 
   // Derive unique values from global state (for dropdowns)

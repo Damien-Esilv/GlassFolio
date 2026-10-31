@@ -95,7 +95,7 @@ const Portfolio: React.FC = () => {
         );
 
         const allConfigs = [...baseCategoryConfigs];
-        if (hasUnmatchedPositions) {
+        if (hasUnmatchedPositions && !allConfigs.some(c => c.id === 'Other')) {
             const otherConfig = getAssetClassConfig('Other');
             allConfigs.push({
                 id: 'Other',

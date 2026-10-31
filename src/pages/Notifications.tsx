@@ -23,6 +23,8 @@ import { useData } from '../context/DataContext';
 import { Alert, AlertRule, AlertRuleMetric, NotificationCategory } from '../types';
 import Button from '../components/Button';
 import { alertText } from '../utils/alertText';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, MAX_STAGGER_STEPS } from '../constants/animations';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 
 function getCategoryIcon(category?: NotificationCategory, type?: string) {
   switch (category) {
@@ -40,7 +42,8 @@ function getCategoryIcon(category?: NotificationCategory, type?: string) {
 }
 
 export const Notifications: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'rules' ? 'rules' : 'inbox';
 
@@ -142,7 +145,7 @@ export const Notifications: React.FC = () => {
                 : 'text-secondary hover:text-primary'
             }`}
           >
-            {t('notifications:tabs.inbox')} ({unreadAlertsCount})
+            {t('notifications:tabs.inbox')} (<AnimatedNumber value={unreadAlertsCount} locale={locale} />)
           </button>
           <button
             type="button"
@@ -153,7 +156,7 @@ export const Notifications: React.FC = () => {
                 : 'text-secondary hover:text-primary'
             }`}
           >
-            {t('notifications:tabs.rules')} ({alertRules.length})
+            {t('notifications:tabs.rules')} (<AnimatedNumber value={alertRules.length} locale={locale} />)
           </button>
         </div>
       </div>
@@ -164,7 +167,9 @@ export const Notifications: React.FC = () => {
           <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
             {t('notifications:stats.total')}
           </p>
-          <p className="text-2xl font-black text-primary mt-1">{alerts.length}</p>
+          <p className="text-2xl font-black text-primary mt-1">
+            <AnimatedNumber value={alerts.length} locale={locale} />
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-card border border-subtle">
@@ -172,7 +177,7 @@ export const Notifications: React.FC = () => {
             {t('notifications:stats.unread')}
           </p>
           <p className={`text-2xl font-black mt-1 ${unreadAlertsCount > 0 ? 'text-primary font-bold' : 'text-secondary'}`}>
-            {unreadAlertsCount}
+            <AnimatedNumber value={unreadAlertsCount} locale={locale} />
           </p>
         </div>
 
@@ -181,7 +186,7 @@ export const Notifications: React.FC = () => {
             {t('notifications:stats.activeRules')}
           </p>
           <p className="text-2xl font-black text-primary mt-1">
-            {alertRules.filter((r) => r.enabled).length}
+            <AnimatedNumber value={alertRules.filter((r) => r.enabled).length} locale={locale} />
           </p>
         </div>
 
@@ -189,7 +194,9 @@ export const Notifications: React.FC = () => {
           <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
             {t('notifications:stats.categories')}
           </p>
-          <p className="text-2xl font-black text-brand mt-1">4</p>
+          <p className="text-2xl font-black text-brand mt-1">
+            <AnimatedNumber value={4} locale={locale} />
+          </p>
         </div>
       </div>
 
@@ -271,12 +278,16 @@ export const Notifications: React.FC = () => {
                 </p>
               </div>
             ) : (
-              filteredAlerts.map((alert) => (
+              filteredAlerts.map((alert, idx) => (
                 <div
                   key={alert.id}
-                  className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-subtle/40 ${
+                  className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-subtle/40 animate-row-in ${
                     !alert.read ? 'bg-primary/5' : ''
                   }`}
+                  style={{
+                    animationDelay: `${Math.min(idx, MAX_STAGGER_STEPS) * STAGGER_DELAY_MS}ms`,
+                    animationFillMode: 'both',
+                  }}
                 >
                   <div className="p-2.5 rounded-xl bg-subtle shrink-0 mt-0.5">
                     {getCategoryIcon(alert.category, alert.type)}
@@ -481,10 +492,14 @@ export const Notifications: React.FC = () => {
                 </p>
               </div>
             ) : (
-              alertRules.map((rule) => (
+              alertRules.map((rule, idx) => (
                 <div
                   key={rule.id}
-                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-subtle/30 transition-colors"
+                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-subtle/30 transition-colors animate-row-in"
+                  style={{
+                    animationDelay: `${Math.min(idx, MAX_STAGGER_STEPS) * STAGGER_DELAY_MS}ms`,
+                    animationFillMode: 'both',
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <button

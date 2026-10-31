@@ -9,7 +9,7 @@ import { DashboardSummary, Position } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { portfolioService } from '../services/portfolioService';
 import { currencyService } from '../services/currencyService';
-import { fetchRealPriceHistory, generateHighPrecisionHistory, HistoricalPricePoint } from '../services/priceService';
+import { fetchRealPriceHistory, getCachedRealPriceHistory, generateHighPrecisionHistory, HistoricalPricePoint } from '../services/priceService';
 import ChartModeToggle from '../components/ui/ChartModeToggle';
 import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { useTranslation } from 'react-i18next';
@@ -34,12 +34,13 @@ const Dashboard: React.FC = () => {
   const currency = user?.preferences?.currency || 'USD';
   const { transactions, xpEvents, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
+  const [displayedRange, setDisplayedRange] = useState('1Y');
   const [chartMode, setChartMode] = useChartPriceMode();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [animActive, setAnimActive] = useState(false);
-  const [bestHistory, setBestHistory] = useState<HistoricalPricePoint[]>([]);
-  const [worstHistory, setWorstHistory] = useState<HistoricalPricePoint[]>([]);
+  const [bestHistory, setBestHistory] = useState<HistoricalPricePoint[] | null>(null);
+  const [worstHistory, setWorstHistory] = useState<HistoricalPricePoint[] | null>(null);
 
   useEffect(() => {
     // Opening the dashboard is the monthly review quest
@@ -47,12 +48,11 @@ const Dashboard: React.FC = () => {
   }, [refreshData]);
 
   useEffect(() => {
-    if (!isLoadingSummary && summary) {
-      setAnimActive(false);
+    if (!isLoadingSummary && summary && !animActive) {
       const timer = setTimeout(() => setAnimActive(true), ENTRANCE_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingSummary, summary]);
+  }, [isLoadingSummary, summary, animActive]);
 
   // Fetch Dashboard Summary
   useEffect(() => {
@@ -61,6 +61,7 @@ const Dashboard: React.FC = () => {
         setIsLoadingSummary(true);
         const data = await portfolioService.getDashboardSummary(timeRange, currency, locale, dateFormat, { chartMode });
         setSummary(data);
+        setDisplayedRange(timeRange);
       } catch (e) {
         console.error(e);
       } finally {
@@ -124,16 +125,32 @@ const Dashboard: React.FC = () => {
     let isSubscribed = true;
 
     if (bestPerformer) {
+      const cached = getCachedRealPriceHistory(bestPerformer, timeRange);
+      if (cached) {
+        setBestHistory(cached);
+      } else {
+        setBestHistory(null);
+      }
       fetchRealPriceHistory(bestPerformer, timeRange).then(data => {
         if (isSubscribed) setBestHistory(data);
+      }).catch(() => {
+        if (isSubscribed) setBestHistory([]);
       });
     } else {
       setBestHistory([]);
     }
 
     if (worstPerformer) {
+      const cached = getCachedRealPriceHistory(worstPerformer, timeRange);
+      if (cached) {
+        setWorstHistory(cached);
+      } else {
+        setWorstHistory(null);
+      }
       fetchRealPriceHistory(worstPerformer, timeRange).then(data => {
         if (isSubscribed) setWorstHistory(data);
+      }).catch(() => {
+        if (isSubscribed) setWorstHistory([]);
       });
     } else {
       setWorstHistory([]);
@@ -183,19 +200,22 @@ const Dashboard: React.FC = () => {
     title,
     position,
     isWorst = false,
-    realHistory = []
+    realHistory = null
   }: {
     title: string;
     position: Position | null;
     isWorst?: boolean;
-    realHistory?: HistoricalPricePoint[];
+    realHistory?: HistoricalPricePoint[] | null;
   }) => {
-    // Real Sparkline price trend data (fallback to high-precision financial generator if API returned empty)
+    // Real Sparkline price trend data (fallback to high-precision financial generator ONLY if API returned empty)
+    // When realHistory is null, real data is actively being fetched from cache/network.
+    // Do NOT generate synthetic fallback while actively fetching, so we avoid the 0.1s false chart start!
     const sparklineData = useMemo(() => {
-      if (!position) return [];
+      if (!position || realHistory === null) return [];
       if (realHistory && realHistory.length >= 2) {
         return realHistory.map(pt => ({ val: pt.price }));
       }
+      // Only fall back to synthetic if fetch finished and returned empty array
       const plRatio = (position.unrealizedPLPercent || 0) / 100;
       const estimatedStart = plRatio !== -1
         ? position.lastPrice / (1 + plRatio)
@@ -266,27 +286,31 @@ const Dashboard: React.FC = () => {
 
         {/* Mini Sparkline Chart — stretched edge-to-edge below the card padding */}
         <div className="h-20 -mx-6 -mb-6 mt-4 overflow-hidden rounded-b-xl z-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={sparklineData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={strokeColor} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="val"
-                stroke={strokeColor}
-                strokeWidth={2}
-                fillOpacity={1}
-                fill={`url(#${gradientId})`}
-                isAnimationActive={true}
-                animationDuration={ANIMATION_DURATION_MS}
-                animationEasing={ANIMATION_EASING}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {sparklineData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart key={`${position.symbol}-${timeRange}`} data={sparklineData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={strokeColor} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="val"
+                  stroke={strokeColor}
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill={`url(#${gradientId})`}
+                  isAnimationActive={true}
+                  animationDuration={ANIMATION_DURATION_MS}
+                  animationEasing={ANIMATION_EASING}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full w-full bg-subtle/10 animate-pulse" />
+          )}
         </div>
       </div>
     );
@@ -341,7 +365,7 @@ const Dashboard: React.FC = () => {
           {/* Main Chart Section with X-Axis Dates */}
           <div className="h-[300px] w-full mt-6">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart key={timeRange} data={summary.chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
+              <AreaChart key={displayedRange} data={summary.chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />

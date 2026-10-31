@@ -231,7 +231,7 @@ export const AISettingsTab: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in">
+    <div className="space-y-6">
       {/* 1. Header Banner */}
       <div className="p-6 rounded-2xl bg-card border border-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">

@@ -65,15 +65,12 @@ describe('ProgressStatsTab', () => {
     expect(text('stat-since')).toContain('July 5, 2024');
   });
 
-  it('shows its cards one after the other, with the common clock', async () => {
+  it('renders cards immediately without delayed fade-in', async () => {
     render(<ProgressStatsTab stats={stats} locale="en-US" />);
-    const reveal = (id: string) => screen.getByTestId(id).parentElement as HTMLElement;
-    expect(reveal('stat-transactions').style.opacity).toBe('0'); // before the entrance
-    await settle();
-    expect(reveal('stat-transactions').style.opacity).toBe('1');
-    expect(reveal('stat-transactions').style.transitionDelay).toBe(`${1 * STAGGER_DELAY_MS}ms`);
-    expect(reveal('stat-goals').style.transitionDelay).toBe(`${8 * STAGGER_DELAY_MS}ms`);
-    expect(reveal('stat-goals').style.transitionDuration).toBe(`${ANIMATION_DURATION_MS}ms`);
+    const card = screen.getByTestId('stat-transactions');
+    expect(card).toBeDefined();
+    // Container is rendered immediately and not hidden with opacity: 0
+    expect(card.parentElement?.style.opacity).not.toBe('0');
   });
 
   it('uses the singular for a single week and says so when nothing is tracked yet', async () => {

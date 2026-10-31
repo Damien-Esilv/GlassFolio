@@ -51,14 +51,11 @@ describe('Progress tabs all animate with the common clock', () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it.each(['goals', 'achievements', 'quests', 'ranks', 'stats'])('%s: cards start hidden, then appear', async tab => {
+  it.each(['goals', 'achievements', 'quests', 'ranks', 'stats'])('%s: cards render immediately without fade-in', async tab => {
     const { container } = renderTab(tab);
-    const before = revealed(container);
-    expect(before.length).toBeGreaterThan(0);
-    expect(before.every(el => el.style.opacity === '0')).toBe(true);
-
-    await settle();
-    expect(revealed(container).every(el => el.style.opacity === '1')).toBe(true);
+    // Cards must NOT start hidden with opacity: 0
+    const hiddenCards = Array.from(container.querySelectorAll<HTMLElement>('div')).filter(el => el.style.opacity === '0');
+    expect(hiddenCards.length).toBe(0);
   });
 
   it('no longer uses the fixed-duration CSS entrance classes', async () => {
@@ -85,5 +82,19 @@ describe('Progress tabs all animate with the common clock', () => {
     await settle();
     expect(bar().style.width).toBe('40%'); // 2 of 5
     expect(bar().style.transitionDuration).toBe(`${ANIMATION_DURATION_MS}ms`);
+  });
+
+  it('goal modal opens instantly without fade-in animation', async () => {
+    render(<MemoryRouter initialEntries={['/progress?tab=goals&action=new']}><Progress /></MemoryRouter>);
+    const backdrop = document.querySelector('.fixed.inset-0.z-\\[100000\\]');
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.classList.contains('animate-fade-in')).toBe(false);
+  });
+
+  it('achievement modal opens instantly without fade-in animation', async () => {
+    render(<MemoryRouter initialEntries={['/progress?tab=achievements&openId=a1']}><Progress /></MemoryRouter>);
+    const backdrop = document.querySelector('.fixed.inset-0.z-\\[100000\\]');
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.classList.contains('animate-fade-in')).toBe(false);
   });
 });

@@ -21,7 +21,9 @@ import {
     Award, 
     Pin, 
     Filter, 
-    Flame
+    Flame,
+    Zap,
+    BarChart3
 } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
@@ -29,9 +31,7 @@ import QuestCard from '../components/QuestCard';
 import InvestorRankCard from '../components/InvestorRankCard';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
-import { Reveal } from '../components/ui/Reveal';
 import { AnimatedNumber } from '../components/ui/AnimatedNumber';
-import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
 import { gamificationService } from '../services/gamificationService';
 import { computeProgressStats } from '../services/progressStatsService';
 import ProgressStatsTab from '../components/progress/ProgressStatsTab';
@@ -234,18 +234,22 @@ const Progress: React.FC = () => {
         return ach.category === categoryFilter;
     });
 
-    // Cards appear again whenever the tab changes, and the badges whenever their filter does
-    const animActive = useEntranceAnimation(activeTab);
-    const gridActive = useEntranceAnimation(`${activeTab}:${categoryFilter}`);
-
     const pinnedAchievementsList = achievements.filter(a => pinnedBadges.includes(a.id));
     const currentRank = gamificationService.getInvestorRank(user?.level || 1);
     const progress = gamificationService.calculateLevelProgress(user?.xp || 0);
 
+    const PROGRESS_TABS = [
+        { id: 'goals' as const, labelKey: 'gamification:tabs.goals', icon: Target },
+        { id: 'achievements' as const, labelKey: 'gamification:tabs.achievements', icon: Trophy },
+        { id: 'quests' as const, labelKey: 'gamification:tabs.quests', icon: Zap },
+        { id: 'ranks' as const, labelKey: 'gamification:tabs.ranks', icon: Award },
+        { id: 'stats' as const, labelKey: 'gamification:tabs.stats', icon: BarChart3 },
+    ];
+
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-6 pb-12">
             {/* Header with Investor Rank & Level Tracker */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-black text-brand mb-1">
                         {t('gamification:hub.title')}
@@ -267,55 +271,32 @@ const Progress: React.FC = () => {
                         </span>
                     </div>
                 </div>
+            </div>
 
-                {/* Tab switcher */}
-                <div className="flex bg-subtle p-1 rounded-2xl border border-subtle overflow-x-auto max-w-full">
-                    <button 
-                        onClick={() => { setActiveTab('goals'); setSearchParams({ tab: 'goals' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'goals' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.goals')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('achievements'); setSearchParams({ tab: 'achievements' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'achievements' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.achievements')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('quests'); setSearchParams({ tab: 'quests' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'quests' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.quests')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('ranks'); setSearchParams({ tab: 'ranks' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'ranks' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.ranks')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('stats'); setSearchParams({ tab: 'stats' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'stats' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.stats')}
-                    </button>
-                </div>
+            {/* Tab switcher: full width, ergonomic, all 5 tabs visible at a glance */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-subtle p-1.5 rounded-2xl border border-subtle">
+                {PROGRESS_TABS.map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button 
+                            key={tab.id}
+                            onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }); }} 
+                            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+                                isActive 
+                                    ? 'bg-card text-primary shadow-sm border border-subtle' 
+                                    : 'text-secondary hover:text-primary hover:bg-card/40'
+                            }`}
+                        >
+                            <Icon size={16} className={isActive ? 'text-brand' : 'text-secondary'} />
+                            <span className="truncate">{t(tab.labelKey)}</span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Featured Showcase (if any badges pinned) */}
             {pinnedAchievementsList.length > 0 && activeTab === 'achievements' && (
-                <Reveal active={animActive}>
                 <div className="p-5 rounded-3xl bg-card border border-subtle space-y-3">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-black uppercase text-secondary flex items-center gap-1.5">
@@ -341,7 +322,6 @@ const Progress: React.FC = () => {
                         ))}
                     </div>
                 </div>
-                </Reveal>
             )}
 
             {/* --- GOALS VIEW --- */}
@@ -375,15 +355,14 @@ const Progress: React.FC = () => {
                         </div>
                     ) : (
                         <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {sortedGoals.map((goal, idx) => (
-                                <Reveal key={goal.id} active={animActive} index={idx}>
-                                    <GoalCard
-                                        goal={goal}
-                                        onEdit={handleEdit}
-                                        onDelete={deleteGoal}
-                                        onPin={toggleGoalPin}
-                                    />
-                                </Reveal>
+                            {sortedGoals.map((goal) => (
+                                <GoalCard
+                                    key={goal.id}
+                                    goal={goal}
+                                    onEdit={handleEdit}
+                                    onDelete={deleteGoal}
+                                    onPin={toggleGoalPin}
+                                />
                             ))}
                         </div>
                     )}
@@ -411,18 +390,17 @@ const Progress: React.FC = () => {
                     </div>
 
                     <div key={`achievements-${activeTab}-${categoryFilter}`} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filteredAchievements.map((ach, idx) => (
-                            <Reveal key={ach.id} active={gridActive} index={idx}>
-                                <AchievementBadge
-                                    achievement={ach}
-                                    isPinned={pinnedBadges.includes(ach.id)}
-                                    onTogglePin={(e) => {
-                                        e.stopPropagation();
-                                        togglePinBadge(ach.id);
-                                    }}
-                                    onClick={() => setSelectedAchievement(ach)}
-                                />
-                            </Reveal>
+                        {filteredAchievements.map((ach) => (
+                            <AchievementBadge
+                                key={ach.id}
+                                achievement={ach}
+                                isPinned={pinnedBadges.includes(ach.id)}
+                                onTogglePin={(e) => {
+                                    e.stopPropagation();
+                                    togglePinBadge(ach.id);
+                                }}
+                                onClick={() => setSelectedAchievement(ach)}
+                            />
                         ))}
                     </div>
                 </div>
@@ -431,25 +409,22 @@ const Progress: React.FC = () => {
             {/* --- MISSIONS / QUESTS VIEW --- */}
             {activeTab === 'quests' && (
                 <div className="space-y-6">
-                    <Reveal active={animActive}>
-                        <div className="p-6 rounded-3xl bg-card border border-subtle">
-                            <h3 className="text-xl font-black text-primary mb-1">
-                                {t('gamification:quests.title')}
-                            </h3>
-                            <p className="text-sm text-secondary">
-                                {t('gamification:quests.subtitle')}
-                            </p>
-                        </div>
-                    </Reveal>
+                    <div className="p-6 rounded-3xl bg-card border border-subtle">
+                        <h3 className="text-xl font-black text-primary mb-1">
+                            {t('gamification:quests.title')}
+                        </h3>
+                        <p className="text-sm text-secondary">
+                            {t('gamification:quests.subtitle')}
+                        </p>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {quests.map((quest, idx) => (
-                            <Reveal key={quest.id} active={animActive} index={idx + 1}>
-                                <QuestCard 
-                                    quest={quest} 
-                                    onClaim={claimQuest} 
-                                />
-                            </Reveal>
+                        {quests.map((quest) => (
+                            <QuestCard 
+                                key={quest.id}
+                                quest={quest} 
+                                onClaim={claimQuest} 
+                            />
                         ))}
                     </div>
                 </div>
@@ -459,19 +434,17 @@ const Progress: React.FC = () => {
             {activeTab === 'stats' && <ProgressStatsTab stats={progressStats} locale={locale} />}
 
             {activeTab === 'ranks' && (
-                <Reveal active={animActive}>
-                    <InvestorRankCard 
-                        currentLevel={user?.level || 1} 
-                        currentXp={user?.xp || 0} 
-                        themeRewards={themeRewards} 
-                    />
-                </Reveal>
+                <InvestorRankCard 
+                    currentLevel={user?.level || 1} 
+                    currentXp={user?.xp || 0} 
+                    themeRewards={themeRewards} 
+                />
             )}
 
             {/* --- GOAL MODAL --- */}
             {isModalOpen && editingGoal && createPortal(
                 <div 
-                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" 
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" 
                     onClick={() => setIsModalOpen(false)}
                 >
                     <div 
@@ -792,7 +765,7 @@ const Progress: React.FC = () => {
             {/* --- ACHIEVEMENT DETAIL MODAL --- */}
             {selectedAchievement && createPortal(
                 <div
-                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
                     onClick={handleCloseAchievementModal}
                 >
                     <div

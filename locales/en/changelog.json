@@ -8,6 +8,15 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-4": {
+      "title": "Smoother animations, refined Progress hub, and extensible asset allocation",
+      "highlights": {
+        "animationHarmonization": "All screens now share a harmonious, consistent animation clock. Figures and progression bars count up smoothly without whole-card loading flashes, and settings tabs open instantly.",
+        "progressHubNavigation": "The Progress and Gamification hub navigation is now fully visible and responsive across all screens, with direct access to every tab without side scrolling.",
+        "assetAllocationExtensible": "Portfolio asset allocation dynamically supports custom and alternative asset categories with unique theme-stable palette assignments.",
+        "dashboardTimelineSmoothness": "Switching time ranges on the dashboard is instantaneous and glitch-free, eliminating sparkline flicker and double animation passes."
+      }
+    },
     "v1-3": {
       "title": "More accurate taxes, quests that move",
       "highlights": {

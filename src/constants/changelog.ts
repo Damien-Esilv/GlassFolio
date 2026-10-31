@@ -26,6 +26,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-4',
+    version: '1.4',
+    date: '2026-10-31',
+    highlights: [
+      { key: 'animationHarmonization', kind: 'improved' },
+      { key: 'progressHubNavigation', kind: 'improved' },
+      { key: 'assetAllocationExtensible', kind: 'new' },
+      { key: 'dashboardTimelineSmoothness', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-3',
     version: '1.3',
     date: '2026-10-30',
