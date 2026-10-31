@@ -22,6 +22,27 @@ interface ImportBatchListProps {
     showTitle?: boolean;
 }
 
+/** Status pill of an import batch. Module level so it is not rebuilt on every render of the list. */
+const StatusBadge: React.FC<{ status: ImportBatch['status'] }> = ({ status }) => {
+    const { t } = useTranslation('transactions');
+    const config = {
+        completed: { icon: CheckCircle, color: 'text-success bg-success/10', label: t('importHistory.status.completed') },
+        partial: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.partial') },
+        rolled_back: { icon: XCircle, color: 'text-secondary bg-subtle', label: t('importHistory.status.rolledBack') },
+        pending: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.pending') },
+        failed: { icon: XCircle, color: 'text-error bg-error/10', label: t('importHistory.status.failed') }
+    }[status] || { icon: CheckCircle, color: 'text-secondary bg-subtle', label: status };
+
+    const Icon = config.icon;
+
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+            <Icon size={12} />
+            {config.label}
+        </span>
+    );
+};
+
 const ImportBatchList: React.FC<ImportBatchListProps> = ({
     compact = false,
     limit,
@@ -114,25 +135,6 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
         } catch {
             return isoDate;
         }
-    };
-
-    const StatusBadge: React.FC<{ status: ImportBatch['status'] }> = ({ status }) => {
-        const config = {
-            completed: { icon: CheckCircle, color: 'text-success bg-success/10', label: t('importHistory.status.completed') },
-            partial: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.partial') },
-            rolled_back: { icon: XCircle, color: 'text-secondary bg-subtle', label: t('importHistory.status.rolledBack') },
-            pending: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.pending') },
-            failed: { icon: XCircle, color: 'text-error bg-error/10', label: t('importHistory.status.failed') }
-        }[status] || { icon: CheckCircle, color: 'text-secondary bg-subtle', label: status };
-
-        const Icon = config.icon;
-
-        return (
-            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-                <Icon size={12} />
-                {config.label}
-            </span>
-        );
     };
 
     const displayedBatches = limit ? batches.slice(0, limit) : batches;

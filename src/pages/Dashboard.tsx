@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, PieChart, Pie, Cell, XAxis } from 'recharts';
-import { ArrowUpRight, AlertTriangle, PlusCircle, TrendingUp, TrendingDown, PieChart as PieChartIcon } from 'lucide-react';
+import { ArrowUpRight, AlertTriangle, PlusCircle, PieChart as PieChartIcon } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
-import { DashboardSummary, Position } from '../types';
+import { DashboardSummary } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { portfolioService } from '../services/portfolioService';
 import { currencyService } from '../services/currencyService';
-import { fetchRealPriceHistory, getCachedRealPriceHistory, generateHighPrecisionHistory, HistoricalPricePoint } from '../services/priceService';
+import PerformerCard from '../components/dashboard/PerformerCard';
+import { usePerformerHistory } from '../hooks/usePerformerHistory';
 import ChartModeToggle from '../components/ui/ChartModeToggle';
 import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +26,9 @@ import { gamificationService } from '../services/gamificationService';
 import WeeklyProgressCard from '../components/progress/WeeklyProgressCard';
 import { alertText } from '../utils/alertText';
 
+/** Longest the loading screen waits for the performer charts' data before showing the page anyway. */
+const HISTORY_WAIT_MAX_MS = 4000;
+
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,15 +36,13 @@ const Dashboard: React.FC = () => {
   const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
   const dateFormat = user?.preferences?.dateFormat || 'DD/MM/YYYY';
   const currency = user?.preferences?.currency || 'USD';
-  const { transactions, xpEvents, positions, alerts, goals, achievements, markAlertAsRead, isLoading: isContextLoading, refreshData } = useData();
+  const { transactions, xpEvents, positions, alerts, goals, achievements, markAlertAsRead, refreshData } = useData();
   const [timeRange, setTimeRange] = useState('1Y');
   const [displayedRange, setDisplayedRange] = useState('1Y');
   const [chartMode, setChartMode] = useChartPriceMode();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [animActive, setAnimActive] = useState(false);
-  const [bestHistory, setBestHistory] = useState<HistoricalPricePoint[] | null>(null);
-  const [worstHistory, setWorstHistory] = useState<HistoricalPricePoint[] | null>(null);
 
   useEffect(() => {
     // Opening the dashboard is the monthly review quest
@@ -120,44 +122,24 @@ const Dashboard: React.FC = () => {
     return [...nonCashPositions].sort((a, b) => a.unrealizedPLPercent - b.unrealizedPLPercent)[0];
   }, [nonCashPositions]);
 
-  // Fetch real historical prices for Best and Worst performers (synchronized with selected portfolio timeRange)
+  // Real price history of both performers, for the selected range. The hook keeps the same data
+  // across refreshes, so the sparklines draw once.
+  const bestHistory = usePerformerHistory(bestPerformer, timeRange);
+  const worstHistory = usePerformerHistory(worstPerformer, timeRange);
+  const historiesReady = (!bestPerformer || bestHistory !== null) && (!worstPerformer || worstHistory !== null);
+
+  // The loading screen stays until the summary and both histories are in (or a short grace period
+  // ends), so every chart appears with its data and animates once. It never comes back afterwards.
+  const [revealed, setRevealed] = useState(false);
   useEffect(() => {
-    let isSubscribed = true;
-
-    if (bestPerformer) {
-      const cached = getCachedRealPriceHistory(bestPerformer, timeRange);
-      if (cached) {
-        setBestHistory(cached);
-      } else {
-        setBestHistory(null);
-      }
-      fetchRealPriceHistory(bestPerformer, timeRange).then(data => {
-        if (isSubscribed) setBestHistory(data);
-      }).catch(() => {
-        if (isSubscribed) setBestHistory([]);
-      });
-    } else {
-      setBestHistory([]);
+    if (revealed || !summary) return;
+    if (historiesReady) {
+      setRevealed(true);
+      return;
     }
-
-    if (worstPerformer) {
-      const cached = getCachedRealPriceHistory(worstPerformer, timeRange);
-      if (cached) {
-        setWorstHistory(cached);
-      } else {
-        setWorstHistory(null);
-      }
-      fetchRealPriceHistory(worstPerformer, timeRange).then(data => {
-        if (isSubscribed) setWorstHistory(data);
-      }).catch(() => {
-        if (isSubscribed) setWorstHistory([]);
-      });
-    } else {
-      setWorstHistory([]);
-    }
-
-    return () => { isSubscribed = false; };
-  }, [bestPerformer, worstPerformer, timeRange]);
+    const timer = setTimeout(() => setRevealed(true), HISTORY_WAIT_MAX_MS);
+    return () => clearTimeout(timer);
+  }, [revealed, summary, historiesReady]);
 
   // Dynamic screen column capacity (1 on sm, 2 on md, 3 on lg)
   const [maxCols, setMaxCols] = useState<number>(() => {
@@ -195,128 +177,7 @@ const Dashboard: React.FC = () => {
 
   const cardStyle = "rounded-xl bg-card p-6 shadow-lg border border-border";
 
-  /** Reusable Performer Card Component */
-  const PerformerCard = ({
-    title,
-    position,
-    isWorst = false,
-    realHistory = null
-  }: {
-    title: string;
-    position: Position | null;
-    isWorst?: boolean;
-    realHistory?: HistoricalPricePoint[] | null;
-  }) => {
-    // Real Sparkline price trend data (fallback to high-precision financial generator ONLY if API returned empty)
-    // When realHistory is null, real data is actively being fetched from cache/network.
-    // Do NOT generate synthetic fallback while actively fetching, so we avoid the 0.1s false chart start!
-    const sparklineData = useMemo(() => {
-      if (!position || realHistory === null) return [];
-      if (realHistory && realHistory.length >= 2) {
-        return realHistory.map(pt => ({ val: pt.price }));
-      }
-      // Only fall back to synthetic if fetch finished and returned empty array
-      const plRatio = (position.unrealizedPLPercent || 0) / 100;
-      const estimatedStart = plRatio !== -1
-        ? position.lastPrice / (1 + plRatio)
-        : (position.avgCost > 0 ? position.avgCost : position.lastPrice * 0.9);
-      const count = timeRange === '1D' ? 24 : timeRange === '1W' ? 42 : timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === 'ALL' ? 300 : 252;
-      const synthetic = generateHighPrecisionHistory(position.symbol, estimatedStart, position.lastPrice, count);
-      return synthetic.map(pt => ({ val: pt.price }));
-    }, [realHistory, position, timeRange]);
-
-    if (!position) {
-      return (
-        <div className={`${cardStyle} flex flex-col justify-between h-full`}>
-          <h3 className="text-secondary text-sm font-medium">{title}</h3>
-          <p className="text-tertiary text-xs my-auto text-center">{t('dashboard:noPositionsYet')}</p>
-        </div>
-      );
-    }
-
-    const isPositive = position.unrealizedPLPercent >= 0;
-
-    // Color logic according to user guidelines:
-    // Best Performer: Green if positive, Red if negative
-    // Worst Performer: Red if negative, ORANGE if positive
-    let badgeBg = 'bg-positive-subtle text-positive';
-    let strokeColor = 'var(--color-positive)';
-    const gradientId = `sparkGradient-${position.id}-${isWorst ? 'worst' : 'best'}`;
-
-    if (isWorst) {
-      if (isPositive) {
-        badgeBg = 'bg-warning-subtle text-warning';
-        strokeColor = 'var(--color-warning)';
-      } else {
-        badgeBg = 'bg-negative-subtle text-negative';
-        strokeColor = 'var(--color-negative)';
-      }
-    } else {
-      if (!isPositive) {
-        badgeBg = 'bg-negative-subtle text-negative';
-        strokeColor = 'var(--color-negative)';
-      }
-    }
-
-    const TrendIcon = isPositive ? TrendingUp : TrendingDown;
-
-    const convertedMarketValue = currencyService.convertAmount(position.marketValue, position.currency || 'EUR', currency);
-    const convertedUnrealizedPL = currencyService.convertAmount(position.unrealizedPL, position.currency || 'EUR', currency);
-
-    return (
-      <div className={`${cardStyle} flex flex-col justify-between h-full relative overflow-hidden`}>
-        <div className="flex justify-between items-start z-10">
-          <div>
-            <span className="text-tertiary text-[10px] font-bold uppercase tracking-wider">{title}</span>
-            <h4 className="text-lg font-bold text-primary mt-0.5">{position.symbol}</h4>
-            <p className="text-tertiary text-xs truncate max-w-[140px]">{position.instrument}</p>
-          </div>
-          <div className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md ${badgeBg}`}>
-            <TrendIcon size={14} />
-            <span>{isPositive ? '+' : ''}{position.unrealizedPLPercent.toFixed(2)}%</span>
-          </div>
-        </div>
-
-        <div className="mt-3 z-10 flex justify-between items-baseline">
-          <span className="text-xl font-bold text-primary">{formatCurrency(convertedMarketValue, currency, locale)}</span>
-          <span className={`text-xs font-semibold ${isPositive ? (isWorst ? 'text-warning' : 'text-positive') : 'text-negative'}`}>
-            {isPositive ? '+' : ''}{formatCurrency(convertedUnrealizedPL, currency, locale)}
-          </span>
-        </div>
-
-        {/* Mini Sparkline Chart — stretched edge-to-edge below the card padding */}
-        <div className="h-20 -mx-6 -mb-6 mt-4 overflow-hidden rounded-b-xl z-0">
-          {sparklineData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart key={`${position.symbol}-${timeRange}`} data={sparklineData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={strokeColor} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="monotone"
-                  dataKey="val"
-                  stroke={strokeColor}
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill={`url(#${gradientId})`}
-                  isAnimationActive={true}
-                  animationDuration={ANIMATION_DURATION_MS}
-                  animationEasing={ANIMATION_EASING}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full w-full bg-subtle/10 animate-pulse" />
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  if ((isContextLoading && !summary) || (isLoadingSummary && !summary) || !summary) {
+  if (!summary || !revealed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" role="status" aria-live="polite">
         <AppThinkingOrb state="searching" size={72} label={t('common:labels.loading')} />
@@ -487,6 +348,9 @@ const Dashboard: React.FC = () => {
           position={bestPerformer}
           isWorst={false}
           realHistory={bestHistory}
+          timeRange={timeRange}
+          currency={currency}
+          locale={locale}
         />
 
         {/* Worst Performer Card */}
@@ -495,6 +359,9 @@ const Dashboard: React.FC = () => {
           position={worstPerformer}
           isWorst={true}
           realHistory={worstHistory}
+          timeRange={timeRange}
+          currency={currency}
+          locale={locale}
         />
       </div>
 
