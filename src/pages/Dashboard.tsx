@@ -11,6 +11,8 @@ import { portfolioService } from '../services/portfolioService';
 import { currencyService } from '../services/currencyService';
 import PerformerCard from '../components/dashboard/PerformerCard';
 import { usePerformerHistory } from '../hooks/usePerformerHistory';
+import { useStableValue } from '../hooks/useStableValue';
+import { useSettledValue } from '../hooks/useSettledValue';
 import ChartModeToggle from '../components/ui/ChartModeToggle';
 import { useChartPriceMode } from '../hooks/useChartPriceMode';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +42,9 @@ const Dashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState('1Y');
   const [displayedRange, setDisplayedRange] = useState('1Y');
   const [chartMode, setChartMode] = useChartPriceMode();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [freshSummary, setSummary] = useState<DashboardSummary | null>(null);
+  // Same content, same reference: a refresh that recomputes equal figures must not cut the chart animation.
+  const summary = useStableValue(freshSummary);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [animActive, setAnimActive] = useState(false);
 
@@ -141,6 +145,9 @@ const Dashboard: React.FC = () => {
     return () => clearTimeout(timer);
   }, [revealed, summary, historiesReady]);
 
+  // Figures that are refreshed while the main chart draws itself wait for the end of its animation.
+  const chartData = useSettledValue(summary?.chartData, revealed, ANIMATION_DURATION_MS + ENTRANCE_DELAY_MS);
+
   // Dynamic screen column capacity (1 on sm, 2 on md, 3 on lg)
   const [maxCols, setMaxCols] = useState<number>(() => {
     if (typeof window === 'undefined') return 3;
@@ -226,7 +233,7 @@ const Dashboard: React.FC = () => {
           {/* Main Chart Section with X-Axis Dates */}
           <div className="h-[300px] w-full mt-6">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart key={displayedRange} data={summary.chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
+              <AreaChart key={displayedRange} data={chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
