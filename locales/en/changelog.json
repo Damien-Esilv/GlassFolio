@@ -8,53 +8,49 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
-    "v1-4": {
-      "title": "Smoother animations, refined Progress hub, and extensible asset allocation",
-      "highlights": {
-        "animationHarmonization": "All screens now share a harmonious, consistent animation clock. Figures and progression bars count up smoothly without whole-card loading flashes, and settings tabs open instantly.",
-        "progressHubNavigation": "The Progress and Gamification hub navigation is now fully visible and responsive across all screens, with direct access to every tab without side scrolling.",
-        "assetAllocationExtensible": "Portfolio asset allocation dynamically supports custom and alternative asset categories with unique theme-stable palette assignments.",
-        "dashboardTimelineSmoothness": "Switching time ranges on the dashboard is instantaneous and glitch-free, eliminating sparkline flicker and double animation passes."
-      }
-    },
-    "v1-3": {
-      "title": "More accurate taxes, quests that move",
-      "highlights": {
-        "peaWithdrawals": "The declaration assistant now computes the taxable gain of your PEA withdrawals, with the income tax and social contributions due.",
-        "taxAccuracy": "Tax figures are more accurate: up-to-date brackets and rates, amounts in foreign currencies converted at the rate of their day, and a crypto portfolio that counts staking rewards and exchanges.",
-        "quests": "Quests now follow what you actually do each month and quarter, and a reward to claim is announced in your notifications.",
-        "localDemo": "A self-hosted install no longer shows a demo button: start it with npm run dev:demo to open the demo account directly.",
-        "reliability": "Many fixes: you stay signed in with Google after a refresh, data stays in sync across tabs, Escape closes windows, and every message is translated.",
-        "smootherNumbers": "Gains, losses and key figures count up smoothly on every screen, and the tax pages open without a loading flash."
-      }
-    },
-    "v1-2": {
-      "title": "A smoother Google sign-in",
-      "highlights": {
-        "googleNoKey": "Signing in with Google no longer asks you to look after a recovery key. You can create one whenever you want, from Settings, Security.",
-        "googleSmoother": "Signing in with Google is more reliable: your two-factor code is asked before your vault opens, and a leftover from an old sign-in on this device no longer gets in the way.",
-        "googleDeletion": "Deleting a Google account now also removes your key file from your Google Drive.",
-        "spheres": "Loading screens use the animated sphere everywhere, and pull-to-refresh only shows on touch screens."
-      }
-    },
-    "v1-1": {
-      "title": "Google sign-in, AI keys and privacy",
-      "highlights": {
-        "googleVault": "Sign in with Google: your vault key is kept in your own Google Drive app storage, so there is nothing to type or keep track of.",
-        "manualPrices": "Prices you enter by hand are now stored inside your encrypted vault, including on your self-hosted server.",
-        "aiKeys": "Each AI provider keeps its own API key, and the assistant conversation clears as soon as you lock the vault.",
-        "privacyNotice": "A clearer privacy notice about the market data providers that see the tickers you follow."
-      }
-    },
     "v1-0": {
-      "title": "Official Launch of GlassFolio V1",
+      "title": "GlassFolio 1.0 — Flagship Release",
       "highlights": {
-        "vault": "End-to-end client-side encrypted vault (AES-256-GCM) with passkey biometric unlock.",
-        "multiAssets": "Complete multi-asset wealth tracking: PEA, brokerage, crypto, life insurance, and savings accounts.",
-        "importEngine": "Universal import engine with smart format detection, column mapping, and statement reconciliation.",
-        "taxAssistant": "French tax assistant: Cerfa 2042 / 3916-bis simulation, flat-tax vs progressive bracket comparison, and tax-loss harvesting.",
-        "aiAssistant": "Private built-in AI copilot (local Ollama or BYOK API) with local MCP server for Claude Desktop & Cursor.",
-        "selfHostAndCloud": "Secure cloud edition and self-hosted Docker container running entirely on your machine."
+        "selfHostVault": "Self-hosted Docker edition with local server vault persistence, eliminating browser storage limits while staying 100% offline-first.",
+        "e2eEncryption": "Client-side end-to-end encryption (AES-256-GCM) with biometric passkey authentication and automated Google Drive key backup.",
+        "multiAssets": "Complete multi-account aggregation across PEA, brokerage CTO, crypto wallets, life insurance, and savings books.",
+        "universalImport": "Universal import engine featuring automatic broker format detection, dynamic column mapping, and point-in-time snapshot reconciliation.",
+        "taxReporting": "French tax assistant with Cerfa 2042 & 3916-bis simulation, capital gains calculation on PEA withdrawals, and flat-tax vs progressive scale comparison.",
+        "animationHarmonization": "Harmonized global animation clock across all dashboard metrics and analytics, instant timeline range switching, and responsive Progress hub navigation.",
+        "assetAllocationExtensible": "Extensible asset allocation supporting alternative asset categories with dynamic, theme-stable color generation.",
+        "smartNotifications": "Real-time notifications and intelligent alerts center for balance variations, quest achievements, and security events."
+      }
+    },
+    "v0-4": {
+      "title": "Universal AI MCP Server & Engineering Architecture",
+      "highlights": {
+        "mcpServer": "Built-in Universal MCP server exposing portfolio inspection and simulation tools directly to Claude Desktop, Cursor, and external AI agents.",
+        "inAppCopilot": "Integrated private AI copilot supporting local Ollama models and private BYOK API keys for instant conversational financial insights.",
+        "productionCore": "Overhauled architecture with strict offline-first state boundaries, simulated latency resilience, and full multi-theme support."
+      }
+    },
+    "v0-3": {
+      "title": "Fee Analysis, Compound Cost Drag & Sector Allocation",
+      "highlights": {
+        "feeAnalysis": "Fee breakdown analytics uncovering transaction expenses, management ratios, and long-term compound cost drag against portfolio growth.",
+        "assetComparisons": "Multi-series comparison chart tracking your positions against benchmark indexes and risk-free rates with consistent color palettes.",
+        "geographicBreakdown": "Sector and geographic diversification breakdown highlighting portfolio exposure and asset concentration risks."
+      }
+    },
+    "v0-2": {
+      "title": "Gamification Engine & Financial Rank System",
+      "highlights": {
+        "gamificationHub": "Progress and Gamification hub introducing financial experience points (XP), progression levels, and weekly savings consistency streaks.",
+        "achievements": "Unlockable financial milestones and badges rewarding disciplined investing, emergency fund constitution, and asset diversification.",
+        "wealthDashboard": "Redesigned financial overview dashboard featuring real-time net worth calculation and interactive asset allocation rings."
+      }
+    },
+    "v0-1": {
+      "title": "Portfolio Foundation & Market Valuation",
+      "highlights": {
+        "corePortfolio": "Foundational portfolio tracking engine supporting transactions, realized and unrealized gains, and cash accounts.",
+        "marketPrices": "Real-time and historical price tracking for equities, ETFs, and cryptocurrencies with live valuation updates.",
+        "csvImport": "CSV transaction import supporting standard broker exports with automated duplicate detection."
       }
     }
   }

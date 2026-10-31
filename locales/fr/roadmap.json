@@ -1,9 +1,9 @@
 {
   "title": "Feuille de route",
-  "intro": "Ce qui arrive prochainement dans GlassFolio. Les échéances sont indicatives et peuvent évoluer avec le projet.",
+  "intro": "Ce qui arrive prochainement dans GlassFolio. Les échéances sont données à titre indicatif et évoluent avec le projet.",
   "status": {
     "inProgress": "En cours",
-    "planned": "Prévu",
+    "planned": "Planifié",
     "exploring": "À l'étude"
   },
   "horizon": {
@@ -14,7 +14,7 @@
   "items": {
     "assetClasses": {
       "title": "Nouvelles classes d'actifs",
-      "body": "Métaux précieux, private equity et objets de collection, valorisés automatiquement quand un prix de marché existe ou manuellement à votre rythme."
+      "body": "Métaux précieux, non coté et objets de collection, valorisés automatiquement lorsqu'un cours de marché existe ou manuellement à votre rythme."
     },
     "manualEntry": {
       "title": "Saisie manuelle des transactions",
@@ -22,21 +22,25 @@
     },
     "aiImport": {
       "title": "Import assisté par IA",
-      "body": "Laissez l'assistant lire un export CSV inconnu et proposer l'association des colonnes, que vous validez."
+      "body": "Laissez l'assistant analyser un export CSV inconnu et vous proposer le bon alignement des colonnes à valider."
     },
     "liabilities": {
       "title": "Emprunts et passif",
-      "body": "Suivez vos crédits immobiliers et à la consommation pour voir votre patrimoine net de dettes."
+      "body": "Suivez vos crédits immobiliers et prêts à la consommation pour visualiser votre patrimoine net réel déduction faite des dettes."
+    },
+    "wealthProjection": {
+      "title": "Projection patrimoniale pluriannuelle",
+      "body": "Simulez la trajectoire future de votre patrimoine et vos objectifs de retraite selon plusieurs scénarios d'épargne et d'intérêts composés."
     },
     "brokerSync": {
-      "title": "Connexion directe aux courtiers",
-      "body": "Actualisez vos positions directement depuis les courtiers et plateformes pris en charge, sans exporter de fichier."
+      "title": "Connexions directes aux courtiers",
+      "body": "Actualisez vos positions directement depuis les courtiers et plateformes partenaires, sans export de fichiers."
     },
     "jurisdictions": {
       "title": "Nouvelles juridictions fiscales",
-      "body": "Étendre le moteur fiscal modulaire au-delà de la France, en commençant par les pays les plus demandés."
+      "body": "Étendez le moteur fiscal modulaire au-delà de la France, en commençant par les pays les plus demandés."
     }
   },
-  "disclaimer": "Les fonctionnalités déjà livrées sont listées dans les nouveautés.",
+  "disclaimer": "Les fonctionnalités déjà disponibles sont listées dans les nouveautés.",
   "changelogLink": "Voir les nouveautés"
 }
