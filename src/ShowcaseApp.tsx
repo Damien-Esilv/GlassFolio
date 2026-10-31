@@ -38,6 +38,8 @@ const SelfHost = lazyPage(() => import('./pages/SelfHost'));
 const About = lazyPage(() => import('./pages/About'));
 const Roadmap = lazyPage(() => import('./pages/Roadmap'));
 const Changelog = lazyPage(() => import('./pages/Changelog'));
+const Docs = lazyPage(() => import('./pages/Docs'));
+const Contact = lazyPage(() => import('./pages/Contact'));
 const NotFound = lazyPage(() => import('./pages/NotFound'));
 
 const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> = {
@@ -51,6 +53,8 @@ const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> =
   terms: LegalCenter,
   cookies: LegalCenter,
   accessibility: LegalCenter,
+  docs: Docs,
+  contact: Contact,
 };
 
 export const preloadPublicPage = (pathname: string): Promise<void> => {
@@ -133,6 +137,10 @@ export const ShowcaseRoutes: React.FC<ShowcaseRoutesProps> = ({ onPageReady }) =
             <Route path="/welcome/roadmap" element={<Roadmap />} />
             <Route path="/changelog" element={<Changelog />} />
             <Route path="/welcome/changelog" element={<Changelog />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/welcome/docs" element={<Docs />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/welcome/contact" element={<Contact />} />
             <Route path="/legal" element={<LegalCenter />} />
             <Route path="/privacy" element={<LegalCenter />} />
             <Route path="/terms" element={<LegalCenter />} />

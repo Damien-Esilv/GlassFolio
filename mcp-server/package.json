@@ -1,0 +1,37 @@
+{
+  "name": "glassfolio-mcp",
+  "version": "0.1.0",
+  "description": "GlassFolio's MCP server (stdio). Lists the app's tools for Claude Desktop, Cursor and other MCP clients, and answers with sample data, not with your portfolio.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "glassfolio",
+    "claude-desktop",
+    "cursor"
+  ],
+  "homepage": "https://glassfolio.dev/en/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Damien-Esilv/GlassFolio.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/Damien-Esilv/GlassFolio/issues"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Damien-Esilv (https://github.com/Damien-Esilv)",
+  "type": "module",
+  "bin": {
+    "glassfolio-mcp": "index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

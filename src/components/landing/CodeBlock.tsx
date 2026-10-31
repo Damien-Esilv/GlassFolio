@@ -7,18 +7,20 @@ interface CodeBlockProps {
   lines: readonly string[];
   /** What the commands do, used for the copy button's accessible name. */
   label: string;
+  /** Show the shell prompt before each line; off for file content such as a JSON configuration. */
+  prompt?: boolean;
 }
 
 /** Shell snippet with a copy button, styled like the landing install terminal. */
-export const CodeBlock: React.FC<CodeBlockProps> = ({ lines, label }) => {
+export const CodeBlock: React.FC<CodeBlockProps> = ({ lines, label, prompt = true }) => {
   const { t } = useTranslation();
 
   return (
     <div className="landing-terminal relative rounded-xl border border-subtle my-4 group">
       <pre className="px-4 py-3.5 pr-24 overflow-x-auto font-mono text-[13px] leading-6 text-primary">
-        {lines.map((line) => (
-          <code key={line} className="block whitespace-pre">
-            <span className="text-positive select-none">$ </span>
+        {lines.map((line, index) => (
+          <code key={`${index}-${line}`} className="block whitespace-pre">
+            {prompt && <span className="text-positive select-none">$ </span>}
             {line}
           </code>
         ))}

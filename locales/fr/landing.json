@@ -44,7 +44,9 @@
     "installButton": "Installer",
     "pageAbout": "Le projet",
     "pageRoadmap": "Feuille de route",
-    "pageChangelog": "Nouveautés"
+    "pageChangelog": "Nouveautés",
+    "pageDocs": "Documentation",
+    "pageContact": "Contact"
   },
   "hero": {
     "badge": "Suivi de patrimoine privé et chiffré",
@@ -255,7 +257,7 @@
       },
       "mcp": {
         "title": "Vos outils IA",
-        "body": "Utilisez votre portefeuille depuis les clients IA que vous utilisez déjà, grâce au serveur MCP local.",
+        "body": "Laissez Claude Desktop, Cursor et d'autres clients MCP appeler les outils de GlassFolio via le serveur MCP local. Il répond pour l'instant avec des données d'exemple, pas avec votre portefeuille.",
         "examples": "Claude Desktop • Cursor"
       }
     },
@@ -408,7 +410,7 @@
       },
       "q4": {
         "question": "Comment l'assistant IA protège-t-il ma vie privée ?",
-        "answer": "Vous choisissez où il tourne : un modèle Ollama local pour que rien ne quitte votre machine, votre propre clé d'API chez le fournisseur de votre choix, ou vos outils IA (Claude Desktop, Cursor) via le serveur MCP local. Les secrets sont retirés avant qu'une requête ne quitte l'application, et chaque modification de vos données attend votre validation."
+        "answer": "Vous choisissez où il tourne : un modèle Ollama local pour que rien ne quitte votre machine, ou votre propre clé d'API chez le fournisseur de votre choix. Les secrets sont retirés avant qu'une requête ne quitte l'application, et chaque modification de vos données attend votre validation. Le serveur MCP local permet à Claude Desktop ou Cursor d'appeler les outils de GlassFolio, mais il répond pour l'instant avec des données d'exemple."
       },
       "q5": {
         "question": "Quelle différence entre l'édition cloud et l'édition Docker ?",

@@ -159,7 +159,7 @@
     },
     "mcp": {
       "title": "Serveur Model Context Protocol (MCP)",
-      "description": "Connectez Claude Desktop, Cursor ou Antigravity à votre instance GlassFolio.",
+      "description": "Essayez les outils de GlassFolio depuis Claude Desktop, Cursor ou Antigravity. Le serveur répond avec des données d'exemple et n'est pas encore connecté à votre portefeuille.",
       "statusReady": "Prêt pour la connexion",
       "serverCommand": "Commande d'exécution",
       "configLabel": "Configuration Claude Desktop (claude_desktop_config.json)",

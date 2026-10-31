@@ -44,7 +44,9 @@
     "installButton": "Install",
     "pageAbout": "The project",
     "pageRoadmap": "Roadmap",
-    "pageChangelog": "Changelog"
+    "pageChangelog": "Changelog",
+    "pageDocs": "Documentation",
+    "pageContact": "Contact"
   },
   "hero": {
     "badge": "Private, encrypted wealth tracking",
@@ -255,7 +257,7 @@
       },
       "mcp": {
         "title": "Your AI tools",
-        "body": "Use your portfolio from the AI clients you already work with, through the local MCP server.",
+        "body": "Let Claude Desktop, Cursor and other MCP clients call GlassFolio's tools through the local MCP server. It answers with sample data for now, not with your portfolio.",
         "examples": "Claude Desktop • Cursor"
       }
     },
@@ -408,7 +410,7 @@
       },
       "q4": {
         "question": "How does the AI assistant protect my privacy?",
-        "answer": "You choose where it runs: a local Ollama model so nothing leaves your machine, your own API key with the provider of your choice, or your AI tools (Claude Desktop, Cursor) through the local MCP server. Secrets are removed before any prompt leaves the app, and every change to your data waits for your approval."
+        "answer": "You choose where it runs: a local Ollama model so nothing leaves your machine, or your own API key with the provider of your choice. Secrets are removed before any prompt leaves the app, and every change to your data waits for your approval. The local MCP server lets Claude Desktop or Cursor call GlassFolio's tools, but it answers with sample data for now."
       },
       "q5": {
         "question": "What is the difference between the cloud edition and the Docker edition?",

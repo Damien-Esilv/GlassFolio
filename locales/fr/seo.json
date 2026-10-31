@@ -39,6 +39,14 @@
     "title": "Déclaration d'accessibilité | GlassFolio",
     "description": "L'engagement d'accessibilité de GlassFolio, son état actuel et comment signaler un problème."
   },
+  "docs": {
+    "title": "Documentation du serveur MCP | GlassFolio",
+    "description": "Vérifier le serveur MCP de GlassFolio, le connecter à Claude Desktop ou Cursor, et outils proposés. Il répond pour l’instant avec des données d’exemple."
+  },
+  "contact": {
+    "title": "Contacter GlassFolio : vie privée, bogues et sécurité",
+    "description": "Où écrire pour vos droits sur vos données, un bogue, une demande de fonctionnalité ou un problème de sécurité sur GlassFolio."
+  },
   "notFound": {
     "title": "Page introuvable | GlassFolio",
     "description": "Cette page n'existe pas sur GlassFolio."

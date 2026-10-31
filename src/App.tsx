@@ -50,6 +50,8 @@ const SelfHost = isShowcaseExcluded ? () => null : React.lazy(() => import('./pa
 const About = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/About'));
 const Roadmap = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Roadmap'));
 const Changelog = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Changelog'));
+const Docs = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Docs'));
+const Contact = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Contact'));
 
 // Helper component for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -134,6 +136,8 @@ const LazySelfHost = lazyPublicPage(SelfHost);
 const LazyAbout = lazyPublicPage(About);
 const LazyRoadmap = lazyPublicPage(Roadmap);
 const LazyChangelog = lazyPublicPage(Changelog);
+const LazyDocs = lazyPublicPage(Docs);
+const LazyContact = lazyPublicPage(Contact);
 
 const App: React.FC = () => {
   if (getAuthCapabilities().misconfigured) {
@@ -164,6 +168,10 @@ const App: React.FC = () => {
               <Route path="/welcome/roadmap" element={<LazyRoadmap />} />
               <Route path="/changelog" element={<LazyChangelog />} />
               <Route path="/welcome/changelog" element={<LazyChangelog />} />
+              <Route path="/docs" element={<LazyDocs />} />
+              <Route path="/welcome/docs" element={<LazyDocs />} />
+              <Route path="/contact" element={<LazyContact />} />
+              <Route path="/welcome/contact" element={<LazyContact />} />
               <Route path="/welcome/legal" element={<LazyLegalCenter />} />
               <Route path="/welcome/privacy" element={<LazyLegalCenter />} />
               <Route path="/welcome/terms" element={<LazyLegalCenter />} />

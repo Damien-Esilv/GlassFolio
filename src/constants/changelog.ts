@@ -26,6 +26,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-2',
+    version: '1.2',
+    date: '2026-10-31',
+    highlights: [
+      { key: 'seoReview', kind: 'improved' },
+      { key: 'mcpDocs', kind: 'new' },
+      { key: 'mcpSampleData', kind: 'improved' },
+      { key: 'contactPage', kind: 'new' },
+    ],
+  },
+  {
     id: 'v1-1',
     version: '1.1',
     date: '2026-10-31',
