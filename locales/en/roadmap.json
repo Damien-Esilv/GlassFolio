@@ -28,6 +28,10 @@
       "title": "Loans and liabilities",
       "body": "Track mortgages and consumer loans to see your net worth after debts."
     },
+    "wealthProjection": {
+      "title": "Long-term wealth projection",
+      "body": "Simulate portfolio trajectories and retirement milestones across multi-year scenarios with customizable contribution rates and compound returns."
+    },
     "brokerSync": {
       "title": "Direct broker connections",
       "body": "Refresh positions straight from supported brokers and exchanges, without exporting files."

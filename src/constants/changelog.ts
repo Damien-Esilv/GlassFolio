@@ -26,62 +26,58 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
-    id: 'v1-4',
-    version: '1.4',
-    date: '2026-10-31',
-    highlights: [
-      { key: 'animationHarmonization', kind: 'improved' },
-      { key: 'progressHubNavigation', kind: 'improved' },
-      { key: 'assetAllocationExtensible', kind: 'new' },
-      { key: 'dashboardTimelineSmoothness', kind: 'improved' },
-    ],
-  },
-  {
-    id: 'v1-3',
-    version: '1.3',
-    date: '2026-10-30',
-    highlights: [
-      { key: 'peaWithdrawals', kind: 'new' },
-      { key: 'taxAccuracy', kind: 'improved' },
-      { key: 'quests', kind: 'improved' },
-      { key: 'localDemo', kind: 'improved' },
-      { key: 'reliability', kind: 'improved' },
-      { key: 'smootherNumbers', kind: 'improved' },
-    ],
-  },
-  {
-    id: 'v1-2',
-    version: '1.2',
-    date: '2026-10-30',
-    highlights: [
-      { key: 'googleNoKey', kind: 'improved' },
-      { key: 'googleSmoother', kind: 'improved' },
-      { key: 'googleDeletion', kind: 'improved' },
-      { key: 'spheres', kind: 'improved' },
-    ],
-  },
-  {
-    id: 'v1-1',
-    version: '1.1',
-    date: '2026-10-29',
-    highlights: [
-      { key: 'googleVault', kind: 'new' },
-      { key: 'manualPrices', kind: 'improved' },
-      { key: 'aiKeys', kind: 'improved' },
-      { key: 'privacyNotice', kind: 'improved' },
-    ],
-  },
-  {
     id: 'v1-0',
     version: '1.0',
-    date: '2026-10-27',
+    date: '2026-10-31',
     highlights: [
-      { key: 'vault', kind: 'new' },
+      { key: 'selfHostVault', kind: 'new' },
+      { key: 'e2eEncryption', kind: 'new' },
       { key: 'multiAssets', kind: 'new' },
-      { key: 'importEngine', kind: 'new' },
-      { key: 'taxAssistant', kind: 'new' },
-      { key: 'aiAssistant', kind: 'new' },
-      { key: 'selfHostAndCloud', kind: 'new' },
+      { key: 'universalImport', kind: 'new' },
+      { key: 'taxReporting', kind: 'new' },
+      { key: 'animationHarmonization', kind: 'improved' },
+      { key: 'assetAllocationExtensible', kind: 'new' },
+      { key: 'smartNotifications', kind: 'improved' },
+    ],
+  },
+  {
+    id: 'v0-4',
+    version: '0.4',
+    date: '2026-10-15',
+    highlights: [
+      { key: 'mcpServer', kind: 'new' },
+      { key: 'inAppCopilot', kind: 'new' },
+      { key: 'productionCore', kind: 'improved' },
+    ],
+  },
+  {
+    id: 'v0-3',
+    version: '0.3',
+    date: '2026-08-05',
+    highlights: [
+      { key: 'feeAnalysis', kind: 'new' },
+      { key: 'assetComparisons', kind: 'new' },
+      { key: 'geographicBreakdown', kind: 'new' },
+    ],
+  },
+  {
+    id: 'v0-2',
+    version: '0.2',
+    date: '2026-03-01',
+    highlights: [
+      { key: 'gamificationHub', kind: 'new' },
+      { key: 'achievements', kind: 'new' },
+      { key: 'wealthDashboard', kind: 'improved' },
+    ],
+  },
+  {
+    id: 'v0-1',
+    version: '0.1',
+    date: '2026-01-15',
+    highlights: [
+      { key: 'corePortfolio', kind: 'new' },
+      { key: 'marketPrices', kind: 'new' },
+      { key: 'csvImport', kind: 'new' },
     ],
   },
 ];

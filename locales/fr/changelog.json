@@ -8,53 +8,49 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
-    "v1-4": {
-      "title": "Animations harmonisées, hub de progrès fluide et répartition d'actifs extensible",
-      "highlights": {
-        "animationHarmonization": "Tous les écrans partagent désormais une horloge d'animation unifiée. Les chiffres et barres de progression s'animent avec fluidité sans scintillement des cartes, et les paramètres s'ouvrent instantanément.",
-        "progressHubNavigation": "La navigation du hub Progrès & Gamification est maintenant accessible en un clic sur tous les écrans, sans défilement horizontal nécessaire.",
-        "assetAllocationExtensible": "La répartition du patrimoine intègre dynamiquement la catégorie Autre et s'adapte automatiquement à toute nouvelle classe d'actifs avec des couleurs stables.",
-        "dashboardTimelineSmoothness": "Le changement de période sur le tableau de bord est instantané et sans coupure, supprimant le double chargement des courbes de performance."
-      }
-    },
-    "v1-3": {
-      "title": "Une fiscalité plus juste, des quêtes qui avancent",
-      "highlights": {
-        "peaWithdrawals": "L’aide déclarative calcule maintenant le gain imposable de vos retraits PEA, avec l’impôt et les prélèvements sociaux dus.",
-        "taxAccuracy": "Les calculs fiscaux sont plus justes : barèmes et taux à jour, montants en devises convertis au taux du jour de l’opération, et un portefeuille crypto qui compte les récompenses de staking et les échanges.",
-        "quests": "Les quêtes suivent maintenant ce que vous faites chaque mois et chaque trimestre, et une récompense à réclamer est signalée dans vos notifications.",
-        "localDemo": "Une installation auto-hébergée n’affiche plus de bouton démo : lancez-la avec npm run dev:demo pour ouvrir directement le compte démo.",
-        "reliability": "De nombreuses corrections : vous restez connecté avec Google après un rafraîchissement, les données restent synchronisées entre onglets, Échap ferme les fenêtres et tous les messages sont traduits.",
-        "smootherNumbers": "Les gains, pertes et chiffres clés défilent en douceur sur tous les écrans, et les pages fiscales s’ouvrent sans écran de chargement."
-      }
-    },
-    "v1-2": {
-      "title": "Une connexion Google plus fluide",
-      "highlights": {
-        "googleNoKey": "Se connecter avec Google ne vous demande plus de gérer une clé de secours. Vous pouvez en créer une quand vous le souhaitez, dans Paramètres, Sécurité.",
-        "googleSmoother": "La connexion avec Google est plus fiable : votre code à deux facteurs est demandé avant l’ouverture de votre coffre, et un reste d’ancienne connexion sur cet appareil ne bloque plus rien.",
-        "googleDeletion": "Supprimer un compte Google supprime aussi votre fichier de clé de votre Google Drive.",
-        "spheres": "Les écrans de chargement utilisent partout la sphère animée, et le tirage pour rafraîchir ne s’affiche que sur les écrans tactiles."
-      }
-    },
-    "v1-1": {
-      "title": "Connexion Google, clés IA et confidentialité",
-      "highlights": {
-        "googleVault": "Connexion avec Google : la clé de votre coffre est conservée dans l’espace d’application de votre propre Google Drive, sans rien à saisir ni à retenir.",
-        "manualPrices": "Les prix saisis à la main sont maintenant stockés dans votre coffre chiffré, y compris sur votre serveur auto-hébergé.",
-        "aiKeys": "Chaque fournisseur d'IA garde sa propre clé API, et la conversation avec l'assistant s'efface dès que vous verrouillez le coffre.",
-        "privacyNotice": "Une notice de confidentialité plus claire sur les fournisseurs de données de marché qui voient les tickers que vous suivez."
-      }
-    },
     "v1-0": {
-      "title": "Lancement officiel de GlassFolio V1",
+      "title": "GlassFolio 1.0 — Version Majeure Officielle",
       "highlights": {
-        "vault": "Coffre-fort chiffré de bout en bout (AES-256-GCM) avec déverrouillage biométrique par passkey.",
-        "multiAssets": "Agrégation patrimoniale multi-actifs complète : PEA, CTO, Crypto, Assurance-Vie et livrets.",
-        "importEngine": "Moteur d'importation universel avec détection automatique de formats et réconciliation de relevés.",
-        "taxAssistant": "Assistant fiscal français : simulation Cerfa 2042 / 3916-bis, arbitrage PFU vs barème et optimisation.",
-        "aiAssistant": "Assistant IA intégré respectueux de la vie privée (Ollama local, BYOK) et serveur MCP pour Claude Desktop & Cursor.",
-        "selfHostAndCloud": "Édition en ligne sécurisée et conteneur Docker auto-hébergé sur votre propre machine."
+        "selfHostVault": "Édition Docker auto-hébergée avec persistance du coffre sur le serveur local, sans limite de stockage navigateur et 100 % hors-ligne.",
+        "e2eEncryption": "Chiffrement de bout en bout côté client (AES-256-GCM) avec authentification biométrique par passkey et sauvegarde de clé Google Drive.",
+        "multiAssets": "Agrégation patrimoniale multi-comptes : PEA, comptes-titres, portefeuilles crypto, assurance-vie et livrets d'épargne.",
+        "universalImport": "Moteur d'importation universel avec détection automatique des courtiers, alignement intelligent des colonnes et réconciliation par snapshot.",
+        "taxReporting": "Aide à la déclaration fiscale française avec simulation Cerfa 2042 / 3916-bis, calcul des gains sur retraits PEA et arbitrage flat-tax / barème.",
+        "animationHarmonization": "Horloge d'animation harmonisée sur l'ensemble du tableau de bord et des analyses, changement de période instantané et navigation fluide dans le hub Progrès.",
+        "assetAllocationExtensible": "Répartition d'actifs extensible supportant les catégories alternatives avec génération dynamique de couleurs stables.",
+        "smartNotifications": "Centre de notifications en temps réel et alertes intelligentes pour les variations de solde, quêtes et événements importants."
+      }
+    },
+    "v0-4": {
+      "title": "Serveur MCP Universel & Architecture d'Ingénierie",
+      "highlights": {
+        "mcpServer": "Serveur MCP universel intégré permettant à Claude Desktop, Cursor et aux agents IA externes d'interagir directement avec vos finances.",
+        "inAppCopilot": "Copilote IA privé intégré compatible avec les modèles Ollama locaux et vos clés d'API personnelles pour des analyses instantanées.",
+        "productionCore": "Refonte de l'architecture avec isolation stricte des états offline-first, résilience à la latence simulée et support multi-thème."
+      }
+    },
+    "v0-3": {
+      "title": "Analyse des Frais, Impact des Coûts & Répartition Sectorielle",
+      "highlights": {
+        "feeAnalysis": "Analyse détaillée des frais de courtage, ratios de gestion et impact composé des coûts sur la performance à long terme.",
+        "assetComparisons": "Graphiques comparatifs multi-courbes mesurant vos actifs face aux indices de référence et au taux sans risque avec une palette stable.",
+        "geographicBreakdown": "Ventilation sectorielle et géographique mettant en évidence l'exposition globale et la concentration des risques."
+      }
+    },
+    "v0-2": {
+      "title": "Moteur de Gamification & Rangs Financiers",
+      "highlights": {
+        "gamificationHub": "Hub Progrès & Gamification introduisant l'expérience financière (XP), les niveaux de maîtrise et le suivi des séries d'épargne hebdomadaires.",
+        "achievements": "Badges et jalons financiers déblocables récompensant la discipline d'investissement, le fonds d'urgence et la diversification.",
+        "wealthDashboard": "Refonte du tableau de bord de synthèse financière avec calcul du patrimoine net en temps réel et anneau interactif d'allocation."
+      }
+    },
+    "v0-1": {
+      "title": "Fondation du Portefeuille & Cours de Marché",
+      "highlights": {
+        "corePortfolio": "Moteur de suivi de portefeuille fondamental gérant les transactions, plus-values latentes et réalisées, et comptes de liquidités.",
+        "marketPrices": "Cotations boursières et historiques pour actions, ETF et cryptomonnaies avec actualisation en temps réel.",
+        "csvImport": "Import de transactions par fichier CSV compatible avec les relevés bancaires standards et détection des doublons."
       }
     }
   }
