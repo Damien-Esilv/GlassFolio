@@ -27,5 +27,6 @@
     },
     "brandName": "Glassfolio",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "toggleMenu": "Open or close the {{menu}} menu"
 }

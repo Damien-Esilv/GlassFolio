@@ -99,7 +99,93 @@ export function getFallbackExchangeRate(fromCurr: string, toCurr: string): numbe
   return toUsdRate / fromUsdRate;
 }
 
+/** Daily closes of one currency in EUR, oldest first: [YYYY-MM-DD, rate] */
+type DailyRates = Array<[string, number]>;
+
+/** Session cache: history does not change; a failed fetch is retried next time */
+const historyCache = new Map<string, Promise<DailyRates>>();
+
+/** A rate older than this before the requested day is reported as estimated */
+const HISTORY_MAX_GAP_DAYS = 7;
+
+async function fetchYahooFxHistory(ticker: string): Promise<DailyRates> {
+  const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
+  try {
+    const response = await fetch(`${base}?interval=1d&range=max`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return [];
+    const json = await response.json();
+    const result = json.chart?.result?.[0];
+    const timestamps: number[] = result?.timestamp ?? [];
+    const closes: Array<number | null> = result?.indicators?.quote?.[0]?.close ?? [];
+    const rates: DailyRates = [];
+    timestamps.forEach((ts, i) => {
+      const close = closes[i];
+      if (typeof close === 'number' && close > 0) rates.push([new Date(ts * 1000).toISOString().slice(0, 10), close]);
+    });
+    return rates;
+  } catch {
+    return [];
+  }
+}
+
+function dailyHistoryToEur(currency: string): Promise<DailyRates> {
+  let pending = historyCache.get(currency);
+  if (!pending) {
+    pending = fetchYahooFxHistory(`${currency}EUR=X`).then(rates => {
+      if (rates.length === 0) historyCache.delete(currency);
+      return rates;
+    });
+    historyCache.set(currency, pending);
+  }
+  return pending;
+}
+
+/** Latest rate on or before `date` (binary search) */
+function rateOnOrBefore(rates: DailyRates, date: string): [string, number] | undefined {
+  let lo = 0;
+  let hi = rates.length - 1;
+  let found: [string, number] | undefined;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (rates[mid][0] <= date) { found = rates[mid]; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return found;
+}
+
+const daysBetween = (from: string, to: string): number =>
+  (new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86_400_000;
+
 export const currencyService = {
+  /**
+   * Builds a lookup of the EUR value of each currency at past dates (Yahoo daily closes).
+   * Without history for that day, the closest earlier close is used, else today's rate; both are
+   * reported as `estimated`.
+   */
+  getHistoricalRatesToEur: async (
+    currencies: string[]
+  ): Promise<(currency: string, date: string) => { rate: number; estimated: boolean } | undefined> => {
+    const codes = Array.from(new Set(currencies.map(c => c.trim().toUpperCase()).filter(c => c && c !== 'EUR')));
+    const histories = new Map<string, DailyRates>();
+    const current = new Map<string, number>();
+    await Promise.all(codes.map(async code => {
+      histories.set(code, await dailyHistoryToEur(code));
+      current.set(code, await currencyService.getExchangeRate(code, 'EUR'));
+    }));
+
+    return (currency, date) => {
+      const code = currency.trim().toUpperCase();
+      if (code === 'EUR') return { rate: 1, estimated: false };
+      const point = rateOnOrBefore(histories.get(code) ?? [], date);
+      if (point) return { rate: point[1], estimated: daysBetween(point[0], date) > HISTORY_MAX_GAP_DAYS };
+      const today = current.get(code);
+      return today && today > 0 ? { rate: today, estimated: true } : undefined;
+    };
+  },
+
   /**
    * Get rate to convert 1 unit of `fromCurrency` into `toCurrency`.
    */

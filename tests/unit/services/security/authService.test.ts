@@ -1,3 +1,4 @@
+import { appStorage } from '../../../../src/services/storage/appStorage';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { LocalAuthProvider, SupabaseAuthProvider, createAuthProvider } from '../../../../src/services/security/authService';
 import { createBackingStorage } from '../../../../src/services/storage/storageFactory';
@@ -631,6 +632,23 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             vaultChange.mockRejectedValueOnce(new Error('disk full'));
             await expect(sbAuth.changePassword('old-good', 'Strong-Master-Key-2026!#')).rejects.toThrow('disk full');
             expect(updateSpy).toHaveBeenLastCalledWith('live-tok', { password: 'old-good' });
+
+            // A header upload failure also puts the previous header back, locally and on the server
+            const backing = appStorage.getBacking();
+            vi.spyOn(userRepository, 'getUser').mockResolvedValue(user);
+            backing.setItem('gf_vault_header', JSON.stringify({ version: 1, wrap: 'old' }));
+            vaultChange.mockImplementationOnce(async () => {
+                backing.setItem('gf_vault_header', JSON.stringify({ version: 1, wrap: 'new' }));
+            });
+            vi.spyOn(vaultService, 'getVaultHeader').mockReturnValue({ version: 1, wrap: 'new' } as any);
+            const headerSpy = vi.spyOn(supabaseClient, 'upsertVaultHeader')
+                .mockRejectedValueOnce(new Error('Failed to fetch'))
+                .mockResolvedValue();
+            await expect(sbAuth.changePassword('old-good', 'Strong-Master-Key-2026!#')).rejects.toThrow('Failed to fetch');
+            expect(JSON.parse(backing.getItem('gf_vault_header') as string)).toEqual({ version: 1, wrap: 'old' });
+            expect(headerSpy).toHaveBeenLastCalledWith('live-tok', { version: 1, wrap: 'old' }, false);
+            expect(updateSpy).toHaveBeenLastCalledWith('live-tok', { password: 'old-good' });
+            backing.removeItem('gf_vault_header');
         });
 
         it('handles changeEmail with validation and security restrictions', async () => {
@@ -676,6 +694,11 @@ describe('authService & Access Control Security (TGLA-047)', () => {
             // Weak password
             await expect(sbAuth.recoverPassword('valid-key', 'weak')).rejects.toThrow(/NIST/i);
 
+            // No recovery session from the reset email
+            (sbAuth as any).supabaseSession = null;
+            await expect(sbAuth.recoverPassword('good-key', 'Strong-Master-Key-2026!#')).rejects.toThrow(/invalid link/i);
+            (sbAuth as any).supabaseSession = { accessToken: 'session-tok', expiresAt: Date.now() + 3600000, user: { id: 'u-1' } };
+
             // Recovery failed
             vi.spyOn(vaultService, 'recoverPasswordWithRecoveryKey').mockResolvedValue({
                 success: false,
@@ -689,11 +712,13 @@ describe('authService & Access Control Security (TGLA-047)', () => {
                 value: { newRecoveryKey: 'NEW-ROTATED-KEY-1234' },
             } as any);
             const updateSpy = vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as any);
-            (sbAuth as any).supabaseSession = { accessToken: 'session-tok', expiresAt: Date.now() + 3600000, user: { id: 'u-1' } };
+            vi.spyOn(vaultService, 'getVaultHeader').mockReturnValue({ totpEnabled: false } as any);
+            const headerSpy = vi.spyOn(supabaseClient, 'upsertVaultHeader').mockResolvedValue();
 
             const res = await sbAuth.recoverPassword('good-key', 'Strong-Master-Key-2026!#');
             expect(res.newRecoveryKey).toBe('NEW-ROTATED-KEY-1234');
             expect(updateSpy).toHaveBeenCalled();
+            expect(headerSpy).toHaveBeenCalledWith('session-tok', { totpEnabled: false }, false);
         });
 
         it('handles resendEmailVerification and verifyEmailOtp', async () => {

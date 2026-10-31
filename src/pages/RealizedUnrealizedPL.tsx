@@ -7,7 +7,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { currencyService } from '../services/currencyService';
 import { portfolioService } from '../services/portfolioService';
-import type { RealizedPLEntry } from '../types';
+import type { Position, RealizedPLEntry } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { formatChartDate } from '../utils/date';
 import AnimatedCounter from '../components/AnimatedCounter';
@@ -104,17 +104,23 @@ const RealizedUnrealizedPL: React.FC = () => {
    // Top Gainers and Losers (Unrealized P&L) - Top 5
    const nonCashPositions = useMemo(() => filteredPositions.filter(p => p.type !== 'Cash'), [filteredPositions]);
 
+   // Ranked in the display currency; a gainer is in profit and a loser at a loss (never both lists)
+   const plInBase = (p: Position) => currencyService.convertAmount(p.unrealizedPL, p.currency || 'EUR', currency);
    const topGainers = useMemo(() => {
-      return [...nonCashPositions]
-         .sort((a, b) => b.unrealizedPL - a.unrealizedPL)
+      return nonCashPositions
+         .filter(p => p.unrealizedPL > 0)
+         .sort((a, b) => plInBase(b) - plInBase(a))
          .slice(0, 5);
-   }, [nonCashPositions]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- plInBase only reads currency
+   }, [nonCashPositions, currency]);
 
    const topLosers = useMemo(() => {
-      return [...nonCashPositions]
-         .sort((a, b) => a.unrealizedPL - b.unrealizedPL)
+      return nonCashPositions
+         .filter(p => p.unrealizedPL < 0)
+         .sort((a, b) => plInBase(a) - plInBase(b))
          .slice(0, 5);
-   }, [nonCashPositions]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- plInBase only reads currency
+   }, [nonCashPositions, currency]);
 
    // Chart data for Position P&L breakdown
    const positionPLChartData = useMemo(() => {
@@ -233,7 +239,7 @@ const RealizedUnrealizedPL: React.FC = () => {
                   <span className="text-tertiary text-xs font-bold uppercase tracking-wider">{t('reports:pl.realizedPL')}</span>
                   <CheckCircle2 size={18} className="text-accent-green" />
                </div>
-               <div className="text-3xl font-extrabold text-accent-green">
+               <div className={`text-3xl font-extrabold ${realizedPL < 0 ? 'text-accent-red' : 'text-accent-green'}`}>
                   <AnimatedCounter value={realizedPL} currency={currency} locale={locale} />
                </div>
                <p className="text-tertiary text-xs mt-1">{t('reports:pl.realizedDesc')}</p>

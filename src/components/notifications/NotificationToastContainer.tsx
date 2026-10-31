@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, ExternalLink, AlertTriangle, CheckCircle, Info, ShieldAlert } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { Alert, NotificationCategory } from '../../types';
+import { alertText } from '../../utils/alertText';
 
 function getToastIcon(type: string, category?: NotificationCategory) {
   if (category === 'security') {
@@ -24,13 +25,15 @@ function getToastIcon(type: string, category?: NotificationCategory) {
 const ToastItem: React.FC<{ alert: Alert; onDismiss: () => void }> = ({ alert, onDismiss }) => {
   const { t } = useTranslation();
 
-  // Auto-dismiss after 5 seconds
+  // Auto-dismiss after 5 seconds, counted once: a re-render (new onDismiss) must not restart it
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
   useEffect(() => {
     const timer = setTimeout(() => {
-      onDismiss();
+      onDismissRef.current();
     }, 5000);
     return () => clearTimeout(timer);
-  }, [onDismiss]);
+  }, []);
 
   return (
     <div
@@ -43,7 +46,7 @@ const ToastItem: React.FC<{ alert: Alert; onDismiss: () => void }> = ({ alert, o
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
-          <p className="text-xs font-bold text-primary truncate">{alert.title}</p>
+          <p className="text-xs font-bold text-primary truncate">{alertText(alert, t).title}</p>
           <button
             type="button"
             onClick={onDismiss}
@@ -54,7 +57,7 @@ const ToastItem: React.FC<{ alert: Alert; onDismiss: () => void }> = ({ alert, o
           </button>
         </div>
 
-        <p className="text-xs text-secondary mt-1 line-clamp-2">{alert.message}</p>
+        <p className="text-xs text-secondary mt-1 line-clamp-2">{alertText(alert, t).message}</p>
 
         {alert.actionUrl && (
           <div className="mt-2 flex items-center justify-end">

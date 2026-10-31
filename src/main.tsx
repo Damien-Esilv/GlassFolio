@@ -7,12 +7,17 @@ import './index.css';
 import { consumeUrlBootstrapParams } from './config/urlBootstrap';
 import { installTrustedTypesDefaultPolicy } from './services/security/trustedTypes';
 import { bootstrapLocalPersistence } from './services/storage/localPersistenceBootstrap';
+import { installChunkReloadHandler } from './services/storage/chunkReload';
+import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 
 // Synchronous preference & URL handoff bootstrap before any render
 consumeUrlBootstrapParams();
 
 // Before any library code runs: Trusted Types `default` policy (same-origin script URLs only)
 installTrustedTypesDefaultPolicy();
+
+// A chunk of the previous build is gone after a deployment: reload once instead of a blank page
+installChunkReloadHandler();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -33,9 +38,11 @@ const fallback = <div className="min-h-screen bg-canvas" />;
 const renderApp = (): void => {
   root.render(
     <React.StrictMode>
-      <React.Suspense fallback={fallback}>
-        <RootComponent />
-      </React.Suspense>
+      <AppErrorBoundary>
+        <React.Suspense fallback={fallback}>
+          <RootComponent />
+        </React.Suspense>
+      </AppErrorBoundary>
     </React.StrictMode>
   );
 };
@@ -60,4 +67,7 @@ const start = async (): Promise<void> => {
   else renderStartupFailure(result.message);
 };
 
-void start();
+start().catch((err: unknown) => {
+  // Never a blank page: an unexpected startup error gets the same recovery screen
+  renderStartupFailure(err instanceof Error ? err.message : String(err));
+});

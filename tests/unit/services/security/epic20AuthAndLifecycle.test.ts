@@ -151,6 +151,13 @@ describe('Epic 20 — Authentication, Cryptographic Lifecycle, 2FA & Anti-Bot', 
 
             await vaultService.lock();
 
+            // The reset email opened a recovery session; the server calls are stubbed
+            mockRemoteVault();
+            vi.spyOn(supabaseClient, 'updateUser').mockResolvedValue({} as never);
+            (sbAuth as unknown as { supabaseSession: unknown }).supabaseSession = {
+                accessToken: 'recovery-token', refreshToken: 'r', expiresAt: Date.now() + 3_600_000, user: { id: 'sb-1' },
+            };
+
             // Perform emergency recovery
             const recoveryRes = await sbAuth.recoverPassword(initialRecoveryKey, resetPassword);
             expect(recoveryRes.newRecoveryKey).toBeDefined();

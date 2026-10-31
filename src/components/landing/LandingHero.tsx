@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
 import { Sparkles, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useDemoAccess } from '../../hooks/useDemoAccess';
+import { useDemoOffered } from '../../hooks/useDemoOffered';
 import { TiltCard } from './motion/TiltCard';
 import { HeroModeChoice } from './HeroModeChoice';
 
@@ -16,7 +17,8 @@ const rise = (delay: number) => ({
 
 export const LandingHero: React.FC = () => {
   const { t } = useTranslation();
-  const { launchDemo, isLaunchingDemo } = useDemoAccess();
+  const { launchDemo, isLaunchingDemo, demoError } = useDemoAccess();
+  const demoOffered = useDemoOffered();
 
   const titleWords = t('landing:hero.title').split(' ');
   const wordsDoneAt = 0.15 + titleWords.length * 0.045;
@@ -63,7 +65,8 @@ export const LandingHero: React.FC = () => {
           </m.div>
         </div>
 
-        {/* Prominent Animated 1-Click Demo Card */}
+        {/* Prominent Animated 1-Click Demo Card (a local install offers it only when started for a demo) */}
+        {demoOffered && (
         <m.div {...rise(wordsDoneAt + 0.25)} className="max-w-3xl mx-auto">
           <TiltCard maxTilt={3} className="bg-card border border-brand/30 rounded-2xl p-6 sm:p-7 shadow-xl relative overflow-hidden group">
             {/* Ambient Background Glow Layer */}
@@ -117,10 +120,13 @@ export const LandingHero: React.FC = () => {
                   <span>{isLaunchingDemo ? t('landing:hero.demoCard.ctaLoading') : t('landing:hero.demoCard.cta')}</span>
                   <ArrowRight size={16} className="shrink-0 transition-transform group-hover:translate-x-1" />
                 </button>
+                {/* e.g. this device already holds a real vault: say why nothing happened */}
+                {demoError && <p role="alert" className="text-xs text-negative mt-2">{demoError}</p>}
               </div>
             </div>
           </TiltCard>
         </m.div>
+        )}
       </div>
     </section>
   );

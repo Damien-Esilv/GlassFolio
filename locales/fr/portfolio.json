@@ -60,7 +60,9 @@
         "badges": {
             "cash": "Liquidités",
             "untracked": "Non tracké",
-            "untrackedTooltip": "Le prix n'est pas mis à jour automatiquement via Yahoo Finance"
+            "untrackedTooltip": "Le prix n'est pas mis à jour automatiquement via Yahoo Finance",
+            "manualPrice": "Prix manuel",
+            "manualPriceTooltip": "Cet actif n’a pas de suivi de prix : son prix est celui que vous saisissez à la main."
         },
         "manualModal": {
             "title": "Saisie Manuelle du Prix",
@@ -73,6 +75,41 @@
         "fallback": {
             "noSource": "Source inconnue",
             "mainAccount": "Compte principal"
+        },
+        "editAsset": {
+            "title": "Modifier l’actif",
+            "name": "Nom",
+            "symbol": "Symbole / ticker",
+            "type": "Type d’actif",
+            "isin": "ISIN",
+            "currency": "Devise",
+            "exchange": "Place de marché",
+            "network": "Réseau (crypto)",
+            "contractAddress": "Adresse du contrat (crypto)",
+            "noInstrument": "Cette position n’est pas encore liée à une fiche d’actif : seul son prix est modifiable ici. Rechargez après un recalcul, ou modifiez l’actif depuis une transaction.",
+            "otherPriceHint": "Les actifs « Autre » n’ont pas de suivi de prix : le prix saisi ici est celui utilisé.",
+            "saveFailed": "L’actif n’a pas pu être enregistré. Rien n’a été modifié.",
+            "mergeInto": "Fusionner avec {{name}} ({{symbol}})",
+            "save": "Enregistrer l’actif",
+            "types": {
+                "stock": "Action",
+                "etf": "ETF",
+                "fund": "Fonds",
+                "crypto": "Crypto",
+                "cash": "Cash",
+                "bond": "Obligation",
+                "other": "Autre (prix manuel)"
+            },
+            "issues": {
+                "INSTRUMENT_SYMBOL_REQUIRED": "Le symbole est obligatoire.",
+                "INSTRUMENT_TYPE_INVALID": "Choisissez un type d’actif valide.",
+                "INSTRUMENT_ISIN_INVALID": "L’ISIN n’est pas valide : 2 lettres, 9 lettres ou chiffres, puis une clé de contrôle.",
+                "INSTRUMENT_ISIN_CHECKDIGIT": "La clé de contrôle de {{value}} ne correspond pas : vérifiez l’ISIN.",
+                "INSTRUMENT_CURRENCY_INVALID": "La devise doit être un code de 2 à 10 lettres ou chiffres (EUR, USD, USDT…).",
+                "INSTRUMENT_DUPLICATE": "{{name}} ({{symbol}}) existe déjà avec le même symbole ou ISIN. Fusionnez avec lui pour ne garder qu’un seul actif.",
+                "INSTRUMENT_MARKET_DATA_MISSING": "Identifiants insuffisants pour récupérer un cours automatiquement (ISIN, ou symbole et place de marché ; pour une crypto, une place, un réseau ou un contrat). Vous pouvez saisir le prix à la main.",
+                "INSTRUMENT_MANUAL_PRICE_ONLY": "Pas de suivi de prix pour cette classe : la valeur vient du prix saisi à la main."
+            }
         }
     },
     "hub": {

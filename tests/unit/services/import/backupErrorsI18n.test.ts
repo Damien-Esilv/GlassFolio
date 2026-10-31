@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 const read = (file: string) => readFileSync(resolve(process.cwd(), file), 'utf-8');
 const CODES = [
   'unreadable', 'not_an_object', 'missing_data', 'prototype_pollution', 'invalid_collection',
-  'checksum_mismatch', 'unsupported_version', 'invalid_zip', 'unsupported_compression', 'crc_mismatch', 'zip_no_backup',
+  'checksum_mismatch', 'unsupported_version', 'invalid_zip', 'unsupported_compression', 'crc_mismatch', 'zip_no_backup', 'empty_backup',
 ];
 
 describe('backup import errors are translated, never hardcoded', () => {

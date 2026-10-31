@@ -14,10 +14,14 @@
  * delegates to the browser provider, i.e. the previous behaviour.
  */
 
-import { IStorageProvider } from '../../types/storage';
+import { ExternalChangeListener, IStorageProvider } from '../../types/storage';
 import {
+    byteLength,
     commitBatch,
     fetchSnapshot,
+    KEEPALIVE_CHUNK_BYTES,
+    MAX_REQUEST_BYTES,
+    MAX_SERVER_VALUE_BYTES,
     SnapshotOutcome,
     splitBatchForKeepalive,
     VaultBatch,
@@ -73,6 +77,7 @@ export class LocalVaultStorageProvider implements IStorageProvider {
     private failures = 0;
     private channel: BroadcastChannel | null = null;
     private readonly listeners = new Set<() => void>();
+    private readonly externalListeners = new Set<ExternalChangeListener>();
     private status: LocalPersistenceStatus = {
         mode: 'uninitialized',
         pending: 0,
@@ -183,6 +188,10 @@ export class LocalVaultStorageProvider implements IStorageProvider {
             this.browser.setItem(key, value);
             return;
         }
+        // The server would refuse it on every retry and hold back every other change queued with it
+        if (byteLength(value) > MAX_SERVER_VALUE_BYTES) {
+            throw new Error(`"${key}" is too large for the local data server.`);
+        }
         this.memory.set(key, value);
         this.enqueue(key, value);
         this.broadcast({ type: 'update', set: { [key]: value }, remove: [] });
@@ -263,18 +272,21 @@ export class LocalVaultStorageProvider implements IStorageProvider {
         const batch = this.takeBatch();
         if (batch === null) return Promise.resolve(true);
 
-        this.inFlight = this.client.commitBatch(batch).then(ok => {
-            if (ok) {
-                this.failures = 0;
-                this.patchStatus({ lastSavedAt: new Date().toISOString(), lastError: null });
-            } else {
-                this.restoreBatch(batch);
+        this.inFlight = (async () => {
+            // Several requests when large: one oversized body would be refused as a whole
+            const parts = splitBatchForKeepalive(batch, MAX_REQUEST_BYTES);
+            for (let index = 0; index < parts.length; index++) {
+                if (await this.client.commitBatch(parts[index])) continue;
+                parts.slice(index).forEach(part => this.restoreBatch(part));
                 this.failures += 1;
                 this.patchStatus({ lastError: 'Could not save to the local server' });
                 this.scheduleRetry();
+                return false;
             }
-            return ok;
-        }).finally(() => {
+            this.failures = 0;
+            this.patchStatus({ lastSavedAt: new Date().toISOString(), lastError: null });
+            return true;
+        })().finally(() => {
             this.inFlight = null;
         });
         return this.inFlight;
@@ -329,7 +341,9 @@ export class LocalVaultStorageProvider implements IStorageProvider {
         const batch = this.takeBatch();
         if (batch === null) return;
         for (const part of splitBatchForKeepalive(batch)) {
-            void this.client.commitBatch(part, { keepalive: true }).then(ok => {
+            // A single entry above the keepalive limit can only go as a regular request (best effort)
+            const fitsKeepalive = byteLength(JSON.stringify(part)) <= KEEPALIVE_CHUNK_BYTES;
+            void this.client.commitBatch(part, { keepalive: fitsKeepalive }).then(ok => {
                 if (ok) return;
                 this.restoreBatch(part);
                 this.scheduleFlush();
@@ -351,12 +365,26 @@ export class LocalVaultStorageProvider implements IStorageProvider {
     private applyRemoteMessage(message: ChannelMessage): void {
         if (message.type === 'clear') {
             this.memory.clear();
-        } else {
-            for (const key of message.remove) this.memory.delete(key);
-            for (const [key, value] of Object.entries(message.set)) {
-                if (isServerPersistedKey(key)) this.memory.set(key, value);
-            }
+            this.externalListeners.forEach(listener => listener(null));
+            return;
         }
+        for (const key of message.remove) this.memory.delete(key);
+        for (const [key, value] of Object.entries(message.set)) {
+            if (isServerPersistedKey(key)) this.memory.set(key, value);
+        }
+        const changed = [...message.remove, ...Object.keys(message.set)];
+        // Layers above (the decrypted cache) must re-read, or this tab would write its stale copy back.
+        if (changed.length > 0) this.externalListeners.forEach(listener => listener(changed));
+    }
+
+    onExternalChange(listener: ExternalChangeListener): () => void {
+        this.externalListeners.add(listener);
+        // Browser mode (no server) keeps the data in localStorage, shared by the tabs.
+        const unsubscribeBrowser = this.browser.onExternalChange?.(listener);
+        return () => {
+            this.externalListeners.delete(listener);
+            unsubscribeBrowser?.();
+        };
     }
 
     /** Stops timers and listeners (tests, hot reload). Does not flush. */

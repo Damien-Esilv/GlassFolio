@@ -327,7 +327,7 @@ const DynamicCalendarSection: React.FC = () => {
                         },
                         {
                             label: `${t('tax:guide.calendar.declarationDeadline')} (${userDeadlines.departmentName})`,
-                            date: `${formatDate(userDeadlines.userDeadline)} à 23h59`
+                            date: t('tax:guide.calendar.deadlineAt', { date: formatDate(userDeadlines.userDeadline) })
                         },
                         {
                             label: t('tax:guide.calendar.taxNotice'),
@@ -356,7 +356,7 @@ const DynamicCalendarSection: React.FC = () => {
 
 // ── Topic detail content ─────────────────────────────────────────────────────
 const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topicId, onBack }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const rules = getFiscalRules(DEFAULT_FISCAL_YEAR, DEFAULT_TAX_COUNTRY);
 
     // Render topic-specific content
@@ -379,11 +379,11 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                             <div className="space-y-3">
                                 <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.examples')}</h3>
                                 <div className="bg-subtle rounded-xl p-4 text-xs font-mono space-y-1">
-                                    <p className="text-secondary">// Achat: 100 actions @ 50 € = 5 000 € (PMP: 50 €)</p>
-                                    <p className="text-secondary">// Achat: 50 actions @ 80 € = 4 000 € (PMP: 60 €)</p>
-                                    <p className="text-secondary">// Vente: 80 actions @ 70 € = 5 600 €</p>
-                                    <p className="text-primary font-semibold">// PV = 5 600 - (60 × 80) = 5 600 - 4 800 = <span className="text-success">+800 €</span></p>
-                                    <p className="text-secondary">// Impôt PFU: 800 × 30% = <span className="text-error">240 €</span></p>
+                                    <p className="text-secondary">{t('tax:guide.examples.cto.buy1')}</p>
+                                    <p className="text-secondary">{t('tax:guide.examples.cto.buy2')}</p>
+                                    <p className="text-secondary">{t('tax:guide.examples.cto.sell')}</p>
+                                    <p className="text-primary font-semibold">{t('tax:guide.examples.cto.gain')} <span className="text-success">+{(800).toLocaleString(i18n.language)} €</span></p>
+                                    <p className="text-secondary">{t('tax:guide.examples.cto.tax', { rate: (rules.pfu.totalRate * 100).toLocaleString(i18n.language, { maximumFractionDigits: 1 }) })} <span className="text-error">{(800 * rules.pfu.totalRate).toLocaleString(i18n.language, { maximumFractionDigits: 2 })} €</span></p>
                                 </div>
                             </div>
                         )}
@@ -433,7 +433,7 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                                 </div>
                             )}
                             <ul className="space-y-2 text-sm text-secondary">
-                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.depositCap', { peaCap: rules?.pea.maxDeposit.toLocaleString('fr-FR') ?? '150 000', pmeCap: rules?.pea.maxDepositPME.toLocaleString('fr-FR') ?? '75 000' })}</li>
+                                <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.depositCap', { peaCap: rules?.pea.maxDeposit.toLocaleString('fr-FR') ?? '150 000', pmeCap: rules?.pea.maxDepositPME.toLocaleString('fr-FR') ?? '225 000' })}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.rule1')}</li>
                                 <li className="flex gap-2"><ChevronRight size={14} className="text-brand shrink-0 mt-0.5" />{t('tax:guide.topicContent.pea.rule2')}</li>
                             </ul>
@@ -458,12 +458,12 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
                             <div className="space-y-3">
                                 <h3 className="font-semibold text-primary text-sm">{t('tax:guide.topicDetail.examples')}</h3>
                                 <div className="bg-subtle rounded-xl p-4 text-xs font-mono space-y-1">
-                                    <p className="text-secondary">// Formule (Art. 150 VH bis):</p>
-                                    <p className="text-primary">// PV = Prix cession − (Coût total portefeuille × Prix cession / Valeur totale portefeuille)</p>
-                                    <p className="text-secondary mt-2">// Cession 0.5 BTC @ 50k€ = 25 000 €</p>
-                                    <p className="text-secondary">// Coût total portefeuille: 30 000 €</p>
-                                    <p className="text-secondary">// Valeur totale portefeuille: 75 000 €</p>
-                                    <p className="text-primary">// PV = 25k − (30k × 25k / 75k) = 25k − 10k = <span className="text-success">+15 000 €</span></p>
+                                    <p className="text-secondary">{t('tax:guide.examples.crypto.formula')}</p>
+                                    <p className="text-primary">{t('tax:guide.examples.crypto.formulaText')}</p>
+                                    <p className="text-secondary mt-2">{t('tax:guide.examples.crypto.sale')}</p>
+                                    <p className="text-secondary">{t('tax:guide.examples.crypto.cost')}</p>
+                                    <p className="text-secondary">{t('tax:guide.examples.crypto.value')}</p>
+                                    <p className="text-primary">{t('tax:guide.examples.crypto.gain')} <span className="text-success">+{(15000).toLocaleString(i18n.language)} €</span></p>
                                 </div>
                             </div>
                         </div>

@@ -1,13 +1,15 @@
 import { aiToolRegistry } from '../aiToolRegistry';
 import { getPortfolioSummaryTool, getAssetAllocationTool } from './portfolioTools';
 import { listPositionsTool } from './positionTools';
+import { listInstrumentsTool, updateInstrumentTool } from './instrumentTools';
 import { listTransactionsTool, recordTransactionTool } from './transactionTools';
 import { getTaxSummaryTool, simulateTaxImpactTool } from './fiscalTools';
 import { listGoalsTool, createGoalTool } from './goalTools';
 import { 
   getGamificationStatusTool, 
   suggestNextMilestoneTool, 
-  listQuestsTool 
+  listQuestsTool,
+  getProgressStatsTool
 } from './gamificationTools';
 import {
   getSecurityStatusTool,
@@ -43,6 +45,8 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getPortfolioSummaryTool);
   aiToolRegistry.registerTool(getAssetAllocationTool);
   aiToolRegistry.registerTool(listPositionsTool);
+  aiToolRegistry.registerTool(listInstrumentsTool);
+  aiToolRegistry.registerTool(updateInstrumentTool);
   aiToolRegistry.registerTool(listTransactionsTool);
   aiToolRegistry.registerTool(recordTransactionTool);
   aiToolRegistry.registerTool(getTaxSummaryTool);
@@ -52,6 +56,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getGamificationStatusTool);
   aiToolRegistry.registerTool(suggestNextMilestoneTool);
   aiToolRegistry.registerTool(listQuestsTool);
+  aiToolRegistry.registerTool(getProgressStatsTool);
   aiToolRegistry.registerTool(getSecurityStatusTool);
   aiToolRegistry.registerTool(listAuthMethodsTool);
   aiToolRegistry.registerTool(listVaultSecretsTool);
@@ -81,6 +86,8 @@ export {
   getPortfolioSummaryTool,
   getAssetAllocationTool,
   listPositionsTool,
+  listInstrumentsTool,
+  updateInstrumentTool,
   listTransactionsTool,
   recordTransactionTool,
   getTaxSummaryTool,
@@ -90,6 +97,7 @@ export {
   getGamificationStatusTool,
   suggestNextMilestoneTool,
   listQuestsTool,
+  getProgressStatsTool,
   getSecurityStatusTool,
   listAuthMethodsTool,
   listVaultSecretsTool,

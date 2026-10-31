@@ -1,12 +1,12 @@
 import { AIToolDefinition } from '../types';
 import { taxService } from '../../fiscal/taxService';
 import { FiscalProfile } from '../../../types/types.backend';
+import { userRepository } from '../../repositories';
 
-const DEFAULT_PROFILE: FiscalProfile = {
-  taxResidenceCountries: ['FR'],
-  hasOpted2OP: false,
-  fiscalShares: 1,
-  otherTaxableIncome: 35000,
+/** The user's own fiscal profile (Settings > Tax), as the tax pages use it; never an invented income. */
+const userFiscalProfile = async (): Promise<FiscalProfile> => {
+  const user = await userRepository.getUser().catch(() => null);
+  return { taxResidenceCountries: ['FR'], fiscalShares: 1, ...(user?.preferences?.fiscalProfile ?? {}) } as FiscalProfile;
 };
 
 export const getTaxSummaryTool: AIToolDefinition<
@@ -37,8 +37,9 @@ export const getTaxSummaryTool: AIToolDefinition<
     const currentYear = new Date().getFullYear();
     const year = params.fiscalYear || String(currentYear - 1);
 
-    const summary = await taxService.getTaxSummary(year, DEFAULT_PROFILE, 'FR');
-    const comparison = await taxService.comparePFUvsBareme(year, DEFAULT_PROFILE, 'FR');
+    const profile = await userFiscalProfile();
+    const summary = await taxService.getTaxSummary(year, profile, 'FR');
+    const comparison = await taxService.comparePFUvsBareme(year, profile, 'FR', summary);
 
     const totalGrossCapitalGains = Math.round((summary.cto.totalGains + summary.crypto.totalGains) * 100) / 100;
     const totalGrossCapitalLosses = Math.round((summary.cto.totalLosses + summary.crypto.totalLosses) * 100) / 100;

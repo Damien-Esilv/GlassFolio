@@ -2,6 +2,7 @@ import { AIToolDefinition } from '../types';
 import { achievementService } from '../../achievementService';
 import { gamificationService } from '../../gamificationService';
 import { db } from '../../db';
+import { progressStatsService, type ProgressStats } from '../../progressStatsService';
 
 export const getGamificationStatusTool: AIToolDefinition<
   Record<string, never>,
@@ -177,4 +178,15 @@ export const listQuestsTool: AIToolDefinition<
       target: q.target,
     }));
   },
+};
+
+export const getProgressStatsTool: AIToolDefinition<Record<string, never>, ProgressStats> = {
+  name: 'get_progress_stats',
+  description:
+    'Retrieve the Stats shown in the Progress page: this week (transactions of the week, current tracking streak in weeks, XP earned this week) and all-time figures (total transactions, active weeks, current and best streak, total XP, level, achievements unlocked, goals reached, date tracking started). Read-only.',
+  parameters: {
+    type: 'object',
+    properties: {},
+  },
+  execute: async () => progressStatsService.getStats(),
 };

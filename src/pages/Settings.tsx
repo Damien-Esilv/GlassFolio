@@ -25,6 +25,9 @@ import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../constants/themeCata
 import { authService } from '../services/security/authService';
 import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
 import { LocalStorageStatusCard } from '../components/security/LocalStorageStatusCard';
+import { AssetLookupToggle } from '../components/settings/AssetLookupToggle';
+import { getAuthCapabilities } from '../services/security/authCapabilities';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const Settings: React.FC = () => {
     const { t } = useTranslation();
@@ -48,6 +51,11 @@ const Settings: React.FC = () => {
     const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [deleteError, setDeleteError] = useState('');
+    useEscapeKey(() => {
+        setShowDeleteAccountModal(false);
+        setDeleteConfirmText('');
+        setDeleteError('');
+    }, showDeleteAccountModal);
 
     // Account deletion, email change and data exports all go through the step-up (stepUpService).
     type SettingsStepUp = { kind: 'deleteAccount' } | { kind: 'changeEmail' } | { kind: 'export'; run: () => Promise<void> | void };
@@ -125,9 +133,10 @@ const Settings: React.FC = () => {
         email: user?.email || '',
     });
 
-    // Preferences State
+    // Preferences State: the saved preferences (notifications included), not only the basics
     const [prefData, setPrefData] = useState<UserPreferences>({
-        currency: user?.preferences?.currency || 'USD',
+        ...user?.preferences,
+        currency: user?.preferences?.currency || 'EUR',
         theme: user?.preferences?.theme || 'night',
         notifications: user?.preferences?.notifications ?? true,
         language: user?.preferences?.language || 'en',
@@ -147,6 +156,9 @@ const Settings: React.FC = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
+    const [avatarError, setAvatarError] = useState('');
+    // Local mode has no email at all (sign-in is the master password): nothing to show or change
+    const emailManagedHere = getAuthCapabilities().emailVerification;
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -157,14 +169,21 @@ const Settings: React.FC = () => {
 
     const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
+        // Picking the same file again must fire onChange again
+        e.target.value = '';
+        setAvatarError('');
         if (file) {
-            if (!file.type.startsWith('image/')) return;
-            if (file.size > 2 * 1024 * 1024) return;
+            if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
+                setAvatarError(t('settings:profile.avatarRejected'));
+                return;
+            }
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64String = reader.result as string;
                 if (typeof base64String === 'string' && base64String.startsWith('data:image/')) {
-                    updateProfile({ avatar: base64String });
+                    updateProfile({ avatar: base64String }).catch(() => setAvatarError(t('settings:profile.avatarRejected')));
+                } else {
+                    setAvatarError(t('settings:profile.avatarRejected'));
                 }
             };
             reader.readAsDataURL(file);
@@ -177,7 +196,7 @@ const Settings: React.FC = () => {
 
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (profileData.email !== user?.email) {
+        if (emailManagedHere && profileData.email !== user?.email) {
             if (user?.authProvider === 'google') {
                 setProfileData(prev => ({ ...prev, email: user?.email || '' }));
                 return;
@@ -188,7 +207,7 @@ const Settings: React.FC = () => {
 
         setIsSaving(true);
         try {
-            await updateProfile(profileData);
+            await updateProfile(emailManagedHere ? profileData : { name: profileData.name });
             setSuccessMsg(t('settings:profile.profileUpdated'));
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (error) {
@@ -198,10 +217,18 @@ const Settings: React.FC = () => {
         }
     };
 
+    // Only the changed fields are sent: preferences saved elsewhere since this page opened are kept
+    const savePreferences = async (changes: Partial<UserPreferences>) => {
+        setPrefData(prev => ({ ...prev, ...changes }));
+        try {
+            await updateProfile({ preferences: changes });
+        } catch (err) {
+            console.error('Failed to save preferences', err);
+        }
+    };
+
     const updatePreference = async <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
-        const newPrefs: UserPreferences = { ...prefData, [key]: value };
-        setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs });
+        await savePreferences({ [key]: value } as Partial<UserPreferences>);
     };
 
     const notifPrefs = prefData.notificationPreferences || {
@@ -224,13 +251,7 @@ const Settings: React.FC = () => {
             ...notifPrefs,
             masterEnabled: nextMaster,
         };
-        const newPrefs: UserPreferences = {
-            ...prefData,
-            notifications: nextMaster,
-            notificationPreferences: updatedNotif,
-        };
-        setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs });
+        await savePreferences({ notifications: nextMaster, notificationPreferences: updatedNotif });
     };
 
     const handleToggleToasts = async () => {
@@ -238,12 +259,7 @@ const Settings: React.FC = () => {
             ...notifPrefs,
             inAppToasts: !notifPrefs.inAppToasts,
         };
-        const newPrefs: UserPreferences = {
-            ...prefData,
-            notificationPreferences: updatedNotif,
-        };
-        setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs });
+        await savePreferences({ notificationPreferences: updatedNotif });
     };
 
     const handleToggleCategory = async (cat: 'portfolio' | 'fiscal' | 'goals' | 'security') => {
@@ -254,12 +270,7 @@ const Settings: React.FC = () => {
                 [cat]: !notifPrefs.categories[cat],
             },
         };
-        const newPrefs: UserPreferences = {
-            ...prefData,
-            notificationPreferences: updatedNotif,
-        };
-        setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs });
+        await savePreferences({ notificationPreferences: updatedNotif });
     };
 
     const handleDormantCashChange = async (val: number) => {
@@ -267,24 +278,14 @@ const Settings: React.FC = () => {
             ...notifPrefs,
             dormantCashThresholdPercent: val,
         };
-        const newPrefs: UserPreferences = {
-            ...prefData,
-            notificationPreferences: updatedNotif,
-        };
-        setPrefData(newPrefs);
-        await updateProfile({ preferences: newPrefs });
+        await savePreferences({ notificationPreferences: updatedNotif });
     };
 
     const handleFiscalChange = async (updates: Partial<typeof fiscalData>) => {
         const newFiscal = { ...fiscalData, ...updates };
         setFiscalData(newFiscal);
         try {
-            await updateProfile({
-                preferences: {
-                    ...prefData,
-                    fiscalProfile: newFiscal,
-                }
-            });
+            await updateProfile({ preferences: { fiscalProfile: newFiscal } });
             setSuccessMsg(t('tax:settings.autoSaved'));
             setTimeout(() => setSuccessMsg(''), 2500);
         } catch (err) {
@@ -348,7 +349,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= PROFILE TAB ================= */}
                     {activeTab === 'profile' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:profile.publicProfile')}</h2>
 
@@ -371,10 +372,11 @@ const Settings: React.FC = () => {
                                                 <Upload size={14} className="mr-2" />
                                                 {t('common:buttons.upload')}
                                             </Button>
-                                            <Button size="sm" variant="ghost" className="text-error hover:bg-error/10" onClick={() => updateProfile({ avatar: '' })}>
+                                            <Button size="sm" variant="ghost" className="text-error hover:bg-error/10" onClick={() => { setAvatarError(''); updateProfile({ avatar: '' }).catch(() => undefined); }}>
                                                 {t('common:buttons.remove')}
                                             </Button>
                                         </div>
+                                        {avatarError && <p role="alert" className="text-xs text-negative mt-2">{avatarError}</p>}
                                     </div>
                                 </div>
 
@@ -391,6 +393,7 @@ const Settings: React.FC = () => {
                                                 className="w-full bg-subtle border border-border text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
                                             />
                                         </div>
+                                        {emailManagedHere && (
                                         <div>
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <label className="block text-xs font-medium text-secondary">{t('settings:profile.emailAddress')}</label>
@@ -416,6 +419,7 @@ const Settings: React.FC = () => {
                                                 </p>
                                             )}
                                         </div>
+                                        )}
                                     </div>
 
                                     <div className="flex justify-end">
@@ -428,7 +432,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= PREFERENCES TAB ================= */}
                     {activeTab === 'preferences' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             {/* App Settings */}
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-6">{t('settings:preferences.applicationSettings')}</h2>
@@ -493,6 +497,8 @@ const Settings: React.FC = () => {
                                             <option value="YYYY-MM-DD">{t('settings:preferences.dateFormatISO')}</option>
                                         </select>
                                     </div>
+
+                                    <AssetLookupToggle />
 
                                     {/* Appearance & Themes Section */}
                                     <div className="border-t border-border pt-6 space-y-5">
@@ -632,7 +638,7 @@ const Settings: React.FC = () => {
                                         </div>
 
                                         {prefData.notifications && (
-                                            <div className="space-y-5 animate-in fade-in slide-in-from-top-1">
+                                            <div className="space-y-5">
                                                 {/* Live Toasts Toggle */}
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -919,10 +925,15 @@ const Settings: React.FC = () => {
                                                 className="w-full justify-center text-xs whitespace-nowrap"
                                                 onClick={async () => {
                                                     setIsResetting(true);
-                                                    await resetAccountDataToZero();
-                                                    setIsResetting(false);
-                                                    setShowResetConfirm(false);
-                                                    setHasExportedBeforeReset(false);
+                                                    try {
+                                                        await resetAccountDataToZero();
+                                                        setShowResetConfirm(false);
+                                                        setHasExportedBeforeReset(false);
+                                                    } catch (err) {
+                                                        console.error('Account data reset failed', err);
+                                                    } finally {
+                                                        setIsResetting(false);
+                                                    }
                                                 }}
                                             >
                                                 {t('settings:dataAndBackup.yesReset')}
@@ -1001,8 +1012,8 @@ const Settings: React.FC = () => {
 
                     {/* Delete Account GDPR Confirmation Modal (Portal) */}
                     {showDeleteAccountModal && typeof document !== 'undefined' && createPortal(
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                            <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5 animate-scale-up">
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                            <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1109,7 +1120,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= FISCAL TAB ================= */}
                     {activeTab === 'fiscal' && (
-                        <div className="animate-fade-in">
+                        <div>
                             <div className={cardStyle}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
@@ -1117,7 +1128,7 @@ const Settings: React.FC = () => {
                                         <h2 className="text-xl font-semibold text-primary">{t('tax:settings.title')}</h2>
                                     </div>
                                     {successMsg && (
-                                        <span className="text-success text-xs font-medium animate-fade-in flex items-center gap-1">
+                                        <span className="text-success text-xs font-medium flex items-center gap-1">
                                             <Check size={14} />
                                             {successMsg}
                                         </span>
@@ -1266,7 +1277,7 @@ const Settings: React.FC = () => {
 
                     {/* ================= AI & MCP TAB ================= */}
                     {activeTab === 'ai' && (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6">
                             <AISettingsTab />
                         </div>
                     )}
@@ -1297,6 +1308,7 @@ const Settings: React.FC = () => {
                 actionVariant={settingsStepUp?.kind === 'deleteAccount' ? 'danger' : 'primary'}
                 onVerified={runSettingsStepUp}
                 onClose={closeSettingsStepUp}
+                googleRoundTrip={settingsStepUp?.kind === 'deleteAccount' && user?.authProvider === 'google'}
             />
         </div>
     );

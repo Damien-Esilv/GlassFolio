@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getAuthCapabilities } from '../../services/security/authCapabilities';
 import { AuthResult, SecondFactorMethod } from '../../services/security/authTypes';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface TwoFactorChallengeModalProps {
     isOpen: boolean;
@@ -27,6 +28,7 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
     const [code, setCode] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    useEscapeKey(() => { if (!isLoading) onCancel(); }, isOpen);
     const hasTotp = methods.includes('totp');
     const hasPasskey = methods.includes('passkey');
     const { backupCodes } = getAuthCapabilities();
@@ -105,7 +107,8 @@ export const TwoFactorChallengeModal: React.FC<TwoFactorChallengeModalProps> = (
                                     id="two-factor-code"
                                     name="otp"
                                     type="text"
-                                    inputMode="numeric"
+                                    // Backup codes hold letters: a numeric keypad could not type them
+                                    inputMode={backupCodes ? 'text' : 'numeric'}
                                     autoFocus
                                     autoComplete="one-time-code"
                                     placeholder={backupCodes ? t('security:totp.inputPlaceholder') : t('security:totp.codePlaceholder')}

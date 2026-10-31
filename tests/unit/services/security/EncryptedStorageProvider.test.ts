@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LocalStorageProvider, InMemoryStorageProvider } from '../../../../src/types/storage';
+import { LocalStorageProvider, InMemoryStorageProvider, ExternalChangeListener } from '../../../../src/types/storage';
 import { generateExtractableDek, parseEnvelope } from '../../../../src/services/security/crypto';
 import { EncryptedStorageProvider } from '../../../../src/services/storage/EncryptedStorageProvider';
 import { appStorage } from '../../../../src/services/storage/appStorage';
@@ -185,6 +185,94 @@ describe('EncryptedStorageProvider — Zero-Plaintext Leakage & Sync Queue (TGLA
 
             await provider.flush();
             expect(backing.getItem('glassfolio_goals')).toBeNull();
+        });
+    });
+
+    describe('Data integrity (TGLA-188)', () => {
+        it('refuses to overwrite a record it could not decrypt, and lets an explicit wipe remove it', async () => {
+            const backing = new InMemoryStorageProvider();
+            const otherDek = await generateExtractableDek();
+            const writer = await EncryptedStorageProvider.open(backing, otherDek);
+            writer.setItem('glassfolio_transactions', '[{"id":"tx-1"}]');
+            await writer.flush();
+            const original = backing.getItem('glassfolio_transactions');
+
+            const provider = await EncryptedStorageProvider.open(backing, await generateExtractableDek());
+            expect(provider.getItem('glassfolio_transactions')).toBeNull();
+            expect(provider.getIntegrityStatus().corruptedKeys).toEqual(['glassfolio_transactions']);
+            expect(() => provider.setItem('glassfolio_transactions', '[]')).toThrow(/could not be decrypted/);
+            expect(() => provider.removeItem('glassfolio_transactions')).toThrow(/could not be decrypted/);
+            await provider.flush();
+            expect(backing.getItem('glassfolio_transactions')).toBe(original);
+
+            provider.clear();
+            await provider.flush();
+            expect(provider.getIntegrityStatus().corruptedKeys).toEqual([]);
+            expect(backing.getItem('glassfolio_transactions')).toBeNull();
+        });
+
+        it('keeps a failed write queued and reports it, then persists it on the next attempt', async () => {
+            class FullStorage extends InMemoryStorageProvider {
+                full = true;
+                setItem(key: string, value: string): void {
+                    if (this.full) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+                    super.setItem(key, value);
+                }
+            }
+            const backing = new FullStorage();
+            const provider = await EncryptedStorageProvider.open(backing, await generateExtractableDek());
+
+            provider.setItem('glassfolio_goals', '{"goal":"Fire"}');
+            await provider.flush();
+            expect(provider.getIntegrityStatus().writeFailed).toBe(true);
+            expect(backing.getItem('glassfolio_goals')).toBeNull();
+
+            backing.full = false;
+            await provider.flush();
+            expect(provider.getIntegrityStatus().writeFailed).toBe(false);
+            expect(parseEnvelope(backing.getItem('glassfolio_goals'))).not.toBeNull();
+        });
+
+        it('a record that cannot be written does not hold back the others', async () => {
+            class PickyStorage extends InMemoryStorageProvider {
+                setItem(key: string, value: string): void {
+                    if (key === 'glassfolio_unified_transactions') throw new Error('too large for the local data server');
+                    super.setItem(key, value);
+                }
+            }
+            const backing = new PickyStorage();
+            const provider = await EncryptedStorageProvider.open(backing, await generateExtractableDek());
+
+            provider.setItem('glassfolio_unified_transactions', '[huge]');
+            provider.setItem('glassfolio_goals', '[]');
+            await provider.flush();
+
+            expect(parseEnvelope(backing.getItem('glassfolio_goals'))).not.toBeNull();
+            expect(provider.getIntegrityStatus().writeFailed).toBe(true);
+        });
+
+        it('reloads a record another tab saved, so this tab never writes its stale copy back', async () => {
+            const listeners = new Set<ExternalChangeListener>();
+            class SharedStorage extends InMemoryStorageProvider {
+                onExternalChange(listener: ExternalChangeListener): () => void {
+                    listeners.add(listener);
+                    return () => listeners.delete(listener);
+                }
+            }
+            const backing = new SharedStorage();
+            const dek = await generateExtractableDek();
+            const tabA = await EncryptedStorageProvider.open(backing, dek);
+            const tabB = await EncryptedStorageProvider.open(backing, dek);
+            const reloaded: string[][] = [];
+            tabB.subscribeExternalData((keys) => reloaded.push(keys));
+
+            tabA.setItem('glassfolio_transactions', '[{"id":"tx-from-A"}]');
+            await tabA.flush();
+            listeners.forEach((listener) => listener(['glassfolio_transactions']));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            expect(tabB.getItem('glassfolio_transactions')).toBe('[{"id":"tx-from-A"}]');
+            expect(reloaded).toEqual([['glassfolio_transactions']]);
         });
     });
 });

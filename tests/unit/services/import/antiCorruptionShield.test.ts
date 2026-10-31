@@ -68,7 +68,7 @@ describe('Anti-Corruption & Prototype Pollution Shield', () => {
   });
 
   it('does not claim verification from the mere presence of a checksum', () => {
-    const result = validateBackupContent(JSON.stringify({ checksum: 'e3b0c442', data: { transactions: [] } }));
+    const result = validateBackupContent(JSON.stringify({ checksum: 'e3b0c442', data: { transactions: [{ id: 'tx-1' }] } }));
     expect(result.valid).toBe(true);
     expect(result.checksumVerified).toBe(false);
   });
@@ -94,7 +94,7 @@ describe('Anti-Corruption & Prototype Pollution Shield', () => {
   });
 
   it('accepts older backups without checksum but does not mark them verified', async () => {
-    const result = await validateBackup(JSON.stringify({ data: { transactions: [] } }));
+    const result = await validateBackup(JSON.stringify({ data: { transactions: [{ id: 'tx-1' }] } }));
     expect(result.valid).toBe(true);
     expect(result.checksumVerified).toBe(false);
   });

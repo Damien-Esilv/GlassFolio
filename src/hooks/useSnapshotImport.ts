@@ -20,8 +20,19 @@ import {
     parseSnapshotFile,
     getExistingPositions,
     calculateReconciliation,
-    commitSnapshotImport
+    commitSnapshotImport,
+    stageSnapshotInstruments,
+    describeSnapshotInstruments,
+    clearSnapshotInstruments
 } from '../services/import/snapshotService';
+import type { ImportInstrumentSummary } from '../services/import/importManager';
+import {
+    isStagedInstrument,
+    previewStagedIssues,
+    updateStagedInstrument
+} from '../services/import/instrumentDrafts';
+import { instrumentService } from '../services/instrumentService';
+import type { InstrumentIssue, InstrumentPatch } from '../services/instrumentService';
 import { computeFileHash, isFileAlreadyImported } from '../services/core/transactionManager';
 import { matchSnapshotColumns } from '../services/import/columnMatcher';
 import {
@@ -71,6 +82,9 @@ export interface SnapshotImportState {
     // Reconciliation (if generating transactions)
     reconciliationResult: ReconciliationResult | null;
 
+    /** The assets of the file (new ones are drafts until the import is confirmed) */
+    instruments: ImportInstrumentSummary[];
+
     // Final batch
     completedBatch: ImportBatch | null;
 }
@@ -97,6 +111,7 @@ const initialState: SnapshotImportState = {
     parseStats: { total: 0, valid: 0, errors: 0 },
 
     reconciliationResult: null,
+    instruments: [],
 
     completedBatch: null,
 };
@@ -228,6 +243,7 @@ export const useSnapshotImport = (
             );
 
             const validPositions = parseResult.positions.filter(p => p.status === 'valid');
+            const keepAssets = parseResult.positions.filter(p => p.status !== 'valid').map(p => p.position);
 
             // Both modes reconcile against the account so the preview shows the real
             // outcome (and snapshot-only never duplicates positions on re-import)
@@ -238,13 +254,16 @@ export const useSnapshotImport = (
             const reconciliation = await calculateReconciliation(
                 validPositions.map(p => p.position),
                 existingPos,
-                { closeMissing: state.closeMissingAssets }
+                { closeMissing: state.closeMissingAssets, keepAssets }
             );
+
+            const instruments = await stageSnapshotInstruments(validPositions.map(p => p.position), accountId);
 
             updateState({
                 parsedPositions: parseResult.positions,
                 parseStats: parseResult.stats,
                 reconciliationResult: reconciliation,
+                instruments,
                 existingBatch,
                 step: 'preview',
                 isLoading: false
@@ -318,6 +337,7 @@ export const useSnapshotImport = (
             const validPositions = state.parsedPositions
                 .filter(p => p.status === 'valid')
                 .map(p => p.position);
+            const keepAssets = state.parsedPositions.filter(p => p.status !== 'valid').map(p => p.position);
 
             const result = await commitSnapshotImport({
                 mode: state.generateSyntheticTransactionsOption ? 'synthetic' : 'replace',
@@ -326,6 +346,7 @@ export const useSnapshotImport = (
                 accountId,
                 userId,
                 closeMissing: state.closeMissingAssets,
+                keepAssets,
                 rawContent: state.rawCSVText,
                 fileName,
                 totalRows: state.parseStats.total
@@ -362,6 +383,26 @@ export const useSnapshotImport = (
     // NAVIGATION
     // =========================================================================
 
+    /** Live integrity checks of an asset being edited in the review (nothing is saved). */
+    const previewInstrumentIssues = useCallback((instrumentId: string, patch: InstrumentPatch): InstrumentIssue[] => {
+        return isStagedInstrument(instrumentId)
+            ? previewStagedIssues(instrumentId, patch)
+            : instrumentService.previewInstrumentIssues(instrumentId, patch);
+    }, []);
+
+    /**
+     * Edit an asset of the snapshot. A new one is a draft (persisted when the import is confirmed); one
+     * already in the portfolio is updated right away. Throws an InstrumentValidationError when refused.
+     */
+    const updateInstrument = useCallback(async (instrumentId: string, patch: InstrumentPatch, mergeInto?: string): Promise<void> => {
+        if (isStagedInstrument(instrumentId)) updateStagedInstrument(instrumentId, patch, mergeInto);
+        else await instrumentService.updateInstrument(instrumentId, patch, { mergeInto });
+        setState(prev => ({
+            ...prev,
+            instruments: describeSnapshotInstruments(prev.parsedPositions.filter(p => p.status === 'valid').map(p => p.position))
+        }));
+    }, []);
+
     const goBack = useCallback(() => {
         setState(prev => {
             switch (prev.step) {
@@ -373,6 +414,7 @@ export const useSnapshotImport = (
     }, []);
 
     const reset = useCallback(() => {
+        clearSnapshotInstruments();
         setState({
             ...initialState,
             rawCSVText: state.rawCSVText,
@@ -409,6 +451,8 @@ export const useSnapshotImport = (
         renameTemplate,
         analyzeAndPreview,
         updateSellPrice,
+        updateInstrument,
+        previewInstrumentIssues,
         commitImport,
         goBack,
         reset

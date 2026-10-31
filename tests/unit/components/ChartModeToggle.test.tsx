@@ -49,4 +49,16 @@ describe('ChartModeToggle & useChartPriceMode invariants', () => {
 
     expect(handleChange).toHaveBeenCalledWith('historical');
   });
+
+  it('supports size="md" matching the time range selector dimensions', () => {
+    const { container } = render(<ChartModeToggle mode="simulated" onChange={vi.fn()} size="md" />);
+    const group = container.querySelector('[role="group"]');
+    expect(group?.className).toContain('rounded-xl');
+    expect(group?.className).toContain('border-subtle');
+
+    const button = screen.getByRole('button', { name: /Estimate/ });
+    expect(button.className).toContain('text-xs');
+    expect(button.className).toContain('px-3.5');
+    expect(button.className).toContain('py-1.5');
+  });
 });

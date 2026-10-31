@@ -5,28 +5,32 @@ import { refreshPositionPrices, fetchRealPriceHistory, HistoricalPricePoint } fr
 import { currencyService } from './currencyService';
 import { formatChartDate, DateFormatPattern } from '../utils/date';
 import { roundCurrency } from '../utils/currency';
-import { isAssetClassMatch } from '../constants/assetClasses';
+import { ASSET_CLASSES, isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
+import { instrumentTypeToPositionType } from './portfolio/assetTypeMapping';
 import { buildLedger, buildRealizedEvents, applyTransaction, defaultLedgerKey, emptyLedgerState, rowSymbol, sortChronologically, LedgerState } from './portfolio/positionLedger';
 
 /** Asset class shown for a position, from its instrument (no instrument: equity) */
-const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => {
-    if (!instrument) return 'Equity';
-    if (instrument.type === 'stock') return 'Equity';
-    if (instrument.type === 'crypto') return 'Crypto';
-    return instrument.type === 'cash' ? 'Cash' : 'ETF';
-};
+const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => instrumentTypeToPositionType(instrument?.type);
 
 export const portfolioService = {
     getPositions: async (filter?: PositionFilter): Promise<Position[]> => {
         await delay(100);
-        let allPositions = await portfolioRepository.getPositions();
-
-        // Refresh live prices from Yahoo Finance on ALL positions (15-min cache)
-        allPositions = await refreshPositionPrices(allPositions);
-
-        // Persist updated prices for all positions (never save filtered subset)
-        await portfolioRepository.savePositions(allPositions);
+        let allPositions: Position[] = [];
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const stored = await portfolioRepository.getPositions();
+            // Refresh live prices from Yahoo Finance on ALL positions (15-min cache)
+            allPositions = await refreshPositionPrices(stored);
+            // The price fetch is slow: an import may have recalculated the positions meanwhile, and
+            // saving this older list would bring removed or outdated positions back.
+            const current = await portfolioRepository.getPositions();
+            if (current.length === stored.length && current.every((p, i) => p.id === stored[i].id && p.quantity === stored[i].quantity)) {
+                // Persist updated prices for all positions (never save filtered subset)
+                await portfolioRepository.savePositions(allPositions);
+                break;
+            }
+            // Newer positions: price them instead (the prices are cached by now)
+        }
 
         if (!filter) {
             return allPositions;
@@ -42,6 +46,50 @@ export const portfolioService = {
 
             return matchesType && matchesSource && matchesCurrency && matchesSearch;
         });
+    },
+
+    /**
+     * Return (%) since the start of `timeRange` of what is held now, per asset class and for the whole
+     * portfolio ('All'), weighted by current value in `baseCurrency`, from each asset's price history.
+     * Cash counts at 0 %. A class without any history is left out (no invented curve).
+     */
+    getHoldingsReturnSeries: async (
+        positions: Position[],
+        timeRange: '1M' | '3M' | '1Y' | 'ALL',
+        pointsCount: number,
+        baseCurrency: string
+    ): Promise<Record<string, number[]>> => {
+        const rates = await currencyService.getExchangeRates([...new Set(positions.map(p => p.currency || 'EUR'))], baseCurrency);
+        const withReturns = (await Promise.all(positions.map(async (p) => {
+            const weight = Math.max(0, currencyService.convertAmount(p.marketValue || 0, p.currency || 'EUR', baseCurrency, rates));
+            if (weight === 0) return null;
+            if (p.type === 'Cash') return { p, weight, returns: Array.from({ length: pointsCount }, () => 0) };
+            const points = [...await fetchRealPriceHistory(p, timeRange, { allowEstimate: false }).catch(() => [] as HistoricalPricePoint[])]
+                .sort((a, b) => a.timestamp - b.timestamp);
+            if (points.length < 2 || points[0].price <= 0) return null;
+            const first = points[0].price;
+            const returns = Array.from({ length: pointsCount }, (_, i) => {
+                const idx = Math.round(i * (points.length - 1) / Math.max(1, pointsCount - 1));
+                return (points[idx].price / first - 1) * 100;
+            });
+            return { p, weight, returns };
+        }))).filter((item): item is { p: Position; weight: number; returns: number[] } => item !== null);
+
+        const combine = (items: typeof withReturns): number[] | undefined => {
+            const total = items.reduce((sum, item) => sum + item.weight, 0);
+            if (total === 0 || items.every(item => item.p.type === 'Cash')) return undefined;
+            return Array.from({ length: pointsCount }, (_, i) =>
+                Math.round(items.reduce((sum, item) => sum + item.weight * item.returns[i], 0) / total * 100) / 100);
+        };
+
+        const result: Record<string, number[]> = {};
+        const all = combine(withReturns);
+        if (all) result.All = all;
+        for (const assetClass of ASSET_CLASSES) {
+            const curve = combine(withReturns.filter(item => isAssetClassMatch(item.p.type, assetClass)));
+            if (curve) result[assetClass] = curve;
+        }
+        return result;
     },
 
     recalculatePositions: async (): Promise<void> => {
@@ -72,7 +120,9 @@ export const portfolioService = {
             const lastPrice = isCash ? 1 : parseFloat(lastTx.priceUnit || '0') || (state.quantity > 0 ? state.costBasis / state.quantity : 0);
 
             positionMap.set(key, {
-                id: `pos-${crypto.randomUUID()}`,
+                // Stable across recalculations (account + asset), so a selection or a link survives them
+                id: `pos-${key}`,
+                instrumentId: instrument?.id,
                 instrument: instrument?.name || firstTx.label || symbol,
                 symbol,
                 quantity: state.quantity,
@@ -81,10 +131,12 @@ export const portfolioService = {
                 marketValue: 0,
                 unrealizedPL: 0,
                 unrealizedPLPercent: 0,
-                currency: instrument?.denominationCurrency || firstTx.feeAsset || 'EUR',
+                // The fee asset (e.g. BNB) is not the currency the position is priced in
+                currency: instrument?.denominationCurrency || account?.defaultCurrency || 'EUR',
                 type: positionTypeOf(instrument),
                 source: institute?.name || 'Unknown',
                 bankName: institute?.name,
+                accountId: account?.id,
                 accountName: account?.name
             });
         }
@@ -157,11 +209,8 @@ export const portfolioService = {
         options: { chartMode?: ChartPriceMode } = {}
     ): Promise<DashboardSummary> => {
         await delay(150);
-        let positions = await portfolioRepository.getPositions();
-
-        // Ensure live prices are fetched and saved
-        positions = await refreshPositionPrices(positions);
-        await portfolioRepository.savePositions(positions);
+        // Live prices, saved without overwriting a recalculation made during the fetch
+        const positions = await portfolioService.getPositions();
 
         // Fetch FX exchange rates for position currencies to baseCurrency
         const uniqueCurrencies = positions.map(p => p.currency || 'EUR');
@@ -211,6 +260,16 @@ export const portfolioService = {
                 pointCount = 30;
                 labelFormat = 'day';
                 break;
+            case '3M':
+                startDate.setDate(now.getDate() - 90);
+                pointCount = 13;
+                labelFormat = 'day';
+                break;
+            case 'YTD':
+                startDate = new Date(now.getFullYear(), 0, 1);
+                pointCount = Math.max(2, now.getMonth() + 2);
+                labelFormat = 'month';
+                break;
             case '1Y':
                 startDate.setFullYear(now.getFullYear() - 1);
                 pointCount = 12;
@@ -233,7 +292,6 @@ export const portfolioService = {
         }
 
         const timeStepMs = Math.max(1000, (now.getTime() - startDate.getTime()) / Math.max(1, pointCount - 1));
-        const totalDuration = Math.max(1, now.getTime() - startDate.getTime());
 
         // BOLT OPTIMIZATION:
         // 1. Pre-parse dates once to eliminate thousands of repeated `new Date()` allocations inside loops.
@@ -276,7 +334,20 @@ export const portfolioService = {
 
         // Unified journal: replay through the shared ledger so snapshot adjustments,
         // decreases and cash statements move the curve exactly like the positions
-        const instrumentSymbols = new Map(db.getInstruments().map(i => [i.id, i.marketIdentifier.symbol]));
+        const instrumentList = db.getInstruments();
+        const instrumentSymbols = new Map(instrumentList.map(i => [i.id, i.marketIdentifier.symbol]));
+        const instrumentCurrencies = new Map(instrumentList.map(i => [i.id, i.denominationCurrency]));
+        const accountCurrencies = new Map(db.getAccounts().map(a => [a.id, a.defaultCurrency]));
+        // An asset sold since has no position left: value it from its own trades, never at 1 per unit
+        const lastTradePrice: Record<string, number> = {};
+        const assetCost: Record<string, number> = {};
+        const assetCurrency: Record<string, string> = {};
+        // When each asset was (last) acquired: the estimated price moves from its cost to today's
+        // price over the time it is held, not over the range on screen (every range showed the whole gain)
+        const heldSince: Record<string, number> = {};
+        const noteQuantity = (symbol: string, previous: number, timeMs: number): void => {
+            if (previous <= 0 && (assetQuantities[symbol] ?? 0) > 0) heldSince[symbol] = timeMs;
+        };
         const unifiedWithTime = unifiedTxs.map(tx => ({ tx, time: new Date(tx.transactionDate).getTime() }));
         const ledgerStates = new Map<string, LedgerState>();
         const ledgerSymbols = new Map<string, string>();
@@ -296,9 +367,15 @@ export const portfolioService = {
                     const symbol = instrumentSymbols.get(tx.instrumentId) || rowSymbol(tx) || tx.assetSymbol;
                     ledgerSymbols.set(key, symbol);
                     // Re-aggregate this symbol across accounts
-                    assetQuantities[symbol] = Array.from(ledgerStates.entries())
-                        .filter(([k]) => ledgerSymbols.get(k) === symbol)
-                        .reduce((sum, [, st]) => sum + st.quantity, 0);
+                    const states = Array.from(ledgerStates.entries()).filter(([k]) => ledgerSymbols.get(k) === symbol);
+                    const previousQuantity = assetQuantities[symbol] ?? 0;
+                    assetQuantities[symbol] = states.reduce((sum, [, st]) => sum + st.quantity, 0);
+                    noteQuantity(symbol, previousQuantity, unifiedWithTime[unifiedIdx].time);
+                    assetCost[symbol] = states.reduce((sum, [, st]) => sum + st.costBasis, 0);
+                    const tradePrice = parseFloat(tx.priceUnit || '');
+                    if (tradePrice > 0) lastTradePrice[symbol] = tradePrice;
+                    const currency = instrumentCurrencies.get(tx.instrumentId) || accountCurrencies.get(tx.accountId);
+                    if (currency) assetCurrency[symbol] = currency;
                 }
                 unifiedIdx++;
             }
@@ -306,11 +383,15 @@ export const portfolioService = {
             // Incrementally accumulate transactions up to pointTimeMs
             while (txIdx < txsWithTime.length && txsWithTime[txIdx].time <= pointTimeMs) {
                 const tx = txsWithTime[txIdx];
+                const previousQuantity = assetQuantities[tx.symbol] ?? 0;
                 if (tx.type === 'Buy' || tx.type === 'Deposit') {
                     assetQuantities[tx.symbol] = (assetQuantities[tx.symbol] || 0) + tx.amount;
                 } else if (tx.type === 'Sell' || tx.type === 'Withdrawal') {
                     assetQuantities[tx.symbol] = Math.max(0, (assetQuantities[tx.symbol] || 0) - tx.amount);
                 }
+                if (tx.price > 0) lastTradePrice[tx.symbol] = tx.price;
+                if (tx.currency) assetCurrency[tx.symbol] = tx.currency;
+                noteQuantity(tx.symbol, previousQuantity, tx.time);
                 txIdx++;
             }
 
@@ -318,13 +399,15 @@ export const portfolioService = {
             let pointInvested = 0;
 
             if (txIdx > 0 || unifiedIdx > 0) {
-                const progress = (pointTimeMs - startDate.getTime()) / totalDuration;
-
                 Object.entries(assetQuantities).forEach(([symbol, qty]) => {
+                    if (qty <= 0) return;
+                    const since = heldSince[symbol] ?? startDate.getTime();
+                    const progress = Math.min(1, Math.max(0, (pointTimeMs - since) / Math.max(1, now.getTime() - since)));
                     const pos = positionMap.get(symbol);
-                    const currentPrice = pos ? pos.lastPrice : 1;
-                    const costPrice = pos ? pos.avgCost : 1;
-                    const posCurr = pos?.currency || 'EUR';
+                    const ledgerCost = assetCost[symbol] !== undefined ? assetCost[symbol] / qty : undefined;
+                    const costPrice = pos ? pos.avgCost : (ledgerCost ?? lastTradePrice[symbol] ?? 0);
+                    const currentPrice = pos ? pos.lastPrice : (lastTradePrice[symbol] ?? costPrice);
+                    const posCurr = pos?.currency || assetCurrency[symbol] || 'EUR';
 
                     // Real close when available, otherwise a deterministic interpolation between cost and current price
                     const realPrice = historicalPriceAt(symbol, pointTimeMs);

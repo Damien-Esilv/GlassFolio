@@ -10,6 +10,7 @@
         "publicProfile": "Profil public",
         "profilePicture": "Photo de profil",
         "profilePictureInfo": "Supporte JPG, PNG ou GIF. Taille max 2 Mo.",
+        "avatarRejected": "Cette image n’a pas pu être utilisée. Choisissez un fichier JPG, PNG ou GIF de 2 Mo maximum.",
         "displayName": "Nom d'affichage",
         "emailAddress": "Adresse e-mail",
         "profileUpdated": "Détails du profil mis à jour avec succès",
@@ -47,7 +48,9 @@
         "dateFormatInfo": "Choisissez le format d'affichage des dates dans l'application.",
         "dateFormatFR": "Européen (JJ/MM/AAAA)",
         "dateFormatUS": "Américain (MM/JJ/AAAA)",
-        "dateFormatISO": "Standard ISO (AAAA-MM-JJ)"
+        "dateFormatISO": "Standard ISO (AAAA-MM-JJ)",
+        "assetLookup": "Reconnaître les actifs automatiquement",
+        "assetLookupInfo": "À l’import, recherche les symboles et ISIN inconnus auprès de Yahoo Finance et CoinGecko pour distinguer actions, ETF et cryptos. Seul le symbole ou l’ISIN est envoyé. Désactivé : le type du compte et les règles intégrées sont utilisés."
     },
     "dataAndBackup": {
         "title": "Données, Sauvegardes & Confidentialité",
@@ -118,7 +121,8 @@
             "invalid_zip": "Archive ZIP illisible ou corrompue.",
             "unsupported_compression": "Compression ZIP non prise en charge.",
             "crc_mismatch": "Archive ZIP corrompue : un fichier ne passe pas le contrôle d'intégrité.",
-            "zip_no_backup": "Cette archive ne contient pas de sauvegarde GlassFolio (data/glassfolio-backup-….json)."
+            "zip_no_backup": "Cette archive ne contient pas de sauvegarde GlassFolio (data/glassfolio-backup-….json).",
+            "empty_backup": "Cette sauvegarde ne contient aucune donnée : la restaurer ne ferait qu’effacer votre compte."
         }
     },
     "legal": {

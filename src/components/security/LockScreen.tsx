@@ -10,6 +10,7 @@ import { getAuthCapabilities } from '../../services/security/authCapabilities';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface LockScreenProps {
     onUnlocked?: () => void;
@@ -32,6 +33,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [passkeySupported, setPasskeySupported] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    useEscapeKey(() => setShowResetConfirm(false), showResetConfirm);
     const [isResetting, setIsResetting] = useState(false);
     // RP ID of passkeys enrolled before it was stored in the vault (cloud), resolved before any click
     const [legacyRpId, setLegacyRpId] = useState<string | undefined>(undefined);

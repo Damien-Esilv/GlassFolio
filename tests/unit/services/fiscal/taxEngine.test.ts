@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCryptoGains, buildTaxSummary, generateFormMappings, EnrichedTransaction } from '../../../../src/services/fiscal/taxEngine';
+import { calculateCryptoGains, buildTaxSummary, generateFormMappings, detectForeignAccounts, comparePFUvsBareme, EnrichedTransaction } from '../../../../src/services/fiscal/taxEngine';
 import { getFiscalRulesOrThrow } from '../../../../src/services/fiscal/taxRules';
 import { CGI_ARTICLES } from '../../../../src/constants/fiscalConstants';
 import { UnifiedTransaction, Account, Institute, Instrument } from '../../../../src/types/types.backend';
@@ -605,5 +605,65 @@ describe('taxEngine O(1) Lookups & Date Parsing Robustness (Jules Hardening)', (
     expect(mappings).toHaveLength(1);
     expect(mappings[0].caseId).toBe('3VG');
     expect(mappings[0].value).toBe(500);
+  });
+
+  it('only carries forward the losses of the last 10 years (TGLA-188)', () => {
+    const profile = { taxResidenceCountries: ['FR'], fiscalShares: 1, lossCarryforwards: { '2013': 5000, '2014': 300, '2020': 200, '2024': 999 } };
+    const summary = buildTaxSummary([], [], [], [], '2024', profile);
+    // 2013 expired (2024 - 10 = 2014 is the oldest usable year); a loss of 2024 itself is not "prior"
+    expect(summary.cto.lossCarryforward).toBe(500);
+  });
+
+  it('declares a foreign account closed during the year, never one opened after it (TGLA-188)', () => {
+    const institutes = [{ id: 'ib', ownerId: 'u', name: 'Interactive Brokers', type: 'broker', country: 'IE' }] as never[];
+    const accounts = [
+      { id: 'closed', ownerId: 'u', instituteId: 'ib', name: 'Closed in 2024', type: 'investment', defaultCurrency: 'EUR', isActive: false },
+      { id: 'old-closed', ownerId: 'u', instituteId: 'ib', name: 'Closed long ago', type: 'investment', defaultCurrency: 'EUR', isActive: false },
+      { id: 'later', ownerId: 'u', instituteId: 'ib', name: 'Opened 2025', type: 'investment', defaultCurrency: 'EUR', isActive: true, openedAt: '2025-03-01' },
+    ] as never[];
+
+    const [obligation] = detectForeignAccounts(institutes, accounts, { fiscalYear: '2024', accountsUsedInYear: new Set(['closed']) });
+    expect(obligation.accountIds).toEqual(['closed']);
+  });
+
+  describe('PFU vs barème (TGLA-188)', () => {
+    const ev = (eventType: string, taxableAmount: number) => ({ eventType, taxableAmount, grossAmount: Math.abs(taxableAmount), wrapperType: 'CTO' }) as never;
+
+    it('charges the salary to neither side: only the tax these revenues add', () => {
+      // Income 2025 rules, salary 35 000, one CTO gain of 10 000
+      const rules = getFiscalRulesOrThrow('2025', 'FR');
+      const { pfuTotal, baremeTotal, recommendation } = comparePFUvsBareme([ev('capital_gain', 10000)], { fiscalShares: 1, otherTaxableIncome: 35000 }, rules);
+      // PFU: 10 000 × 12.8 % + 10 000 × 18.6 % = 1 280 + 1 860
+      expect(pfuTotal).toBeCloseTo(3140, 2);
+      // Barème: base 10 000 − 6.8 % deductible CSG = 9 320, all in the 30 % bracket = 2 796, + 1 860
+      expect(baremeTotal).toBeCloseTo(4656, 2);
+      expect(recommendation).toBe('PFU');
+    });
+
+    it('nets the losses of the year and the earlier ones before taxing', () => {
+      const rules = getFiscalRulesOrThrow('2024', 'FR');
+      const events = [ev('capital_gain', 1000), ev('capital_loss', -400)];
+      expect(comparePFUvsBareme(events, { fiscalShares: 1, otherTaxableIncome: 0 }, rules).pfuTotal).toBeCloseTo(180, 2);
+      expect(comparePFUvsBareme(events, { fiscalShares: 1, otherTaxableIncome: 0 }, rules, 600).pfuTotal).toBe(0);
+    });
+
+    it('keeps dividends of 2025 at 17.2 % of social contributions while gains are at 18.6 %', () => {
+      const rules = getFiscalRulesOrThrow('2025', 'FR');
+      const { pfuTotal } = comparePFUvsBareme([ev('dividend', 1000), ev('capital_gain', 1000)], { fiscalShares: 1, otherTaxableIncome: 0 }, rules);
+      // 2 000 × 12.8 % + 1 000 × 17.2 % + 1 000 × 18.6 %
+      expect(pfuTotal).toBeCloseTo(256 + 172 + 186, 2);
+    });
+  });
+
+  it('declares one net securities result and nothing for exempt crypto (TGLA-188)', () => {
+    const rules = getFiscalRulesOrThrow('2024', 'FR');
+    const ev = (eventType: string, taxableAmount: number) => ({ eventType, taxableAmount, grossAmount: Math.abs(taxableAmount), wrapperType: 'CTO' }) as never;
+    const boxes = (events: never[], options = {}) => Object.fromEntries(generateFormMappings(events, rules, options).map(m => [m.caseId, m.value]));
+
+    expect(boxes([ev('capital_gain', 1000), ev('capital_loss', -400)])).toMatchObject({ '3VG': 600 });
+    expect(boxes([ev('capital_gain', 1000), ev('capital_loss', -400)])['3VH']).toBeUndefined();
+    expect(boxes([ev('capital_gain', 300), ev('capital_loss', -500)])).toMatchObject({ '3VH': 200 });
+    expect(boxes([ev('capital_gain', 1000)], { priorLossCarryforward: 250 })).toMatchObject({ '3VG': 750 });
+    expect(boxes([ev('crypto_gain', 100)], { cryptoExempt: true })['3AN']).toBeUndefined();
   });
 });

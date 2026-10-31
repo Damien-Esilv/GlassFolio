@@ -56,6 +56,9 @@
     "errors": {
         "failedToLogin": "Échec de la connexion",
         "failedToLoad": "Échec du chargement des données. Veuillez réessayer.",
+        "appCrashTitle": "Une erreur est survenue",
+        "appCrashDescription": "Cette page n’a pas pu s’afficher, souvent parce que GlassFolio vient d’être mis à jour. Rechargez pour obtenir la dernière version ; vos données sont intactes.",
+        "appCrashReload": "Recharger",
         "passwordsDoNotMatch": "Les nouveaux mots de passe ne correspondent pas !",
         "required": "Ce champ est requis",
         "auth": {
@@ -103,7 +106,10 @@
             "passwordRequired": "Votre mot de passe est requis.",
             "deleteConfirmationMismatch": "Saisissez SUPPRIMER pour confirmer.",
             "googleAccountMismatch": "Ce n’est pas le compte Google utilisé par ce compte GlassFolio. Choisissez le bon compte Google et réessayez.",
-            "driveCleanupFailed": "Le fichier de clé n’a pas pu être supprimé de votre Google Drive. Rien n’a été supprimé."
+            "driveCleanupFailed": "Le fichier de clé n’a pas pu être supprimé de votre Google Drive. Rien n’a été supprimé.",
+            "deleteFailed": "Votre compte n’a pas pu être supprimé. Rien n’a été effacé ; réessayez dans un instant.",
+            "actionFailed": "Cette action n’a pas pu aboutir. Rien n’a été modifié ; réessayez.",
+            "vaultRecordUnreadable": "Ces données n’ont pas pu être déchiffrées : elles ont été laissées intactes. Déconnectez-vous puis reconnectez-vous, ou restaurez une sauvegarde."
         },
         "passkey": {
             "UNSUPPORTED": "Les passkeys ne sont pas prises en charge par ce navigateur.",
@@ -145,7 +151,6 @@
             "CASH_CURRENCY_INVALID": "Les lignes de liquidités nécessitent un code devise ISO 4217 valide",
             "SNAPSHOT_QTY_REQUIRED": "La quantité est obligatoire",
             "SNAPSHOT_PRICE_REQUIRED": "Le prix de revient unitaire (PRU) est obligatoire",
-            "LABEL_MISSING": "Libellé recommandé pour la traçabilité",
             "OVERSELL": "Impossible de vendre {{sell}} {{symbol}} : seulement {{position}} détenu(s)",
             "TYPE_INFERRED": "Aucun type dans le fichier : lu comme {{type}} d'après le signe de la quantité ou du montant",
             "TYPE_UNRECOGNIZED": "Type inconnu « {{label}} » : vérifiez que cette ligne est bien un(e) {{type}}",

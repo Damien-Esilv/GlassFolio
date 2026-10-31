@@ -6,6 +6,7 @@ import Landing from '../src/pages/Landing';
 import Login from '../src/pages/Login';
 import Signup from '../src/pages/Signup';
 import * as deploymentModule from '../src/config/deployment';
+import { demoAvailability } from '../src/services/demoAvailability';
 import { LANDING_SECTION_ANCHORS } from '../src/components/landing/LandingHeader';
 import '../src/i18n';
 
@@ -148,13 +149,14 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
   });
 
   it('triggers 1-click demo login and navigates to / when Try Live Demo is clicked', async () => {
+    vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
 
-    const demoButtons = screen.getAllByRole('button', { name: /Try Live Demo|Launch Interactive Demo/i });
+    const demoButtons = await screen.findAllByRole('button', { name: /Try Live Demo|Launch Interactive Demo/i });
     expect(demoButtons.length).toBeGreaterThan(0);
 
     fireEvent.click(demoButtons[0]);
@@ -164,7 +166,9 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     });
   });
 
-  it('renders the prominent demo showcase card with feature highlights and centered CTA button', () => {
+  it('renders the prominent demo showcase card with feature highlights and centered CTA button', async () => {
+    // The online showcase always offers the demo
+    vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
@@ -172,7 +176,7 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     );
 
     // Headline is displayed
-    expect(screen.getByRole('heading', { level: 3, name: /Explore the full GlassFolio experience live/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 3, name: /Explore the full GlassFolio experience live/i })).toBeTruthy();
 
     // Feature highlights are rendered
     expect(screen.getByText(/anonymous/i)).toBeTruthy();
@@ -198,10 +202,10 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(screen.getByText(/the engine is modular so other jurisdictions can be added/i)).toBeTruthy();
   });
 
-  it('hides the demo button on /login in cloud mode and shows it in local mode', () => {
+  it('hides the demo button on /login in cloud mode and on a normal local launch, shows it on a local demo launch', async () => {
     // 1. Cloud mode: Demo button is hidden on /login, Google button is visible
     vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('cloud');
-    const { rerender } = render(
+    const { unmount: unmountCloud } = render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -212,18 +216,37 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(screen.queryByRole('button', { name: /Explore Demo Account/i })).toBeNull();
     expect(screen.getByRole('button', { name: /Google/i })).toBeTruthy();
 
-    // 2. Local mode: Demo button is displayed on /login, Google button is hidden
+    // 2. Local mode, normal launch: no demo button, no Google button
+    unmountCloud();
     vi.spyOn(deploymentModule, 'getDeploymentMode').mockReturnValue('local');
-    rerender(
+    demoAvailability.reset();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: { get: () => 'application/json' }, json: async () => ({ demo: false }) }));
+    const { unmount: unmountLocal } = render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<Login />} />
         </Routes>
       </MemoryRouter>
     );
-
-    expect(screen.getByRole('button', { name: /Explore Demo Account/i })).toBeTruthy();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Explore Demo Account/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Google/i })).toBeNull();
+
+    // 3. Local mode started with --demo: the demo button is there
+    unmountLocal();
+    demoAvailability.reset();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: { get: () => 'application/json' }, json: async () => ({ demo: true }) }));
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect((await screen.findAllByRole('button', { name: /Explore Demo Account/i })).length).toBeGreaterThan(0);
+    unmount();
+    vi.unstubAllGlobals();
+    demoAvailability.reset();
   });
 
   it('shows Google signup button in cloud mode and hides it in local mode', () => {

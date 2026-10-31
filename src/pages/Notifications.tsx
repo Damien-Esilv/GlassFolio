@@ -22,6 +22,9 @@ import {
 import { useData } from '../context/DataContext';
 import { Alert, AlertRule, AlertRuleMetric, NotificationCategory } from '../types';
 import Button from '../components/Button';
+import { alertText } from '../utils/alertText';
+import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, MAX_STAGGER_STEPS } from '../constants/animations';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 
 function getCategoryIcon(category?: NotificationCategory, type?: string) {
   switch (category) {
@@ -39,7 +42,8 @@ function getCategoryIcon(category?: NotificationCategory, type?: string) {
 }
 
 export const Notifications: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'rules' ? 'rules' : 'inbox';
 
@@ -80,8 +84,9 @@ export const Notifications: React.FC = () => {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesTitle = alert.title.toLowerCase().includes(query);
-        const matchesMsg = alert.message.toLowerCase().includes(query);
+        const { title, message } = alertText(alert, t);
+        const matchesTitle = title.toLowerCase().includes(query);
+        const matchesMsg = message.toLowerCase().includes(query);
         if (!matchesTitle && !matchesMsg) return false;
       }
       // Category filter
@@ -94,11 +99,11 @@ export const Notifications: React.FC = () => {
       }
       return true;
     });
-  }, [alerts, searchQuery, selectedCategory, selectedStatus]);
+  }, [alerts, searchQuery, selectedCategory, selectedStatus, t]);
 
   const handleCreateRuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ruleForm.name.trim()) return;
+    if (!ruleForm.name.trim() || !Number.isFinite(Number(ruleForm.threshold))) return;
 
     await saveAlertRule({
       name: ruleForm.name,
@@ -118,7 +123,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-in">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -140,7 +145,7 @@ export const Notifications: React.FC = () => {
                 : 'text-secondary hover:text-primary'
             }`}
           >
-            {t('notifications:tabs.inbox')} ({unreadAlertsCount})
+            {t('notifications:tabs.inbox')} (<AnimatedNumber value={unreadAlertsCount} locale={locale} />)
           </button>
           <button
             type="button"
@@ -151,7 +156,7 @@ export const Notifications: React.FC = () => {
                 : 'text-secondary hover:text-primary'
             }`}
           >
-            {t('notifications:tabs.rules')} ({alertRules.length})
+            {t('notifications:tabs.rules')} (<AnimatedNumber value={alertRules.length} locale={locale} />)
           </button>
         </div>
       </div>
@@ -162,7 +167,9 @@ export const Notifications: React.FC = () => {
           <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
             {t('notifications:stats.total')}
           </p>
-          <p className="text-2xl font-black text-primary mt-1">{alerts.length}</p>
+          <p className="text-2xl font-black text-primary mt-1">
+            <AnimatedNumber value={alerts.length} locale={locale} />
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-card border border-subtle">
@@ -170,7 +177,7 @@ export const Notifications: React.FC = () => {
             {t('notifications:stats.unread')}
           </p>
           <p className={`text-2xl font-black mt-1 ${unreadAlertsCount > 0 ? 'text-primary font-bold' : 'text-secondary'}`}>
-            {unreadAlertsCount}
+            <AnimatedNumber value={unreadAlertsCount} locale={locale} />
           </p>
         </div>
 
@@ -179,7 +186,7 @@ export const Notifications: React.FC = () => {
             {t('notifications:stats.activeRules')}
           </p>
           <p className="text-2xl font-black text-primary mt-1">
-            {alertRules.filter((r) => r.enabled).length}
+            <AnimatedNumber value={alertRules.filter((r) => r.enabled).length} locale={locale} />
           </p>
         </div>
 
@@ -187,7 +194,9 @@ export const Notifications: React.FC = () => {
           <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
             {t('notifications:stats.categories')}
           </p>
-          <p className="text-2xl font-black text-brand mt-1">4</p>
+          <p className="text-2xl font-black text-brand mt-1">
+            <AnimatedNumber value={4} locale={locale} />
+          </p>
         </div>
       </div>
 
@@ -247,7 +256,9 @@ export const Notifications: React.FC = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => clearReadAlerts()}
+                onClick={() => {
+                  if (window.confirm(t('notifications:filters.clearReadConfirm'))) void clearReadAlerts();
+                }}
                 className="text-xs shrink-0 text-secondary hover:text-negative"
               >
                 <Trash2 size={14} className="mr-1" />
@@ -267,12 +278,16 @@ export const Notifications: React.FC = () => {
                 </p>
               </div>
             ) : (
-              filteredAlerts.map((alert) => (
+              filteredAlerts.map((alert, idx) => (
                 <div
                   key={alert.id}
-                  className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-subtle/40 ${
+                  className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-subtle/40 animate-row-in ${
                     !alert.read ? 'bg-primary/5' : ''
                   }`}
+                  style={{
+                    animationDelay: `${Math.min(idx, MAX_STAGGER_STEPS) * STAGGER_DELAY_MS}ms`,
+                    animationFillMode: 'both',
+                  }}
                 >
                   <div className="p-2.5 rounded-xl bg-subtle shrink-0 mt-0.5">
                     {getCategoryIcon(alert.category, alert.type)}
@@ -288,10 +303,10 @@ export const Notifications: React.FC = () => {
                           }}
                           className="text-xs font-bold text-primary hover:underline"
                         >
-                          {alert.title}
+                          {alertText(alert, t).title}
                         </Link>
                       ) : (
-                        <span className="text-xs font-bold text-primary">{alert.title}</span>
+                        <span className="text-xs font-bold text-primary">{alertText(alert, t).title}</span>
                       )}
                       {!alert.read && (
                         <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-primary/20 text-primary">
@@ -299,7 +314,7 @@ export const Notifications: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-secondary mt-1">{alert.message}</p>
+                    <p className="text-xs text-secondary mt-1">{alertText(alert, t).message}</p>
 
                     <div className="flex flex-wrap items-center gap-4 mt-2 text-[11px] text-tertiary">
                       <span className="flex items-center gap-1">
@@ -374,7 +389,7 @@ export const Notifications: React.FC = () => {
           {isCreatingRule && (
             <form
               onSubmit={handleCreateRuleSubmit}
-              className="p-5 rounded-2xl bg-card border border-primary/30 shadow-lg space-y-4 animate-in fade-in slide-in-from-top-2"
+              className="p-5 rounded-2xl bg-card border border-primary/30 shadow-lg space-y-4"
             >
               <h4 className="text-sm font-bold text-primary flex items-center gap-2">
                 <SlidersHorizontal size={16} className="text-primary" />
@@ -440,9 +455,10 @@ export const Notifications: React.FC = () => {
                     step="any"
                     required
                     placeholder={t('notifications:rules.thresholdPlaceholder')}
-                    value={ruleForm.threshold || ''}
+                    value={Number.isFinite(ruleForm.threshold) ? ruleForm.threshold : ''}
                     onChange={(e) =>
-                      setRuleForm({ ...ruleForm, threshold: parseFloat(e.target.value) || 0 })
+                      // An empty field stays empty (NaN), so "0" and "0.5" can be typed
+                      setRuleForm({ ...ruleForm, threshold: e.target.value === '' ? Number.NaN : parseFloat(e.target.value) })
                     }
                     className="w-full px-3 py-2 rounded-xl bg-subtle border border-subtle text-primary text-xs focus:ring-primary focus:border-primary"
                   />
@@ -476,10 +492,14 @@ export const Notifications: React.FC = () => {
                 </p>
               </div>
             ) : (
-              alertRules.map((rule) => (
+              alertRules.map((rule, idx) => (
                 <div
                   key={rule.id}
-                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-subtle/30 transition-colors"
+                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-subtle/30 transition-colors animate-row-in"
+                  style={{
+                    animationDelay: `${Math.min(idx, MAX_STAGGER_STEPS) * STAGGER_DELAY_MS}ms`,
+                    animationFillMode: 'both',
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <button

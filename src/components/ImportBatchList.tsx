@@ -14,6 +14,7 @@ import { ImportBatch, Account, Institute } from '../types';
 import { importService } from '../services/importService';
 import { instituteService, accountService } from '../services/instituteService';
 import { useTranslation } from 'react-i18next';
+import { useData } from '../context/DataContext';
 
 interface ImportBatchListProps {
     compact?: boolean;
@@ -27,6 +28,7 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
     showTitle = false
 }) => {
     const { t, i18n } = useTranslation('transactions');
+    const { refreshData } = useData();
     const [batches, setBatches] = useState<ImportBatch[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -79,6 +81,8 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
                     message: t('importHistory.rollbackSuccess', { count: result.deleted || count })
                 });
                 await loadData();
+                // Positions, totals, alerts and goals everywhere else in the app follow the rollback
+                await refreshData();
             } else {
                 setFeedbackMessage({
                     type: 'error',
@@ -117,8 +121,8 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
             completed: { icon: CheckCircle, color: 'text-success bg-success/10', label: t('importHistory.status.completed') },
             partial: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.partial') },
             rolled_back: { icon: XCircle, color: 'text-secondary bg-subtle', label: t('importHistory.status.rolledBack') },
-            pending: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.partial') },
-            failed: { icon: XCircle, color: 'text-error bg-error/10', label: t('importHistory.status.rolledBack') }
+            pending: { icon: AlertTriangle, color: 'text-warning bg-warning/10', label: t('importHistory.status.pending') },
+            failed: { icon: XCircle, color: 'text-error bg-error/10', label: t('importHistory.status.failed') }
         }[status] || { icon: CheckCircle, color: 'text-secondary bg-subtle', label: status };
 
         const Icon = config.icon;

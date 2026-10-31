@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
+    "dev:demo": "node scripts/dev-server.mjs --demo",
     "dev:online": "node scripts/dev-server.mjs --online",
     "dev:cloud": "node scripts/dev-server.mjs --online",
     "dev:local": "node scripts/dev-server.mjs",

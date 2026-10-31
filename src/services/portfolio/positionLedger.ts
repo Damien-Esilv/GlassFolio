@@ -267,16 +267,16 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
 }
 
 /**
- * Chronological order used everywhere: date, then creation time for same-day rows. Rows that
- * share a timestamp (date-only broker files, one batch) put acquisitions before disposals, so a
- * same-day buy and sell never read as an oversell.
+ * Chronological order used everywhere: date, then acquisitions before disposals for rows that share
+ * a timestamp (date-only broker files, entries typed by hand in any order), so a same-day buy and
+ * sell never read as an oversell; then creation time.
  */
 export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'> & { type?: string }>(txs: T[]): T[] {
     const rank = (tx: T): number => (tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0);
     return [...txs].sort((a, b) =>
         new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
-        || (a.createdAt || '').localeCompare(b.createdAt || '')
         || rank(a) - rank(b)
+        || (a.createdAt || '').localeCompare(b.createdAt || '')
     );
 }
 

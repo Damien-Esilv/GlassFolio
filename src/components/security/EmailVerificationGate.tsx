@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailCheck, Send, RefreshCw, LogOut, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Button from '../Button';
 import { authService } from '../../services/security/authService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { captchaTokenForResend, CaptchaRequiredError } from '../../services/security/captchaResend';
+import { AntiBotShield, AntiBotShieldHandle } from './AntiBotShield';
 
 interface EmailVerificationGateProps {
     userEmail: string;
@@ -25,6 +27,7 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isResending, setIsResending] = useState(false);
+    const antiBotRef = useRef<AntiBotShieldHandle | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
@@ -80,14 +83,18 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
         setIsResending(true);
 
         try {
+            const captchaToken = captchaTokenForResend(antiBotRef.current?.getPayload().captchaToken);
             if (authService.resendEmailVerification) {
-                await authService.resendEmailVerification(userEmail);
+                await authService.resendEmailVerification(userEmail, { captchaToken });
             }
             setCooldown(RESEND_COOLDOWN_SECONDS);
-            setSuccessMessage(t('auth:verification.emailSent', 'A new verification link and code have been sent to your email.'));
+            setSuccessMessage(t('auth:verification.emailSent'));
         } catch (err: unknown) {
-            setError(mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
+            setError(err instanceof CaptchaRequiredError
+                ? t('auth:verification.captchaRequired')
+                : mapAuthErrorMessage(err, t, 'auth:verification.resendFailed'));
         } finally {
+            antiBotRef.current?.reset();
             setIsResending(false);
         }
     };
@@ -160,6 +167,7 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
                 </form>
 
                 <div className="pt-2 border-t border-subtle flex flex-col gap-2">
+                    <AntiBotShield ref={antiBotRef} />
                     <Button
                         type="button"
                         variant="secondary"
@@ -173,8 +181,8 @@ export const EmailVerificationGate: React.FC<EmailVerificationGateProps> = ({
                             <Send size={16} className="mr-2" />
                         )}
                         {cooldown > 0
-                            ? t('auth:verification.resendCooldown', { seconds: cooldown, defaultValue: `Resend in ${cooldown}s` })
-                            : t('auth:verification.resendButton', 'Resend verification email')}
+                            ? t('auth:verification.resendCooldown', { seconds: cooldown })
+                            : t('auth:verification.resendButton')}
                     </Button>
 
                     <Button

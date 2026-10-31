@@ -23,29 +23,44 @@ const TaxHub: React.FC = () => {
     const { user } = useAuth();
 
     const [fiscalYear, setFiscalYear] = useState<string>(DEFAULT_FISCAL_YEAR);
-    const [summary, setSummary] = useState<TaxSummaryResult | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
     const profile: FiscalProfile = user?.preferences?.fiscalProfile || {};
+    const [summary, setSummary] = useState<TaxSummaryResult | null>(() => taxService.getCachedTaxSummary(fiscalYear, profile));
+    const [isLoading, setIsLoading] = useState(!summary);
+
     const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
     const supportedYears = taxService.getSupportedYears();
 
     // Compute the declaration year from the fiscal year rules
     const declarationYear = (parseInt(fiscalYear) + 1).toString();
 
+    const profileKey = JSON.stringify(profile);
     useEffect(() => {
+        // A late answer for a year the user already left must not replace the current one
+        let cancelled = false;
         const loadSummary = async () => {
+            const cached = taxService.getCachedTaxSummary(fiscalYear, profile);
+            if (cached) {
+                setSummary(cached);
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 const result = await taxService.getTaxSummary(fiscalYear, profile);
-                setSummary(result);
+                if (!cancelled) setSummary(result);
             } catch (err) {
                 console.error('Failed to load tax summary:', err);
+                // Never leave another year's figures under this year's title
+                if (!cancelled) setSummary(null);
             }
-            setIsLoading(false);
+            if (!cancelled) setIsLoading(false);
         };
         loadSummary();
-    }, [fiscalYear]);
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- profile is read through profileKey
+    }, [fiscalYear, profileKey]);
 
     const cards: TaxHubCardItem[] = [
         {

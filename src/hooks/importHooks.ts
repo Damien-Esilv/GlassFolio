@@ -5,7 +5,7 @@
  * Manages the 5-step import flow: Context → Upload → Mapping → Staging → Complete
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     Institute,
     Account,
@@ -21,7 +21,24 @@ import {
     parseCSVText
 } from '../services/importService';
 import { instituteService, accountService } from '../services/instituteService';
+import {
+    describeImportInstruments,
+    resolveStagedInstrument,
+    revalidateStagedRow,
+} from '../services/import/importManager';
+import type { ImportInstrumentSummary } from '../services/import/importManager';
+import {
+    clearStagedInstruments,
+    findInstrument,
+    isStagedInstrument,
+    previewStagedIssues,
+    resolveInstrumentId,
+    updateStagedInstrument,
+} from '../services/import/instrumentDrafts';
+import { instrumentService } from '../services/instrumentService';
+import type { InstrumentIssue, InstrumentPatch } from '../services/instrumentService';
 import { readAndParseCsvFile } from '../services/import/csvWorkerClient';
+import { parseDate, parseDecimal } from '../services/import/typeNormalizer';
 import {
     proposeColumnMapping,
     proposalsToMappings,
@@ -87,6 +104,8 @@ export interface ImportWizardState {
     // Step 4: Staging Area
     stagedTransactions: StagedTransaction[];
     stats: ParseResult['stats'];
+    /** The assets the rows point at (new ones are drafts until the import is confirmed) */
+    instruments: ImportInstrumentSummary[];
     editingRowId: string | null;
 
     // Step 5: Complete
@@ -210,10 +229,22 @@ const initialState: ImportWizardState = {
 
     stagedTransactions: [],
     stats: { total: 0, valid: 0, errors: 0, duplicates: 0, warnings: 0 },
+    instruments: [],
     editingRowId: null,
 
     completedBatch: null,
 };
+
+const computeStats = (rows: StagedTransaction[]): ParseResult['stats'] => ({
+    total: rows.length,
+    valid: rows.filter(c => c.status === 'valid').length,
+    errors: rows.filter(c => c.status === 'error').length,
+    duplicates: rows.filter(c => c.status === 'duplicate').length,
+    warnings: rows.filter(c => c.status === 'warning').length
+});
+
+/** How long to wait after the last keystroke before looking up the asset of an edited row. */
+const ROW_ASSET_RESOLVE_DELAY_MS = 400;
 
 // ============================================================================
 // HOOK
@@ -221,6 +252,14 @@ const initialState: ImportWizardState = {
 
 export const useImportWizard = (userId: string = 'default-user') => {
     const [state, setState] = useState<ImportWizardState>(initialState);
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const resolveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    /** Rows whose cells were typed in the review: stored like file values once editing ends. */
+    const editedRowIds = useRef(new Set<string>());
+    useEffect(() => () => {
+        Object.values(resolveTimers.current).forEach(clearTimeout);
+    }, []);
 
     // Helpers for partial state updates
     const updateState = useCallback((updates: Partial<ImportWizardState>) => {
@@ -378,6 +417,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
                 existingBatch,
                 mappings,
                 detectedPreset,
+                // A new file is read on its own: the date order chosen for the previous one may not apply
+                dateFormat: 'auto',
                 isLoading: false,
                 step: 3 // Move to mapping step
             });
@@ -536,6 +577,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
             updateState({
                 stagedTransactions: result.candidates,
                 stats: result.stats,
+                instruments: result.instruments ?? [],
                 isLoading: false,
                 step: 4
             });
@@ -572,13 +614,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
             return {
                 ...prev,
                 stagedTransactions: filtered,
-                stats: {
-                    total: filtered.length,
-                    valid: filtered.filter(c => c.status === 'valid').length,
-                    errors: filtered.filter(c => c.status === 'error').length,
-                    duplicates: filtered.filter(c => c.status === 'duplicate').length,
-                    warnings: filtered.filter(c => c.status === 'warning').length
-                }
+                stats: computeStats(filtered),
+                instruments: describeImportInstruments(filtered)
             };
         });
     }, []);
@@ -587,48 +624,94 @@ export const useImportWizard = (userId: string = 'default-user') => {
         updateState({ editingRowId: rowId });
     }, [updateState]);
 
+    /**
+     * A cell typed in the review is text in the user's own format ("1 234,56", "05/01/2024"): read it
+     * like the file's values, or it would be stored as is (1 instead of 1234.56, a non-ISO date).
+     */
+    const normalizeEditedRows = (rows: StagedTransaction[], dateFormat: DateFormatHint | 'auto', mode: ImportMode): StagedTransaction[] => {
+        if (editedRowIds.current.size === 0) return rows;
+        const edited = new Set(editedRowIds.current);
+        editedRowIds.current.clear();
+        return rows.map(row => {
+            if (!edited.has(row.id)) return row;
+            const date = row.parsed.transactionDate
+                ? parseDate(row.parsed.transactionDate, dateFormat === 'auto' ? undefined : dateFormat)
+                : null;
+            const amount = row.parsed.amountPrimary ? parseDecimal(row.parsed.amountPrimary) : null;
+            const parsed = {
+                ...row.parsed,
+                ...(date ? { transactionDate: date } : {}),
+                ...(amount !== null ? { amountPrimary: amount } : {}),
+            };
+            return revalidateStagedRow({ ...row, parsed }, mode);
+        });
+    };
+
     const cancelEditRow = useCallback(() => {
-        updateState({ editingRowId: null });
-    }, [updateState]);
-
-    const updateRowField = useCallback((rowId: string, field: string, value: string) => {
         setState(prev => ({
-            ...prev,
-            stagedTransactions: prev.stagedTransactions.map(t => {
-                if (t.id !== rowId) return t;
-
-                // Update the parsed field
-                const updated = {
-                    ...t,
-                    parsed: {
-                        ...t.parsed,
-                        [field]: value
-                    }
-                };
-
-                // Re-validate
-                const errors = [];
-                if (!updated.parsed.transactionDate) {
-                    errors.push({ field: 'transactionDate', message: i18n.t('transactions:importWizard.validation.dateRequired'), severity: 'error' as const });
-                }
-                if (!updated.parsed.amountPrimary) {
-                    errors.push({ field: 'amountPrimary', message: i18n.t('transactions:importWizard.validation.amountRequired'), severity: 'error' as const });
-                }
-                if (!updated.parsed.assetSymbol && !updated.parsed.assetIsin) {
-                    errors.push({ field: 'assetSymbol', message: i18n.t('transactions:importWizard.validation.identifierRequired'), severity: 'error' as const });
-                }
-
-                const hasErrors = errors.some(e => e.severity === 'error');
-
-                return {
-                    ...updated,
-                    errors,
-                    status: hasErrors ? 'error' : 'valid',
-                    resolution: hasErrors ? 'skip' : t.resolution === 'skip' ? 'pending' : t.resolution
-                } as StagedTransaction;
-            })
+            ...refreshRows(prev, normalizeEditedRows(prev.stagedTransactions, prev.dateFormat, prev.importMode)),
+            editingRowId: null,
         }));
     }, []);
+
+    /** Rows re-validated with the full rules; the asset summary and the counters follow. */
+    const refreshRows = (prev: ImportWizardState, rows: StagedTransaction[]): ImportWizardState => ({
+        ...prev,
+        stagedTransactions: rows,
+        stats: computeStats(rows),
+        instruments: describeImportInstruments(rows)
+    });
+
+    const updateRowField = useCallback((rowId: string, field: string, value: string) => {
+        editedRowIds.current.add(rowId);
+        setState(prev => refreshRows(prev, prev.stagedTransactions.map(t => {
+            if (t.id !== rowId) return t;
+            return revalidateStagedRow({ ...t, parsed: { ...t.parsed, [field]: value } }, prev.importMode);
+        })));
+
+        // A new symbol or ISIN points the row at another asset: look it up once typing pauses
+        if (field === 'assetSymbol' || field === 'assetIsin') {
+            clearTimeout(resolveTimers.current[rowId]);
+            resolveTimers.current[rowId] = setTimeout(async () => {
+                const current = stateRef.current;
+                const row = current.stagedTransactions.find(t => t.id === rowId);
+                if (!row || !current.selectedAccountId) return;
+                const instrument = await resolveStagedInstrument(
+                    { symbol: row.parsed.assetSymbol, isin: row.parsed.assetIsin },
+                    current.selectedAccountId
+                );
+                setState(prev => refreshRows(prev, prev.stagedTransactions.map(t => {
+                    if (t.id !== rowId || t.parsed.assetSymbol !== row.parsed.assetSymbol || t.parsed.assetIsin !== row.parsed.assetIsin) return t;
+                    return revalidateStagedRow({ ...t, parsed: { ...t.parsed, instrumentId: instrument?.id } }, prev.importMode);
+                })));
+            }, ROW_ASSET_RESOLVE_DELAY_MS);
+        }
+    }, []);
+
+    /** Live integrity checks of an asset being edited in the review (nothing is saved). */
+    const previewImportInstrumentIssues = useCallback((instrumentId: string, patch: InstrumentPatch): InstrumentIssue[] => {
+        return isStagedInstrument(instrumentId)
+            ? previewStagedIssues(instrumentId, patch)
+            : instrumentService.previewInstrumentIssues(instrumentId, patch);
+    }, []);
+
+    /**
+     * Edit an asset of the import. A new one is a draft (persisted when the import is confirmed); one
+     * already in the portfolio is updated right away. With `mergeInto` it is merged into that duplicate.
+     * Throws an InstrumentValidationError when the edit is refused.
+     */
+    const updateImportInstrument = useCallback(async (instrumentId: string, patch: InstrumentPatch, mergeInto?: string): Promise<void> => {
+        const kept = isStagedInstrument(instrumentId)
+            ? updateStagedInstrument(instrumentId, patch, mergeInto)
+            : (await instrumentService.updateInstrument(instrumentId, patch, { mergeInto })).instrument;
+        setState(prev => refreshRows(prev, prev.stagedTransactions.map(t => {
+            const id = t.parsed.instrumentId;
+            if (!id || (resolveInstrumentId(id) !== kept.id && id !== instrumentId)) return t;
+            return revalidateStagedRow({ ...t, parsed: { ...t.parsed, instrumentId: kept.id } }, prev.importMode);
+        })));
+    }, []);
+
+    const findImportInstrument = useCallback((instrumentId: string) => findInstrument(instrumentId), []);
 
     const downloadInvalidRows = useCallback(() => {
         // Generate CSV for invalid rows only
@@ -671,8 +754,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
         updateState({ isLoading: true, error: null });
 
         try {
-            // Set all pending valid/warning rows to import
-            const toCommit = state.stagedTransactions.map(t => ({
+            // Set all pending valid/warning rows to import (a row still being edited is read first)
+            const toCommit = normalizeEditedRows(state.stagedTransactions, state.dateFormat, state.importMode).map(t => ({
                 ...t,
                 resolution: t.resolution === 'pending' && (t.status === 'valid' || t.status === 'warning')
                     ? 'import' as const
@@ -706,7 +789,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
         } catch (err) {
             updateState({ error: i18n.t('transactions:importWizard.errors.failedToCompleteImport'), isLoading: false });
         }
-    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, state.delimiter, userId, updateState]);
+    }, [state.selectedAccountId, state.file, state.rawCSVText, state.stagedTransactions, state.importMode, state.delimiter, state.dateFormat, userId, updateState]);
 
     // =========================================================================
     // NAVIGATION
@@ -725,6 +808,7 @@ export const useImportWizard = (userId: string = 'default-user') => {
     }, []);
 
     const reset = useCallback(() => {
+        clearStagedInstruments();
         setState(prev => ({
             ...initialState,
             institutes: prev.institutes,
@@ -867,6 +951,9 @@ export const useImportWizard = (userId: string = 'default-user') => {
         startEditRow,
         cancelEditRow,
         updateRowField,
+        updateImportInstrument,
+        previewImportInstrumentIssues,
+        findImportInstrument,
         downloadInvalidRows,
 
         // Step 5 Actions

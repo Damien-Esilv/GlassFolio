@@ -3,7 +3,10 @@ import { FinancialGoal } from '../types';
 import { Home, Plane, Car, Shield, Wallet, Pin, Trash2, Edit2, Zap, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency } from '../utils/currency';
+import { AnimatedCounter } from './AnimatedCounter';
+import { AnimatedNumber } from './ui/AnimatedNumber';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 
@@ -19,10 +22,11 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
     const { t } = useTranslation();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
-    const currency = user?.preferences?.currency || 'USD';
+    const currency = user?.preferences?.currency || 'EUR';
     const Icon = ICON_MAP[goal.iconType] || Wallet;
     const safeCurrent = goal.currentAmount || 0;
-    const progress = Math.min((safeCurrent / goal.targetAmount) * 100, 100);
+    const progress = goal.targetAmount > 0 ? Math.min((safeCurrent / goal.targetAmount) * 100, 100) : 0;
+    const entered = useEntranceAnimation();
 
     let colorClass = 'bg-accent-blue';
     if (goal.color === 'emerald') colorClass = 'bg-accent-green';
@@ -40,19 +44,27 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
         <div className="relative group rounded-xl bg-card p-6 shadow-lg border border-border hover:border-strong transition-all">
             {/* Actions (Only show if handlers provided) */}
             {(onPin || onEdit || onDelete) && (
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                // Always visible on touch screens (nothing to hover with) and when reached with the keyboard
+                <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity z-10">
                     {onPin && (
-                        <button onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
+                        <button type="button" aria-label={t('progress:goals.pinGoal')} aria-pressed={Boolean(goal.isPinned)} onClick={() => onPin(goal.id)} className={`p-2 rounded-full hover:bg-card-hover ${goal.isPinned ? 'text-primary' : 'text-secondary'}`}>
                             <Pin size={16} fill={goal.isPinned ? "currentColor" : "none"} />
                         </button>
                     )}
                     {onEdit && (
-                        <button onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
+                        <button type="button" aria-label={t('progress:goals.editGoal')} onClick={() => onEdit(goal)} className="p-2 rounded-full hover:bg-card-hover text-secondary">
                             <Edit2 size={16} />
                         </button>
                     )}
                     {onDelete && (
-                        <button onClick={() => onDelete(goal.id)} className="p-2 rounded-full hover:bg-error/10 text-error">
+                        <button
+                            type="button"
+                            aria-label={t('progress:goals.deleteGoal')}
+                            onClick={() => {
+                                if (window.confirm(t('progress:goals.deleteGoalConfirm', { title: goal.title }))) onDelete(goal.id);
+                            }}
+                            className="p-2 rounded-full hover:bg-error/10 text-error"
+                        >
                             <Trash2 size={16} />
                         </button>
                     )}
@@ -77,14 +89,17 @@ const GoalCardComponent: React.FC<GoalCardProps> = ({ goal, onEdit, onDelete, on
             <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm font-medium">
                     <span className="text-secondary">{t('common:labels.progress')}</span>
-                    <span className="text-primary">{progress.toFixed(0)}%</span>
+                    <span className="text-primary"><AnimatedNumber value={progress} locale={locale} />%</span>
                 </div>
                 <div className="w-full bg-subtle h-2 rounded-full overflow-hidden">
-                    <div className={`h-full ${colorClass} transition-all duration-1000 relative overflow-hidden`} style={{ width: `${progress}%` }}></div>
+                    <div
+                        className={`h-full ${colorClass} transition-all relative overflow-hidden`}
+                        style={{ width: `${entered ? progress : 0}%`, transitionDuration: `${ANIMATION_DURATION_MS}ms`, transitionTimingFunction: ANIMATION_EASING }}
+                    ></div>
                 </div>
                 <div className="flex justify-between text-xs text-secondary font-mono">
-                    <span>{formatCurrency(safeCurrent, currency, locale, { maximumFractionDigits: 0 })}</span>
-                    <span>{t('common:labels.target')}: {formatCurrency(goal.targetAmount, currency, locale, { maximumFractionDigits: 0 })}</span>
+                    <span><AnimatedCounter value={safeCurrent} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} /></span>
+                    <span>{t('common:labels.target')}: <AnimatedCounter value={goal.targetAmount} currency={currency} locale={locale} options={{ maximumFractionDigits: 0 }} /></span>
                 </div>
             </div>
 

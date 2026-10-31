@@ -11,6 +11,25 @@ function generateId(prefix: string = 'alrt'): string {
   return `${prefix}-${Date.now().toString(36)}-${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** Dismissed alerts with a dedupKey stay as hidden tombstones, so the engine never re-creates them. */
+const MAX_TOMBSTONES = 500;
+
+const visibleAlerts = (alerts: Alert[]): Alert[] => alerts.filter((a) => !a.archived);
+
+/** Hides `alerts` matching `shouldDismiss`: kept as a tombstone when the engine could re-create them. */
+function dismissAlerts(alerts: Alert[], shouldDismiss: (a: Alert) => boolean): Alert[] {
+  const kept = alerts.flatMap((a) => {
+    if (!shouldDismiss(a)) return [a];
+    return a.dedupKey ? [{ ...a, read: true, archived: true }] : [];
+  });
+  const tombstones = kept.filter((a) => a.archived);
+  if (tombstones.length <= MAX_TOMBSTONES) return kept;
+  const oldest = new Set(
+    [...tombstones].sort((a, b) => a.date.localeCompare(b.date)).slice(0, tombstones.length - MAX_TOMBSTONES).map((a) => a.id)
+  );
+  return kept.filter((a) => !oldest.has(a.id));
+}
+
 export interface EvaluateAlertsParams {
   positions: Position[];
   totalPortfolioValue: number;
@@ -26,7 +45,7 @@ export const alertService = {
    */
   getAlerts: async (): Promise<Alert[]> => {
     await delay(100);
-    return db.getAlerts();
+    return visibleAlerts(db.getAlerts());
   },
 
   /**
@@ -45,7 +64,7 @@ export const alertService = {
     const alerts = db.getAlerts();
     const updated = alerts.map((a) => (a.id === alertId ? { ...a, read: true } : a));
     db.saveAlerts(updated);
-    return updated;
+    return visibleAlerts(updated);
   },
 
   /**
@@ -56,7 +75,7 @@ export const alertService = {
     const alerts = db.getAlerts();
     const updated = alerts.map((a) => ({ ...a, read: true }));
     db.saveAlerts(updated);
-    return updated;
+    return visibleAlerts(updated);
   },
 
   /**
@@ -64,10 +83,9 @@ export const alertService = {
    */
   deleteAlert: async (alertId: string): Promise<Alert[]> => {
     await delay(80);
-    const alerts = db.getAlerts();
-    const updated = alerts.filter((a) => a.id !== alertId);
+    const updated = dismissAlerts(db.getAlerts(), (a) => a.id === alertId);
     db.saveAlerts(updated);
-    return updated;
+    return visibleAlerts(updated);
   },
 
   /**
@@ -75,10 +93,9 @@ export const alertService = {
    */
   clearReadAlerts: async (): Promise<Alert[]> => {
     await delay(80);
-    const alerts = db.getAlerts();
-    const updated = alerts.filter((a) => !a.read);
+    const updated = dismissAlerts(db.getAlerts(), (a) => Boolean(a.read) && !a.archived);
     db.saveAlerts(updated);
-    return updated;
+    return visibleAlerts(updated);
   },
 
   /**
@@ -165,7 +182,7 @@ export const alertService = {
     const isMasterEnabled = preferences?.notifications ?? true;
     if (!isMasterEnabled || notifPrefs?.masterEnabled === false) {
       const current = db.getAlerts();
-      return { newAlerts: [], allAlerts: current };
+      return { newAlerts: [], allAlerts: visibleAlerts(current) };
     }
 
     const categoryFlags = {
@@ -176,6 +193,7 @@ export const alertService = {
     };
 
     const dormantCashThreshold = notifPrefs?.dormantCashThresholdPercent ?? 25;
+    const baseCurrency = preferences?.currency || 'EUR';
 
     const existingAlerts = db.getAlerts();
     const existingDedupKeys = new Set(
@@ -194,6 +212,8 @@ export const alertService = {
         let isTriggered = false;
         let alertTitle = rule.name;
         let alertMessage = '';
+        let messageKey = '';
+        let messageParams: Record<string, string | number> = {};
         let targetUrl = '/positions';
 
         if (rule.metric === 'cash_ratio_above') {
@@ -203,7 +223,9 @@ export const alertService = {
           if (ratio >= rule.threshold) {
             isTriggered = true;
             alertTitle = rule.name;
-            alertMessage = `La part de liquidités (${ratio.toFixed(1)}%) dépasse votre seuil de ${rule.threshold}%.`;
+            alertMessage = `Cash share (${ratio.toFixed(1)}%) is above your ${rule.threshold}% threshold.`;
+            messageKey = 'notifications:engine.cashRatioAbove';
+            messageParams = { ratio, threshold: rule.threshold };
             targetUrl = '/portfolio/summary';
           }
         } else if (rule.symbol) {
@@ -211,17 +233,22 @@ export const alertService = {
           if (pos) {
             if (rule.metric === 'price_above' && pos.lastPrice >= rule.threshold) {
               isTriggered = true;
-              alertMessage = `Le cours de ${pos.symbol} (${pos.lastPrice.toFixed(2)}) a atteint votre seuil haut de ${rule.threshold}.`;
+              alertMessage = `${pos.symbol} price (${pos.lastPrice.toFixed(2)}) reached your upper threshold of ${rule.threshold}.`;
+              messageKey = 'notifications:engine.priceAbove';
             } else if (rule.metric === 'price_below' && pos.lastPrice <= rule.threshold) {
               isTriggered = true;
-              alertMessage = `Le cours de ${pos.symbol} (${pos.lastPrice.toFixed(2)}) est passé sous votre seuil bas de ${rule.threshold}.`;
+              alertMessage = `${pos.symbol} price (${pos.lastPrice.toFixed(2)}) fell below your lower threshold of ${rule.threshold}.`;
+              messageKey = 'notifications:engine.priceBelow';
             } else if (rule.metric === 'pl_percent_above' && pos.unrealizedPLPercent >= rule.threshold) {
               isTriggered = true;
-              alertMessage = `La plus-value latente de ${pos.symbol} (+${pos.unrealizedPLPercent.toFixed(1)}%) dépasse ${rule.threshold}%.`;
+              alertMessage = `${pos.symbol} unrealised gain (+${pos.unrealizedPLPercent.toFixed(1)}%) is above ${rule.threshold}%.`;
+              messageKey = 'notifications:engine.plAbove';
             } else if (rule.metric === 'pl_percent_below' && pos.unrealizedPLPercent <= rule.threshold) {
               isTriggered = true;
-              alertMessage = `La moins-value latente de ${pos.symbol} (${pos.unrealizedPLPercent.toFixed(1)}%) est sous le seuil de ${rule.threshold}%.`;
+              alertMessage = `${pos.symbol} unrealised result (${pos.unrealizedPLPercent.toFixed(1)}%) is below ${rule.threshold}%.`;
+              messageKey = 'notifications:engine.plBelow';
             }
+            messageParams = { symbol: pos.symbol, price: pos.lastPrice, percent: pos.unrealizedPLPercent, threshold: rule.threshold };
           }
         }
 
@@ -234,6 +261,8 @@ export const alertService = {
             category: 'portfolio',
             title: alertTitle,
             message: alertMessage,
+            messageKey: messageKey || undefined,
+            params: messageParams,
             date: nowIso,
             read: false,
             dedupKey,
@@ -261,8 +290,11 @@ export const alertService = {
           id: generateId('cash-alert'),
           type: 'warning',
           category: 'portfolio',
-          title: 'Liquidités dormantes élevées',
-          message: `${cashPct.toFixed(1)}% de votre patrimoine (${Math.round(totalCash).toLocaleString()} €) est non investi. Pensez à déployer selon votre allocation cible.`,
+          title: 'High idle cash',
+          message: `${cashPct.toFixed(1)}% of your wealth (${Math.round(totalCash)} ${baseCurrency}) is not invested.`,
+          titleKey: 'notifications:engine.dormantCashTitle',
+          messageKey: 'notifications:engine.dormantCash',
+          params: { percent: cashPct, amount: Math.round(totalCash), currency: baseCurrency },
           date: nowIso,
           read: false,
           dedupKey: `smart-dormant-cash-${nowIso.slice(0, 7)}`,
@@ -285,8 +317,11 @@ export const alertService = {
           id: generateId('fiscal-alert'),
           type: urgency,
           category: 'fiscal',
-          title: `Échéance fiscale : ${deadlineInfo.departmentName}`,
-          message: `Date limite de télédéclaration le ${deadlineInfo.userDeadline} (dans ${deadlineInfo.daysRemaining} jour${deadlineInfo.daysRemaining > 1 ? 's' : ''}).`,
+          title: `Tax deadline: ${deadlineInfo.departmentName}`,
+          message: `Online filing deadline ${deadlineInfo.userDeadline} (in ${deadlineInfo.daysRemaining} days).`,
+          titleKey: 'notifications:engine.fiscalDeadlineTitle',
+          messageKey: 'notifications:engine.fiscalDeadline',
+          params: { department: deadlineInfo.departmentName, deadline: deadlineInfo.userDeadline, count: deadlineInfo.daysRemaining },
           date: nowIso,
           read: false,
           dedupKey: `smart-fiscal-${currentYear}-${deadlineInfo.userZone}`,
@@ -307,8 +342,11 @@ export const alertService = {
             id: generateId('goal-alert'),
             type: 'info',
             category: 'goals',
-            title: `Objectif atteint à 100% : ${goal.title}`,
-            message: `Félicitations ! Vous avez atteint votre objectif patrimonial de ${target.toLocaleString()} €.`,
+            title: `Goal reached: ${goal.title}`,
+            message: `You reached your goal of ${target} ${baseCurrency}.`,
+            titleKey: 'notifications:engine.goalReachedTitle',
+            messageKey: 'notifications:engine.goalReached',
+            params: { goal: goal.title, target, currency: baseCurrency },
             date: nowIso,
             read: false,
             dedupKey: `smart-goal-reached-${goal.id}`,
@@ -326,11 +364,15 @@ export const alertService = {
           id: generateId('quest-alert'),
           type: 'info',
           category: 'goals',
-          title: 'Récompense de quête disponible',
-          message: `Votre quête est complétée ! Réclamez vos +${quest.rewardXp} XP pour progresser.`,
+          title: 'Quest reward available',
+          message: `Your quest is complete: claim your +${quest.rewardXp} XP.`,
+          titleKey: 'notifications:engine.questRewardTitle',
+          messageKey: 'notifications:engine.questReward',
+          params: { xp: quest.rewardXp },
           date: nowIso,
           read: false,
-          dedupKey: `smart-quest-unclaimed-${quest.id}`,
+          // One reminder per quest and period: next month's completion deserves its own
+          dedupKey: `smart-quest-unclaimed-${quest.id}${quest.periodKey ? `-${quest.periodKey}` : ''}`,
           actionUrl: '/progress?tab=quests',
           actionLabelKey: 'gamification:quests.claimReward',
         });
@@ -345,9 +387,9 @@ export const alertService = {
     if (trulyNewAlerts.length > 0) {
       const mergedAlerts = [...trulyNewAlerts, ...existingAlerts];
       db.saveAlerts(mergedAlerts);
-      return { newAlerts: trulyNewAlerts, allAlerts: mergedAlerts };
+      return { newAlerts: trulyNewAlerts, allAlerts: visibleAlerts(mergedAlerts) };
     }
 
-    return { newAlerts: [], allAlerts: existingAlerts };
+    return { newAlerts: [], allAlerts: visibleAlerts(existingAlerts) };
   },
 };

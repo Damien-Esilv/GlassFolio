@@ -1,6 +1,18 @@
 import { AIProvider, LLMToolSchema } from './types';
 import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 
+/** Models sometimes return malformed JSON arguments: an empty object lets the tool report it. */
+const parseToolArguments = (raw: unknown): Record<string, unknown> => {
+  if (raw && typeof raw === 'object') return raw as Record<string, unknown>;
+  if (typeof raw !== 'string' || raw.trim() === '') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+};
+
 export class OpenAICompatibleProvider implements AIProvider {
   constructor(
     private apiKey: string,
@@ -26,6 +38,18 @@ export class OpenAICompatibleProvider implements AIProvider {
             role: 'tool',
             content: m.content,
             tool_call_id: m.toolCallId || 'call_default',
+          };
+        }
+        // The tool results that follow must answer calls the API sees: echo them back
+        if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
+          return {
+            role: 'assistant',
+            content: m.content || null,
+            tool_calls: m.toolCalls.map((tc) => ({
+              id: tc.id,
+              type: 'function',
+              function: { name: tc.name, arguments: JSON.stringify(tc.arguments ?? {}) },
+            })),
           };
         }
         return {
@@ -84,9 +108,7 @@ export class OpenAICompatibleProvider implements AIProvider {
           toolCalls.push({
             id: tc.id || `call_${Date.now()}`,
             name: tc.function.name,
-            arguments: typeof tc.function.arguments === 'string'
-              ? JSON.parse(tc.function.arguments)
-              : tc.function.arguments || {},
+            arguments: parseToolArguments(tc.function.arguments),
           });
         }
       }

@@ -404,6 +404,12 @@
         "purpose": "Locally caches public prices and exchange rates to limit network calls. Holds no personal data.",
         "lifespan": "Minutes to hours, then refreshed"
       },
+      "assetLookup": {
+        "key": "gf_asset_class_cache / gf_asset_lookup",
+        "category": "Strictly Necessary (Public cache & Preferences)",
+        "purpose": "Remembers on this device what kind of asset a symbol or ISIN is (stock, ETF, crypto) after a lookup, and your choice to switch that lookup off in Settings. Holds only public market identifiers.",
+        "lifespan": "Up to 30 days, then refreshed; the choice stays until you change it"
+      },
       "uiState": {
         "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
         "category": "Strictly Necessary (Preferences & Data)",
@@ -415,6 +421,12 @@
         "category": "Strictly Necessary (Security)",
         "purpose": "Remembers the domain (RP ID) your passkeys are bound to so the vault can be unlocked while locked. Public deployment metadata, no personal data.",
         "lifespan": "Until account deletion or cache clearing"
+      },
+      "chunkReload": {
+        "key": "gf_chunk_reload_at",
+        "category": "Strictly Necessary (Session)",
+        "purpose": "Time of the last automatic reload after a GlassFolio update, so a page that cannot load is reloaded only once instead of in a loop. Contains no personal data.",
+        "lifespan": "Until the tab is closed"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",

@@ -8,6 +8,26 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-4": {
+      "title": "Smoother animations, refined Progress hub, and extensible asset allocation",
+      "highlights": {
+        "animationHarmonization": "All screens now share a harmonious, consistent animation clock. Figures and progression bars count up smoothly without whole-card loading flashes, and settings tabs open instantly.",
+        "progressHubNavigation": "The Progress and Gamification hub navigation is now fully visible and responsive across all screens, with direct access to every tab without side scrolling.",
+        "assetAllocationExtensible": "Portfolio asset allocation dynamically supports custom and alternative asset categories with unique theme-stable palette assignments.",
+        "dashboardTimelineSmoothness": "Switching time ranges on the dashboard is instantaneous and glitch-free, eliminating sparkline flicker and double animation passes."
+      }
+    },
+    "v1-3": {
+      "title": "More accurate taxes, quests that move",
+      "highlights": {
+        "peaWithdrawals": "The declaration assistant now computes the taxable gain of your PEA withdrawals, with the income tax and social contributions due.",
+        "taxAccuracy": "Tax figures are more accurate: up-to-date brackets and rates, amounts in foreign currencies converted at the rate of their day, and a crypto portfolio that counts staking rewards and exchanges.",
+        "quests": "Quests now follow what you actually do each month and quarter, and a reward to claim is announced in your notifications.",
+        "localDemo": "A self-hosted install no longer shows a demo button: start it with npm run dev:demo to open the demo account directly.",
+        "reliability": "Many fixes: you stay signed in with Google after a refresh, data stays in sync across tabs, Escape closes windows, and every message is translated.",
+        "smootherNumbers": "Gains, losses and key figures count up smoothly on every screen, and the tax pages open without a loading flash."
+      }
+    },
     "v1-2": {
       "title": "A smoother Google sign-in",
       "highlights": {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Transaction, Position, Alert, AlertRule, AlertRuleMetric, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
+import { Transaction, Position, Alert, AlertRule, AlertRuleMetric, FinancialGoal, Achievement, AssetGroup, GamificationQuest, XpEvent } from '../types';
 import { useAuth } from './AuthContext';
 import { transactionService } from '../services/transactionService';
 import { portfolioService } from '../services/portfolioService';
@@ -9,6 +9,7 @@ import { goalService } from '../services/goalService';
 import { achievementService } from '../services/achievementService';
 import { gamificationService } from '../services/gamificationService';
 import { getLastPriceFetchTime, clearPriceCache } from '../services/priceService';
+import { currencyService } from '../services/currencyService';
 import { db } from '../services/db';
 import CelebrationModal, { CelebrationData } from '../components/CelebrationModal';
 import { isDemoAccount } from '../services/security/demoAccount';
@@ -24,6 +25,8 @@ interface DataContextType {
   achievements: Achievement[];
   assetGroups: AssetGroup[];
   quests: GamificationQuest[];
+  /** Dated gains of XP (what was earned this week, in the Stats tab) */
+  xpEvents: XpEvent[];
   pinnedBadges: string[];
   isLoading: boolean;
   error: string | null;
@@ -75,6 +78,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [assetGroups, setAssetGroups] = useState<AssetGroup[]>([]);
   const [quests, setQuests] = useState<GamificationQuest[]>([]);
+  const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
   const [pinnedBadges, setPinnedBadges] = useState<string[]>(['ac4', 'ac3', 'ac1']);
   const [activeCelebration, setActiveCelebration] = useState<CelebrationData | null>(null);
   const [lastPriceRefresh, setLastPriceRefresh] = useState<string | null>(() => getLastPriceFetchTime());
@@ -94,6 +98,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const userRef = useRef(user);
   userRef.current = user;
+  // Read through a ref: a new updateProfile identity must not re-run the whole data load.
+  const updateProfileRef = useRef(updateProfile);
+  updateProfileRef.current = updateProfile;
 
   const refreshData = useCallback(async () => {
     const currentUser = userRef.current;
@@ -106,6 +113,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAchievements([]);
       setAssetGroups([]);
       setQuests([]);
+      setXpEvents([]);
       setPinnedBadges([]);
       setIsLoading(false);
       return;
@@ -114,7 +122,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const baseCurr = currentUser?.preferences?.currency || 'EUR';
-      const [txs, pos, alrts, rules, gls, achData, grps, activeQuests, pinned] = await Promise.all([
+      const [txs, pos, alrts, rules, gls, achData, grps, activeQuests, pinned, events] = await Promise.all([
         transactionService.getTransactions(),
         portfolioService.getPositions(),
         alertService.getAlerts(),
@@ -123,7 +131,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         achievementService.getAchievements(),
         goalService.getAssetGroups(),
         gamificationService.getQuests(),
-        gamificationService.getPinnedBadges()
+        gamificationService.getPinnedBadges(),
+        gamificationService.getXpEvents()
       ]);
 
       setTransactions(txs);
@@ -133,12 +142,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAchievements(achData.achievements);
       setAssetGroups(grps);
       setQuests(activeQuests);
+      setXpEvents(events);
       setPinnedBadges(pinned);
 
-      // Evaluate Smart Alerts (Multi-Domain Engine)
-      const totalPortfolioValue = pos.reduce((sum, p) => sum + (p.marketValue || 0), 0);
+      // Evaluate Smart Alerts (Multi-Domain Engine), on values in the base currency
+      const rates = await currencyService.getExchangeRates([...new Set(pos.map(p => p.currency || 'EUR'))], baseCurr);
+      const positionsInBase = pos.map(p => ({
+        ...p,
+        marketValue: currencyService.convertAmount(p.marketValue || 0, p.currency || 'EUR', baseCurr, rates),
+      }));
+      const totalPortfolioValue = positionsInBase.reduce((sum, p) => sum + p.marketValue, 0);
       const evalResult = await alertService.evaluateSmartAlerts({
-        positions: pos,
+        positions: positionsInBase,
         totalPortfolioValue,
         taxZone: currentUser?.preferences?.fiscalProfile?.taxZone,
         preferences: currentUser?.preferences,
@@ -160,7 +175,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newXp = (currentUser.xp || 0) + achData.xpGained;
         const oldLevel = currentUser.level || 1;
         const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
-        updateProfile({ xp: newXp, level: newLevel });
+        updateProfileRef.current({ xp: newXp, level: newLevel }).catch(err => console.error('Failed to save XP', err));
+
+        // Date every gain, so the XP earned this week can be told
+        for (const unlocked of achData.unlockedEvents ?? []) {
+          await gamificationService.recordXp(unlocked.xpReward, 'achievement', unlocked.achievementId);
+        }
+        setXpEvents(await gamificationService.getXpEvents());
 
         const isDemo = isDemoAccount(currentUser);
 
@@ -169,7 +190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (newLevel > oldLevel) {
             setActiveCelebration({
               type: 'level_up',
-              title: `Level Up!`,
+              title: t('gamification:celebration.levelUp'),
               level: newLevel,
               xpGained: achData.xpGained
             });
@@ -196,7 +217,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, updateProfile, t]);
+  }, [user?.id, t]);
 
   /** Clears the 15-min price cache and triggers a full data reload with fresh prices. */
   const forceRefreshPrices = useCallback(async () => {
@@ -207,6 +228,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Initial fetch
   useEffect(() => {
     refreshData();
+  }, [refreshData]);
+
+  // Another tab of this browser saved data: reload it here, or this tab would show (and act on) a stale copy
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = db.subscribeExternalChanges(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void refreshData(); }, 300);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
   }, [refreshData]);
 
   const addTransactions = useCallback(async (newTxs: Transaction[]) => {
@@ -270,24 +304,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const oldLevel = user.level || 1;
       const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
       updateProfile({ xp: newXp, level: newLevel });
+      await gamificationService.recordXp(res.xpReward, 'quest', questId);
+      setXpEvents(await gamificationService.getXpEvents());
       if (newLevel > oldLevel) {
         setActiveCelebration({
           type: 'level_up',
-          title: 'Level Up!',
+          title: t('gamification:celebration.levelUp'),
           level: newLevel,
           xpGained: res.xpReward
         });
       } else {
         setActiveCelebration({
           type: 'rank',
-          title: `+${res.xpReward} XP !`,
-          subtitle: 'Mission accomplie',
+          title: t('gamification:celebration.xpGained', { xp: res.xpReward }),
+          subtitle: t('gamification:celebration.questDone'),
           xpGained: res.xpReward
         });
       }
       setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true, claimed: true } : q));
     }
-  }, [user, updateProfile]);
+  }, [user, updateProfile, t]);
 
   const markAlertAsRead = useCallback(async (alertId: string) => {
     const updated = await alertService.markAlertAsRead(alertId);
@@ -356,6 +392,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       achievements,
       assetGroups,
       quests,
+      xpEvents,
       pinnedBadges,
       isLoading,
       error,

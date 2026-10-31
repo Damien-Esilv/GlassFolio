@@ -11,6 +11,7 @@ import { formatCurrency, SUPPORTED_CURRENCIES } from '../utils/currency';
 import { db } from '../services/db';
 import { ASSET_CLASSES_CONFIG } from '../constants/assetClasses';
 import { STAGGER_DELAY_MS } from '../constants/animations';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const Transactions: React.FC = () => {
     const { t } = useTranslation();
@@ -34,6 +35,7 @@ const Transactions: React.FC = () => {
    const [editingTx, setEditingTx] = useState<Transaction | null>(null);
    const [editForm, setEditForm] = useState<Partial<Transaction>>({})
    const [isSaving, setIsSaving] = useState(false);
+   useEscapeKey(() => { if (!isSaving) setEditingTx(null); }, editingTx !== null);
 
    // Derive institutes & accounts for dependent dropdowns
    const allInstitutes = useMemo(() => db.getInstitutes(), []);
@@ -57,8 +59,8 @@ const Transactions: React.FC = () => {
       const textMatched = allAccounts.filter(a => a.name.toLowerCase().includes(selectedBroker.toLowerCase()));
       if (textMatched.length > 0) return textMatched.map(a => a.name);
 
-      return [`${selectedBroker} Compte Principal`];
-   }, [editForm.source, allInstitutes, allAccounts]);
+      return [t('transactions:filters.defaultAccountName', { broker: selectedBroker })];
+   }, [editForm.source, allInstitutes, allAccounts, t]);
 
    const typeLabels = useMemo(() => ({
       Buy: t('transactions:filters.buy'),
@@ -122,10 +124,10 @@ const Transactions: React.FC = () => {
                      onChange={(e) => setDateRange(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
                   >
-                     <option>{t('transactions:filters.all')}</option>
-                     <option>{t('transactions:filters.last30Days')}</option>
-                     <option>{t('transactions:filters.last90Days')}</option>
-                     <option>{t('transactions:filters.ytd')}</option>
+                     <option value="All">{t('transactions:filters.all')}</option>
+                     <option value="Last 30 Days">{t('transactions:filters.last30Days')}</option>
+                     <option value="Last 90 Days">{t('transactions:filters.last90Days')}</option>
+                     <option value="YTD">{t('transactions:filters.ytd')}</option>
                   </select>
                </div>
 
@@ -154,7 +156,7 @@ const Transactions: React.FC = () => {
                      onChange={(e) => setSide(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
                   >
-                     <option>{t('transactions:filters.all')}</option>
+                     <option value="All">{t('transactions:filters.all')}</option>
                      <option value="Buy">{t('transactions:filters.buy')}</option>
                      <option value="Sell">{t('transactions:filters.sell')}</option>
                      <option value="Deposit">{t('transactions:filters.deposit')}</option>

@@ -9,6 +9,7 @@ import {
   subscribeConsentPreferencesOpen,
 } from '../services/consentService';
 import { getDeploymentMode, getAppTarget } from '../config/deployment';
+import { LegalLink } from './ui/LegalLink';
 
 export const ConsentBanner: React.FC = () => {
   const { t } = useTranslation();
@@ -83,7 +84,7 @@ export const ConsentBanner: React.FC = () => {
           type="button"
           onClick={handleRefuse}
           className="p-1 text-secondary hover:text-primary rounded-md transition-colors"
-          aria-label="Close"
+          aria-label={t('common:buttons.close')}
         >
           <X size={16} />
         </button>
@@ -113,13 +114,20 @@ export const ConsentBanner: React.FC = () => {
       </div>
 
       <div className="mt-3 text-center">
-        <Link
-          to={cookiesPath}
-          onClick={() => setIsVisible(false)}
-          className="text-[11px] text-brand hover:underline font-semibold"
-        >
-          {t('legal:banner.customizeLink')} &rarr;
-        </Link>
+        {/* The app-only build has no /cookies route: the page lives on the showcase site */}
+        {getAppTarget() === 'app' ? (
+          <LegalLink path="/cookies" onClick={() => setIsVisible(false)} className="text-[11px] text-brand hover:underline font-semibold">
+            {t('legal:banner.customizeLink')} &rarr;
+          </LegalLink>
+        ) : (
+          <Link
+            to={cookiesPath}
+            onClick={() => setIsVisible(false)}
+            className="text-[11px] text-brand hover:underline font-semibold"
+          >
+            {t('legal:banner.customizeLink')} &rarr;
+          </Link>
+        )}
       </div>
     </aside>
   );

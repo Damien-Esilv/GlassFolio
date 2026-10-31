@@ -28,6 +28,7 @@ import { formatCurrency } from '../utils/currency';
 import type { ImportBatch } from '../types';
 import type { ReconciliationDiff } from '../services/import/types';
 import DuplicateFileBanner from './import/DuplicateFileBanner';
+import { ImportAssetsTable } from './import/ImportAssetsTable';
 import MappingProfilesPanel from './import/MappingProfilesPanel';
 import { formatFieldError } from './import/formatFieldError';
 
@@ -393,6 +394,13 @@ const SnapshotPreviewStep: React.FC<{
                     <div className="text-xl font-bold text-primary mt-1 font-mono">{formatCurrency(investedAfter, currency, locale)}</div>
                 </div>
             </div>
+
+            {/* The assets of the file: same review and corrections as a history import */}
+            <ImportAssetsTable
+                instruments={snapshot.instruments}
+                onUpdate={snapshot.updateInstrument}
+                preview={snapshot.previewInstrumentIssues}
+            />
 
             {/* Reconciliation Table */}
             <div className="bg-card border border-subtle rounded-xl overflow-hidden shadow-sm">

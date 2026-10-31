@@ -45,6 +45,7 @@ export function localVaultPlugin({ dataDir } = {}) {
       handler ??= createLocalVaultHandler(createLocalVaultStore({ dataDir: resolvedDir }), {
         securityHeaders,
         allowedHosts: (process.env.ALLOWED_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
+        demo: process.env.GLASSFOLIO_DEMO === '1',
       });
       handler(req, res, url).catch(next);
     });

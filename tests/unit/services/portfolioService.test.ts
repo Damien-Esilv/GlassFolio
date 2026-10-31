@@ -12,6 +12,9 @@ import { Position } from '../../../src/types';
 
 vi.mock('../../../src/services/priceService', () => ({
   refreshPositionPrices: vi.fn((positions: Position[]) => Promise.resolve(positions)),
+  fetchRealPriceHistory: vi.fn(async (pos: Position) => pos.symbol === 'AAPL'
+    ? [{ timestamp: 1, price: 100 }, { timestamp: 2, price: 110 }, { timestamp: 3, price: 120 }]
+    : []),
 }));
 
 describe('portfolioService', () => {
@@ -52,6 +55,22 @@ describe('portfolioService', () => {
     vi.clearAllMocks();
   });
 
+  describe('getHoldingsReturnSeries (TGLA-188)', () => {
+    it('builds real curves from price histories, weighted by value, and leaves out classes without history', async () => {
+      vi.spyOn(currencyService, 'getExchangeRates').mockResolvedValue({ USD: 1 });
+      vi.spyOn(currencyService, 'convertAmount').mockImplementation((amount: number) => amount);
+      const cash = { ...samplePositions[0], id: 'c', symbol: 'EUR', type: 'Cash', marketValue: 1755.5 } as Position;
+
+      const series = await portfolioService.getHoldingsReturnSeries([samplePositions[0], samplePositions[1], cash], '1Y', 3, 'USD');
+
+      expect(series.Equities).toEqual([0, 10, 20]);
+      // BTC has no history: no invented crypto curve
+      expect(series.Crypto).toBeUndefined();
+      // Whole portfolio: AAPL (1 755.5) and cash at 0 % (1 755.5) weigh the same
+      expect(series.All).toEqual([0, 5, 10]);
+    });
+  });
+
   describe('getPositions', () => {
     it('returns all positions when no filter is provided', async () => {
       vi.spyOn(portfolioRepository, 'getPositions').mockResolvedValue(samplePositions);
@@ -63,6 +82,22 @@ describe('portfolioService', () => {
       expect(result[1].symbol).toBe('BTC');
     });
 
+    it('never saves an older position list over one recalculated during the price fetch', async () => {
+      const recalculated = [samplePositions[1]];
+      const getPositions = vi.spyOn(portfolioRepository, 'getPositions')
+        .mockResolvedValueOnce(samplePositions)   // read before the (slow) price fetch
+        .mockResolvedValueOnce(recalculated)      // an import recalculated the positions meanwhile
+        .mockResolvedValue(recalculated);
+      const save = vi.spyOn(portfolioRepository, 'savePositions').mockResolvedValue(undefined);
+
+      const result = await portfolioService.getPositions();
+
+      expect(getPositions).toHaveBeenCalledTimes(4);
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save).toHaveBeenCalledWith(recalculated);
+      expect(result.map(p => p.symbol)).toEqual(['BTC']);
+    });
+
     it('filters positions by asset type', async () => {
       vi.spyOn(portfolioRepository, 'getPositions').mockResolvedValue(samplePositions);
       vi.spyOn(portfolioRepository, 'savePositions').mockResolvedValue(undefined);
@@ -70,6 +105,16 @@ describe('portfolioService', () => {
       const result = await portfolioService.getPositions({ type: 'Crypto' });
       expect(result).toHaveLength(1);
       expect(result[0].symbol).toBe('BTC');
+    });
+
+    it('has an "Other" class: bonds and other assets are listed apart from ETFs', async () => {
+      const other: Position = { ...samplePositions[0], id: 'pos-3', instrument: 'Vintage wine', symbol: 'WINE', type: 'Other', lastPrice: 900, marketValue: 900 };
+      vi.spyOn(portfolioRepository, 'getPositions').mockResolvedValue([...samplePositions, other]);
+      vi.spyOn(portfolioRepository, 'savePositions').mockResolvedValue(undefined);
+
+      const result = await portfolioService.getPositions({ type: 'Other' });
+      expect(result.map(p => p.symbol)).toEqual(['WINE']);
+      expect((await portfolioService.getPositions({ type: 'ETFs' }))).toHaveLength(0);
     });
 
     it('filters positions by search query', async () => {

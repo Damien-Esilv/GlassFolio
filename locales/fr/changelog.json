@@ -8,6 +8,26 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-4": {
+      "title": "Animations harmonisées, hub de progrès fluide et répartition d'actifs extensible",
+      "highlights": {
+        "animationHarmonization": "Tous les écrans partagent désormais une horloge d'animation unifiée. Les chiffres et barres de progression s'animent avec fluidité sans scintillement des cartes, et les paramètres s'ouvrent instantanément.",
+        "progressHubNavigation": "La navigation du hub Progrès & Gamification est maintenant accessible en un clic sur tous les écrans, sans défilement horizontal nécessaire.",
+        "assetAllocationExtensible": "La répartition du patrimoine intègre dynamiquement la catégorie Autre et s'adapte automatiquement à toute nouvelle classe d'actifs avec des couleurs stables.",
+        "dashboardTimelineSmoothness": "Le changement de période sur le tableau de bord est instantané et sans coupure, supprimant le double chargement des courbes de performance."
+      }
+    },
+    "v1-3": {
+      "title": "Une fiscalité plus juste, des quêtes qui avancent",
+      "highlights": {
+        "peaWithdrawals": "L’aide déclarative calcule maintenant le gain imposable de vos retraits PEA, avec l’impôt et les prélèvements sociaux dus.",
+        "taxAccuracy": "Les calculs fiscaux sont plus justes : barèmes et taux à jour, montants en devises convertis au taux du jour de l’opération, et un portefeuille crypto qui compte les récompenses de staking et les échanges.",
+        "quests": "Les quêtes suivent maintenant ce que vous faites chaque mois et chaque trimestre, et une récompense à réclamer est signalée dans vos notifications.",
+        "localDemo": "Une installation auto-hébergée n’affiche plus de bouton démo : lancez-la avec npm run dev:demo pour ouvrir directement le compte démo.",
+        "reliability": "De nombreuses corrections : vous restez connecté avec Google après un rafraîchissement, les données restent synchronisées entre onglets, Échap ferme les fenêtres et tous les messages sont traduits.",
+        "smootherNumbers": "Les gains, pertes et chiffres clés défilent en douceur sur tous les écrans, et les pages fiscales s’ouvrent sans écran de chargement."
+      }
+    },
     "v1-2": {
       "title": "Une connexion Google plus fluide",
       "highlights": {

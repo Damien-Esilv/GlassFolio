@@ -15,11 +15,19 @@
 
 import { IStorageProvider } from '../../types/storage';
 import { decryptString, encryptString, parseEnvelope, serializeEnvelope } from '../security/crypto';
+import { VaultRecordUnreadableError } from '../security/vaultTypes';
 import { isSensitiveKey } from './storageKeys';
 
 export interface EncryptedStorageOptions {
     /** Only true during first-time local setup to migrate pre-vault local storage. */
     adoptLegacyPlaintext?: boolean;
+}
+
+export interface VaultIntegrityStatus {
+    /** Records that could not be decrypted: kept unchanged, and every write to them is refused. */
+    corruptedKeys: readonly string[];
+    /** The last encrypted write failed (e.g. storage full): the changes are still queued. */
+    writeFailed: boolean;
 }
 
 export class EncryptedStorageProvider implements IStorageProvider {
@@ -29,9 +37,13 @@ export class EncryptedStorageProvider implements IStorageProvider {
     private drainPromise: Promise<void> = Promise.resolve();
     private draining = false;
     private dek: CryptoKey | null;
-    private readonly corruptedKeys: string[] = [];
+    private readonly corruptedKeys = new Set<string>();
     private lastWriteError: unknown = null;
     private readonly options: EncryptedStorageOptions;
+    private integrity: VaultIntegrityStatus = { corruptedKeys: [], writeFailed: false };
+    private readonly integrityListeners = new Set<() => void>();
+    private readonly dataListeners = new Set<(keys: string[]) => void>();
+    private unsubscribeBacking: (() => void) | null = null;
 
     private constructor(
         private readonly backing: IStorageProvider,
@@ -50,7 +62,34 @@ export class EncryptedStorageProvider implements IStorageProvider {
     ): Promise<EncryptedStorageProvider> {
         const provider = new EncryptedStorageProvider(backing, dek, options);
         await provider.hydrate();
+        provider.listenToBacking();
         return provider;
+    }
+
+    /**
+     * Re-encrypts `records` under a new DEK (DEK rotation, vault migration): they replace the
+     * previous ciphertext. A sensitive record of `backing` left out stays unreadable (and protected).
+     */
+    static rekey(backing: IStorageProvider, dek: CryptoKey, records: Map<string, string>): EncryptedStorageProvider {
+        const provider = new EncryptedStorageProvider(backing, dek);
+        for (const [key, value] of records) {
+            if (!isSensitiveKey(key)) continue;
+            provider.cache.set(key, value);
+            provider.dirty.set(key, value);
+        }
+        for (const key of backing.keys()) {
+            if (isSensitiveKey(key) && !records.has(key)) provider.corruptedKeys.add(key);
+        }
+        provider.publishIntegrity();
+        provider.listenToBacking();
+        if (provider.dirty.size > 0) provider.scheduleDrain();
+        return provider;
+    }
+
+    private listenToBacking(): void {
+        this.unsubscribeBacking = this.backing.onExternalChange?.((keys) => {
+            void this.applyExternalChange(keys);
+        }) ?? null;
     }
 
     private async hydrate(): Promise<void> {
@@ -67,7 +106,7 @@ export class EncryptedStorageProvider implements IStorageProvider {
                     this.dirty.set(key, raw);
                 } else {
                     // Untrusted plaintext injected into storage → reject as corrupted, do not adopt or re-encrypt.
-                    this.corruptedKeys.push(key);
+                    this.corruptedKeys.add(key);
                     console.error(`[vault] Non-envelope plaintext found for sensitive key "${key}" — record ignored.`);
                 }
                 continue;
@@ -75,12 +114,46 @@ export class EncryptedStorageProvider implements IStorageProvider {
             try {
                 this.cache.set(key, await decryptString(dek, envelope, key));
             } catch {
-                // Tampered / foreign ciphertext: never overwrite silently at open time.
-                this.corruptedKeys.push(key);
+                // Tampered / foreign ciphertext: kept as is, and protected from writes (see assertWritable).
+                this.corruptedKeys.add(key);
                 console.error(`[vault] Failed to decrypt "${key}" — record ignored.`);
             }
         }
+        this.publishIntegrity();
         if (this.dirty.size > 0) this.scheduleDrain();
+    }
+
+    /** Re-reads records another tab wrote, so this tab never writes its stale copy back over them. */
+    private async applyExternalChange(keys: string[] | null): Promise<void> {
+        const dek = this.dek;
+        if (!dek) return;
+        const candidates = keys ?? Array.from(new Set([...this.cache.keys(), ...this.backing.keys()]));
+        const changed: string[] = [];
+        for (const key of candidates) {
+            // A pending local write is newer than what the other tab saved
+            if (!isSensitiveKey(key) || this.dirty.has(key)) continue;
+            const raw = this.backing.getItem(key);
+            if (raw === null) {
+                if (this.cache.delete(key)) changed.push(key);
+                this.corruptedKeys.delete(key);
+                continue;
+            }
+            const envelope = parseEnvelope(raw);
+            if (!envelope) continue;
+            try {
+                const plain = await decryptString(dek, envelope, key);
+                if (this.dek !== dek || this.dirty.has(key)) return;
+                if (this.cache.get(key) !== plain) {
+                    this.cache.set(key, plain);
+                    changed.push(key);
+                }
+                this.corruptedKeys.delete(key);
+            } catch {
+                // Keep the copy this tab could read
+            }
+        }
+        this.publishIntegrity();
+        if (changed.length > 0) this.dataListeners.forEach(listener => listener(changed));
     }
 
     // ── IStorageProvider ──────────────────────────────────────────────────────
@@ -97,6 +170,7 @@ export class EncryptedStorageProvider implements IStorageProvider {
             return;
         }
         this.requireDek();
+        this.assertWritable(key);
         this.cache.set(key, value);
         this.dirty.set(key, value);
         this.scheduleDrain();
@@ -108,6 +182,7 @@ export class EncryptedStorageProvider implements IStorageProvider {
             return;
         }
         this.requireDek();
+        this.assertWritable(key);
         this.cache.delete(key);
         this.dirty.set(key, null);
         this.scheduleDrain();
@@ -121,6 +196,9 @@ export class EncryptedStorageProvider implements IStorageProvider {
             ...this.backing.keys().filter(isSensitiveKey),
         ]);
         this.cache.clear();
+        // An explicit wipe is the user's decision: unreadable records go too
+        this.corruptedKeys.clear();
+        this.publishIntegrity();
         sensitive.forEach(key => this.dirty.set(key, null));
         this.scheduleDrain();
     }
@@ -134,8 +212,9 @@ export class EncryptedStorageProvider implements IStorageProvider {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /** Resolves once every pending write has been encrypted and persisted. */
+    /** Resolves once every pending write has been encrypted and persisted (one retry after a failure). */
     async flush(): Promise<void> {
+        if (!this.draining && this.dirty.size > 0) this.scheduleDrain();
         while (this.draining) {
             await this.drainPromise;
         }
@@ -143,9 +222,13 @@ export class EncryptedStorageProvider implements IStorageProvider {
 
     /** Drops decrypted data and the DEK reference. Call `flush()` first. */
     dispose(): void {
+        this.unsubscribeBacking?.();
+        this.unsubscribeBacking = null;
         this.cache.clear();
         this.dirty.clear();
         this.dek = null;
+        this.dataListeners.clear();
+        this.integrityListeners.clear();
     }
 
     isOpen(): boolean {
@@ -153,11 +236,27 @@ export class EncryptedStorageProvider implements IStorageProvider {
     }
 
     getCorruptedKeys(): readonly string[] {
-        return this.corruptedKeys;
+        return this.integrity.corruptedKeys;
     }
 
     getLastWriteError(): unknown {
         return this.lastWriteError;
+    }
+
+    getIntegrityStatus(): VaultIntegrityStatus {
+        return this.integrity;
+    }
+
+    /** Listens to integrity changes (unreadable records, failed writes). */
+    subscribeIntegrity(listener: () => void): () => void {
+        this.integrityListeners.add(listener);
+        return () => this.integrityListeners.delete(listener);
+    }
+
+    /** Listens to records changed by another tab, once they are decrypted into this tab's cache. */
+    subscribeExternalData(listener: (keys: string[]) => void): () => void {
+        this.dataListeners.add(listener);
+        return () => this.dataListeners.delete(listener);
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────
@@ -167,6 +266,20 @@ export class EncryptedStorageProvider implements IStorageProvider {
         return this.dek;
     }
 
+    private assertWritable(key: string): void {
+        if (this.corruptedKeys.has(key)) throw new VaultRecordUnreadableError(key);
+    }
+
+    private publishIntegrity(): void {
+        const corruptedKeys = Array.from(this.corruptedKeys);
+        const writeFailed = this.lastWriteError !== null;
+        if (writeFailed === this.integrity.writeFailed
+            && corruptedKeys.length === this.integrity.corruptedKeys.length
+            && corruptedKeys.every(key => this.integrity.corruptedKeys.includes(key))) return;
+        this.integrity = { corruptedKeys, writeFailed };
+        this.integrityListeners.forEach(listener => listener());
+    }
+
     private scheduleDrain(): void {
         if (this.draining) return;
         this.draining = true;
@@ -174,27 +287,41 @@ export class EncryptedStorageProvider implements IStorageProvider {
     }
 
     private async drain(): Promise<void> {
+        // A record that cannot be written (storage full, too large) is skipped for this pass: it must
+        // not hold back the others queued behind it.
+        const failedKeys = new Set<string>();
+        let lastError: unknown = null;
         try {
             // Let synchronous bursts of writes coalesce.
             await Promise.resolve();
-            while (this.dirty.size > 0 && this.dek) {
-                const batch = Array.from(this.dirty.entries());
-                this.dirty.clear();
-                for (const [key, value] of batch) {
+            while (this.dek) {
+                const next = Array.from(this.dirty.entries()).find(([key]) => !failedKeys.has(key));
+                if (!next) break;
+                const [key, value] = next;
+                const dek = this.dek;
+                try {
                     if (value === null) {
                         this.backing.removeItem(key);
                     } else {
-                        const envelope = await encryptString(this.dek, value, key);
+                        const envelope = await encryptString(dek, value, key);
+                        // Closed (reset, lock) while encrypting: a record of that vault must not land in storage
+                        if (this.dek !== dek) break;
                         this.backing.setItem(key, serializeEnvelope(envelope));
                     }
+                    // Dequeue only once persisted (a failure keeps it queued); a newer write stays pending.
+                    if (this.dirty.get(key) === value) this.dirty.delete(key);
+                } catch (err) {
+                    failedKeys.add(key);
+                    lastError = err;
+                    console.error(`[vault] Encrypted write of "${key}" failed`, err);
                 }
             }
-        } catch (err) {
-            this.lastWriteError = err;
-            console.error('[vault] Encrypted write failed', err);
         } finally {
+            this.lastWriteError = failedKeys.size > 0 ? lastError : null;
             this.draining = false;
-            if (this.dirty.size > 0 && this.dek && this.lastWriteError === null) {
+            this.publishIntegrity();
+            // After a failure, the next write (or flush) retries the whole queue.
+            if (failedKeys.size === 0 && this.dirty.size > 0 && this.dek) {
                 this.scheduleDrain();
             }
         }

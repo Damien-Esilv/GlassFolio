@@ -58,7 +58,16 @@ export interface NormalizedRow {
     /** Problems found while reading the row (type guessing, unsupported corporate action, unknown cost) */
     issues: FieldError[];
     /** Inputs of the row hash, unchanged from the pre-normalizer engine so stored rows still match */
-    hashParts: { date: string; amount: string; symbol: string; type: TransactionType; fee: string | undefined };
+    hashParts: {
+        date: string;
+        amount: string;
+        /** The symbol, or the ISIN when the file has no symbol (two ETFs bought the same day differ) */
+        symbol: string;
+        type: TransactionType;
+        fee: string | undefined;
+        /** Symbol the hash used before the ISIN counted: recognises rows imported by older versions */
+        legacySymbol?: string;
+    };
     /** Valid ISO 4217 code found in the currency column */
     currencyCode?: string;
     /** The row is about a currency (bank statement line), not a security */
@@ -289,9 +298,10 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
         hashParts: {
             date: transactionDate || '',
             amount: amountParsed || derivedAmount || '0',
-            symbol: rawSymbol,
+            symbol: rawSymbol || parsed.assetIsin || '',
             type,
-            fee: feeSigned ?? undefined
+            fee: feeSigned ?? undefined,
+            ...(!rawSymbol && parsed.assetIsin ? { legacySymbol: '' } : {})
         },
         currencyCode,
         isCashAsset,

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ChevronLeft, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Globe, CheckCircle, Info } from 'lucide-react';
 import Button from '../components/Button';
 import { taxService, OptimizationSuggestion } from '../services/fiscal';
+import { getFiscalRules } from '../services/fiscal/taxRules';
 import { DEFAULT_FISCAL_YEAR } from '../constants/fiscalConstants';
 import { FiscalProfile, FiscalConfidence } from '../types/types.backend';
 import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../constants/animations';
@@ -21,8 +22,12 @@ interface PFUComparisonResult {
     confidence: FiscalConfidence;
 }
 
-const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }> = ({ data, isLoading }) => {
-    const { t } = useTranslation();
+const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean; fiscalYear: string }> = ({ data, isLoading, fiscalYear }) => {
+    const { t, i18n } = useTranslation();
+    // The flat tax rate depends on the year (31.4 % from income 2025, LFSS 2026)
+    const rules = getFiscalRules(fiscalYear);
+    const pct = (rate: number | undefined) => rate === undefined ? '' : (rate * 100).toLocaleString(i18n.language, { maximumFractionDigits: 1 });
+    const rates = { total: pct(rules?.pfu.totalRate), ir: pct(rules?.pfu.irRate), social: pct(rules?.pfu.socialRate) };
 
     if (isLoading) return <div className="h-48 bg-card border border-subtle rounded-2xl animate-pulse" />;
     if (!data) return null;
@@ -32,17 +37,17 @@ const PFUCard: React.FC<{ data: PFUComparisonResult | null; isLoading: boolean }
     const isBaremeBetter = data.recommendation === 'BAREME';
 
     return (
-        <div className="bg-card border border-subtle rounded-2xl p-6 space-y-5 animate-fade-in-up">
+        <div className="rounded-2xl bg-card border border-subtle p-6 space-y-5 shadow-md">
             <div>
                 <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.pfuVsBareme.title')}</h3>
-                <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle')}</p>
+                <p className="text-xs text-secondary">{t('tax:optimization.pfuVsBareme.subtitle', rates)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className={`rounded-xl p-4 border transition-all ${isPFUBetter ? 'border-success/40 bg-success/5' : 'border-subtle bg-subtle/40'}`}>
                     <p className="text-xs text-secondary mb-1">{t('tax:optimization.pfuVsBareme.pfuAmount')}</p>
                     <p className="text-2xl font-bold text-primary">{formatEur(data.pfuTotal)}</p>
-                    <p className="text-xs text-secondary mt-2 leading-relaxed">{t('tax:optimization.pfuVsBareme.pfuDescription')}</p>
+                    <p className="text-xs text-secondary mt-2 leading-relaxed">{t('tax:optimization.pfuVsBareme.pfuDescription', rates)}</p>
                 </div>
                 <div className={`rounded-xl p-4 border transition-all ${isBaremeBetter ? 'border-success/40 bg-success/5' : 'border-subtle bg-subtle/40'}`}>
                     <p className="text-xs text-secondary mb-1">{t('tax:optimization.pfuVsBareme.baremeAmount')}</p>
@@ -90,6 +95,11 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
         crypto: 'text-warning bg-warning/10',
         envelope: 'text-accent-purple bg-accent-purple/10',
     };
+    const impactClasses: Record<OptimizationSuggestion['impactKind'], string> = {
+        savings: 'text-success bg-success/10',
+        risk: 'text-error bg-error/10',
+        cost: 'text-warning bg-warning/10',
+    };
     const categoryIcons: Record<OptimizationSuggestion['category'], React.ReactNode> = {
         regime: <TrendingUp size={16} />,
         harvesting: <TrendingDown size={16} />,
@@ -99,23 +109,23 @@ const SuggestionCard: React.FC<{ suggestion: OptimizationSuggestion; index?: num
     };
 
     return (
-        <div 
-            className="bg-card border border-subtle rounded-xl p-5 flex gap-4 hover:border-strong transition-all animate-fade-in-up"
-            style={{ animationDelay: `${index * STAGGER_DELAY_MS}ms` }}
-        >
+        <div className="group rounded-xl bg-card border border-subtle p-5 flex gap-4 hover:border-strong transition-all shadow-sm hover:shadow-md">
             <div className={`p-2 rounded-lg shrink-0 h-fit ${categoryColors[suggestion.category]}`}>
                 {categoryIcons[suggestion.category]}
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4 className="font-semibold text-primary text-sm">{suggestion.title}</h4>
+                    <h4 className="font-semibold text-primary text-sm">{t(`tax:optimization.suggestions.items.${suggestion.titleKey}.title`)}</h4>
                     {suggestion.impact > 0 && (
-                        <span className="shrink-0 text-xs font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
-                            ~{formatEur(suggestion.impact)}
+                        <span
+                            className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${impactClasses[suggestion.impactKind]}`}
+                            title={t(`tax:optimization.suggestions.impactKinds.${suggestion.impactKind}`)}
+                        >
+                            {t(`tax:optimization.suggestions.impactKinds.${suggestion.impactKind}`)} ~{formatEur(suggestion.impact)}
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-secondary leading-relaxed">{suggestion.recommendation}</p>
+                <p className="text-xs text-secondary leading-relaxed">{t(`tax:optimization.suggestions.items.${suggestion.titleKey}.text`, suggestion.params)}</p>
                 <p className="text-xs text-tertiary mt-1">{t(`tax:optimization.suggestions.categories.${suggestion.category}`)}</p>
             </div>
         </div>
@@ -129,7 +139,7 @@ const EnvelopeTable: React.FC = () => {
     const cols = ['gains', 'dividends', 'flexibility', 'ceiling'] as const;
 
     return (
-        <div className="bg-card border border-subtle rounded-2xl p-6">
+        <div className="rounded-2xl bg-card border border-subtle p-6 shadow-md">
             <h3 className="text-lg font-bold text-primary mb-1">{t('tax:optimization.envelope.title')}</h3>
             <p className="text-xs text-secondary mb-5">{t('tax:optimization.envelope.subtitle')}</p>
             <div className="overflow-x-auto">
@@ -173,18 +183,21 @@ const TaxOptimization: React.FC = () => {
     const profileKey = JSON.stringify(profile);
     const hasFiscalProfile = !!(profile.taxResidenceCountries?.length && profile.familyStatus && profile.fiscalShares);
 
-    const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(null);
-    const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const prevFetchKeyRef = useRef<string>('');
+    const cachedOpt = taxService.getCachedTaxOptimization(fiscalYear, profile);
+    const [pfuComparison, setPFUComparison] = useState<PFUComparisonResult | null>(cachedOpt?.pfuComparison ?? null);
+    const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>(cachedOpt?.suggestions ?? []);
+    const [isLoading, setIsLoading] = useState<boolean>(!cachedOpt);
 
     useEffect(() => {
-        const fetchKey = `${fiscalYear}:${profileKey}`;
-        if (prevFetchKeyRef.current === fetchKey) return;
-        prevFetchKeyRef.current = fetchKey;
-
         let isMounted = true;
+        const cached = taxService.getCachedTaxOptimization(fiscalYear, profile);
+        if (cached) {
+            setPFUComparison(cached.pfuComparison);
+            setSuggestions(cached.suggestions);
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
 
         (async () => {
@@ -194,6 +207,7 @@ const TaxOptimization: React.FC = () => {
                     taxService.comparePFUvsBareme(fiscalYear, profile, undefined, summary),
                     taxService.getOptimizationSuggestions(fiscalYear, profile, undefined, summary),
                 ]);
+                taxService.setCachedTaxOptimization(fiscalYear, profile, undefined, pfuResult, sugResult);
                 if (isMounted) {
                     setPFUComparison(pfuResult);
                     setSuggestions(sugResult);
@@ -213,7 +227,7 @@ const TaxOptimization: React.FC = () => {
     }, [fiscalYear, profileKey]);
 
     return (
-        <div className="space-y-6 w-full animate-fade-in">
+        <div className="space-y-6 w-full">
             {/* Header */}
             <div>
                 <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
@@ -224,14 +238,17 @@ const TaxOptimization: React.FC = () => {
             </div>
 
             {/* Disclaimer */}
-            <div className="rounded-xl bg-warning/10 border border-warning/30 p-4 flex gap-3">
+            <div className="animate-slide-in-left rounded-xl bg-warning/10 border border-warning/30 p-4 flex gap-3">
                 <AlertTriangle size={18} className="text-warning shrink-0 mt-0.5" />
                 <p className="text-xs text-secondary leading-relaxed">{t('tax:hub.disclaimer')}</p>
             </div>
 
             {/* Incomplete Fiscal Profile Warning Banner */}
             {!hasFiscalProfile && (
-                <div className="rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div
+                    className="animate-slide-in-left rounded-xl bg-brand/10 border border-brand/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    style={{ animationDelay: `${STAGGER_DELAY_MS}ms` }}
+                >
                     <div className="flex-1">
                         <h3 className="text-sm font-semibold text-primary mb-1">{t('tax:hub.profileRequired')}</h3>
                         <p className="text-xs text-secondary">{t('tax:hub.profileRequiredDesc')}</p>
@@ -246,10 +263,18 @@ const TaxOptimization: React.FC = () => {
             )}
 
             {/* PFU vs Barème */}
-            <PFUCard data={pfuComparison} isLoading={isLoading} />
+            <div
+                className="animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 1 : 2) * STAGGER_DELAY_MS}ms` }}
+            >
+                <PFUCard data={pfuComparison} isLoading={isLoading} fiscalYear={fiscalYear} />
+            </div>
 
             {/* Personalized suggestions */}
-            <div className="space-y-4">
+            <div
+                className="space-y-4 animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 2 : 3) * STAGGER_DELAY_MS}ms` }}
+            >
                 <h2 className="text-lg font-bold text-primary">{t('tax:optimization.suggestions.title')}</h2>
                 {isLoading ? (
                     <div className="space-y-3 animate-pulse">
@@ -262,13 +287,24 @@ const TaxOptimization: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {suggestions.map((s, idx) => <SuggestionCard key={s.id} suggestion={s} index={idx} />)}
+                        {suggestions.map((s, idx) => (
+                            <div
+                                key={s.id}
+                                className="animate-slide-in-left"
+                                style={{ animationDelay: `${((hasFiscalProfile ? 2 : 3) + idx + 1) * STAGGER_DELAY_MS}ms` }}
+                            >
+                                <SuggestionCard suggestion={s} index={idx} />
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
             {/* Tax-Loss Harvesting info */}
-            <div className="bg-card border border-subtle rounded-2xl p-6 space-y-3">
+            <div
+                className="animate-slide-in-left bg-card border border-subtle rounded-2xl p-6 space-y-3 shadow-md"
+                style={{ animationDelay: `${(hasFiscalProfile ? 3 : 4) * STAGGER_DELAY_MS}ms` }}
+            >
                 <h3 className="text-lg font-bold text-primary">{t('tax:optimization.harvesting.title')}</h3>
                 <p className="text-xs text-secondary">{t('tax:optimization.harvesting.subtitle')}</p>
                 <div className="rounded-xl bg-brand/5 border border-brand/20 p-3 flex gap-2">
@@ -278,7 +314,12 @@ const TaxOptimization: React.FC = () => {
             </div>
 
             {/* Envelope comparison */}
-            <EnvelopeTable />
+            <div
+                className="animate-slide-in-left"
+                style={{ animationDelay: `${(hasFiscalProfile ? 4 : 5) * STAGGER_DELAY_MS}ms` }}
+            >
+                <EnvelopeTable />
+            </div>
         </div>
     );
 };

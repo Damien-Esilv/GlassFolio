@@ -5,12 +5,14 @@ import { KeyRound, Plus, Trash2, Eye, EyeOff, AlertCircle, X, Check } from 'luci
 import Button from '../Button';
 import { secretsService, SafeSecretItem, SecretItem } from '../../services/security/secretsService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export const SecretsVaultPanel: React.FC = () => {
     const { t } = useTranslation();
 
     const [secrets, setSecrets] = useState<SafeSecretItem[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
+    useEscapeKey(() => setShowAddModal(false), showAddModal);
     const [provider, setProvider] = useState<SecretItem['provider']>('gemini');
     const [label, setLabel] = useState('');
     const [value, setValue] = useState('');
@@ -189,7 +191,7 @@ export const SecretsVaultPanel: React.FC = () => {
                                     value={label}
                                     onChange={(e) => setLabel(e.target.value)}
                                     className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
-                                    placeholder="Production Gemini API Key"
+                                    placeholder={t('security:secrets.labelPlaceholder')}
                                 />
                             </div>
 

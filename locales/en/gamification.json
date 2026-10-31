@@ -7,7 +7,8 @@
     "goals": "Goals",
     "achievements": "Achievements",
     "quests": "Missions",
-    "ranks": "Ranks & Rewards"
+    "ranks": "Ranks & Rewards",
+    "stats": "Stats"
   },
   "level": "Level",
   "xp": "XP",
@@ -28,7 +29,10 @@
     "newRankTitle": "New Investor Rank Unlocked!",
     "rewardGained": "+{{xp}} XP Earned",
     "continue": "Awesome!",
-    "viewBadge": "View Details"
+    "viewBadge": "View Details",
+    "levelUp": "Level up!",
+    "xpGained": "+{{xp}} XP!",
+    "questDone": "Quest complete"
   },
   "ranks": {
     "title": "Investor Ranks",
@@ -52,7 +56,8 @@
     "sovereign": {
       "title": "Financial Sovereign",
       "description": "Full mastery of personal net worth, long-term vision, and financial independence."
-    }
+    },
+    "levelRange": "Lv. {{min}} – {{max}}"
   },
   "themes": {
     "title": "Unlockable Themes",
@@ -84,7 +89,13 @@
     "allocationAudit": {
       "title": "Asset Class Diversification",
       "description": "Hold positions across at least 3 distinct asset classes."
-    }
+    },
+    "frequency": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "onboarding": "Getting started"
+    },
+    "claiming": "Claiming…"
   },
   "badges": {
     "executioner": {
@@ -119,5 +130,21 @@
       "title": "Portfolio Pioneer",
       "description": "Maintain active portfolio tracking consistency"
     }
+  },
+  "stats": {
+    "thisWeek": "This week",
+    "allTime": "All time",
+    "totalTransactions": "Transactions",
+    "currentStreak": "Current streak",
+    "bestStreak": "Best streak",
+    "activeWeeks": "Active weeks",
+    "totalXp": "Total XP",
+    "level": "Level",
+    "achievements": "Achievements unlocked",
+    "goals": "Goals reached",
+    "trackingSince": "Tracking since",
+    "noneYet": "Nothing yet",
+    "weeksUnit_one": "week",
+    "weeksUnit_other": "weeks"
   }
 }

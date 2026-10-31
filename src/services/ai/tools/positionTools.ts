@@ -4,6 +4,7 @@ import { portfolioService } from '../../portfolioService';
 export const listPositionsTool: AIToolDefinition<
   { type?: string; searchQuery?: string },
   Array<{
+    instrumentId?: string;
     symbol: string;
     instrument: string;
     type: string;
@@ -24,7 +25,7 @@ export const listPositionsTool: AIToolDefinition<
     properties: {
       type: {
         type: 'string',
-        description: 'Filter by asset class: All, Equity, Crypto, Cash, ETF',
+        description: 'Filter by asset class: All, Equity, Crypto, Cash, ETF, Other',
       },
       searchQuery: {
         type: 'string',
@@ -40,6 +41,7 @@ export const listPositionsTool: AIToolDefinition<
     const positions = await portfolioService.getPositions(filter);
 
     return positions.map((p) => ({
+      instrumentId: p.instrumentId,
       symbol: p.symbol,
       instrument: p.instrument,
       type: String(p.type),

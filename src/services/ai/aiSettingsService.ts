@@ -176,23 +176,16 @@ class AISettingsService {
         url = 'https://generativelanguage.googleapis.com/v1beta/models';
         headers['x-goog-api-key'] = apiKey.trim();
       } else if (provider === 'anthropic') {
-        url = 'https://api.anthropic.com/v1/messages';
+        // Lists the models: checks the key without spending tokens or depending on a model name
+        url = 'https://api.anthropic.com/v1/models';
         headers['x-api-key'] = apiKey.trim();
         headers['anthropic-version'] = '2023-06-01';
-        headers['dangerously-allow-browser'] = 'true';
+        headers['anthropic-dangerous-direct-browser-access'] = 'true';
       } else {
         return { ok: true };
       }
 
-      const res = await fetch(url, {
-        method: provider === 'anthropic' ? 'POST' : 'GET',
-        headers,
-        body: provider === 'anthropic' ? JSON.stringify({
-          model: model || 'claude-3-5-sonnet-20241022',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'test' }]
-        }) : undefined,
-      });
+      const res = await fetch(url, { method: 'GET', headers });
 
       if (!res.ok) {
         let errMsg = `HTTP ${res.status}`;

@@ -52,8 +52,10 @@ const COOKIE_ROW_KEYS = [
   'supabaseSession',
   'oauthVerifier',
   'marketCaches',
+  'assetLookup',
   'uiState',
   'passkeyRpId',
+  'chunkReload',
 ] as const;
 
 type LegalDocKey = 'legalNotice' | 'privacy' | 'terms';

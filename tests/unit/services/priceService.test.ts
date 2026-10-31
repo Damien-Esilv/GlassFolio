@@ -18,11 +18,14 @@ import {
   getLastPriceFetchTime,
   getManualPriceHistory,
   saveManualPrice,
+  getCachedRealPriceHistory,
+  HISTORICAL_PRICE_CACHE_KEY,
 } from '../../../src/services/priceService';
 import {
   MANUAL_PRICE_HISTORY_KEY,
   LEGACY_MANUAL_PRICE_HISTORY_KEY,
 } from '../../../src/services/storage/storageKeys';
+import { appStorage } from '../../../src/services/storage/appStorage';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const makePosition = (overrides: Partial<Position> = {}): Position => ({
@@ -81,6 +84,8 @@ describe('priceService.getLastPriceFetchTime', () => {
   });
 });
 
+const clearCacheOnly = () => localStorage.removeItem('gf_price_cache');
+
 describe('priceService.refreshPositionPrices', () => {
   beforeEach(() => {
     clearPriceCache();
@@ -120,6 +125,28 @@ describe('priceService.refreshPositionPrices', () => {
     // fetch should not have been called for cash
     expect(mockFetch).not.toHaveBeenCalled();
     expect(result).toHaveLength(1);
+  });
+
+  it('never queries a price tracker for "Other" assets: the price is the latest one entered by hand', async () => {
+    saveManualPrice('ARTWORK', 11000);
+    saveManualPrice('ARTWORK', 12500);
+    // even once the 15-minute price cache is gone, the hand-entered price stays
+    clearCacheOnly();
+    const positions = [makePosition({ type: 'Other', symbol: 'ARTWORK', quantity: 2, avgCost: 10000, lastPrice: 10000, marketValue: 20000 })];
+
+    const result = await refreshPositionPrices(positions);
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result[0].lastPrice).toBe(12500);
+    expect(result[0].marketValue).toBe(25000);
+    expect(result[0].unrealizedPL).toBe(5000);
+  });
+
+  it('leaves an "Other" asset without a manual price untouched and offline', async () => {
+    const positions = [makePosition({ type: 'Other', symbol: 'WINE', lastPrice: 0, marketValue: 0 })];
+    const result = await refreshPositionPrices(positions);
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result[0].lastPrice).toBe(0);
   });
 
   it('uses cached prices when cache is valid (< 15 min old)', async () => {
@@ -165,6 +192,44 @@ describe('priceService.refreshPositionPrices', () => {
     // Price should be updated
     expect(result[0].lastPrice).toBe(newPrice);
     expect(result[0].marketValue).toBeCloseTo(newPrice * 10);
+  });
+
+  it('converts a USD quote into the currency of a position held on a EUR account', async () => {
+    localStorage.removeItem('gf_fx_rates_cache');
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('USDEUR')) {
+        return { ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 0.9 } }] } }) };
+      }
+      return { ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 200, currency: 'USD' } }] } }) };
+    });
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'AAPL', currency: 'EUR', quantity: 10, avgCost: 150 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(180);
+    expect(pos.marketValue).toBeCloseTo(1800);
+    expect(pos.unrealizedPL).toBeCloseTo(300);
+  });
+
+  it('reads London quotes in pence as pounds', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 1500, currency: 'GBp' } }] } }),
+    });
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'VUSA', exchange: 'LON', currency: 'GBP', quantity: 2, avgCost: 10 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(15);
+    expect(pos.marketValue).toBeCloseTo(30);
+  });
+
+  it('converts a cached crypto pair quoted in USD for a EUR position', async () => {
+    localStorage.removeItem('gf_fx_rates_cache');
+    localStorage.setItem('gf_price_cache', JSON.stringify({ data: { 'BTC-USD': 50000 }, fetchedAt: new Date().toISOString() }));
+    mockFetch.mockImplementation(async () => ({ ok: true, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 0.9 } }] } }) }));
+
+    const [pos] = await refreshPositionPrices([makePosition({ symbol: 'BTC', type: 'Crypto', currency: 'EUR', quantity: 1, avgCost: 30000 })]);
+
+    expect(pos.lastPrice).toBeCloseTo(45000);
   });
 
   it('handles empty positions array without fetching', async () => {
@@ -217,5 +282,44 @@ describe('priceService manual price encryption & migration (Finding #8)', () => 
     clearPriceCache();
     expect(localStorage.getItem(MANUAL_PRICE_HISTORY_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_MANUAL_PRICE_HISTORY_KEY)).toBeNull();
+  });
+});
+
+describe('priceService.getCachedRealPriceHistory', () => {
+  const pos = makePosition({ symbol: 'BTC', currency: 'EUR', type: 'Crypto' });
+
+  beforeEach(() => {
+    appStorage.removeItem(HISTORICAL_PRICE_CACHE_KEY);
+  });
+
+  it('returns null on cache miss', () => {
+    expect(getCachedRealPriceHistory(pos, '1Y')).toBeNull();
+  });
+
+  it('returns cached historical points when cache is fresh', () => {
+    const cacheData = {
+      fetchedAt: new Date().toISOString(),
+      data: {
+        'BTC-USD_1Y': [
+          { date: '2026-01-01', price: 60000 },
+          { date: '2026-01-02', price: 61000 },
+        ],
+      },
+      currencies: { 'BTC-USD_1Y': 'EUR' },
+      estimated: {},
+    };
+    appStorage.setItem(HISTORICAL_PRICE_CACHE_KEY, JSON.stringify(cacheData));
+
+    const result = getCachedRealPriceHistory(pos, '1Y');
+    expect(result).not.toBeNull();
+    expect(result).toHaveLength(2);
+    expect(result![0].price).toBe(60000);
+  });
+
+  it('returns null for Cash or Other positions', () => {
+    const cashPos = makePosition({ type: 'Cash' });
+    const otherPos = makePosition({ type: 'Other' });
+    expect(getCachedRealPriceHistory(cashPos, '1Y')).toBeNull();
+    expect(getCachedRealPriceHistory(otherPos, '1Y')).toBeNull();
   });
 });

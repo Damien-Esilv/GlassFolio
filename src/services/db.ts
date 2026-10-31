@@ -17,7 +17,7 @@ import {
     buildDemoAlerts,
     buildDemoAlertRules
 } from './mockData';
-import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest } from '../types';
+import { Transaction, Position, Alert, AlertRule, FinancialGoal, Achievement, AssetGroup, GamificationQuest, XpEvent } from '../types';
 
 // Backend entity types and mock data
 import {
@@ -55,6 +55,7 @@ const STORAGE_KEYS = {
     ACHIEVEMENTS: 'glassfolio_achievements',
     ASSET_GROUPS: 'glassfolio_asset_groups',
     QUESTS: 'glassfolio_quests',
+    XP_EVENTS: 'glassfolio_xp_events',
     PINNED_BADGES: 'glassfolio_pinned_badges',
     // New multi-asset architecture keys
     INSTITUTES: 'glassfolio_institutes',
@@ -81,6 +82,16 @@ export const isRealUserVaultActive = (): boolean => {
 };
 
 class MockDB {
+    /** Changes whenever the stored user data changes: lets derived results (tax summary) know they are stale. */
+    getDataVersion(): number {
+        return appStorage.getDataVersion();
+    }
+
+    /** Calls `listener` when another tab of this browser changed the stored data. */
+    subscribeExternalChanges(listener: () => void): () => void {
+        return appStorage.subscribeExternalData(() => listener());
+    }
+
     // =========================================================================
     // LEGACY METHODS (Existing Functionality)
     // =========================================================================
@@ -149,6 +160,21 @@ class MockDB {
 
     saveAchievements(data: Achievement[]) {
         appStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(data));
+    }
+
+    getXpEvents(): XpEvent[] {
+        const stored = appStorage.getItem(STORAGE_KEYS.XP_EVENTS);
+        if (!stored) return [];
+        try {
+            const parsed: unknown = JSON.parse(stored);
+            return Array.isArray(parsed) ? (parsed as XpEvent[]) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    saveXpEvents(data: XpEvent[]) {
+        appStorage.setItem(STORAGE_KEYS.XP_EVENTS, JSON.stringify(data));
     }
 
     getQuests(): GamificationQuest[] {
@@ -531,6 +557,7 @@ class MockDB {
             assetPositions: pick(() => this.getAssetPositions(), STORAGE_KEYS.ASSET_POSITIONS),
             instruments: pick(() => this.getInstruments(), STORAGE_KEYS.INSTRUMENTS),
             quests: pick(() => this.getQuests(), STORAGE_KEYS.QUESTS),
+            xpEvents: pick(() => this.getXpEvents(), STORAGE_KEYS.XP_EVENTS),
             pinnedBadges: persistedOnly
                 ? this.readPersistedList(STORAGE_KEYS.PINNED_BADGES).map(id => ({ id }))
                 : this.getPinnedBadges().map(id => ({ id })),
@@ -567,6 +594,7 @@ class MockDB {
             STORAGE_KEYS.ACHIEVEMENTS,
             STORAGE_KEYS.ASSET_GROUPS,
             STORAGE_KEYS.QUESTS,
+            STORAGE_KEYS.XP_EVENTS,
             STORAGE_KEYS.PINNED_BADGES,
             STORAGE_KEYS.ACCOUNTS,
             STORAGE_KEYS.IMPORT_BATCHES,

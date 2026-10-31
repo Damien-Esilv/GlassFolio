@@ -19,7 +19,7 @@ describe('backupRestoreService', () => {
                 exportedAt: '2026-10-05T10:00:00Z',
                 schema: 'glassfolio-v1',
                 data: {
-                    transactions: [],
+                    transactions: [{ id: 'tx-1' }],
                     goals: []
                 }
             });
@@ -35,7 +35,7 @@ describe('backupRestoreService', () => {
                 ...(version === undefined ? {} : { version }),
                 exportedAt: '2026-10-05T10:00:00Z',
                 schema: 'transfer',
-                data: { transactions: [] }
+                data: { transactions: [{ id: 'tx-1' }] }
             });
 
             it.each(['1.0', '1.0.0', '1.9.3', 1])('accepts format version %s', version => {
@@ -107,6 +107,36 @@ describe('backupRestoreService', () => {
             expect(saveTxSpy).toHaveBeenCalledWith(mockData.transactions);
             expect(saveGoalsSpy).toHaveBeenCalledWith(mockData.goals);
             expect(savePosSpy).toHaveBeenCalledWith(mockData.positions);
+        });
+    });
+
+    describe('empty or failing restores never wipe the account (TGLA-188)', () => {
+        it('rejects a backup without a single row', () => {
+            const result = validateBackupContent(JSON.stringify({ version: '1.0', data: { transactions: [], goals: [] } }));
+            expect(result.valid).toBe(false);
+            expect(result.error).toBe('empty_backup');
+            expect(validateBackupContent(JSON.stringify({ data: {} })).error).toBe('empty_backup');
+        });
+
+        it('refuses to reset with nothing to restore', async () => {
+            const clearAllSpy = vi.spyOn(db, 'clearAll');
+            await expect(restoreBackupReset({ transactions: [] })).rejects.toThrow(/no data/);
+            expect(clearAllSpy).not.toHaveBeenCalled();
+        });
+
+        it('puts every record back when a write fails half way', async () => {
+            appStorage.setItem('glassfolio_goals', JSON.stringify([{ id: 'kept-goal' }]));
+            appStorage.setItem('glassfolio_transactions', JSON.stringify([{ id: 'kept-tx' }]));
+            vi.spyOn(db, 'saveGoals').mockImplementation(() => { throw new Error('Quota exceeded'); });
+
+            await expect(restoreBackupReset({
+                transactions: [{ id: 'tx-new' } as any],
+                goals: [{ id: 'goal-new' } as any],
+            })).rejects.toThrow(/quota/i);
+
+            expect(JSON.parse(appStorage.getItem('glassfolio_goals') as string)).toEqual([{ id: 'kept-goal' }]);
+            expect(JSON.parse(appStorage.getItem('glassfolio_transactions') as string)).toEqual([{ id: 'kept-tx' }]);
+            vi.restoreAllMocks();
         });
     });
 

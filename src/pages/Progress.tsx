@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,9 @@ import {
     Award, 
     Pin, 
     Filter, 
-    Flame
+    Flame,
+    Zap,
+    BarChart3
 } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import AchievementBadge from '../components/AchievementBadge';
@@ -29,8 +31,11 @@ import QuestCard from '../components/QuestCard';
 import InvestorRankCard from '../components/InvestorRankCard';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
-import { STAGGER_DELAY_MS } from '../constants/animations';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 import { gamificationService } from '../services/gamificationService';
+import { computeProgressStats } from '../services/progressStatsService';
+import ProgressStatsTab from '../components/progress/ProgressStatsTab';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const ICON_MAP = { home: Home, plane: Plane, car: Car, emergency: Shield, other: Wallet };
 const GOAL_COLOR_TOKENS: Record<string, string> = {
@@ -41,7 +46,7 @@ const GOAL_COLOR_TOKENS: Record<string, string> = {
     rose: 'var(--color-accent-red)'
 };
 
-type ProgressTab = 'goals' | 'achievements' | 'quests' | 'ranks';
+type ProgressTab = 'goals' | 'achievements' | 'quests' | 'ranks' | 'stats';
 type AchievementCategoryFilter = 'all' | 'discipline' | 'wealth' | 'explorer' | 'mastery';
 
 const Progress: React.FC = () => {
@@ -59,11 +64,21 @@ const Progress: React.FC = () => {
         addAssetGroup, 
         updateAssetGroup,
         togglePinBadge,
-        claimQuest
+        claimQuest,
+        transactions,
+        xpEvents
     } = useData();
     const { user } = useAuth();
     const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
     const currency = user?.preferences?.currency || 'USD';
+    const progressStats = useMemo(() => computeProgressStats({
+        transactions,
+        xpEvents,
+        xp: user?.xp ?? 0,
+        level: user?.level ?? 1,
+        achievements,
+        goals
+    }), [transactions, xpEvents, user?.xp, user?.level, achievements, goals]);
     
     const [activeTab, setActiveTab] = useState<ProgressTab>('goals');
     const [categoryFilter, setCategoryFilter] = useState<AchievementCategoryFilter>('all');
@@ -81,6 +96,8 @@ const Progress: React.FC = () => {
 
     // --- ACHIEVEMENT MODAL STATE ---
     const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+    useEscapeKey(() => setIsModalOpen(false), isModalOpen);
+    useEscapeKey(() => handleCloseAchievementModal(), selectedAchievement !== null);
 
     // Load theme rewards
     useEffect(() => {
@@ -99,7 +116,7 @@ const Progress: React.FC = () => {
     // Handle URL Params for Tabs and Deep Linking
     useEffect(() => {
         const tab = searchParams.get('tab') as ProgressTab | null;
-        if (tab && ['goals', 'achievements', 'quests', 'ranks'].includes(tab)) {
+        if (tab && ['goals', 'achievements', 'quests', 'ranks', 'stats'].includes(tab)) {
             setActiveTab(tab);
         }
 
@@ -147,12 +164,17 @@ const Progress: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingGoal || !editingGoal.title || !editingGoal.targetAmount) return;
-        saveGoal(editingGoal as FinancialGoal);
-        setIsModalOpen(false);
-        setEditingGoal(null);
+        try {
+            await saveGoal(editingGoal as FinancialGoal);
+            setIsModalOpen(false);
+            setEditingGoal(null);
+        } catch (err) {
+            // Keep the form open with what was typed
+            console.error('Failed to save goal', err);
+        }
     };
 
     const handleToggleLink = (type: 'asset' | 'class' | 'group', id: string, name: string) => {
@@ -216,10 +238,18 @@ const Progress: React.FC = () => {
     const currentRank = gamificationService.getInvestorRank(user?.level || 1);
     const progress = gamificationService.calculateLevelProgress(user?.xp || 0);
 
+    const PROGRESS_TABS = [
+        { id: 'goals' as const, labelKey: 'gamification:tabs.goals', icon: Target },
+        { id: 'achievements' as const, labelKey: 'gamification:tabs.achievements', icon: Trophy },
+        { id: 'quests' as const, labelKey: 'gamification:tabs.quests', icon: Zap },
+        { id: 'ranks' as const, labelKey: 'gamification:tabs.ranks', icon: Award },
+        { id: 'stats' as const, labelKey: 'gamification:tabs.stats', icon: BarChart3 },
+    ];
+
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-6 pb-12">
             {/* Header with Investor Rank & Level Tracker */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-black text-brand mb-1">
                         {t('gamification:hub.title')}
@@ -230,7 +260,7 @@ const Progress: React.FC = () => {
                             {t(currentRank.titleKey)}
                         </span>
                         <span>
-                            {t('gamification:level')} {user?.level || 1} • {user?.xp || 0} {t('gamification:xp')}
+                            {t('gamification:level')} <AnimatedNumber value={user?.level || 1} locale={locale} /> • <AnimatedNumber value={user?.xp || 0} locale={locale} /> {t('gamification:xp')}
                         </span>
                         <span className="text-tertiary hidden md:inline">•</span>
                         <span className="text-xs text-tertiary hidden md:inline">
@@ -241,42 +271,28 @@ const Progress: React.FC = () => {
                         </span>
                     </div>
                 </div>
+            </div>
 
-                {/* Tab switcher */}
-                <div className="flex bg-subtle p-1 rounded-2xl border border-subtle overflow-x-auto max-w-full">
-                    <button 
-                        onClick={() => { setActiveTab('goals'); setSearchParams({ tab: 'goals' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'goals' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.goals')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('achievements'); setSearchParams({ tab: 'achievements' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'achievements' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.achievements')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('quests'); setSearchParams({ tab: 'quests' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'quests' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.quests')}
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('ranks'); setSearchParams({ tab: 'ranks' }); }} 
-                        className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
-                            activeTab === 'ranks' ? 'bg-card text-primary shadow-md' : 'text-secondary hover:text-primary'
-                        }`}
-                    >
-                        {t('gamification:tabs.ranks')}
-                    </button>
-                </div>
+            {/* Tab switcher: full width, ergonomic, all 5 tabs visible at a glance */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-subtle p-1.5 rounded-2xl border border-subtle">
+                {PROGRESS_TABS.map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button 
+                            key={tab.id}
+                            onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }); }} 
+                            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+                                isActive 
+                                    ? 'bg-card text-primary shadow-sm border border-subtle' 
+                                    : 'text-secondary hover:text-primary hover:bg-card/40'
+                            }`}
+                        >
+                            <Icon size={16} className={isActive ? 'text-brand' : 'text-secondary'} />
+                            <span className="truncate">{t(tab.labelKey)}</span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Featured Showcase (if any badges pinned) */}
@@ -339,21 +355,14 @@ const Progress: React.FC = () => {
                         </div>
                     ) : (
                         <div key={`goals-${activeTab}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {sortedGoals.map((goal, idx) => (
-                                <div
+                            {sortedGoals.map((goal) => (
+                                <GoalCard
                                     key={goal.id}
-                                    className="animate-scale-up"
-                                    style={{
-                                        animationDelay: `${idx * STAGGER_DELAY_MS}ms`
-                                    }}
-                                >
-                                    <GoalCard
-                                        goal={goal}
-                                        onEdit={handleEdit}
-                                        onDelete={deleteGoal}
-                                        onPin={toggleGoalPin}
-                                    />
-                                </div>
+                                    goal={goal}
+                                    onEdit={handleEdit}
+                                    onDelete={deleteGoal}
+                                    onPin={toggleGoalPin}
+                                />
                             ))}
                         </div>
                     )}
@@ -381,24 +390,17 @@ const Progress: React.FC = () => {
                     </div>
 
                     <div key={`achievements-${activeTab}-${categoryFilter}`} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filteredAchievements.map((ach, idx) => (
-                            <div
+                        {filteredAchievements.map((ach) => (
+                            <AchievementBadge
                                 key={ach.id}
-                                className="animate-scale-up"
-                                style={{
-                                    animationDelay: `${idx * STAGGER_DELAY_MS}ms`
+                                achievement={ach}
+                                isPinned={pinnedBadges.includes(ach.id)}
+                                onTogglePin={(e) => {
+                                    e.stopPropagation();
+                                    togglePinBadge(ach.id);
                                 }}
-                            >
-                                <AchievementBadge
-                                    achievement={ach}
-                                    isPinned={pinnedBadges.includes(ach.id)}
-                                    onTogglePin={(e) => {
-                                        e.stopPropagation();
-                                        togglePinBadge(ach.id);
-                                    }}
-                                    onClick={() => setSelectedAchievement(ach)}
-                                />
-                            </div>
+                                onClick={() => setSelectedAchievement(ach)}
+                            />
                         ))}
                     </div>
                 </div>
@@ -419,7 +421,7 @@ const Progress: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {quests.map((quest) => (
                             <QuestCard 
-                                key={quest.id} 
+                                key={quest.id}
                                 quest={quest} 
                                 onClaim={claimQuest} 
                             />
@@ -429,6 +431,8 @@ const Progress: React.FC = () => {
             )}
 
             {/* --- RANKS & REWARDS VIEW --- */}
+            {activeTab === 'stats' && <ProgressStatsTab stats={progressStats} locale={locale} />}
+
             {activeTab === 'ranks' && (
                 <InvestorRankCard 
                     currentLevel={user?.level || 1} 
@@ -440,7 +444,7 @@ const Progress: React.FC = () => {
             {/* --- GOAL MODAL --- */}
             {isModalOpen && editingGoal && createPortal(
                 <div 
-                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" 
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" 
                     onClick={() => setIsModalOpen(false)}
                 >
                     <div 
@@ -603,7 +607,7 @@ const Progress: React.FC = () => {
                                         ) : (
                                             <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                                                 {linkTab === 'asset' && positions.map(pos => {
-                                                    const link = editingGoal.linkedAssets?.find(l => l.id === pos.id && l.type === 'asset');
+                                                    const link = editingGoal.linkedAssets?.find(l => (l.id === pos.symbol || l.id === pos.id) && l.type === 'asset');
                                                     return (
                                                         <div key={pos.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
                                                             link ? 'bg-subtle border-brand/50' : 'border-subtle hover:bg-subtle/50'
@@ -612,7 +616,7 @@ const Progress: React.FC = () => {
                                                                 <input 
                                                                     type="checkbox" 
                                                                     checked={!!link} 
-                                                                    onChange={() => handleToggleLink('asset', pos.id, pos.symbol)} 
+                                                                    onChange={() => handleToggleLink('asset', link?.id ?? pos.symbol, pos.symbol)} 
                                                                     className="rounded border-subtle bg-subtle text-brand" 
                                                                 />
                                                                 <div>
@@ -625,7 +629,7 @@ const Progress: React.FC = () => {
                                                                     <input 
                                                                         type="number" 
                                                                         value={link.percentage} 
-                                                                        onChange={(e) => updateLinkPercentage(pos.id, 'asset', parseInt(e.target.value))} 
+                                                                        onChange={(e) => updateLinkPercentage(link.id, 'asset', parseInt(e.target.value))} 
                                                                         className="w-10 bg-subtle text-primary text-xs p-1 rounded border border-subtle text-center" 
                                                                     /> 
                                                                     <span className="text-xs text-secondary">%</span>
@@ -670,7 +674,7 @@ const Progress: React.FC = () => {
                                                         <div className="flex gap-2 mb-2">
                                                             <input 
                                                                 type="text" 
-                                                                placeholder="New Group Name" 
+                                                                placeholder={t('progress:goals.newGroupName')} 
                                                                 value={newGroupname} 
                                                                 onChange={e => setNewGroupName(e.target.value)} 
                                                                 className="flex-1 bg-subtle border-none rounded text-xs px-2 text-primary placeholder-tertiary focus:ring-1 focus:ring-brand" 
@@ -704,7 +708,7 @@ const Progress: React.FC = () => {
                                                                         <button 
                                                                             onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); }} 
                                                                             className="p-1.5 rounded hover:bg-card-hover text-secondary hover:text-primary" 
-                                                                            title="Edit Members"
+                                                                            title={t('progress:goals.editMembers')}
                                                                         >
                                                                             <Settings size={14} />
                                                                         </button>
@@ -736,7 +740,7 @@ const Progress: React.FC = () => {
                                             type="number"
                                             value={editingGoal.manualAmount}
                                             onChange={(e) => setEditingGoal({ ...editingGoal, manualAmount: parseFloat(e.target.value) })}
-                                            placeholder="Enter Amount"
+                                            placeholder={t('progress:goals.enterAmount')}
                                             className="w-full bg-subtle border border-subtle rounded-lg p-3 text-primary placeholder-tertiary focus:border-brand outline-none"
                                         />
                                     </div>
@@ -761,7 +765,7 @@ const Progress: React.FC = () => {
             {/* --- ACHIEVEMENT DETAIL MODAL --- */}
             {selectedAchievement && createPortal(
                 <div
-                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
                     onClick={handleCloseAchievementModal}
                 >
                     <div

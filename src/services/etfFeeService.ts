@@ -1,6 +1,7 @@
 import { Position } from '../types';
 import { currencyService } from './currencyService';
 import { formatChartDate, DateFormatPattern } from '../utils/date';
+import { fetchAssetHistory } from './assetSearchService';
 
 export interface ETFInfo {
     symbol: string;
@@ -27,6 +28,8 @@ export interface FeeAnalysisResult {
     alternativeAnnualFees: number;
     potentialAnnualSavings: number;
     recommendations: ETFRecommendation[];
+    /** Held ETFs missing from the reference list: their fees are unknown, so nothing is claimed for them */
+    unknownEtfSymbols: string[];
 }
 
 export interface FeeDragPoint {
@@ -145,20 +148,20 @@ export const etfFeeService = {
         let currentAnnualFees = 0;
         let alternativeAnnualFees = 0;
         const recommendations: ETFRecommendation[] = [];
+        const unknownEtfSymbols: string[] = [];
 
         for (const pos of etfPositions) {
             const valInBase = currencyService.convertAmount(pos.marketValue, pos.currency || 'EUR', baseCurrency);
             totalHeldEtfValue += valInBase;
 
-            // Lookup known ETF info or default to standard TER
+            // Known ETF (the list is keyed by bare ticker: "CW8.PA" is CW8). An unknown one has no TER to
+            // compare: inventing one would suggest a "cheaper" switch to a fund that tracks something else.
             const symbolUpper = pos.symbol.toUpperCase();
-            const knownInfo = KNOWN_ETF_DB[symbolUpper] || {
-                symbol: pos.symbol,
-                name: pos.instrument,
-                ter: 0.35, // Default estimated TER
-                category: 'MSCI World',
-                yahooUrl: `https://finance.yahoo.com/quote/${pos.symbol}`
-            };
+            const knownInfo = KNOWN_ETF_DB[symbolUpper] || KNOWN_ETF_DB[symbolUpper.split('.')[0]];
+            if (!knownInfo) {
+                unknownEtfSymbols.push(pos.symbol);
+                continue;
+            }
 
             const currentTer = knownInfo.ter;
             const currentCost = valInBase * (currentTer / 100);
@@ -169,7 +172,7 @@ export const etfFeeService = {
             let cheapest = CHEAPEST_ALTERNATIVES_BY_CATEGORY[category] || KNOWN_ETF_DB['WPEA'];
 
             // If user already holds the cheapest alternative, keep it
-            if (cheapest.symbol.toUpperCase().startsWith(symbolUpper)) {
+            if (cheapest.symbol.toUpperCase().split('.')[0] === symbolUpper.split('.')[0]) {
                 cheapest = knownInfo;
             }
 
@@ -193,7 +196,8 @@ export const etfFeeService = {
             currentAnnualFees,
             alternativeAnnualFees,
             potentialAnnualSavings: Math.max(0, currentAnnualFees - alternativeAnnualFees),
-            recommendations
+            recommendations,
+            unknownEtfSymbols
         };
     },
 
@@ -240,57 +244,35 @@ export const etfFeeService = {
         return points;
     },
 
-    getSideBySideEtfComparisonData: (
+    /**
+     * Base-100 performance of each ETF over the period, from its real price history (which already
+     * includes its fees). An ETF without history is left out rather than drawn from invented data.
+     */
+    getSideBySideEtfComparisonData: async (
         symbols: string[],
+        period: '6M' | '1Y' | '3Y' | '5Y',
         pointsCount = 12,
         locale = 'fr-FR',
         dateFormatPattern: DateFormatPattern = 'DD/MM/YYYY'
-    ) => {
+    ): Promise<Array<Record<string, string | number>>> => {
         const now = new Date();
+        const range = period === '5Y' ? 'ALL' : period;
+        const histories = await Promise.all(symbols.map(async (sym) => {
+            const ticker = etfFeeService.getEtfInfo(sym).symbol;
+            const returns = await fetchAssetHistory(ticker, range, pointsCount).catch(() => [] as number[]);
+            return { sym, returns };
+        }));
+        const drawable = histories.filter(h => h.returns.length === pointsCount);
+        if (drawable.length === 0) return [];
 
-        // BOLT OPTIMIZATION: Pre-compute symbol metadata once to avoid redundant object lookups and math operations inside the N-points loop.
-        const symbolMeta = symbols.map((sym, symIdx) => {
-            const symUpper = sym.toUpperCase();
-            const info = KNOWN_ETF_DB[symUpper] || etfFeeService.getEtfInfo(symUpper);
-            const charSum = symUpper.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-            const seedOffset = (charSum % 10) * 0.15;
-            const waveFreq = 0.8 + ((charSum % 5) * 0.1);
-
-            let baseTrend = 1.6;
-            if (info.category?.includes('S&P')) baseTrend = 2.1;
-            else if (info.category?.includes('World')) baseTrend = 1.75;
-            else if (info.category?.includes('All-World')) baseTrend = 1.45;
-
-            return {
-                sym,
-                symIdx,
-                ter: typeof info.ter === 'number' ? info.ter : 0.20,
-                seedOffset,
-                waveFreq,
-                baseTrend
-            };
-        });
-
+        const monthsBack = period === '6M' ? 6 : period === '1Y' ? 12 : period === '3Y' ? 36 : 60;
         return Array.from({ length: pointsCount }, (_, i) => {
-            const d = new Date(now.getFullYear(), now.getMonth() - (pointsCount - 1 - i), 1);
-            const monthLabel = formatChartDate(d, 'month', dateFormatPattern, locale);
-
-            const point: Record<string, string | number> = {
-                month: monthLabel
-            };
-
-            symbolMeta.forEach(({ sym, symIdx, ter, seedOffset, waveFreq, baseTrend }) => {
-                // Base normalized growth starting at 100
-                const trendGrowth = (i * baseTrend) + (Math.sin((i + symIdx * 2) * waveFreq) * (1.2 + seedOffset));
-                const grossValue = 100 + trendGrowth;
-
-                // Subtract TER fee drag accrued over time
-                const accumulatedFeeDrag = (ter / 100) * (i / (pointsCount / 12));
-                const netValue = Math.round((grossValue * (1 - accumulatedFeeDrag)) * 100) / 100;
-
-                point[sym] = netValue;
+            const monthOffset = Math.round((pointsCount - 1 - i) * monthsBack / Math.max(1, pointsCount - 1));
+            const d = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
+            const point: Record<string, string | number> = { month: formatChartDate(d, 'month', dateFormatPattern, locale) };
+            drawable.forEach(({ sym, returns }) => {
+                point[sym] = Math.round((100 + returns[i]) * 100) / 100;
             });
-
             return point;
         });
     },

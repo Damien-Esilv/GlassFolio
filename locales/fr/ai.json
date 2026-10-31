@@ -219,7 +219,10 @@
   "service": {
     "readOnlyBlocked": "Le mode \"Lecture Seule Stricte\" est activé. L'action **{{tool}}** a été bloquée conformément à vos réglages de sécurité.",
     "actionApproved": "✅ L'opération a été validée et enregistrée avec succès dans votre portefeuille.",
-    "actionRejected": "❌ L'opération a été refusée et annulée. Aucune modification n'a été effectuée."
+    "actionRejected": "❌ L'opération a été refusée et annulée. Aucune modification n'a été effectuée.",
+    "actionFailed": "⚠️ L’opération n’a pas pu aboutir : rien n’a été enregistré. {{error}}",
+    "confirmationRequired": "Une confirmation est requise avant d’appliquer cette modification :",
+    "emptyAnswer": "Je n’ai pas de réponse à donner cette fois. Pouvez-vous reformuler votre question ?"
   },
   "mock": {
     "greeting": "Bonjour ! Comment puis-je vous aider avec votre patrimoine aujourd’hui ?",

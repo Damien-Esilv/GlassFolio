@@ -13,6 +13,8 @@
         "done": "Terminé",
         "editGoal": "Modifier l'objectif",
         "deleteGoal": "Supprimer l'objectif",
+        "deleteGoalConfirm": "Supprimer l’objectif « {{title}} » ? Cette action est définitive.",
+        "pinGoal": "Épingler au tableau de bord",
         "noGoals": "Aucun objectif créé",
         "noGoalsDescription": "Définissez votre premier objectif financier pour commencer à suivre vos progrès.",
         "form": {
@@ -31,7 +33,10 @@
             "car": "Voiture",
             "emergency": "Urgence",
             "other": "Autre"
-        }
+        },
+        "newGroupName": "Nom du nouveau groupe",
+        "editMembers": "Modifier les membres",
+        "enterAmount": "Saisissez un montant"
     },
     "achievements": {
         "title": "Succès",

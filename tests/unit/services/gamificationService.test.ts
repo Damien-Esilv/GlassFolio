@@ -107,9 +107,6 @@ describe('GamificationService', () => {
       const quest1 = quests[0];
       const quest2 = quests[1];
 
-      expect(quest1.completed).toBe(true);
-      expect(quest2.completed).toBe(true);
-
       const totalClaimedXp = initialDemoXp + quest1.rewardXp + quest2.rewardXp;
       expect(totalClaimedXp).toBe(2500); // 2150 + 150 + 200 = exactly 2500 (level 6 threshold)
 
@@ -130,7 +127,8 @@ describe('GamificationService', () => {
     });
 
     it('claims completed quest, prevents double-claiming, and persists claimed state', async () => {
-      // Ensure quest_monthly_review exists and is completed
+      // Opening the dashboard completes the monthly review
+      await gamificationService.recordDashboardVisit();
       const initialQuests = await gamificationService.getQuests();
       const targetQuest = initialQuests.find(q => q.id === 'quest_monthly_review');
       expect(targetQuest).toBeDefined();
@@ -149,6 +147,42 @@ describe('GamificationService', () => {
       const reloadedQuests = await gamificationService.getQuests();
       const updatedTarget = reloadedQuests.find(q => q.id === 'quest_monthly_review');
       expect(updatedTarget?.claimed).toBe(true);
+    });
+
+    it('measures quests on the data of the current period', async () => {
+      const now = new Date();
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 2).toISOString();
+      const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), 2).toISOString();
+      const base = db.getUnifiedTransactions()[0];
+      db.saveQuests([]);
+      db.saveUnifiedTransactions([
+        { ...base, id: 'q1', type: 'BUY', isSynthetic: false, transactionDate: thisMonth },
+        { ...base, id: 'q2', type: 'DEPOSIT', isSynthetic: false, transactionDate: thisMonth },
+        { ...base, id: 'q3', type: 'BUY', isSynthetic: false, transactionDate: lastYear },
+        { ...base, id: 'q4', type: 'BUY', isSynthetic: true, transactionDate: thisMonth },
+      ]);
+      const position = { id: 'p', instrument: 'x', symbol: 'x', quantity: 1, avgCost: 1, lastPrice: 1, marketValue: 1, unrealizedPL: 0, unrealizedPLPercent: 0, currency: 'EUR' };
+      db.savePositions([
+        { ...position, id: 'p1', type: 'Equity' },
+        { ...position, id: 'p2', type: 'Crypto' },
+        { ...position, id: 'p3', type: 'Cash' },
+      ]);
+
+      const quests = await gamificationService.getQuests();
+      const byId = new Map(quests.map(q => [q.id, q]));
+      expect(byId.get('quest_dca_habit')).toMatchObject({ progress: 2, completed: true, claimed: false });
+      expect(byId.get('quest_allocation_audit')).toMatchObject({ progress: 2, completed: false });
+      expect(byId.get('quest_monthly_review')?.progress).toBe(0);
+    });
+
+    it('starts a claimed quest over in the next period', async () => {
+      await gamificationService.recordDashboardVisit();
+      await gamificationService.claimQuestReward('quest_monthly_review');
+      const stored = db.getQuests().map(q => q.id === 'quest_monthly_review' ? { ...q, periodKey: '1999-01' } : q);
+      db.saveQuests(stored);
+
+      const review = (await gamificationService.getQuests()).find(q => q.id === 'quest_monthly_review');
+      expect(review).toMatchObject({ claimed: false, completed: false, progress: 0 });
     });
 
     it('pins max 3 badges cleanly', async () => {

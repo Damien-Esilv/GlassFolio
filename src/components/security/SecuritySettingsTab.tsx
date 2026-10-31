@@ -17,6 +17,8 @@ import { RecoveryKeyDialog } from './RecoveryKeyDialog';
 import { StepUpAuthModal } from './StepUpAuthModal';
 import { evaluatePassword } from '../../services/security/passwordValidator';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { getAuthCapabilities } from '../../services/security/authCapabilities';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export const SecuritySettingsTab: React.FC = () => {
     const { t } = useTranslation();
@@ -28,6 +30,7 @@ export const SecuritySettingsTab: React.FC = () => {
 
     // Change Password Modal state
     const [showChangePassword, setShowChangePassword] = useState(false);
+    useEscapeKey(() => setShowChangePassword(false), showChangePassword);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -145,7 +148,7 @@ export const SecuritySettingsTab: React.FC = () => {
     const cardStyle = "bg-card rounded-xl p-6 shadow-lg border border-border space-y-4";
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6">
             {/* 1. Encrypted Vault (E2EE) Section */}
             <div className={cardStyle}>
                 <div className="flex flex-col gap-4">
@@ -327,7 +330,7 @@ export const SecuritySettingsTab: React.FC = () => {
 
             {/* Change Master Password Modal */}
             {showChangePassword && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
                     <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
                         <button
                             type="button"
@@ -443,10 +446,11 @@ export const SecuritySettingsTab: React.FC = () => {
                                         id="change-totp"
                                         name="otp"
                                         type="text"
-                                        inputMode="numeric"
+                                        // Local backup codes (XXXX-XXXX) hold letters
+                                        inputMode={getAuthCapabilities().backupCodes ? 'text' : 'numeric'}
                                         autoComplete="one-time-code"
                                         value={totpCode}
-                                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                                        onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 9))}
                                         className="w-full bg-subtle border border-subtle text-primary text-sm font-mono tracking-wider rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary text-center"
                                         placeholder={t('security:totp.codePlaceholder', '000000')}
                                     />

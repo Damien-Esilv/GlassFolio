@@ -628,16 +628,6 @@ export function validateRow(
         }
     }
 
-    // Description recommended
-    if (!data.rawLabel && !data.label) {
-        allErrors.push({
-            field: 'rawLabel',
-            message: 'Description recommended for audit trail',
-            severity: 'warning',
-            code: 'LABEL_MISSING'
-        });
-    }
-
     // Separate errors and warnings
     const errors = allErrors.filter(e => e.severity === 'error');
     const warnings = allErrors.filter(e => e.severity === 'warning');

@@ -42,6 +42,16 @@ describe('UI Theming Micro-primitives', () => {
       expect(span?.className).toContain('text-secondary');
       expect(span?.textContent).toBe('0.00%');
     });
+
+    it('supports animated mode without breaking aria labels and formats', () => {
+      const { container } = render(
+        <TrendValue value={15.75} format="percent" animated />
+      );
+
+      const rootSpan = container.querySelector('span');
+      expect(rootSpan).toBeTruthy();
+      expect(rootSpan?.getAttribute('aria-label')).toBe('+15.75%');
+    });
   });
 
   describe('<TrendBadge />', () => {

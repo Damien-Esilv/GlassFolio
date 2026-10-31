@@ -33,6 +33,7 @@ import {
     supabaseClient,
     consumeInitialOAuthHash,
     getSessionAssurance,
+    SupabaseRequestError,
     SupabaseUserData,
 } from '../supabase/supabaseClient';
 
@@ -405,6 +406,9 @@ export class LocalAuthProvider implements IAuthProvider {
         try {
             if (vaultService.isInitialized() && !vaultService.isUnlocked()) {
                 await vaultService.unlock(password);
+            } else if (vaultService.isUnlocked() && !(await vaultService.verifyPassword(password))) {
+                // An already open vault proves nothing about who is typing: check the password anyway
+                throw new Error('Invalid master password.');
             }
             const storedUser = await userRepository.getUser();
             if (storedUser && storedUser.email.toLowerCase() === cleanEmail) {
@@ -468,7 +472,7 @@ export class LocalAuthProvider implements IAuthProvider {
         }
     }
 
-    public async changePassword(oldPassword: string, newPassword: string, _options?: { nonce?: string; totpCode?: string }): Promise<void> {
+    public async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void> {
         this.checkLockout();
 
         const user = await userRepository.getUser();
@@ -479,6 +483,15 @@ export class LocalAuthProvider implements IAuthProvider {
         const validation = evaluatePassword(newPassword);
         if (!validation.isValid) {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
+        }
+
+        // The settings form asks for the code when 2FA is on: it must really be checked
+        if (await totpService.isEnabled()) {
+            if (!options?.totpCode) throw new Error('Two-factor authentication code is required.');
+            if (!(await totpService.verify(options.totpCode))) {
+                this.registerFailure();
+                throw new Error('Invalid two-factor authentication code or backup code.');
+            }
         }
 
         await vaultService.changePassword(oldPassword, newPassword);
@@ -611,6 +624,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     constructor() {
         super(3); // Enforce 3-attempt lockout for cloud auth
         this.restoreSessionFromStorage();
+        if (typeof window !== 'undefined') window.addEventListener('storage', this.onSessionStorage);
         // A restored session can pull, but only writes once the same user has unlocked their vault.
         vaultService.subscribeStatus((status) => {
             if (status === 'unlocked') {
@@ -690,12 +704,23 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }, delayMs);
     }
 
-    private async refreshActiveSession(): Promise<SupabaseAuthSession | null> {
+    /** One refresh at a time: Supabase rotates the refresh token, so a second use could revoke the session. */
+    private refreshInFlight: Promise<SupabaseAuthSession | null> | null = null;
+
+    private refreshActiveSession(): Promise<SupabaseAuthSession | null> {
+        if (this.refreshInFlight) return this.refreshInFlight;
         const current = this.supabaseSession;
-        if (!current?.refreshToken) return null;
-        const refreshed = await supabaseClient.refreshSession(current.refreshToken);
-        this.persistSession({ ...refreshed, user: refreshed.user ?? current.user });
-        return this.supabaseSession;
+        if (!current?.refreshToken) return Promise.resolve(null);
+        this.refreshInFlight = (async () => {
+            try {
+                const refreshed = await supabaseClient.refreshSession(current.refreshToken);
+                this.persistSession({ ...refreshed, user: refreshed.user ?? current.user });
+                return this.supabaseSession;
+            } finally {
+                this.refreshInFlight = null;
+            }
+        })();
+        return this.refreshInFlight;
     }
 
     /** The current session, refreshed first when its access token is about to expire. */
@@ -705,11 +730,29 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         if (current.expiresAt - Date.now() > SESSION_REFRESH_MARGIN_MS) return current;
         try {
             return await this.refreshActiveSession();
-        } catch {
-            this.persistSession(null);
-            return null;
+        } catch (err) {
+            // Only a refused refresh token ends the session; offline or a server hiccup keeps it for a retry
+            if (err instanceof SupabaseRequestError && err.status >= 400 && err.status < 500 && err.status !== 429) {
+                this.persistSession(null);
+                return null;
+            }
+            return current.expiresAt > Date.now() ? current : null;
         }
     }
+
+    /** Another tab refreshed the session (rotating its refresh token): adopt it instead of reusing the old one. */
+    private readonly onSessionStorage = (event: StorageEvent): void => {
+        if (event.key !== 'gf_sb_session' || !event.newValue) return;
+        try {
+            const next = JSON.parse(event.newValue) as SupabaseAuthSession;
+            if (!this.supabaseSession || next.user?.id !== this.supabaseSession.user.id) return;
+            this.supabaseSession = next;
+            getSyncedStorageProvider()?.setSupabaseSession(next);
+            this.scheduleRefresh(next);
+        } catch {
+            // Malformed value: keep this tab's session
+        }
+    };
 
     private provisionalUser(session: SupabaseAuthSession, email: string, authProvider: User['authProvider']): User {
         return {
@@ -757,6 +800,25 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             };
         }
         return complete(session);
+    }
+
+    /**
+     * A reload keeps the Supabase session but drops the decrypted vault. A Google account has no
+     * password to type: its vault reopens with the non-extractable device key stored at sign-in.
+     */
+    public async resumeDeviceSession(): Promise<boolean> {
+        const session = this.supabaseSession;
+        if (!session || !vaultService.isInitialized() || vaultService.isUnlocked()) return false;
+        if (vaultService.isGoogleDriveVault()) return vaultService.unlockWithDeviceKey(session.user.id);
+        if (vaultService.isLegacyIdentityGoogleVault() && session.user.email) {
+            try {
+                await vaultService.unlockOAuthVault(`gf-oauth-e2ee-v1:${session.user.id}:${session.user.email.trim().toLowerCase()}`);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+        return false;
     }
 
     public async getActiveAccessToken(): Promise<string | undefined> {
@@ -1464,13 +1526,15 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             this.persistSession(active);
         }
 
-        if (active.user.id !== user.id) {
+        if (!user || active.user.id !== user.id) {
             throw new Error('Session principal mismatch.');
         }
 
         // Supabase first: the account and vault passwords are the same secret, so if the server
         // refuses (AAL2, reauthentication) the vault must keep the old one too.
         await supabaseClient.updateUser(active.accessToken, { password: newPassword, ...(options?.nonce ? { nonce: options.nonce } : {}) });
+        const backing = appStorage.getBacking();
+        const previousHeader = backing.getItem(VAULT_HEADER_KEY);
         try {
             await vaultService.changePassword(oldPassword, newPassword);
             const header = vaultService.getVaultHeader();
@@ -1484,6 +1548,16 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             // Revoke other active sessions on password change
             await supabaseClient.signOut(active.accessToken, 'others').catch(() => undefined);
         } catch (err) {
+            // Back to the old password everywhere: the re-wrapped header may already be stored locally
+            // and replicated, and it would no longer open with the password the account has again.
+            if (previousHeader !== null && backing.getItem(VAULT_HEADER_KEY) !== previousHeader) {
+                backing.setItem(VAULT_HEADER_KEY, previousHeader);
+                await supabaseClient.upsertVaultHeader(
+                    active.accessToken,
+                    JSON.parse(previousHeader) as Record<string, unknown>,
+                    Boolean((JSON.parse(previousHeader) as { totpEnabled?: boolean }).totpEnabled)
+                ).catch(() => undefined);
+            }
             await supabaseClient.updateUser(active.accessToken, { password: oldPassword }).catch(() => undefined);
             throw err;
         }
@@ -1514,22 +1588,56 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        // Recover DEK and rotate Recovery Key in client vault
+        // The reset-email link opened a recovery session: without it the account password could not
+        // change, and the user could never sign in with the new one.
+        const active = await this.getActiveSession();
+        if (!active) {
+            throw new Error('Recovery session expired: invalid link.');
+        }
+
+        // The server copy is the source of truth: a fresh device has no header, and a stale one
+        // would be re-wrapped and then pushed over the newer remote header.
+        const synced = getSyncedStorageProvider();
+        if (synced) {
+            synced.setSupabaseSession(active);
+            const pull = await synced.pullFromRemote();
+            if (!pull.ok) throw new Error('Your encrypted vault could not be reached.');
+        }
+
+        const backing = appStorage.getBacking();
+        const previousHeader = backing.getItem(VAULT_HEADER_KEY);
+        const restorePreviousHeader = async (): Promise<void> => {
+            await vaultService.lock().catch(() => undefined);
+            if (previousHeader !== null) backing.setItem(VAULT_HEADER_KEY, previousHeader);
+        };
+
+        // Recover DEK and rotate Recovery Key in client vault (validates the recovery key first)
         const res = await vaultService.recoverPasswordWithRecoveryKey(recoveryKey, newPassword);
         if (isErr(res)) {
             throw new Error(res.error.message);
         }
 
-        // If active session, update password on Supabase
-        const active = await this.getActiveSession();
-        if (active) {
-            try {
-                await supabaseClient.updateUser(active.accessToken, { password: newPassword });
-                await supabaseClient.signOut(active.accessToken, 'others').catch(() => undefined);
-            } catch {
-                // If token expired, user will log in with new password
-            }
+        // Account password first: if the header upload then fails, the server keeps the old header,
+        // which the unchanged recovery key still opens, so the user can simply retry.
+        try {
+            await supabaseClient.updateUser(active.accessToken, { password: newPassword });
+        } catch (err) {
+            await restorePreviousHeader();
+            throw err;
         }
+        const header = vaultService.getVaultHeader();
+        try {
+            if (!header) throw new Error('Vault header is missing.');
+            await supabaseClient.upsertVaultHeader(
+                active.accessToken,
+                header as unknown as Record<string, unknown>,
+                Boolean(header.totpEnabled)
+            );
+        } catch (err) {
+            await restorePreviousHeader();
+            throw err;
+        }
+        await supabaseClient.signOut(active.accessToken, 'others').catch(() => undefined);
 
         this.resetFailures();
         await auditLogService.record('recovery_key_used', 'Emergency recovery key used to unlock vault', 'warning');
@@ -1830,8 +1938,11 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     }
 
     public override async deleteAccountPermanently(options?: { password?: string; confirmationText?: string }): Promise<void> {
-        const user = await userRepository.getUser();
-        if (user?.authProvider === 'email' || !user?.authProvider) {
+        const user = await userRepository.getUser().catch(() => null);
+        // Back from Google the vault may still be locked: the session tells which kind of account this is
+        const authProvider = user?.authProvider
+            ?? (this.supabaseSession?.user.app_metadata?.provider === 'google' ? 'google' : undefined);
+        if (authProvider === 'email' || !authProvider) {
             if (!options?.password) {
                 throw new Error('Password is required to delete an email-based account.');
             }
@@ -1841,7 +1952,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                     throw new Error('Invalid master password.');
                 }
             }
-        } else if (user?.authProvider === 'google') {
+        } else if (authProvider === 'google') {
             const confirm = (options?.confirmationText || '').trim().toUpperCase();
             if (confirm !== 'DELETE' && confirm !== 'SUPPRIMER') {
                 throw new Error('Confirmation text must match DELETE or SUPPRIMER.');
@@ -1871,12 +1982,20 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
      * Sends the browser through Google again for an action that needs the Drive key file. The Drive
      * access token is never kept after sign-in, so these actions cannot reuse it.
      */
-    public async startGoogleReauth(intent: Exclude<GoogleCeremonyIntent, 'sign-in'>): Promise<void> {
-        const user = await userRepository.getUser();
-        await googleOidcService.startCeremony({ intent, loginHint: user?.email });
+    public async startGoogleReauth(intent: Exclude<GoogleCeremonyIntent, 'sign-in'>, options?: { returnTo?: string }): Promise<void> {
+        const user = await userRepository.getUser().catch(() => null);
+        await googleOidcService.startCeremony({
+            intent,
+            loginHint: user?.email || this.supabaseSession?.user.email,
+            returnTo: options?.returnTo,
+        });
     }
 
-    /** The Google account chosen in the round trip must be the one this account is signed in with. */
+    /**
+     * The Google account chosen in the round trip must be the one this account is signed in with. Its
+     * fresh id_token then renews the Supabase session, so the sign-in is recent again (the account
+     * deletion RPC checks it). An account with TOTP keeps its AAL2 session: a new one would be AAL1.
+     */
     private async requireSameGoogleAccount(
         callbackResult: GoogleCallbackResult
     ): Promise<SupabaseAuthSession> {
@@ -1885,20 +2004,47 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             throw new Error('Your session expired. Sign in again.');
         }
         const email = readIdTokenEmail(callbackResult.idToken);
-        if (!email || email !== active.user.email.trim().toLowerCase()) {
+        if (!email || email !== (active.user.email || '').trim().toLowerCase()) {
             throw new Error('GOOGLE_ACCOUNT_MISMATCH');
         }
-        return active;
+        const fresh = await supabaseClient.signInWithIdToken({
+            provider: 'google',
+            token: callbackResult.idToken,
+            nonce: callbackResult.rawNonce,
+        });
+        if (fresh.user.id !== active.user.id) {
+            await supabaseClient.signOut(fresh.accessToken).catch(() => undefined);
+            throw new Error('GOOGLE_ACCOUNT_MISMATCH');
+        }
+        const factors = await supabaseClient.listMfaFactors(fresh.accessToken).catch(() => null);
+        if (factors === null || factors.some(factor => factor.factor_type === 'totp')) {
+            await supabaseClient.signOut(fresh.accessToken).catch(() => undefined);
+            return active;
+        }
+        this.persistSession({ ...fresh, user: fresh.user ?? active.user });
+        await supabaseClient.signOut(active.accessToken).catch(() => undefined);
+        return fresh;
+    }
+
+    /** Google step-up: the round trip itself is the proof; the renewed session satisfies the recency check. */
+    public async confirmGoogleStepUp(callbackResult: GoogleCallbackResult): Promise<void> {
+        await this.requireSameGoogleAccount(callbackResult);
     }
 
     /**
-     * Deletes a Google account: the Drive key file first (so the user is left with nothing behind in
-     * their Drive), then the account and local data. A failure before the account is deleted changes nothing.
+     * Deletes a Google account: the account first (the server refuses when the sign-in is not recent
+     * or the second factor is missing, and then nothing changed), then the Drive key file. The key file
+     * goes last: deleted first, a refused deletion would leave a vault nobody can open.
      */
     public async completeGoogleAccountDeletion(callbackResult: GoogleCallbackResult): Promise<void> {
         const active = await this.requireSameGoogleAccount(callbackResult);
-        await googleDriveVaultKeyService.deleteOwnedRootSecret(callbackResult.accessToken, active.user.id);
         await this.deleteRemoteAccountAndWipeLocal(active);
+        try {
+            await googleDriveVaultKeyService.deleteOwnedRootSecret(callbackResult.accessToken, active.user.id);
+        } catch (err) {
+            // The account and its encrypted vault are gone: the leftover key file opens nothing
+            console.warn('[auth] Account deleted, but its Drive key file could not be removed', err);
+        }
     }
 
     /**

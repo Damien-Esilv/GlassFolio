@@ -557,8 +557,9 @@ export const supabaseClient = {
             body: JSON.stringify({ refresh_token: refreshToken }),
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error('Failed to refresh Supabase session.');
+        const data = await res.json().catch(() => ({}));
+        // Typed, so the caller can tell a refused refresh token (signed out) from a server hiccup
+        if (!res.ok) throw toSupabaseError(data, res.status, 'Failed to refresh Supabase session.');
 
         return {
             accessToken: data.access_token,

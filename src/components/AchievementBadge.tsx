@@ -1,6 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Achievement } from '../types';
+import { useEntranceAnimation } from '../hooks/useEntranceAnimation';
+import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../constants/animations';
 import { 
     Trophy, 
     Wallet, 
@@ -30,6 +32,7 @@ const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
     onTogglePin
 }) => {
     const { t } = useTranslation(['gamification']);
+    const entered = useEntranceAnimation();
 
     // Determine next level
     const nextLevelData = ach.levels.find(l => l.level === ach.currentLevel + 1);
@@ -128,8 +131,8 @@ const AchievementBadgeComponent: React.FC<AchievementBadgeProps> = ({
                 {/* Progress Bar */}
                 <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden mt-3 shrink-0">
                     <div 
-                        className={`h-full transition-all duration-700 ${progressColor}`} 
-                        style={{ width: `${progressPercent}%` }} 
+                        className={`h-full transition-all ${progressColor}`} 
+                        style={{ width: `${entered ? progressPercent : 0}%`, transitionDuration: `${ANIMATION_DURATION_MS}ms`, transitionTimingFunction: ANIMATION_EASING }} 
                     />
                 </div>
             </button>

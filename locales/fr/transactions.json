@@ -5,6 +5,7 @@
         "dateRange": "Plage de dates",
         "all": "Tout",
         "last30Days": "30 derniers jours",
+        "defaultAccountName": "Compte principal {{broker}}",
         "last90Days": "90 derniers jours",
         "ytd": "Année en cours",
         "class": "Classe",
@@ -110,16 +111,30 @@
             "noAccounts": "Aucun compte trouvé. Créez-en un pour continuer.",
             "createNewAccount": "Créer un nouveau compte",
             "accountNamePlaceholder": "Nom du compte...",
-            "wrapperType": "Enveloppe fiscale",
-            "wrappers": {
-                "CTO": "Compte-Titres (CTO)",
-                "PEA": "Plan d'Épargne en Actions (PEA)",
-                "OTHER": "Autre / Crypto / Standard"
+            "accountKindLabel": "Type de compte",
+            "accountKindHint": "Définit ce que le compte contient par défaut et son régime fiscal. Tout compte peut aussi contenir du cash.",
+            "currencyLabel": "Devise",
+            "accountKinds": {
+                "CTO": "Compte-titres (CTO)",
+                "PEA": "Plan d’épargne en actions (PEA)",
+                "CRYPTO": "Crypto",
+                "CASH": "Cash / épargne",
+                "OTHER": "Autre (prix saisi à la main)"
             },
-            "accountTypes": {
-                "checking": "Liquidités / Cash",
-                "investment": "Actions / ETF (PEA, CTO)",
-                "cryptoSpot": "Crypto"
+            "countries": {
+                "FR": "France (FR)",
+                "DE": "Allemagne (DE)",
+                "NL": "Pays-Bas (NL)",
+                "IE": "Irlande (IE)",
+                "US": "États-Unis (US)",
+                "GB": "Royaume-Uni (GB)",
+                "LU": "Luxembourg (LU)",
+                "CH": "Suisse (CH)",
+                "MT": "Malte (MT)",
+                "CY": "Chypre (CY)",
+                "SC": "Seychelles (SC)",
+                "SG": "Singapour (SG)",
+                "OTHER": "Autre pays étranger"
             }
         },
         "mode": {
@@ -308,6 +323,25 @@
             "hint": "C'est exactement ce que l'import conservera. Si une date, un montant ou un actif semble faux, changez sa colonne ci-dessus.",
             "row": "Ligne {{index}}",
             "incomplete": "Associez la date, le montant et l'actif pour voir comment vos lignes seront enregistrées."
+        },
+        "assets": {
+            "title": "Actifs détectés",
+            "subtitle": "Vérifiez la nature de chaque actif avant d’importer : changez son type ou modifiez n’importe quel détail. Les nouveaux actifs ne sont créés qu’à la confirmation de l’import.",
+            "columns": {
+                "asset": "Actif",
+                "type": "Type",
+                "identifiers": "ISIN · marché · réseau",
+                "price": "Prix",
+                "rows": "Lignes"
+            },
+            "badgeNew": "Nouvel actif",
+            "badgeExisting": "Déjà dans votre portefeuille",
+            "priceAuto": "Prix automatique",
+            "priceManual": "Prix à la main",
+            "editDetails": "Modifier les détails",
+            "apply": "Appliquer",
+            "cancel": "Annuler",
+            "existingNote": "Cet actif est déjà dans votre portefeuille : les modifications s’appliquent immédiatement, pas seulement à cet import."
         }
     },
     "cashWizard": {
@@ -355,7 +389,9 @@
         "status": {
             "completed": "Terminé",
             "partial": "Partiel",
-            "rolledBack": "Annulé"
+            "rolledBack": "Annulé",
+            "pending": "En cours",
+            "failed": "Échec"
         },
         "undo": "Annuler",
         "confirmDelete": "Supprimer {{count}} transactions ?",

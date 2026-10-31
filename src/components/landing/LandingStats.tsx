@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useInView } from 'motion/react';
 import { CountUp } from './motion/CountUp';
 import {
   AI_TOOL_COUNT,
@@ -19,10 +20,12 @@ const FACTS = [
 export const LandingStats: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith('fr') ? 'fr-FR' : 'en-US';
+  const containerRef = useRef<HTMLDListElement>(null);
+  const isInView = useInView(containerRef, { once: true, amount: 0.3 });
 
   return (
     <section aria-label={t('landing:stats.ariaLabel')} className="border-t border-subtle bg-canvas">
-      <dl className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 lg:grid-cols-4">
+      <dl ref={containerRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 lg:grid-cols-4">
         {FACTS.map(({ key, value }, index) => (
           <div
             key={key}
@@ -30,7 +33,7 @@ export const LandingStats: React.FC = () => {
           >
             <dt className="text-sm text-secondary leading-snug order-2 max-w-[16rem]">{t(`landing:stats.${key}`)}</dt>
             <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight text-primary mb-1.5 order-1 tabular-nums">
-              <CountUp value={value} locale={locale} />
+              <CountUp value={value} locale={locale} inView={isInView} />
             </dd>
           </div>
         ))}

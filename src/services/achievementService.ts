@@ -1,5 +1,6 @@
 import { Achievement, Position, Transaction } from '../types';
 import { db, delay } from './db';
+import { getStartOfCurrentWeek } from '../utils/date';
 
 export interface AchievementUnlockEvent {
     achievementId: string;
@@ -83,23 +84,69 @@ function calculateMaxHoldingDurationMonths(positions: Position[], transactions: 
     return maxMonths;
 }
 
+/** Local calendar day of a date, as a stable key (no DST arithmetic on timestamps). */
+const dayKey = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
 /**
- * Calculates active tracking streak (distinct active weeks from transactions).
+ * The ISO weeks (Monday to Sunday, local time) with at least one completed transaction, keyed by their
+ * Monday. Pending and future-dated transactions do not count.
  */
-export function calculateWeeklyTrackingStreak(transactions: Transaction[]): number {
-    if (transactions.length === 0) return 0;
-    const weekSet = new Set<string>();
+export function collectActiveWeeks(transactions: Transaction[], now: Date = new Date()): Map<string, Date> {
+    const weeks = new Map<string, Date>();
     transactions.forEach(t => {
+        if (t.status === 'Pending') return;
         const d = new Date(t.date);
-        if (!isNaN(d.getTime())) {
-            const year = d.getFullYear();
-            const oneJan = new Date(year, 0, 1);
-            const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-            const week = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
-            weekSet.add(`${year}-W${week}`);
-        }
+        if (isNaN(d.getTime()) || d.getTime() > now.getTime()) return;
+        const monday = getStartOfCurrentWeek(d);
+        weeks.set(dayKey(monday), monday);
     });
-    return Math.max(1, weekSet.size);
+    return weeks;
+}
+
+/**
+ * The current tracking streak: consecutive weeks with a completed transaction, ending this week or, if
+ * nothing happened yet this week, last week. A week without activity breaks it.
+ */
+export function calculateWeeklyTrackingStreak(transactions: Transaction[], now: Date = new Date()): number {
+    const activeWeeks = collectActiveWeeks(transactions, now);
+    if (activeWeeks.size === 0) return 0;
+
+    const cursor = getStartOfCurrentWeek(now);
+    if (!activeWeeks.has(dayKey(cursor))) {
+        cursor.setDate(cursor.getDate() - 7);
+        if (!activeWeeks.has(dayKey(cursor))) return 0;
+    }
+    let streak = 0;
+    while (activeWeeks.has(dayKey(cursor))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 7);
+    }
+    return streak;
+}
+
+/**
+ * The longest tracking streak in the whole history: consecutive weeks with a completed transaction,
+ * wherever they are on the calendar. It comes from the transaction dates (when the user traded), not from
+ * when they were imported, so importing years of history gives the streak those years earned.
+ */
+export function calculateLongestWeeklyStreak(transactions: Transaction[], now: Date = new Date()): number {
+    const weeks = collectActiveWeeks(transactions, now);
+
+    let longest = 0;
+    for (const monday of weeks.values()) {
+        const before = new Date(monday);
+        before.setDate(before.getDate() - 7);
+        if (weeks.has(dayKey(before))) continue; // not the first week of a run
+
+        let run = 0;
+        const cursor = new Date(monday);
+        while (weeks.has(dayKey(cursor))) {
+            run += 1;
+            cursor.setDate(cursor.getDate() + 7);
+        }
+        longest = Math.max(longest, run);
+    }
+    return longest;
 }
 
 // This simulates the "Game Engine" running on the server
@@ -124,7 +171,7 @@ export const achievementService = {
             .reduce((sum, p) => sum + p.marketValue, 0);
         const hodlMonths = calculateMaxHoldingDurationMonths(positions, transactions);
         const goalsCompleted = goals.filter(g => (g.currentAmount || 0) >= g.targetAmount).length;
-        const activeWeeks = calculateWeeklyTrackingStreak(transactions);
+        const activeWeeks = calculateLongestWeeklyStreak(transactions);
 
         let xpGained = 0;
         let hasChanges = false;
@@ -180,8 +227,9 @@ export const achievementService = {
             db.saveAchievements(updatedAchievements);
         }
 
+        // Progress is recomputed on every load: return it even when no level changed (stored on level-ups)
         return {
-            achievements: hasChanges ? updatedAchievements : achievements,
+            achievements: updatedAchievements,
             xpGained,
             unlockedEvents
         };

@@ -10,6 +10,7 @@
         "publicProfile": "Public Profile",
         "profilePicture": "Profile Picture",
         "profilePictureInfo": "Supports JPG, PNG or GIF. Max size 2MB.",
+        "avatarRejected": "This image could not be used. Choose a JPG, PNG or GIF file of 2 MB at most.",
         "displayName": "Display Name",
         "emailAddress": "Email Address",
         "profileUpdated": "Profile details updated successfully",
@@ -47,7 +48,9 @@
         "dateFormatInfo": "Choose the display format for dates across the application.",
         "dateFormatFR": "European (DD/MM/YYYY)",
         "dateFormatUS": "American (MM/DD/YYYY)",
-        "dateFormatISO": "ISO Standard (YYYY-MM-DD)"
+        "dateFormatISO": "ISO Standard (YYYY-MM-DD)",
+        "assetLookup": "Recognise assets automatically",
+        "assetLookupInfo": "When you import, look up unknown symbols and ISINs with Yahoo Finance and CoinGecko to tell stocks, ETFs and crypto apart. Only the symbol or ISIN is sent. Off: the account type and built-in rules are used."
     },
     "dataAndBackup": {
         "title": "Data, Backups & Privacy",
@@ -118,7 +121,8 @@
             "invalid_zip": "The ZIP archive is unreadable or corrupted.",
             "unsupported_compression": "ZIP compression not supported.",
             "crc_mismatch": "Corrupted ZIP archive: a file fails its integrity check.",
-            "zip_no_backup": "This archive holds no GlassFolio backup (data/glassfolio-backup-….json)."
+            "zip_no_backup": "This archive holds no GlassFolio backup (data/glassfolio-backup-….json).",
+            "empty_backup": "This backup holds no data: restoring it would only erase your account."
         }
     },
     "legal": {

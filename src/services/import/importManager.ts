@@ -34,6 +34,16 @@ import {
 } from '../core/transactionManager';
 import { validationService, RowData } from '../core/validationService';
 import { instrumentService } from '../instrumentService';
+import { getAccountContext } from './accountContext';
+import {
+    clearStagedInstruments,
+    commitStagedInstruments,
+    findInstrument,
+    isStagedInstrument,
+    removeInstruments,
+    resolveInstrumentId,
+    stageInstrument,
+} from './instrumentDrafts';
 import { portfolioService } from '../portfolioService';
 import { buildLedger, resolveQuantity, sortChronologically } from '../portfolio/positionLedger';
 import { validateCSVRow } from '../../types/schemas';
@@ -99,6 +109,8 @@ export interface StagedTransaction {
     originalRowArray: string[];
     parsed: Partial<UnifiedTransaction>;
     rowHash: string;
+    /** Hash an older version gave this row (see hashParts.legacySymbol), for duplicate detection only */
+    legacyRowHash?: string;
     status: 'valid' | 'error' | 'duplicate' | 'warning';
     errors: FieldError[];
     resolution: 'pending' | 'import' | 'skip';
@@ -121,6 +133,16 @@ export interface ParseResult {
     existingBatch: ImportBatch | null;
     detectedPreset?: string;
     detectedDelimiter: string;
+    /** The assets the rows point at: new ones are drafts, persisted only when the import is confirmed. */
+    instruments: ImportInstrumentSummary[];
+}
+
+/** An asset used by the rows of an import in review. */
+export interface ImportInstrumentSummary {
+    instrument: Instrument;
+    /** New in this import (a draft) rather than already in the portfolio. */
+    isNew: boolean;
+    rowCount: number;
 }
 
 /**
@@ -169,6 +191,9 @@ export async function parseFile(
 ): Promise<ParseResult> {
     await delay(200);
 
+    // A new analysis replaces the drafts of the previous one (nothing was persisted for them)
+    clearStagedInstruments();
+
     // Compute file hash for idempotence
     const fileHash = await computeFileHash(csvText);
 
@@ -206,7 +231,8 @@ export async function parseFile(
             headers,
             fileHash,
             existingBatch,
-            detectedDelimiter: delimiter
+            detectedDelimiter: delimiter,
+            instruments: []
         };
     }
 
@@ -220,7 +246,10 @@ export async function parseFile(
         const key = [hint.symbol, hint.isin, hint.exchange, hint.network, hint.contractAddress, hint.denominationCurrency].join('|');
         let pending = instrumentCache.get(key);
         if (!pending) {
-            pending = instrumentService.findOrCreateInstrument(hint);
+            pending = instrumentService.findOrCreateInstrument(hint, { persist: false }).then(instrument => {
+                if (!db.getInstrumentById(instrument.id)) stageInstrument(instrument);
+                return instrument;
+            });
             instrumentCache.set(key, pending);
         }
         return pending;
@@ -228,7 +257,8 @@ export async function parseFile(
     const instrumentsById = new Map<string, Instrument>();
     // New instruments are denominated in the target account currency (EUR for a PEA, not USD)
     const accountCurrency = db.getAccountById(config.accountId)?.defaultCurrency;
-
+    // Where the assets are held steers their class; a crypto institution is also their exchange
+    const { accountType, instituteType, exchange: exchangeAccountName } = getAccountContext(config.accountId);
     // File-wide conventions (day/month order, decimal separator, amount signs), read once
     const rowContext = buildRowContext(headers, rows, mappings, {
         mode: config.mode,
@@ -255,6 +285,9 @@ export async function parseFile(
             hashParts.fee
         );
         parsed.rowHash = rowHash;
+        const legacyRowHash = hashParts.legacySymbol === undefined
+            ? undefined
+            : await computeRowHash(hashParts.date, hashParts.amount, hashParts.legacySymbol, hashParts.type, hashParts.fee);
 
         // Resolve the instrument from the symbol or, failing that, the ISIN
         const { exchange, network, contractAddress, assetName } = normalized.instrumentHints;
@@ -267,9 +300,11 @@ export async function parseFile(
                     symbol: identifier,
                     isin: parsed.assetIsin,
                     name: assetName,
-                    exchange,
+                    exchange: exchange ?? exchangeAccountName,
                     network,
-                    contractAddress
+                    contractAddress,
+                    accountType,
+                    instituteType
                 });
                 instrumentId = instrument.id;
                 parsed.instrumentId = instrumentId;
@@ -299,9 +334,9 @@ export async function parseFile(
             rawLabel: parsed.rawLabel,
             label: parsed.label,
             instrumentType: resolvedInstrument?.type,
-            exchange,
-            network,
-            contractAddress
+            exchange: exchange ?? resolvedInstrument?.marketIdentifier.exchange,
+            network: network ?? resolvedInstrument?.marketIdentifier.network,
+            contractAddress: contractAddress ?? resolvedInstrument?.marketIdentifier.contractAddress
         };
         const validation = validationService.validateRow(rowData, config.mode);
 
@@ -322,6 +357,7 @@ export async function parseFile(
             originalRowArray: row,
             parsed,
             rowHash,
+            ...(legacyRowHash ? { legacyRowHash } : {}),
             status,
             errors: [...normalized.issues, ...validation.errors, ...validation.warnings],
             resolution: 'pending' as const
@@ -347,7 +383,8 @@ export async function parseFile(
         fileHash,
         existingBatch,
         detectedPreset,
-        detectedDelimiter: delimiter
+        detectedDelimiter: delimiter,
+        instruments: describeImportInstruments(candidates)
     };
 }
 
@@ -360,9 +397,11 @@ function flagDuplicates(candidates: StagedTransaction[], storedCounts: Map<strin
     const seenInFile = new Map<string, number>();
     for (const candidate of candidates) {
         if (candidate.status === 'error') continue;
-        const occurrence = seenInFile.get(candidate.rowHash) ?? 0;
-        seenInFile.set(candidate.rowHash, occurrence + 1);
-        if (occurrence < (storedCounts.get(candidate.rowHash) ?? 0)) {
+        // Rows stored by an older version carry the hash it computed then
+        const hash = candidate.legacyRowHash && storedCounts.has(candidate.legacyRowHash) ? candidate.legacyRowHash : candidate.rowHash;
+        const occurrence = seenInFile.get(hash) ?? 0;
+        seenInFile.set(hash, occurrence + 1);
+        if (occurrence < (storedCounts.get(hash) ?? 0)) {
             candidate.status = 'duplicate';
             candidate.resolution = 'skip';
         }
@@ -417,6 +456,86 @@ const QTY_TOLERANCE = 1e-9;
 // ============================================================================
 
 /**
+ * The assets the rows of an import point at (one entry per asset), drafts included. Recomputed after
+ * an asset is edited or merged in the review.
+ */
+export function describeImportInstruments(candidates: StagedTransaction[]): ImportInstrumentSummary[] {
+    const counts = new Map<string, number>();
+    for (const staged of candidates) {
+        const id = staged.parsed.instrumentId;
+        if (!id) continue;
+        const resolved = resolveInstrumentId(id);
+        counts.set(resolved, (counts.get(resolved) ?? 0) + 1);
+    }
+    const summaries: ImportInstrumentSummary[] = [];
+    for (const [id, rowCount] of counts) {
+        const instrument = findInstrument(id);
+        if (instrument) summaries.push({ instrument, isNew: isStagedInstrument(id), rowCount });
+    }
+    return summaries.sort((a, b) => b.rowCount - a.rowCount || a.instrument.marketIdentifier.symbol.localeCompare(b.instrument.marketIdentifier.symbol));
+}
+
+/** The asset behind a symbol or ISIN typed in the review: an existing one, or a new draft. */
+export async function resolveStagedInstrument(
+    symbolOrIsin: { symbol?: string; isin?: string; name?: string },
+    accountId: string
+): Promise<Instrument | undefined> {
+    const identifier = symbolOrIsin.symbol?.trim() || symbolOrIsin.isin?.trim();
+    if (!identifier) return undefined;
+    const context = getAccountContext(accountId);
+    const instrument = await instrumentService.findOrCreateInstrument(
+        {
+            symbol: identifier,
+            isin: symbolOrIsin.isin,
+            name: symbolOrIsin.name,
+            exchange: context.exchange,
+            accountType: context.accountType,
+            instituteType: context.instituteType,
+            denominationCurrency: db.getAccountById(accountId)?.defaultCurrency
+        },
+        { persist: false }
+    );
+    if (!db.getInstrumentById(instrument.id)) stageInstrument(instrument);
+    return instrument;
+}
+
+/** Validates a row again after the user edited it or its asset, with the same rules as the parse. */
+export function revalidateStagedRow(staged: StagedTransaction, mode: ImportMode): StagedTransaction {
+    const instrument = staged.parsed.instrumentId ? findInstrument(staged.parsed.instrumentId) : undefined;
+    const parsed = staged.parsed;
+    const validation = validationService.validateRow({
+        transactionDate: parsed.transactionDate,
+        valueDate: parsed.valueDate,
+        type: parsed.type,
+        amountPrimary: parsed.amountPrimary,
+        assetSymbol: parsed.assetSymbol,
+        assetIsin: parsed.assetIsin,
+        priceUnit: parsed.priceUnit,
+        quantity: parsed.quantity,
+        feeAmount: parsed.feeAmount,
+        rawLabel: parsed.rawLabel,
+        label: parsed.label,
+        instrumentType: instrument?.type,
+        exchange: instrument?.marketIdentifier.exchange,
+        network: instrument?.marketIdentifier.network,
+        contractAddress: instrument?.marketIdentifier.contractAddress
+    }, mode);
+
+    const hasErrors = !validation.isValid;
+    const status: StagedTransaction['status'] = hasErrors
+        ? 'error'
+        : staged.status === 'duplicate'
+            ? 'duplicate'
+            : validation.warnings.length > 0 ? 'warning' : 'valid';
+    return {
+        ...staged,
+        errors: [...validation.errors, ...validation.warnings],
+        status,
+        resolution: hasErrors ? 'skip' : staged.status === 'error' && staged.resolution === 'skip' ? 'pending' : staged.resolution
+    };
+}
+
+/**
  * Commit staged transactions atomically
  */
 export async function commitBatch(
@@ -469,9 +588,22 @@ export async function commitBatch(
         }
     }
 
+    // Instruments created by this import stay drafts until now: persist the ones the rows use
+    let addedInstrumentIds: string[] = [];
+
     // Begin atomic transaction
     try {
         transactionManager.begin();
+
+        // A draft that was lost (another analysis ran meanwhile) is rebuilt from its row, so no row loses its asset
+        for (const staged of toImport) {
+            const id = staged.parsed.instrumentId ? resolveInstrumentId(staged.parsed.instrumentId) : '';
+            if (id && !isStagedInstrument(id) && !db.getInstrumentById(id)) {
+                const rebuilt = await resolveStagedInstrument({ symbol: staged.parsed.assetSymbol, isin: staged.parsed.assetIsin }, accountId);
+                staged.parsed = { ...staged.parsed, instrumentId: rebuilt?.id };
+            }
+        }
+        addedInstrumentIds = commitStagedInstruments(toImport.map(t => t.parsed.instrumentId).filter((id): id is string => Boolean(id)));
 
         // Convert to UnifiedTransaction
         const unifiedTxs: UnifiedTransaction[] = toImport.map(staged => ({
@@ -479,7 +611,7 @@ export async function commitBatch(
             ownerId: userId,
             batchId,
             accountId,
-            instrumentId: staged.parsed.instrumentId || '',
+            instrumentId: resolveInstrumentId(staged.parsed.instrumentId || ''),
             rowHash: staged.rowHash,
             externalId: staged.parsed.externalId,
             sourceOrigin: 'FILE' as SourceOrigin,
@@ -538,14 +670,22 @@ export async function commitBatch(
         const result = transactionManager.commit();
 
         if (result.success) {
-            // Recalculate positions after successful commit
-            await recalculatePositions();
+            clearStagedInstruments();
+            // The import is committed: a failed recalculation must not report it as failed, nor drop
+            // the instruments its transactions use. Positions are rebuilt on the next recalculation.
+            try {
+                await recalculatePositions();
+            } catch (recalcError) {
+                console.error('[import] Position recalculation failed after a committed import', recalcError);
+            }
             return { ...result, batch: newBatch };
         }
 
+        removeInstruments(addedInstrumentIds);
         return result;
     } catch (error) {
         transactionManager.rollback();
+        removeInstruments(addedInstrumentIds);
         return {
             success: false,
             transactionCount: 0,

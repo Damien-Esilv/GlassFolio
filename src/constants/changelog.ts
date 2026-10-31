@@ -26,6 +26,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-4',
+    version: '1.4',
+    date: '2026-10-31',
+    highlights: [
+      { key: 'animationHarmonization', kind: 'improved' },
+      { key: 'progressHubNavigation', kind: 'improved' },
+      { key: 'assetAllocationExtensible', kind: 'new' },
+      { key: 'dashboardTimelineSmoothness', kind: 'improved' },
+    ],
+  },
+  {
+    id: 'v1-3',
+    version: '1.3',
+    date: '2026-10-30',
+    highlights: [
+      { key: 'peaWithdrawals', kind: 'new' },
+      { key: 'taxAccuracy', kind: 'improved' },
+      { key: 'quests', kind: 'improved' },
+      { key: 'localDemo', kind: 'improved' },
+      { key: 'reliability', kind: 'improved' },
+      { key: 'smootherNumbers', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-2',
     version: '1.2',
     date: '2026-10-30',

@@ -5,6 +5,7 @@
         "dateRange": "Date Range",
         "all": "All",
         "last30Days": "Last 30 Days",
+        "defaultAccountName": "{{broker}} main account",
         "last90Days": "Last 90 Days",
         "ytd": "YTD",
         "class": "Class",
@@ -110,16 +111,30 @@
             "noAccounts": "No accounts found. Create one to continue.",
             "createNewAccount": "Create new account",
             "accountNamePlaceholder": "Account name...",
-            "wrapperType": "Tax wrapper",
-            "wrappers": {
-                "CTO": "Standard Account (CTO)",
-                "PEA": "Equity Savings Plan (PEA)",
-                "OTHER": "Other / Crypto / Standard"
+            "accountKindLabel": "Account type",
+            "accountKindHint": "Sets what the account holds by default and its tax regime. Any account can also hold cash.",
+            "currencyLabel": "Currency",
+            "accountKinds": {
+                "CTO": "Securities account (CTO)",
+                "PEA": "Equity savings plan (PEA)",
+                "CRYPTO": "Crypto",
+                "CASH": "Cash / savings",
+                "OTHER": "Other (priced by hand)"
             },
-            "accountTypes": {
-                "checking": "Cash / Savings",
-                "investment": "Stocks / ETFs (PEA, CTO)",
-                "cryptoSpot": "Crypto"
+            "countries": {
+                "FR": "France (FR)",
+                "DE": "Germany (DE)",
+                "NL": "Netherlands (NL)",
+                "IE": "Ireland (IE)",
+                "US": "United States (US)",
+                "GB": "United Kingdom (GB)",
+                "LU": "Luxembourg (LU)",
+                "CH": "Switzerland (CH)",
+                "MT": "Malta (MT)",
+                "CY": "Cyprus (CY)",
+                "SC": "Seychelles (SC)",
+                "SG": "Singapore (SG)",
+                "OTHER": "Other foreign country"
             }
         },
         "mode": {
@@ -308,6 +323,25 @@
             "hint": "This is exactly what the import will keep. If a date, an amount or an asset looks wrong, change its column above.",
             "row": "Row {{index}}",
             "incomplete": "Match the date, the amount and the asset to see how your rows will be stored."
+        },
+        "assets": {
+            "title": "Detected assets",
+            "subtitle": "Check what each asset is before importing: change its type, or edit any detail. New assets are only created when you confirm the import.",
+            "columns": {
+                "asset": "Asset",
+                "type": "Type",
+                "identifiers": "ISIN · market · network",
+                "price": "Price",
+                "rows": "Rows"
+            },
+            "badgeNew": "New asset",
+            "badgeExisting": "Already in your portfolio",
+            "priceAuto": "Automatic price",
+            "priceManual": "Price by hand",
+            "editDetails": "Edit details",
+            "apply": "Apply",
+            "cancel": "Cancel",
+            "existingNote": "This asset is already in your portfolio: changes apply immediately, not only to this import."
         }
     },
     "cashWizard": {
@@ -355,7 +389,9 @@
         "status": {
             "completed": "Completed",
             "partial": "Partial",
-            "rolledBack": "Rolled Back"
+            "rolledBack": "Rolled Back",
+            "pending": "In progress",
+            "failed": "Failed"
         },
         "undo": "Undo",
         "confirmDelete": "Delete {{count}} transactions?",
