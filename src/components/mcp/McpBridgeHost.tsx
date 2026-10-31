@@ -29,7 +29,7 @@ const buildExecutor = (getLanguage: () => 'en' | 'fr') => createMcpBridgeExecuto
   onSettled: (proposal) => mcpApprovalStore.update(proposal),
   redact: (text) => guardrailsService.redactSensitiveExfiltrations(text),
   isVaultUnlocked: () => vaultService.isUnlocked(),
-  isReadOnly: () => aiSettingsService.getSettings().executionMode === 'read_only',
+  getMode: () => aiSettingsService.getSettings().executionMode,
   context: () => ({ language: getLanguage(), currency: 'EUR' }),
 });
 

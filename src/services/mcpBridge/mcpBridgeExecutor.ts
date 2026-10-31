@@ -1,4 +1,5 @@
-import type { AIExecutionContext, AIToolDefinition, PendingActionProposal } from '../ai/types';
+import type { AIExecutionContext, AIExecutionMode, AIToolDefinition, PendingActionProposal } from '../ai/types';
+import { decideConfirmation } from '../ai/executionPolicy';
 import type { BridgeCall, BridgeOutcome } from './mcpBridgeClient';
 import type { ApprovalDecision } from './mcpApprovalStore';
 
@@ -14,7 +15,7 @@ export interface McpExecutorDeps {
   onSettled?: (proposal: PendingActionProposal) => void;
   redact: (text: string) => string;
   isVaultUnlocked: () => boolean;
-  isReadOnly: () => boolean;
+  getMode: () => AIExecutionMode;
   context: () => AIExecutionContext;
 }
 
@@ -40,15 +41,16 @@ export function createMcpBridgeExecutor(deps: McpExecutorDeps) {
     if (!tool) return fail(`Unknown tool: ${call.name}`);
     const context = deps.context();
 
-    if (!tool.requiresConfirmation) {
+    const policy = decideConfirmation(tool, deps.getMode());
+    if (policy === 'run') {
+      // A tool that changes nothing, or any tool but the account actions in autonomous mode
       try {
         return ok(await deps.executeTool(call.name, call.arguments, context));
       } catch (error) {
         return fail(describe(error));
       }
     }
-
-    if (deps.isReadOnly()) return fail(READ_ONLY);
+    if (policy === 'block') return fail(READ_ONLY);
     const proposal = deps.createPendingAction(call.name, call.name, call.arguments, call.arguments);
     const decision = await deps.requestApproval(proposal);
     if (decision === 'locked') return fail(LOCKED);
@@ -56,7 +58,7 @@ export function createMcpBridgeExecutor(deps: McpExecutorDeps) {
       deps.rejectAction(proposal.id);
       return fail(decision === 'rejected' ? DECLINED : EXPIRED);
     }
-    if (deps.isReadOnly()) {
+    if (deps.getMode() === 'read_only') {
       // Read-only was switched on while the card was shown
       deps.rejectAction(proposal.id);
       return fail(READ_ONLY);

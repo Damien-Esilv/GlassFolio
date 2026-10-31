@@ -1,6 +1,7 @@
 import { appStorage } from '../storage/appStorage';
 import { MCP_BRIDGE_STORAGE_KEY } from '../storage/storageKeys';
 import { getDeploymentMode } from '../../config/deployment';
+import { DEFAULT_MCP_CLIENT_ID, MCP_CLIENTS } from '../../config/mcpClients';
 
 /**
  * Device settings of the MCP bridge (TGLA-198): whether AI clients (Claude Code, Codex, Cursor...) may call
@@ -11,13 +12,15 @@ export interface McpBridgeSettings {
   /** Address of a bridge on this computer; '' means the server that serves the app (local mode). */
   url: string;
   token: string;
+  /** The AI client shown in the setup snippets (an id of mcpClients.json). */
+  client: string;
 }
 
 /** Where the standalone bridge (`glassfolio-mcp serve`) listens by default. */
 export const STANDALONE_BRIDGE_URL = 'http://127.0.0.1:47831';
 export const MCP_TOKEN_HEADER = 'X-GlassFolio-Token';
 
-const DEFAULTS: McpBridgeSettings = { enabled: false, url: '', token: '' };
+const DEFAULTS: McpBridgeSettings = { enabled: false, url: '', token: '', client: DEFAULT_MCP_CLIENT_ID };
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
 let cachedValue: McpBridgeSettings = DEFAULTS;
@@ -47,6 +50,7 @@ function parse(raw: string | null): McpBridgeSettings {
       enabled: value.enabled === true,
       url: typeof value.url === 'string' ? (normalizeBridgeUrl(value.url) ?? '') : '',
       token: typeof value.token === 'string' ? value.token : '',
+      client: MCP_CLIENTS.some((client) => client.id === value.client) ? (value.client as string) : DEFAULT_MCP_CLIENT_ID,
     };
   } catch {
     return DEFAULTS;
@@ -65,7 +69,8 @@ export function getMcpBridgeSettings(): McpBridgeSettings {
 export function saveMcpBridgeSettings(patch: Partial<McpBridgeSettings>): McpBridgeSettings {
   const current = getMcpBridgeSettings();
   const url = patch.url === undefined ? current.url : (normalizeBridgeUrl(patch.url) ?? current.url);
-  const next: McpBridgeSettings = { ...current, ...patch, url, token: (patch.token ?? current.token).trim() };
+  const client = patch.client !== undefined && MCP_CLIENTS.some((entry) => entry.id === patch.client) ? patch.client : current.client;
+  const next: McpBridgeSettings = { ...current, ...patch, url, client, token: (patch.token ?? current.token).trim() };
   appStorage.setItem(MCP_BRIDGE_STORAGE_KEY, JSON.stringify(next));
   listeners.forEach((listener) => listener());
   return getMcpBridgeSettings();

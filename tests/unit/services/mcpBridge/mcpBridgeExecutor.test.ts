@@ -10,7 +10,7 @@ const proposal = (status: PendingActionProposal['status'] = 'pending', extra: Pa
 });
 
 const setup = (overrides: Partial<McpExecutorDeps> = {}) => {
-  const tools = new Map([['get_portfolio_summary', tool('get_portfolio_summary')], ['record_transaction', tool('record_transaction', true)]]);
+  const tools = new Map([['get_portfolio_summary', tool('get_portfolio_summary')], ['record_transaction', tool('record_transaction', true)], ['lock_vault', tool('lock_vault', true)]]);
   const deps: McpExecutorDeps = {
     getTool: (name) => tools.get(name),
     executeTool: vi.fn(async () => ({ totalValue: 42 })),
@@ -22,7 +22,7 @@ const setup = (overrides: Partial<McpExecutorDeps> = {}) => {
     onSettled: vi.fn(),
     redact: (text) => text,
     isVaultUnlocked: () => true,
-    isReadOnly: () => false,
+    getMode: () => 'supervised',
     context: () => ({ language: 'en', currency: 'EUR' }),
     ...overrides,
   };
@@ -104,11 +104,11 @@ describe('tool calls of an AI client, in the app', () => {
     });
 
     it('is blocked in read-only mode before anything is proposed, and when read-only is switched on while waiting', async () => {
-      const blocked = setup({ isReadOnly: () => true });
+      const blocked = setup({ getMode: () => 'read_only' });
       expect((await blocked.execute(call('record_transaction'))).error).toMatch(/read-only/);
       expect(blocked.deps.createPendingAction).not.toHaveBeenCalled();
-      let readOnly = false;
-      const late = setup({ isReadOnly: () => readOnly, requestApproval: vi.fn(async (): Promise<ApprovalDecision> => { readOnly = true; return 'approved'; }) });
+      let mode: 'supervised' | 'read_only' = 'supervised';
+      const late = setup({ getMode: () => mode, requestApproval: vi.fn(async (): Promise<ApprovalDecision> => { mode = 'read_only'; return 'approved'; }) });
       expect((await late.execute(call('record_transaction'))).error).toMatch(/read-only/);
       expect(late.deps.approveAction).not.toHaveBeenCalled();
     });
@@ -120,6 +120,32 @@ describe('tool calls of an AI client, in the app', () => {
       const outcome = await thrown.execute(call('record_transaction'));
       expect(outcome).toEqual({ ok: false, error: 'storage error' });
       expect(thrown.deps.onSettled).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    });
+  });
+
+  describe('autonomous mode', () => {
+    it('runs a change at once, without a card and without asking, and returns its result', async () => {
+      const { deps, execute } = setup({ getMode: () => 'autonomous', executeTool: vi.fn(async () => ({ success: true, id: 'goal1' })) });
+      const outcome = await execute(call('record_transaction', { symbol: 'AAPL' }));
+      expect(outcome).toEqual({ ok: true, result: '{"success":true,"id":"goal1"}' });
+      expect(deps.executeTool).toHaveBeenCalledWith('record_transaction', { symbol: 'AAPL' }, { language: 'en', currency: 'EUR' });
+      expect(deps.createPendingAction).not.toHaveBeenCalled();
+      expect(deps.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('still asks for the actions on the account itself', async () => {
+      const { deps, execute } = setup({ getMode: () => 'autonomous' });
+      await execute(call('lock_vault'));
+      expect(deps.requestApproval).toHaveBeenCalled();
+      expect(deps.executeTool).not.toHaveBeenCalled();
+    });
+
+    it('still refuses everything while the vault is locked, and reports a failing tool', async () => {
+      const locked = setup({ getMode: () => 'autonomous', isVaultUnlocked: () => false });
+      expect((await locked.execute(call('record_transaction'))).error).toMatch(/locked/);
+      expect(locked.deps.executeTool).not.toHaveBeenCalled();
+      const failing = setup({ getMode: () => 'autonomous', executeTool: vi.fn(async () => { throw new Error('storage full'); }) });
+      expect(await failing.execute(call('record_transaction'))).toEqual({ ok: false, error: 'storage full' });
     });
   });
 });

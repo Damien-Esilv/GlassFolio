@@ -155,7 +155,21 @@
       "supervised": "Supervisé (Human-in-the-loop)",
       "supervisedDesc": "L'assistant peut proposer des modifications, mais chaque transaction requiert votre accord explicite.",
       "readOnly": "Lecture Seule Stricte",
-      "readOnlyDesc": "L'assistant ne peut proposer ni enregistrer aucune modification financière."
+      "readOnlyDesc": "L'assistant ne peut proposer ni enregistrer aucune modification financière.",
+      "autonomous": "Autonome (sans confirmation)",
+      "autonomousDesc": "Les agents IA créent et modifient vos données tout de suite, sans demander : l’assistant intégré, un modèle Ollama local et les clients IA connectés par MCP.",
+      "active": "Le mode autonome est activé : les agents IA modifient vos données sans vous demander.",
+      "warning": {
+        "title": "Désactiver la confirmation des modifications ?",
+        "intro": "En mode autonome, chaque agent IA qui parle à GlassFolio agit sans vous attendre :",
+        "a": "Il crée et modifie objectifs, transactions, alertes et imports immédiatement, et certaines modifications sont difficiles à annuler.",
+        "b": "Cela vaut pour l’assistant intégré, pour un modèle Ollama local et pour les clients IA connectés par MCP, comme Antigravity ou Cursor.",
+        "c": "Un agent peut mal vous comprendre, ou suivre une instruction cachée dans un document, une page web ou un e-mail qu’il lit. Rien ne l’arrête.",
+        "d": "Les actions sur le compte lui-même (verrouiller le coffre, changer la clé, exporter vos données, renvoyer l’e-mail de vérification) demandent toujours votre approbation.",
+        "e": "Vous pouvez revenir à Supervisé à tout moment. Faites d’abord une sauvegarde.",
+        "confirm": "J’ai compris, l’activer",
+        "cancel": "Annuler"
+      }
     },
     "mcp": {
       "title": "Serveur Model Context Protocol (MCP)",
@@ -320,16 +334,71 @@
     "hideToken": "Masquer le jeton",
     "copy": "Copier",
     "copied": "Copié !",
-    "clients": {
-      "title": "Connecter votre client IA",
-      "claudeCode": "Claude Code (commande)",
-      "urlJson": "Clients qui prennent une URL, comme Cursor (JSON)",
-      "stdioJson": "Clients qui démarrent une commande, comme Claude Desktop (JSON)",
-      "codex": "Codex (~/.codex/config.toml)",
-      "note": "Remplacez /absolute/path/to/GlassFolio par le dossier de votre copie du dépôt. Ces formats suivent la documentation de chaque client ; si l’un ne correspond pas à votre version, l’adresse et le jeton sont tout ce qu’il lui faut."
-    },
     "approval": {
       "title": "Un client IA demande à modifier vos données"
+    },
+    "autonomousOn": "Le mode autonome est activé : les clients IA modifient vos données sans vous demander. Vous pouvez le changer dans la section ci-dessus.",
+    "startTitle": "Démarrer le pont sur cet ordinateur",
+    "values": {
+      "title": "Les deux choses à coller",
+      "hint": "Votre IA laisse deux marqueurs dans sa configuration. Remplacez-les par ces deux valeurs.",
+      "address": "Adresse MCP",
+      "copyAddress": "Copier l’adresse",
+      "copyToken": "Copier le jeton"
+    },
+    "setup": {
+      "title": "Laissez votre IA se configurer",
+      "body": "Copiez ce prompt et envoyez-le à votre client IA (Antigravity, Cursor, Claude Code, Codex...). Il configure tout lui-même, puis ne vous laisse que deux étapes : coller le jeton et coller l’adresse là où il vous l’indique. Le prompt ne contient aucun secret.",
+      "copy": "Copier le prompt",
+      "copied": "Prompt copié"
+    },
+    "manual": {
+      "title": "Ou configurez à la main",
+      "clientLabel": "Votre client IA",
+      "transportLabel": "Type de connexion",
+      "transport": {
+        "http": "URL (HTTP)",
+        "stdio": "Commande (stdio)"
+      },
+      "format": {
+        "command": "commande",
+        "json": "JSON",
+        "toml": "TOML"
+      },
+      "where": "Où : {{where}}",
+      "note": "Remplacez /absolute/path/to/GlassFolio par le dossier de votre copie du dépôt. Si un format ne correspond pas à votre version du client, il ne lui faut que l’adresse et le jeton."
+    },
+    "commands": {
+      "title": "Commandes pour gérer le pont",
+      "intro": "Lancez-les dans un terminal, depuis le dossier de votre copie de GlassFolio. Chacune se copie.",
+      "items": {
+        "start": {
+          "title": "Démarrer le pont",
+          "desc": "Démarre le pont sur cet ordinateur et affiche son adresse et son jeton. Laissez-le tourner pendant que vous utilisez votre client IA."
+        },
+        "token": {
+          "title": "Afficher le jeton",
+          "desc": "Affiche le jeton que votre client IA et GlassFolio partagent."
+        },
+        "tools": {
+          "title": "Lister les outils",
+          "desc": "Affiche les noms des outils que votre client IA verra."
+        },
+        "status": {
+          "title": "Vérifier la connexion",
+          "desc": "Indique si votre onglet GlassFolio est connecté au pont (« connected » : true). Il faut le jeton."
+        },
+        "rotate": {
+          "title": "Révoquer l’accès (nouveau jeton)",
+          "desc": "Supprime le jeton. Un nouveau est créé, et l’ancien cesse de fonctionner.",
+          "online": "Supprime le jeton, puis en affiche un nouveau. Collez-le de nouveau dans GlassFolio et dans votre client IA : l’ancien cesse de fonctionner.",
+          "local": "Supprime le jeton de ce serveur. Redémarrez le serveur : il en crée un nouveau, et l’ancien cesse de fonctionner. Avec Docker, supprimez mcp-token dans le volume de données."
+        },
+        "disable": {
+          "title": "Désactiver le pont sur le serveur",
+          "desc": "Retire l’adresse /mcp de ce serveur. Définissez la variable dans l’environnement du serveur (avec Docker, dans son fichier d’environnement)."
+        }
+      }
     }
   }
 }

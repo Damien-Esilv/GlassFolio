@@ -155,7 +155,21 @@
       "supervised": "Supervised (Human-in-the-loop)",
       "supervisedDesc": "The assistant can suggest modifications, but every single transaction requires explicit confirmation.",
       "readOnly": "Strict Read-Only",
-      "readOnlyDesc": "The assistant cannot suggest or create any financial mutations."
+      "readOnlyDesc": "The assistant cannot suggest or create any financial mutations.",
+      "autonomous": "Autonomous (no confirmation)",
+      "autonomousDesc": "AI agents create and change your data at once, without asking: the in-app assistant, a local Ollama model and AI clients connected through MCP alike.",
+      "active": "Autonomous mode is on: AI agents change your data without asking you.",
+      "warning": {
+        "title": "Turn off the confirmation of changes?",
+        "intro": "In autonomous mode, every AI agent that talks to GlassFolio acts without waiting for you:",
+        "a": "It creates and changes goals, transactions, alerts and imports immediately, and some changes are hard to undo.",
+        "b": "It applies to the in-app assistant, to a local Ollama model and to AI clients connected through MCP, such as Antigravity or Cursor.",
+        "c": "An agent can misunderstand you, or follow an instruction hidden in a document, a web page or an email that it reads. Nothing stops it.",
+        "d": "Actions on the account itself (locking the vault, changing the key, exporting your data, resending the verification email) still ask for your approval.",
+        "e": "You can go back to Supervised at any time. Make a backup first.",
+        "confirm": "I understand, turn it on",
+        "cancel": "Cancel"
+      }
     },
     "mcp": {
       "title": "Model Context Protocol (MCP) Server",
@@ -320,16 +334,71 @@
     "hideToken": "Hide the token",
     "copy": "Copy",
     "copied": "Copied!",
-    "clients": {
-      "title": "Connect your AI client",
-      "claudeCode": "Claude Code (command)",
-      "urlJson": "Clients that take a URL, such as Cursor (JSON)",
-      "stdioJson": "Clients that start a command, such as Claude Desktop (JSON)",
-      "codex": "Codex (~/.codex/config.toml)",
-      "note": "Replace /absolute/path/to/GlassFolio with the folder of your copy of the repository. These formats follow each client’s documentation; if one does not match your version, the address and the token are all it needs."
-    },
     "approval": {
       "title": "An AI client asks to change your data"
+    },
+    "autonomousOn": "Autonomous mode is on: AI clients change your data without asking you. You can switch it back in the section above.",
+    "startTitle": "Start the bridge on this computer",
+    "values": {
+      "title": "The two things to paste",
+      "hint": "Your AI leaves two placeholders in its configuration. Replace them with these two values.",
+      "address": "MCP address",
+      "copyAddress": "Copy the address",
+      "copyToken": "Copy the token"
+    },
+    "setup": {
+      "title": "Let your AI set itself up",
+      "body": "Copy this prompt and send it to your AI client (Antigravity, Cursor, Claude Code, Codex...). It sets everything up itself, then leaves you two steps: paste the token and paste the address where it tells you. The prompt contains no secret.",
+      "copy": "Copy the prompt",
+      "copied": "Prompt copied"
+    },
+    "manual": {
+      "title": "Or set it up by hand",
+      "clientLabel": "Your AI client",
+      "transportLabel": "Connection type",
+      "transport": {
+        "http": "URL (HTTP)",
+        "stdio": "Command (stdio)"
+      },
+      "format": {
+        "command": "command",
+        "json": "JSON",
+        "toml": "TOML"
+      },
+      "where": "Where: {{where}}",
+      "note": "Replace /absolute/path/to/GlassFolio with the folder of your copy of the repository. If a format does not match your version of the client, it only needs the address and the token."
+    },
+    "commands": {
+      "title": "Commands to manage the bridge",
+      "intro": "Run them in a terminal, from the folder of your copy of GlassFolio. Each one can be copied.",
+      "items": {
+        "start": {
+          "title": "Start the bridge",
+          "desc": "Starts the bridge on this computer and prints its address and token. Keep it running while you use your AI client."
+        },
+        "token": {
+          "title": "Show the token",
+          "desc": "Prints the token that your AI client and GlassFolio share."
+        },
+        "tools": {
+          "title": "List the tools",
+          "desc": "Prints the names of the tools that your AI client will see."
+        },
+        "status": {
+          "title": "Check the connection",
+          "desc": "Says whether your GlassFolio tab is connected to the bridge (\"connected\": true). It needs the token."
+        },
+        "rotate": {
+          "title": "Revoke access (new token)",
+          "desc": "Deletes the token. A new one is made, and the old one stops working.",
+          "online": "Deletes the token, then prints a new one. Paste it again in GlassFolio and in your AI client: the old one stops working.",
+          "local": "Deletes the token of this server. Restart the server: it makes a new one, and the old one stops working. With Docker, delete mcp-token in the data volume."
+        },
+        "disable": {
+          "title": "Switch the bridge off on the server",
+          "desc": "Removes the /mcp address from this server. Set the variable in the environment of the server (with Docker, in its environment file)."
+        }
+      }
     }
   }
 }
