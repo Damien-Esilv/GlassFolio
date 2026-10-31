@@ -17,6 +17,10 @@ export type AppTarget = 'unified' | 'showcase' | 'app';
 export const DEFAULT_DEPLOYMENT_MODE: DeploymentMode = 'local';
 export const DEFAULT_APP_TARGET: AppTarget = 'unified';
 
+// Test domains of the `develop` branch, one per Vercel project
+const DEV_SHOWCASE_HOST = 'dev-showcase.glassfolio.dev';
+const DEV_APP_HOST = 'dev-app.glassfolio.dev';
+
 const VALID_MODES: readonly DeploymentMode[] = ['local', 'cloud'];
 const VALID_TARGETS: readonly AppTarget[] = ['unified', 'showcase', 'app'];
 
@@ -66,10 +70,10 @@ export const getAppTarget = (): AppTarget => {
   // Dynamic hostname detection in browser environment
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const host = window.location.hostname.toLowerCase();
-    if (host.startsWith('app.')) {
+    if (host.startsWith('app.') || host === DEV_APP_HOST) {
       return 'app';
     }
-    if (host === 'glassfolio.dev' || host === 'www.glassfolio.dev') {
+    if (host === 'glassfolio.dev' || host === 'www.glassfolio.dev' || host === DEV_SHOWCASE_HOST) {
       return 'showcase';
     }
   }
@@ -84,6 +88,9 @@ export const getAppUrl = (): string => {
     if (host === 'glassfolio.dev' || host === 'www.glassfolio.dev') {
       return `${window.location.protocol}//app.glassfolio.dev`;
     }
+    if (host === DEV_SHOWCASE_HOST) {
+      return `${window.location.protocol}//${DEV_APP_HOST}`;
+    }
   }
   return '';
 };
@@ -95,6 +102,9 @@ export const getShowcaseUrl = (): string => {
     const host = window.location.hostname.toLowerCase();
     if (host.startsWith('app.')) {
       return `${window.location.protocol}//glassfolio.dev`;
+    }
+    if (host === DEV_APP_HOST) {
+      return `${window.location.protocol}//${DEV_SHOWCASE_HOST}`;
     }
   }
   return '';

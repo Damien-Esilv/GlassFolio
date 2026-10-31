@@ -14,17 +14,15 @@ const config = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf-
 const sourceToRegExp = (source: string): RegExp => new RegExp(`^${source}$`);
 
 describe('vercel.json edge rules', () => {
-  it('redirects www to the apex with a 301, keeping the path', () => {
-    const rule = config.redirects.find((entry) => entry.has?.[0]?.value === 'www.glassfolio.dev');
-    expect(rule?.statusCode).toBe(301);
-    expect(rule?.destination).toBe('https://glassfolio.dev/:path*');
+  it('leaves the www and apex redirect to the Vercel domain settings, where a second rule would loop', () => {
+    expect(config.redirects.some((entry) => entry.has?.some((match) => match.value.includes('glassfolio.dev')))).toBe(false);
   });
 
-  it('sends noindex on the app host only', () => {
+  it('sends noindex on the app and test hosts and the internal files, never on public URLs', () => {
     const noindex = config.headers.filter((rule) => rule.headers.some((header) => header.key === 'X-Robots-Tag'));
-    expect(noindex).toHaveLength(1);
-    expect(noindex[0].has).toEqual([{ type: 'host', value: 'app.glassfolio.dev' }]);
-    expect(noindex[0].headers[0].value).toBe('noindex');
+    const hosts = noindex.filter((rule) => rule.has).map((rule) => rule.has?.[0].value);
+    expect(hosts).toEqual(['app.glassfolio.dev', 'dev-app.glassfolio.dev', 'dev-showcase.glassfolio.dev']);
+    expect(noindex.filter((rule) => !rule.has).map((rule) => rule.source)).toEqual(['/_p/(.*)', '/app-shell.html']);
   });
 
   it('caches hashed assets for a year and nothing else', () => {
@@ -33,11 +31,9 @@ describe('vercel.json edge rules', () => {
     expect(cached[0].headers[0].value).toBe('public, max-age=31536000, immutable');
   });
 
-  it('never rewrites a missing asset to the HTML shell, which would be cached for a year', () => {
-    const catchAll = sourceToRegExp(config.rewrites[0].source);
-    expect(catchAll.test('/assets/old-chunk.js')).toBe(false);
-    expect(catchAll.test('/self-host')).toBe(true);
-    expect(catchAll.test('/')).toBe(true);
-    expect(catchAll.test('/.well-known/security.txt')).toBe(true);
+  it('never rewrites a missing asset to HTML, which would be cached for a year', () => {
+    config.rewrites.forEach((rule) => {
+      expect(sourceToRegExp(rule.source.replace(':page(', '(')).test('/assets/old-chunk.js'), rule.source).toBe(false);
+    });
   });
 });

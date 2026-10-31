@@ -1,20 +1,53 @@
 {
+  "buildCommand": "npm run build:vercel",
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/((?!assets/).*)",
-      "destination": "/index.html"
+      "has": [
+        {
+          "type": "host",
+          "value": "app.glassfolio.dev"
+        }
+      ],
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-app.glassfolio.dev"
+        }
+      ],
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/",
+      "destination": "/_p/index.html"
+    },
+    {
+      "source": "/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "destination": "/_p/:page.html"
+    },
+    {
+      "source": "/(login|signup|forgot-password|reset-password|dashboard|portfolio|positions|transactions|analytics|tax|reports|goals|alerts|notifications|settings|progress|import|import-history)(/.*)?",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": "/app-shell.html"
     }
   ],
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.glassfolio.dev"
-        }
-      ],
-      "destination": "https://glassfolio.dev/:path*",
+      "source": "/welcome",
+      "destination": "/",
+      "statusCode": 301
+    },
+    {
+      "source": "/welcome/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "destination": "/:page",
       "statusCode": 301
     }
   ],
@@ -67,6 +100,54 @@
         {
           "type": "host",
           "value": "app.glassfolio.dev"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/_p/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/app-shell.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-app.glassfolio.dev"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "dev-showcase.glassfolio.dev"
         }
       ],
       "headers": [

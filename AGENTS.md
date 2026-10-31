@@ -23,6 +23,7 @@ En cas de conflit entre des règles, `AI_CODING_STANDARDS.md` prime.
 - **Charts** : Recharts. **Icons** : lucide-react.
 - **Data** : couche `src/services/` + `src/services/db.ts` (mock `localStorage`) avec **délai artificiel** à conserver.
 - **Cible (non implémentée)** : déploiement Vercel + InstantDB, sans API REST lourde.
+- **Vercel** : deux projets sur le même dépôt et le même `vercel.json`. `glassfolio-showcase` sert le site public prérendu (`glassfolio.dev`, test : `dev-showcase.glassfolio.dev`) ; `glassfolio-app` sert l'application (`app.glassfolio.dev`, test : `dev-app.glassfolio.dev`). `scripts/vercel-build.mjs` choisit le build selon le projet. Les pages publiques se déclarent dans `src/config/publicRoutes.ts`, leurs textes SEO dans `locales/{en,fr}/seo.json`. La redirection entre `www` et l'apex se règle uniquement dans les domaines Vercel.
 
 ## Structure du repo (actuelle)
 
@@ -173,7 +174,7 @@ Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doi
 Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et des auditeurs :
 
 1. **Deux branches permanentes : `develop` (test) et `main` (production)** :
-   - `develop` est rattachée sur Vercel à un domaine de branche **stable** (`develop.glassfolio.dev`, à confirmer) : c'est l'environnement de test en conditions réelles (Google OAuth, Turnstile, Supabase y sont déclarés une seule fois). **Elle n'est jamais supprimée.**
+   - `develop` est rattachée sur Vercel à un domaine de branche **stable** (`dev-showcase.glassfolio.dev` et `dev-app.glassfolio.dev`) : c'est l'environnement de test en conditions réelles (Google OAuth, Turnstile, Supabase y sont déclarés une seule fois). **Elle n'est jamais supprimée.**
    - `main` est une branche protégée réservée exclusivement aux versions de production, alimentée uniquement depuis `develop`.
    - **Interdiction formelle de commiter directement sur `develop` ou `main`** : on y entre uniquement par merge d'une branche de travail (vers `develop`) ou par promotion de `develop` (vers `main`).
    - **L'agent IA ne doit JAMAIS fusionner sur `develop` ni sur `main` de sa propre initiative**, même si tous les tests et la CI passent au vert. Le merge vers `develop`, puis la promotion vers `main`, s'effectuent **UNIQUEMENT lorsque l'utilisateur le demande de manière claire et explicite** dans le fil de discussion. Le push d'une branche de travail sur `origin` reste libre.
@@ -230,7 +231,7 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
      ```
 
 6. **Promotion `develop` → `main` (production)** :
-   - Uniquement sur demande explicite de l'utilisateur, et uniquement pour du travail **déjà testé sur `develop.glassfolio.dev`**.
+   - Uniquement sur demande explicite de l'utilisateur, et uniquement pour du travail **déjà testé sur `dev-showcase.glassfolio.dev` et `dev-app.glassfolio.dev`**.
    - **Tout `develop` est prêt** : `git merge --no-ff develop -m "merge: promote develop into main"`. **Jamais de squash de `develop`** (les deux branches divergeraient durablement).
    - **Seulement certaines features sont prêtes** : chaque feature étant un commit unique sur `develop`, la reprendre avec `git cherry-pick -x <hash>` sur une branche issue de `main`, puis merge `--no-ff` dans `main`. Citer les `TGLA-xxx` / `BUG-xxx` correspondants.
    - **Resynchronisation obligatoire** : juste après, fusionner `main` dans `develop` (`git merge --no-ff main`) pour éviter toute dérive ; un hotfix fait sur `main` suit le même chemin.

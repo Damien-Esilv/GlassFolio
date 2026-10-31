@@ -2,8 +2,8 @@
 /**
  * Post-deploy production smoke test (Epic E19 — TGLA-132).
  *
- * For every host: GET "/" and a non-existent deep link (SPA rewrite) must answer
- * HTTP 200 + HTML, and carry the security headers declared in vercel.json.
+ * For every host: GET "/" must answer HTTP 200 + HTML, a non-existent path 200 on the app host
+ * (SPA rewrite) and 404 on the public site, all with the security headers declared in vercel.json.
  *
  * Env:
  *   SMOKE_HOSTS     comma-separated base URLs (default: glassfolio.dev + app.glassfolio.dev)
@@ -19,6 +19,7 @@ import {
   DEEP_LINK_PATH,
   expectedHeadersFromVercelConfig,
   evaluateSmokeResponse,
+  expectedDeepLinkStatus,
 } from './lib/smokeChecks.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,9 +49,8 @@ const checkHost = async (base) => {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     failures = [];
     try {
-      for (const path of ['/', DEEP_LINK_PATH]) {
-        failures.push(...evaluateSmokeResponse(await probe(base, path), expectedHeaders));
-      }
+      failures.push(...evaluateSmokeResponse(await probe(base, '/'), expectedHeaders));
+      failures.push(...evaluateSmokeResponse(await probe(base, DEEP_LINK_PATH), expectedHeaders, expectedDeepLinkStatus(base)));
     } catch (error) {
       failures.push(`request failed: ${error instanceof Error ? error.message : String(error)}`);
     }

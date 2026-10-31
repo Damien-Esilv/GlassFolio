@@ -380,6 +380,9 @@ body {
     radial-gradient(32% 40% at 78% 22%, color-mix(in srgb, var(--color-accent-cyan) 18%, transparent), transparent 70%),
     radial-gradient(30% 36% at 60% 70%, color-mix(in srgb, var(--color-accent-indigo) 16%, transparent), transparent 70%);
   filter: blur(48px);
+  /* First keyframe as resting position, composited from first paint: otherwise its start counts as a layout shift */
+  transform: translate3d(-4%, -2%, 0);
+  will-change: transform;
   animation: auroraDrift 22s ease-in-out infinite alternate;
 }
 
@@ -526,4 +529,9 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   border: none;
+}
+
+/* Prerendered English text stays hidden until the app renders another language (public/prerender-gate.js) */
+.prerender-pending #root {
+  visibility: hidden;
 }
