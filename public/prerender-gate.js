@@ -23,7 +23,8 @@
     root.setAttribute('data-theme', theme);
     root.classList.toggle('dark', theme !== 'light');
   }
-  if (read('gf_public_lang') === 'fr') {
+  // French URLs ship French HTML; elsewhere a visitor who chose French waits for the app
+  if (!/^\/fr(\/|$)/.test(location.pathname) && read('gf_public_lang') === 'fr') {
     root.lang = 'fr';
     root.classList.add('prerender-pending');
     // Never leave a page hidden if the app fails to start

@@ -8,20 +8,20 @@ import { StaticRouter } from 'react-router-dom';
 import i18n from './i18n';
 import { AuthProvider } from './context/AuthContext';
 import { PrerenderedMotion, ShowcaseRoutes } from './ShowcaseApp';
-import { PUBLIC_ROUTES, canonicalUrl, type PublicSeoKey } from './config/publicRoutes';
+import { FR_BASENAME, PUBLIC_ROUTES, canonicalUrl, localizedPath, type PublicLanguage, type PublicSeoKey } from './config/publicRoutes';
 import { CHANGELOG } from './constants/changelog';
 
-export { PUBLIC_ROUTES, canonicalUrl };
+export { PUBLIC_ROUTES, canonicalUrl, localizedPath };
 
 export const latestReleaseDate = (): string => CHANGELOG[0].date;
 
-export const seoTexts = (key: PublicSeoKey | 'notFound'): { title: string; description: string } => ({
-  title: i18n.t(`seo:${key}.title`, { lng: 'en' }),
-  description: i18n.t(`seo:${key}.description`, { lng: 'en' }),
+export const seoTexts = (key: PublicSeoKey | 'notFound', language: PublicLanguage = 'en'): { title: string; description: string } => ({
+  title: i18n.t(`seo:${key}.title`, { lng: language }),
+  description: i18n.t(`seo:${key}.description`, { lng: language }),
 });
 
-export const renderPublicPage = async (path: string): Promise<string> => {
-  await i18n.changeLanguage('en');
+export const renderPublicPage = async (path: string, language: PublicLanguage = 'en'): Promise<string> => {
+  await i18n.changeLanguage(language);
   const { prelude } = await prerenderToNodeStream(
     // Same boundaries as main.tsx and ShowcaseApp, or hydration fails and the page renders twice
     <React.StrictMode>
@@ -29,7 +29,7 @@ export const renderPublicPage = async (path: string): Promise<string> => {
         <AuthProvider>
           <PrerenderedMotion>
             <React.Fragment key="hydration">
-              <StaticRouter location={path}>
+              <StaticRouter location={localizedPath(path, language)} basename={language === 'fr' ? FR_BASENAME : undefined}>
                 <ShowcaseRoutes />
               </StaticRouter>
             </React.Fragment>

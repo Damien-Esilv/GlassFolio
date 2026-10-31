@@ -31,6 +31,14 @@
       "destination": "/_p/:page.html"
     },
     {
+      "source": "/fr",
+      "destination": "/_p/fr/index.html"
+    },
+    {
+      "source": "/fr/:page(self-host|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility)",
+      "destination": "/_p/fr/:page.html"
+    },
+    {
       "source": "/(login|signup|forgot-password|reset-password|dashboard|portfolio|positions|transactions|analytics|tax|reports|goals|alerts|notifications|settings|progress|import|import-history)(/.*)?",
       "destination": "/app-shell.html"
     },

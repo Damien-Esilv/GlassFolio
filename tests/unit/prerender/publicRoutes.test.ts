@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { PUBLIC_ROUTES, canonicalUrl, findPublicRoute } from '../../../src/config/publicRoutes';
+import { PUBLIC_ROUTES, canonicalUrl, findPublicRoute, languageFromPath, localizedPath } from '../../../src/config/publicRoutes';
 import { resolveVercelBuildTarget } from '../../../scripts/lib/vercelBuildTarget.mjs';
 
 interface HostMatch { type: string; value: string }
@@ -33,7 +33,14 @@ describe('public routes manifest', () => {
     expect(canonicalUrl('/about')).toBe('https://glassfolio.dev/about');
     expect(findPublicRoute('/welcome')?.path).toBe('/');
     expect(findPublicRoute('/welcome/about')?.path).toBe('/about');
+    expect(findPublicRoute('/fr')?.path).toBe('/');
+    expect(findPublicRoute('/fr/about')?.path).toBe('/about');
     expect(findPublicRoute('/nope')).toBeUndefined();
+    expect(canonicalUrl('/', 'fr')).toBe('https://glassfolio.dev/fr');
+    expect(canonicalUrl('/about', 'fr')).toBe('https://glassfolio.dev/fr/about');
+    expect(languageFromPath('/fr/about')).toBe('fr');
+    expect(languageFromPath('/france')).toBe('en');
+    expect(localizedPath('/about', 'en')).toBe('/about');
   });
 
   it('keeps the product schema off the legal pages', () => {
@@ -72,6 +79,13 @@ describe('vercel.json serves both Vercel projects', () => {
     PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
       expect(destinationFor(route.path), route.path).toBe('/_p/:page.html');
       expect(route.file).toBe(route.path.slice(1));
+    });
+  });
+
+  it('serves the French pages from their own URLs', () => {
+    expect(destinationFor('/fr')).toBe('/_p/fr/index.html');
+    PUBLIC_ROUTES.filter((route) => route.path !== '/').forEach((route) => {
+      expect(destinationFor(`/fr${route.path}`), route.path).toBe('/_p/fr/:page.html');
     });
   });
 

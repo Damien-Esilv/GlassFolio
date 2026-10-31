@@ -14,7 +14,7 @@ import { LegacyHashRedirect } from './components/ui/LegacyHashRedirect';
 import { ConsentGatedAnalytics } from './components/ConsentGatedAnalytics';
 import { PullToRefresh } from './components/ui/PullToRefresh';
 import { PublicPageHead } from './components/landing/PublicPageHead';
-import { findPublicRoute, type PublicSeoKey } from './config/publicRoutes';
+import { FR_BASENAME, findPublicRoute, languageFromPath, type PublicSeoKey } from './config/publicRoutes';
 
 type PageModule = { default: React.ComponentType };
 
@@ -177,6 +177,8 @@ interface ShowcaseAppProps {
 }
 
 export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false }) => {
+  // Router basename: every internal link and route of a French page stays under /fr
+  const basename = languageFromPath(window.location.pathname) === 'fr' ? FR_BASENAME : undefined;
   const [pageReady, setPageReady] = useState(false);
   const markReady = React.useCallback(() => {
     document.documentElement.classList.remove('prerender-pending');
@@ -186,7 +188,7 @@ export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false })
   if (!prerendered) {
     return (
       <AuthProvider>
-        <Router>
+        <Router basename={basename}>
           <ShowcaseRoutes />
         </Router>
       </AuthProvider>
@@ -199,7 +201,7 @@ export const ShowcaseApp: React.FC<ShowcaseAppProps> = ({ prerendered = false })
     <AuthProvider>
       <PrerenderedMotion>
         <React.Fragment key={pageReady ? 'client' : 'hydration'}>
-          <Router>
+          <Router basename={basename}>
             <ShowcaseRoutes onPageReady={pageReady ? undefined : markReady} />
           </Router>
         </React.Fragment>

@@ -298,15 +298,15 @@ jobs:
             smoke: false
           - label: showcase
             build_cmd: npm run build:showcase
-            # 1408 -> 1424: prerender runtime (SEO texts, head updates, 404 page, TGLA-193)
-            limit_kb: 1424
+            # 1408 -> 1440: prerender runtime and French URLs (SEO texts, head updates, 404 page, TGLA-193, TGLA-194)
+            limit_kb: 1440
             landing: present
             smoke: false
           - label: vercel-parity
             build_cmd: GLASSFOLIO_BUILD_TARGET=showcase npm run build:vercel
             # 2560 -> 2624: Google Drive split-trust (OIDC, Drive key, device key, recovery modal) adds ~35 KB.
             # The showcase project's real build (TGLA-193); the app project matches cloud-app
-            limit_kb: 1424
+            limit_kb: 1440
             landing: present
             smoke: true
     steps:

@@ -341,6 +341,7 @@
         "topicContent": {
             "cto": {
                 "rule1": "Flat Tax (PFU {{rate}}%: {{ir}}% income tax + {{social}}% social contributions) or optional progressive income tax scale",
+                "rulesNotice": "Rules applied for fiscal year {{year}}. This guide is informational and is not tax advice: check impots.gouv.fr or a tax professional before filing.",
                 "rateExceptions": "Rate exceptions: income from life insurance and capitalisation contracts (except rente-survie and épargne-handicap contracts), interest on CEL and PEL accounts opened up to 31 December 2017 (first 12 years for PEL) and income-tax-exempt PEP income stay at 17.2% social contributions. Dividends and interest paid and withheld in 2025 stayed at 17.2%. Source: impots.gouv.fr, 2026.",
                 "rule2": "Cost basis calculated using Weighted Average Price (PMP)",
                 "rule3": "Capital losses can offset capital gains of the same nature, carried forward for 10 years",

@@ -8,6 +8,16 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-1": {
+      "title": "A clearer, faster public site",
+      "highlights": {
+        "frenchPages": "The public site now has its own French pages, at addresses you can share and bookmark.",
+        "fasterPublicPages": "Public pages show their content straight away, without waiting for the app to load.",
+        "taxRates": "The tax guide and optimization table show the flat-tax and social contribution rates of each year, with their exceptions.",
+        "compactConsent": "The consent notice is now a small bar that no longer covers the page.",
+        "readability": "Better text contrast and larger tap targets on the public site, including on mobile."
+      }
+    },
     "v1-0": {
       "title": "GlassFolio 1.0 — Flagship Release",
       "highlights": {
