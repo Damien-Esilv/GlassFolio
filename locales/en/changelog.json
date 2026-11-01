@@ -8,6 +8,13 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-0-1": {
+      "title": "GlassFolio 1.0.1 — Fixes and Polish",
+      "highlights": {
+        "smallRefinements": "Small refinements across the app and the public site.",
+        "bugFixes": "A few bugs fixed for smoother everyday use."
+      }
+    },
     "v1-0": {
       "title": "GlassFolio 1.0 — Flagship Release",
       "highlights": {

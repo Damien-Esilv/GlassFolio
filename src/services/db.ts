@@ -43,6 +43,7 @@ import {
     buildDemoInstruments
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
+import { getDeploymentMode } from '../config/deployment';
 import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY, VAULT_HEADER_KEY } from './storage/storageKeys';
 
 const STORAGE_KEYS = {
@@ -67,8 +68,13 @@ const STORAGE_KEYS = {
     INSTRUMENTS: 'glassfolio_instruments'
 };
 
-// Helper: Simulate network delay
-export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+/**
+ * Simulated network delay, kept for the hosted (cloud) build where the data layer stands in for a
+ * remote backend. In local mode the calls already pay their real cost (encryption, the write to the
+ * server volume), so waiting on top of that only slows the interface down.
+ */
+export const delay = (ms: number): Promise<void> =>
+    getDeploymentMode() === 'local' ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms));
 
 export const isRealUserVaultActive = (): boolean => {
     try {

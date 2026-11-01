@@ -28,6 +28,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-0-1',
+    version: '1.0.1',
+    date: '2026-11-02',
+    highlights: [
+      { key: 'smallRefinements', kind: 'improved' },
+      { key: 'bugFixes', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-0',
     version: '1.0',
     date: '2026-10-31',

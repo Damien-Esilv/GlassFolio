@@ -2,7 +2,7 @@
   "name": "glassfolio",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -46,7 +46,7 @@
     "prepare": "node -e \"const fs=require('fs'); try { if (fs.existsSync('.git') && fs.existsSync('.git/hooks')) { fs.copyFileSync('scripts/pre-commit.sh', '.git/hooks/pre-commit'); fs.chmodSync('.git/hooks/pre-commit', 0o755); } } catch (e) {}\"",
     "precommit:check": "node scripts/pre-commit-check.mjs",
     "notion:sync": "node scripts/notion-sync.mjs",
-    "docker:up": "node scripts/docker-guard.mjs && docker compose --env-file docker/docker.env up -d --build",
+    "docker:up": "node scripts/docker-guard.mjs && docker compose --env-file docker/docker.env up -d --build && node scripts/docker-ready.mjs",
     "docker:down": "docker compose --env-file docker/docker.env down",
     "docker:logs": "docker compose --env-file docker/docker.env logs -f glassfolio",
     "docker:smoke": "node scripts/smoke-docker.mjs",
