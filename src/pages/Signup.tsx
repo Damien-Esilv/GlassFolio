@@ -171,7 +171,8 @@ const Signup: React.FC = () => {
       e.preventDefault();
       setError('');
 
-      if (!acceptedLegal) {
+      // The Terms and the Privacy Policy cover the hosted service; a local vault sends nothing to the publisher
+      if (!isLocal && !acceptedLegal) {
          setError(t('auth:signup.acceptLegalRequired'));
          return;
       }
@@ -398,26 +399,30 @@ const Signup: React.FC = () => {
                   <PasswordStrengthMeter password={password} />
                </div>
 
-               <label className="flex items-start gap-2.5 text-xs text-secondary mt-2 cursor-pointer" htmlFor="accept-legal">
-                  <input
-                     id="accept-legal"
-                     type="checkbox"
-                     required
-                     checked={acceptedLegal}
-                     onChange={(e) => setAcceptedLegal(e.target.checked)}
-                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary"
-                  />
-                  <span>
-                     <Trans
-                        i18nKey="auth:signup.acceptLegal"
-                        values={{ version: LEGAL_DOCUMENTS_VERSION }}
-                        components={{
-                           terms: <LegalLink path="/terms" newTab className="text-brand hover:underline" />,
-                           privacy: <LegalLink path="/privacy" newTab className="text-brand hover:underline" />,
-                        }}
+               {isLocal ? (
+                  <p className="text-xs text-secondary mt-2">{t('auth:signup.localNotice')}</p>
+               ) : (
+                  <label className="flex items-start gap-2.5 text-xs text-secondary mt-2 cursor-pointer" htmlFor="accept-legal">
+                     <input
+                        id="accept-legal"
+                        type="checkbox"
+                        required
+                        checked={acceptedLegal}
+                        onChange={(e) => setAcceptedLegal(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary"
                      />
-                  </span>
-               </label>
+                     <span>
+                        <Trans
+                           i18nKey="auth:signup.acceptLegal"
+                           values={{ version: LEGAL_DOCUMENTS_VERSION }}
+                           components={{
+                              terms: <LegalLink path="/terms" newTab className="text-brand hover:underline" />,
+                              privacy: <LegalLink path="/privacy" newTab className="text-brand hover:underline" />,
+                           }}
+                        />
+                     </span>
+                  </label>
+               )}
 
                {isLocal && showOverwriteConfirm && (
                   <div>

@@ -20,7 +20,7 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 
 <br />
 
-<img src=".github/assets/readme-hero.webp" alt="Tableau de bord GlassFolio devant les écrans positions et fiscalité" width="960" />
+<img src="public/screenshots/readme-hero.webp" alt="Tableau de bord GlassFolio devant les écrans positions et fiscalité" width="960" />
 
 </div>
 
@@ -79,20 +79,20 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 
 <table>
   <tr>
-    <td width="50%"><img src="public/screenshots/dashboard.webp" alt="Tableau de bord" /><br /><sub><b>Tableau de bord</b> : patrimoine, répartition, performances</sub></td>
-    <td width="50%"><img src="public/screenshots/positions.webp" alt="Positions" /><br /><sub><b>Positions</b> : lignes par compte et classe d'actifs</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/dashboard.webp" alt="Tableau de bord" /><br /><sub><b>Tableau de bord</b> : patrimoine, répartition, performances</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/positions.webp" alt="Positions" /><br /><sub><b>Positions</b> : lignes par compte et classe d'actifs</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b> : comparaison à un indice dans le temps</sub></td>
-    <td width="50%"><img src="public/screenshots/fees.webp" alt="Frais" /><br /><sub><b>Frais</b> : coût annuel et cumulé de chaque fonds</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b> : comparaison à un indice dans le temps</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/fees.webp" alt="Frais" /><br /><sub><b>Frais</b> : coût annuel et cumulé de chaque fonds</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/tax.webp" alt="Moteur fiscal" /><br /><sub><b>Moteur fiscal</b> : PFU ou barème, assistant Cerfa</sub></td>
-    <td width="50%"><img src="public/screenshots/import.webp" alt="Import" /><br /><sub><b>Import</b> : formats de courtiers, mappage des colonnes, aperçu en direct</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/tax.webp" alt="Moteur fiscal" /><br /><sub><b>Moteur fiscal</b> : PFU ou barème, assistant Cerfa</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/import.webp" alt="Import" /><br /><sub><b>Import</b> : formats de courtiers, mappage des colonnes, aperçu en direct</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/ai-assistant.webp" alt="Assistant IA" /><br /><sub><b>Assistant IA</b> : réponses tirées de vos données</sub></td>
-    <td width="50%"><img src="public/screenshots/progress.webp" alt="Progression" /><br /><sub><b>Progression</b> : objectifs d'épargne, rangs et quêtes</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/ai-assistant.webp" alt="Assistant IA" /><br /><sub><b>Assistant IA</b> : réponses tirées de vos données</sub></td>
+    <td width="50%"><img src="public/screenshots/fr/progress.webp" alt="Progression" /><br /><sub><b>Progression</b> : objectifs d'épargne, rangs et quêtes</sub></td>
   </tr>
 </table>
 
@@ -178,6 +178,7 @@ Dans les réglages, choisissez le fournisseur Ollama et saisissez son adresse (`
 - Système de fichiers racine en lecture seule, `/tmp` en tmpfs, `cap_drop: ALL`, `no-new-privileges`.
 - Exécuté avec l'utilisateur non root `node`, avec des limites de 512 Mo de mémoire et 128 processus.
 - Image de base épinglée par empreinte (digest), vérification de santé intégrée.
+- Chaîne d'approvisionnement contrôlée en CI/CD : chaque exécution vérifie les épinglages SHA (empreintes Docker, commits des GitHub Actions, intégrité du lockfile npm), puis construit l'image et la teste de bout en bout, persistance des données comprise.
 - Écoute sur `127.0.0.1` par défaut ; l'exposition réseau exige un jeton d'accès.
 - Une CSP stricte et des en-têtes de sécurité sont envoyés par le serveur lui-même.
 

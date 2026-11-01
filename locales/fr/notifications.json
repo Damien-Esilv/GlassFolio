@@ -24,8 +24,7 @@
   "stats": {
     "total": "Total des alertes",
     "unread": "Non lues",
-    "activeRules": "Règles actives",
-    "categories": "Catégories surveillées"
+    "activeRules": "Règles actives"
   },
   "filters": {
     "searchPlaceholder": "Rechercher une alerte, un actif, un mot-clé...",

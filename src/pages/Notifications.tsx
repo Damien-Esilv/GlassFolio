@@ -162,7 +162,7 @@ export const Notifications: React.FC = () => {
       </div>
 
       {/* KPI Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 rounded-2xl bg-card border border-subtle">
           <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
             {t('notifications:stats.total')}
@@ -187,15 +187,6 @@ export const Notifications: React.FC = () => {
           </p>
           <p className="text-2xl font-black text-primary mt-1">
             <AnimatedNumber value={alertRules.filter((r) => r.enabled).length} locale={locale} />
-          </p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-card border border-subtle">
-          <p className="text-[11px] font-bold text-tertiary uppercase tracking-wider">
-            {t('notifications:stats.categories')}
-          </p>
-          <p className="text-2xl font-black text-brand mt-1">
-            <AnimatedNumber value={4} locale={locale} />
           </p>
         </div>
       </div>

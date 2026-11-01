@@ -5,7 +5,8 @@
  * Zero dependencies: drives a local Chrome/Chromium in headless mode over the DevTools protocol
  * with Node's built-in WebSocket. Start the app first (`npm run dev`), then:
  *
- *   npm run screenshots
+ *   npm run screenshots           (English: public/screenshots/)
+ *   npm run screenshots -- --lang fr (French: public/screenshots/fr/)
  *   CHROME_PATH=/usr/bin/chromium npm run screenshots -- --base http://localhost:3000
  *
  * It signs in with the demo account (`/?demo=1`), so no personal data ends up in the images.
@@ -25,12 +26,13 @@ const args = Object.fromEntries(
 );
 
 const BASE_URL = args.base ?? 'http://localhost:3000';
-const OUT_DIR = path.resolve(args.out ?? 'public/screenshots');
-/** README hero lives outside public/ so it never ships with (or weighs on) the site. */
-const README_HERO = path.resolve('.github/assets/readme-hero.webp');
+const LANG = args.lang ?? 'en';
+/** English set at the root (used by the showcase), other languages in a sub-folder (README.<lang>.md). */
+const OUT_DIR = path.resolve(args.out ?? (LANG === 'en' ? 'public/screenshots' : `public/screenshots/${LANG}`));
+const README_HERO = path.resolve('public/screenshots/readme-hero.webp');
+const OG_COVER = path.resolve('public/screenshots/og-cover.png');
 const README_MOCKUP = path.resolve('scripts/readme-mockup.html');
 const THEME = args.theme ?? 'night';
-const LANG = args.lang ?? 'en';
 const DEBUG_PORT = 9333;
 const VIEWPORT = { width: 1440, height: 900, deviceScaleFactor: 1.5 };
 const CHROME_CANDIDATES = [
@@ -179,18 +181,21 @@ async function main() {
       if (shot.openAssistant) await evaluate(cdp, `document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
     }
 
-    // Social preview card (Open Graph): 1200×630, dashboard.
-    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1200, height: 630, deviceScaleFactor: 1, mobile: false });
-    await goTo(cdp, '/');
-    await sleep(6000);
-    await capture(cdp, path.join(OUT_DIR, 'og-cover.png'), 'png');
-
-    // README hero: the fresh screenshots composed in browser frames (scripts/readme-mockup.html).
-    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1.5, mobile: false });
-    await mkdir(path.dirname(README_HERO), { recursive: true });
-    await cdp.send('Page.navigate', { url: pathToFileURL(README_MOCKUP).href });
-    await sleep(2000);
-    await capture(cdp, README_HERO);
+    // The hero and the Open Graph card (the same image, 1200×630) come from the English set only.
+    if (LANG === 'en') {
+      // README hero: the fresh screenshots composed in browser frames (scripts/readme-mockup.html).
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1.5, mobile: false });
+      await cdp.send('Page.navigate', { url: pathToFileURL(README_MOCKUP).href });
+      await sleep(2000);
+      await capture(cdp, README_HERO);
+      // Link preview card: the hero cropped to 1200×630 (clip of 1600×840, scaled by 0.75).
+      const { data } = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        clip: { x: 0, y: 30, width: 1600, height: 840, scale: 0.75 },
+      });
+      await writeFile(OG_COVER, Buffer.from(data, 'base64'));
+      console.log(`  ✓ ${path.relative(process.cwd(), OG_COVER)}`);
+    }
     cdp.close();
   } finally {
     const exited = new Promise((resolve) => browser.once('exit', resolve));

@@ -24,8 +24,7 @@
   "stats": {
     "total": "Total Alerts",
     "unread": "Unread",
-    "activeRules": "Active Rules",
-    "categories": "Categories Tracked"
+    "activeRules": "Active Rules"
   },
   "filters": {
     "searchPlaceholder": "Search alerts, assets, keywords...",

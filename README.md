@@ -20,7 +20,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 
 <br />
 
-<img src=".github/assets/readme-hero.webp" alt="GlassFolio dashboard in front of the positions and tax screens" width="960" />
+<img src="public/screenshots/readme-hero.webp" alt="GlassFolio dashboard in front of the positions and tax screens" width="960" />
 
 </div>
 
@@ -178,6 +178,7 @@ In Settings, choose the Ollama provider and enter its address (`http://localhost
 - Read-only root filesystem, `/tmp` on tmpfs, `cap_drop: ALL`, `no-new-privileges`.
 - Runs as the non-root `node` user, with 512 MB memory and 128 process limits.
 - Base image pinned by digest, health check built in.
+- Supply chain checked in CI/CD: every run verifies the SHA pins (Docker digests, GitHub Actions commits, npm lockfile integrity), then builds the image and smoke-tests it, data persistence included.
 - Binds to `127.0.0.1` by default; network exposure requires an access token.
 - A strict CSP and security headers are sent by the server itself.
 
