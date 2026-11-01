@@ -2,7 +2,7 @@
   "name": "glassfolio",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "engines": {
     "node": "22.x"
