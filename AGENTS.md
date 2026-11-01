@@ -172,9 +172,9 @@ Le graphe Memory persisté dans `$HOME/Developpement/memory/glassfolio.json` doi
 
 > ⚠️ Ne jamais lire, modifier ou créer d'autres fichiers dans `$HOME/Developpement/memory/` — seul `glassfolio.json` est géré par ce projet.
 
-### Protocole Git, Branching & DevSecOps (Règle Recruiter-Grade)
+### Protocole Git, Branching & DevSecOps (SDLC)
 
-Pour garantir une traçabilité logicielle de niveau professionnel visible des recruteurs et des auditeurs :
+Cycle de vie de développement logiciel (SDLC) du projet, pour garantir la traçabilité et l'auditabilité de chaque livraison :
 
 1. **Deux branches permanentes : `develop` (test) et `main` (production)** :
    - `develop` est rattachée sur Vercel à un domaine de branche **stable** (`dev-showcase.glassfolio.dev` et `dev-app.glassfolio.dev`) : c'est l'environnement de test en conditions réelles (Google OAuth, Turnstile, Supabase y sont déclarés une seule fois). **Elle n'est jamais supprimée.**
@@ -190,7 +190,7 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
    - Tout commit sur la branche de travail doit suivre le standard Conventional Commits : `feat(scope): message`, `fix(scope): message`, `test(scope): message`, etc.
    - **Cycle d'itération sur la branche** : L'IA a l'entière liberté de créer des commits intermédiaires ou correctifs sur la branche dédiée afin de valider localement et déclencher les workflows CI GitHub Actions.
    - **Consolidation obligatoire avant merge dans `develop` (Squash en 1 seul commit avec traçabilité Notion complète)** :
-     - Le squash vaut pour **toutes** les branches de travail, grosses features comme micro-corrections : chacune entre dans `develop` sous la forme d'un seul commit. C'est ce qui rend ensuite une feature promouvable seule vers `main` (cf. point 6).
+     - Le squash vaut pour **toutes** les branches de travail, grosses features comme micro-corrections : chacune entre dans `develop` sous la forme d'un seul commit. C'est ce qui rend ensuite une feature promouvable seule vers `main` (cf. point 5).
      - Lorsque l'utilisateur demande explicitement le merge dans `develop`, l'ensemble des commits intermédiaires, micro-ajustements cosmétiques ou essais de la branche de feature doivent impérativement être **consolidés / squashe en un seul commit atomique et auto-suffisant** représentant la livraison complète et fonctionnelle.
      - **Préservation intégrale des identifiants Notion dans le message de commit consolidé** :
        - Le titre et le corps du commit squashed unique **DOIVENT impérativement citer TOUS les identifiants de tâches (`TGLA-xxx`) et bugs (`BUG-xxx`)** concernés par la branche :
@@ -223,22 +223,12 @@ Pour garantir une traçabilité logicielle de niveau professionnel visible des r
    - Il est formellement interdit de clore une intervention tant que les checks CI distants ne sont pas terminés et passés avec succès (`success` / vert).
    - En cas d'échec du runner distant (différence d'environnement, timeout, cache), l'agent doit inspecter les logs, corriger le code sur la branche, re-pousser et attendre à nouveau la validation complète de la CI.
 
-5. **Architecture Dual-Remote (Lab Privé vs Vitrine Publique)** :
-   - `origin` : dépôt de travail privé (toutes branches de sprint, discussions et historiques détaillés).
-   - `public` : dépôt miroir public en code source disponible, licence PolyForm Noncommercial (uniquement les releases propres validées de `main`).
-   - Synchronisation vers la vitrine publique :
-     ```bash
-     git checkout main
-     npm run check:standards && npm test
-     git push public main:main --tags
-     ```
-
-6. **Promotion `develop` → `main` (production)** :
+5. **Promotion `develop` → `main` (production)** :
    - Uniquement sur demande explicite de l'utilisateur, et uniquement pour du travail **déjà testé sur `dev-showcase.glassfolio.dev` et `dev-app.glassfolio.dev`**.
    - **Tout `develop` est prêt** : `git merge --no-ff develop -m "merge: promote develop into main"`. **Jamais de squash de `develop`** (les deux branches divergeraient durablement).
    - **Seulement certaines features sont prêtes** : chaque feature étant un commit unique sur `develop`, la reprendre avec `git cherry-pick -x <hash>` sur une branche issue de `main`, puis merge `--no-ff` dans `main`. Citer les `TGLA-xxx` / `BUG-xxx` correspondants.
    - **Resynchronisation obligatoire** : juste après, fusionner `main` dans `develop` (`git merge --no-ff main`) pour éviter toute dérive ; un hotfix fait sur `main` suit le même chemin.
-   - Les 6 gates locales et la CI distante doivent être vertes avant la promotion ; la synchro Notion, le changelog public (voir règle ci-dessus) et la vitrine (`public`) se font à ce moment-là.
+   - Les 6 gates locales et la CI distante doivent être vertes avant la promotion ; la synchro Notion et le changelog public (voir règle ci-dessus) se font à ce moment-là.
 
 ### Règles tokens / latence
 

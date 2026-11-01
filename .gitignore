@@ -5,7 +5,6 @@
 # Environment files & Secrets
 .env
 .env.*
-!.env.example
 *.local
 
 # Security credentials & Private keys
@@ -65,6 +64,8 @@ Thumbs.db
 .gemini/
 .claude/
 .cursor/
+.playwright-mcp/
+.superpowers/
 poc-*.html
 
 # Docker Local Persistent Volume

@@ -49,9 +49,8 @@ describe('DevSecOps Pre-Commit Shield — 6 Core Invariants Contract', () => {
       }
     });
 
-    it('allows non-secret template files', () => {
+    it('allows non-secret repository files', () => {
       const allowedFiles = [
-        '.env.example',
         'package.json',
         'README.md',
         'App.tsx',

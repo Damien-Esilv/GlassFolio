@@ -19,6 +19,7 @@ jobs:
   sync-notion:
     name: 📝 Sync Tasks to Notion
     runs-on: ubuntu-latest
+    if: github.repository == 'Damien-Esilv/GlassFolio' && github.event.repository.fork == false
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
