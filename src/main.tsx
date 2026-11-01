@@ -5,12 +5,20 @@ import ReactDOM from 'react-dom/client';
 import './fonts.css';
 import './index.css';
 import { consumeUrlBootstrapParams } from './config/urlBootstrap';
+import { getLocalhostRedirect } from './config/loopbackRedirect';
 import { installTrustedTypesDefaultPolicy } from './services/security/trustedTypes';
 import { bootstrapLocalPersistence } from './services/storage/localPersistenceBootstrap';
 import { installChunkReloadHandler } from './services/storage/chunkReload';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 import { getSyncedPublicLanguage } from './services/storage/publicPreferencesSync';
 import { DEFAULT_PUBLIC_LANGUAGE, languageFromPath } from './config/publicRoutes';
+
+// Opened on 127.0.0.1: go to localhost, the address on which every browser feature works
+const localhostUrl = getLocalhostRedirect(window.location);
+if (localhostUrl) {
+  window.location.replace(localhostUrl);
+  throw new Error('Redirecting to localhost');
+}
 
 // Synchronous preference & URL handoff bootstrap before any render
 consumeUrlBootstrapParams();
