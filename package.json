@@ -1,8 +1,8 @@
 {
-  "name": "copy-of-glassfolio-working",
+  "name": "glassfolio",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -93,6 +93,7 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
-    "postcss-selector-parser": "^7.1.6"
+    "postcss-selector-parser": "^7.1.6",
+    "minimatch": "^11.0.3"
   }
 }
