@@ -31,4 +31,18 @@ describe('qrCode generator', () => {
         expect(transparentSvg).not.toContain('<rect');
         expect(transparentSvg).toContain('fill="black"');
     });
+
+    it('sanitizes malicious SVG attributes in color, bg, and margin options', () => {
+        const text = 'otpauth://totp/GlassFolio:test?secret=JBSWY3DPEHPK3PXP';
+        const svg = generateQrSvg(text, {
+            color: '"><script>alert(1)</script><path fill="',
+            bg: '" onload="alert(1)',
+            margin: -10,
+        });
+
+        expect(svg).not.toContain('<script>');
+        expect(svg).not.toContain('onload=');
+        expect(svg).toContain('fill="black"');
+        expect(svg).toContain('fill="white"');
+    });
 });

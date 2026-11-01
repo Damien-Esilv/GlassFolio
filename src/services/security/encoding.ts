@@ -83,3 +83,23 @@ export const fromBase32 = (value: string): Bytes => {
     }
     return new Uint8Array(out);
 };
+
+// ── Constant-Time Comparison ─────────────────────────────────────────────────
+
+/**
+ * Compares two strings in constant time (with respect to the candidate length)
+ * to mitigate timing side-channel attacks on TOTP tokens and backup code hashes.
+ */
+export const constantTimeCompare = (a: string, b: string): boolean => {
+    const bytesA = utf8Encode(a);
+    const bytesB = utf8Encode(b);
+    let result = bytesA.length ^ bytesB.length;
+    const len = Math.max(bytesA.length, bytesB.length);
+    for (let i = 0; i < len; i++) {
+        const byteA = i < bytesA.length ? bytesA[i] : 0;
+        const byteB = i < bytesB.length ? bytesB[i] : 0;
+        result |= byteA ^ byteB;
+    }
+    return result === 0;
+};
+

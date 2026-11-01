@@ -134,7 +134,7 @@ export const etfFeeService = {
             name: fallbackName || symbol,
             ter: 0.35,
             category: 'Equity ETF',
-            yahooUrl: `https://finance.yahoo.com/quote/${symbol}`
+            yahooUrl: `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}`
         };
     },
 

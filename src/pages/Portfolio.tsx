@@ -68,13 +68,13 @@ const Portfolio: React.FC = () => {
     const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
     // Category configuration dynamically generated from ASSET_CLASSES_CONFIG + dynamic fallback
-    const baseCategoryConfigs = ASSET_CLASSES_CONFIG.map(ac => ({
+    const baseCategoryConfigs = useMemo(() => ASSET_CLASSES_CONFIG.map(ac => ({
         id: ac.id,
         name: t(`categories.${ac.i18nKey}`, { defaultValue: ac.id }),
         icon: ac.icon,
         color: ac.color,
         bgClass: ac.bgClass
-    }));
+    })), [t]);
 
     const typeLabels: Record<string, string> = {};
     ASSET_CLASSES_CONFIG.forEach(ac => {
