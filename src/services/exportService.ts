@@ -70,8 +70,10 @@ export function objectsToCSV(items: Record<string, unknown>[]): string {
         if (val === null || val === undefined) return '';
         if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
         let str = String(val);
-        // Security: Mitigate CSV Formula Injection (OWASP) by escaping formula trigger characters
-        if (typeof val === 'string' && /^[=+\-@\t\r]/.test(str)) {
+        // Security: Mitigate CSV Formula Injection (OWASP) by escaping formula trigger characters,
+        // including leading whitespace, while preserving pure numeric strings (e.g. "-50.25").
+        const isPureNumeric = /^[+-]?\d+(\.\d+)?$/.test(str.trim());
+        if (typeof val === 'string' && !isPureNumeric && /^\s*[=+\-@%\t\r|]/.test(str)) {
             str = `'${str}`;
         }
         if (str.includes(',') || str.includes('\n') || str.includes('"') || str.includes(';')) {

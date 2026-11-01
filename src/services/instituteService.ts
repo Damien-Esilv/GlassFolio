@@ -8,6 +8,7 @@ import { db, delay } from './db';
 import { Institute, Account, InstituteType, AccountType } from '../types';
 import { WrapperType, CostBasisMethod } from '../types/types.backend';
 import { portfolioService } from './portfolioService';
+import { userRepository } from './repositories';
 
 // ============================================================================
 // INSTITUTE OPERATIONS
@@ -43,9 +44,10 @@ export const instituteService = {
         await delay(200);
 
         const now = new Date().toISOString();
+        const currentUser = await userRepository.getUser();
         const newInstitute: Institute = {
-            id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            ownerId: 'default-user', // TODO: Get from auth context
+            id: `inst-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+            ownerId: currentUser?.id || 'default-user',
             name: data.name,
             type: data.type,
             country: data.country || 'FR',
@@ -149,9 +151,10 @@ export const accountService = {
         await delay(200);
 
         const now = new Date().toISOString();
+        const currentUser = await userRepository.getUser();
         const newAccount: Account = {
-            id: `acc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            ownerId: 'default-user', // TODO: Get from auth context
+            id: `acc-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+            ownerId: currentUser?.id || 'default-user',
             instituteId: data.instituteId,
             name: data.name,
             type: data.type,

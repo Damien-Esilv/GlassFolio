@@ -272,12 +272,19 @@ export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, 
  * sell never read as an oversell; then creation time.
  */
 export function sortChronologically<T extends Pick<UnifiedTransaction, 'transactionDate' | 'createdAt'> & { type?: string }>(txs: T[]): T[] {
-    const rank = (tx: T): number => (tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0);
-    return [...txs].sort((a, b) =>
-        new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
-        || rank(a) - rank(b)
-        || (a.createdAt || '').localeCompare(b.createdAt || '')
+    if (txs.length <= 1) return [...txs];
+    const decorated = txs.map(tx => ({
+        tx,
+        time: Date.parse(tx.transactionDate),
+        rank: tx.type === 'SELL' || tx.type === 'WITHDRAW' ? 1 : 0,
+        createdAt: tx.createdAt || ''
+    }));
+    decorated.sort((a, b) =>
+        a.time - b.time
+        || a.rank - b.rank
+        || a.createdAt.localeCompare(b.createdAt)
     );
+    return decorated.map(d => d.tx);
 }
 
 export interface LedgerEntry {

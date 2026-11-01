@@ -34,41 +34,50 @@ export const transactionService = {
         }
 
         if (filter) {
+            const searchQueryLower = filter.searchQuery ? filter.searchQuery.toLowerCase() : null;
+            const hasDateFilter = Boolean(filter.dateRange && filter.dateRange !== 'All');
+            const now = hasDateFilter ? new Date() : null;
+            const nowTime = now ? now.getTime() : 0;
+            const currentYear = now ? now.getFullYear() : 0;
+            const hasAssetClassFilter = Boolean(filter.assetClass && filter.assetClass !== 'All');
+            const hasSideFilter = Boolean(filter.side && filter.side !== 'All');
+            const hasSourceFilter = Boolean(filter.source && filter.source !== 'All');
+            const hasCurrencyFilter = Boolean(filter.currency && filter.currency !== 'All');
+            const hasStatusFilter = Boolean(filter.status && filter.status !== 'All');
+
             transactions = transactions.filter(tx => {
-                if (filter.searchQuery) {
-                    const query = filter.searchQuery.toLowerCase();
+                if (searchQueryLower) {
                     const matches =
-                        tx.instrument.toLowerCase().includes(query) ||
-                        tx.symbol.toLowerCase().includes(query) ||
-                        tx.id.toLowerCase().includes(query);
+                        tx.instrument.toLowerCase().includes(searchQueryLower) ||
+                        tx.symbol.toLowerCase().includes(searchQueryLower) ||
+                        tx.id.toLowerCase().includes(searchQueryLower);
                     if (!matches) return false;
                 }
 
-                if (filter.dateRange && filter.dateRange !== 'All') {
+                if (hasDateFilter) {
                     const txDate = new Date(tx.date);
-                    const now = new Date();
-                    const diffTime = Math.abs(now.getTime() - txDate.getTime());
+                    const diffTime = Math.abs(nowTime - txDate.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                     if (filter.dateRange === 'Last 30 Days' && diffDays > 30) return false;
                     if (filter.dateRange === 'Last 90 Days' && diffDays > 90) return false;
-                    if (filter.dateRange === 'YTD' && txDate.getFullYear() !== now.getFullYear()) return false;
+                    if (filter.dateRange === 'YTD' && txDate.getFullYear() !== currentYear) return false;
                 }
 
-                if (filter.assetClass && filter.assetClass !== 'All') {
-                    if (!isAssetClassMatch(tx.assetClass, filter.assetClass)) return false;
+                if (hasAssetClassFilter) {
+                    if (!isAssetClassMatch(tx.assetClass, filter.assetClass!)) return false;
                 }
 
-                if (filter.side && filter.side !== 'All' && tx.type !== filter.side) return false;
-                if (filter.source && filter.source !== 'All' && tx.source !== filter.source) return false;
-                if (filter.currency && filter.currency !== 'All' && tx.currency !== filter.currency) return false;
-                if (filter.status && filter.status !== 'All' && tx.status !== filter.status) return false;
+                if (hasSideFilter && tx.type !== filter.side) return false;
+                if (hasSourceFilter && tx.source !== filter.source) return false;
+                if (hasCurrencyFilter && tx.currency !== filter.currency) return false;
+                if (hasStatusFilter && tx.status !== filter.status) return false;
 
                 return true;
             });
         }
 
-        return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return transactions.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
     },
 
     addTransactions: async (newTxs: Transaction[]): Promise<void> => {

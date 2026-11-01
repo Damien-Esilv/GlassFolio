@@ -335,7 +335,7 @@ Tout outil doit comporter :
 
 ---
 
-## 9. Git Workflow, Branching & DevSecOps Standards (Pilier Recruiter-Grade)
+## 9. Git Workflow, Branching & DevSecOps Standards (SDLC)
 > **Version:** 1.0 | **Ajouté:** 2026-10-15
 
 **Règle absolue : Aucun commit direct sur `main` ni sur `develop`. L'historique Git doit refléter une rigueur logicielle exemplaire.**
@@ -371,6 +371,6 @@ Tout outil doit comporter :
   - Une partie seulement est prête : `git cherry-pick -x <commit squashé>` sur une branche issue de `main`, puis merge `--no-ff` dans `main` (chaque feature étant un commit unique, elle se déplace seule).
 - **Resynchronisation** : après chaque promotion ou hotfix sur `main`, `main` est fusionné dans `develop` (`git merge --no-ff main`) pour qu'elles ne divergent pas.
 - **Gates** : les 6 gates locales passent avant tout merge dans `develop` ; la CI distante doit être verte avant de promouvoir.
-- **Effets de bord à `main`** : changelog public, Notion (`notion-sync`) et vitrine publique sont traités à la promotion vers `main`, pas à l'intégration dans `develop`.
+- **Effets de bord à `main`** : changelog public et Notion (`notion-sync`) sont traités à la promotion vers `main`, pas à l'intégration dans `develop`.
 
 

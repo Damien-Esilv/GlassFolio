@@ -64,7 +64,7 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 - Assistant intégré avec streaming, blocs de raisonnement visibles et cartes d'approbation pour les actions sensibles.
 - Modèles locaux via Ollama (aucune donnée ne quitte votre machine), ou OpenAI, Anthropic, OpenRouter et Groq avec des clés stockées dans votre coffre chiffré.
 - Des garde-fous masquent les secrets (clés, codes de récupération, graines TOTP) avant que quoi que ce soit n'atteigne un modèle.
-- Un [serveur MCP](mcp-server/index.mjs) autonome (`npm run mcp`, stdio) pour Claude Desktop, Cursor et d'autres clients MCP.
+- Un [pont MCP](mcp-server/index.mjs) : Claude Code, Codex, Cursor, Antigravity et les autres clients MCP appellent les outils de l'application sur vos propres données, via votre onglet ouvert et déverrouillé, et chaque modification attend votre accord. Un serveur local (Docker ou `npm run dev`) l'inclut sur `/mcp` ; pour GlassFolio en ligne, lancez-le sur votre ordinateur avec `npm run mcp -- serve`. Voir la [documentation](https://glassfolio.dev/fr/docs).
 
 ### Sécurité et confidentialité
 - Mots de passe évalués selon les recommandations NIST SP 800-63B, double authentification TOTP avec codes de secours, passkeys WebAuthn et clé de récupération d'urgence.
@@ -107,6 +107,8 @@ git clone https://github.com/Damien-Esilv/GlassFolio.git && cd GlassFolio && npm
 ```
 
 Ouvrez <http://localhost:3000>, créez votre mot de passe maître, et c'est prêt.
+
+Pour explorer le compte de démonstration à la place, démarrez avec `GLASSFOLIO_DEMO=1 npm run docker:up` : l'application s'ouvre directement sur la démo (`npm run docker:up` seul ne la propose jamais).
 
 ```bash
 npm run docker:logs    # suivre les journaux
@@ -183,7 +185,7 @@ Dans les réglages, choisissez le fournisseur Ollama et saisissez son adresse (`
 
 GlassFolio est construit une seule fois et existe en deux modes.
 
-| | **Local** (Docker / `npm run dev`) | **Cloud** ([app.glassfolio.dev](https://app.glassfolio.dev)) |
+| | **Local** (Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
 |---|---|---|
 | Où vivent les données | Enregistrements du coffre sur le volume de votre serveur, source de vérité | Coffre chiffré stocké dans Supabase |
 | Comptes | Mot de passe maître, avec TOTP (et codes de secours) et passkeys dans le coffre | Supabase Auth, vérification d'e-mail, TOTP et passkeys |
@@ -203,14 +205,15 @@ npm install
 npm run dev        # http://localhost:3000 (mode local)
 ```
 
-Pour essayer sans saisir de données, connectez-vous avec le compte de démonstration `demo@glassfolio.com` / `password`, ou ouvrez `/?demo=1`. Des exemples de CSV de courtiers se trouvent dans [`test-data/`](test-data).
+Pour essayer sans saisir de données, démarrez avec `npm run dev:demo` (ou `GLASSFOLIO_DEMO=1 npm run docker:up`) : l'application s'ouvre sur le compte de démonstration. Un lancement normal ne propose pas de démo. Des exemples de CSV de courtiers se trouvent dans [`test-data/`](test-data).
 
 | Script | Rôle |
 |---|---|
-| `npm run dev` / `dev:cloud` | Serveur de développement en mode local / en mode cloud (Supabase) |
+| `npm run dev` / `dev:demo` / `dev:cloud` | Serveur de développement en mode local / mode local sur le compte démo / mode cloud (Supabase) |
 | `npm run build` | Build de production (`build:local`, `build:app`, `build:showcase` pour des cibles précises) |
 | `npm run preview` | Prévisualiser le build de production |
-| `npm run mcp` | Démarrer le serveur MCP (stdio) |
+| `npm run mcp` | Démarrer le pont MCP (stdio ; `-- serve` pour HTTP) |
+| `npm run mcp:catalog` | Régénérer `mcp-server/tools.json` après modification d'un outil IA |
 | `npm run docker:up` / `docker:down` / `docker:logs` / `docker:smoke` | Commandes d'auto-hébergement |
 
 ## ✅ Qualité et sécurité

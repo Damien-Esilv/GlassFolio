@@ -10,7 +10,7 @@
  *   - E2EE storage in appStorage (encrypted at rest).
  */
 
-import { fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
+import { constantTimeCompare, fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
 import { appStorage } from '../storage/appStorage';
 import { LEGACY_TOTP_FLAG_KEY } from '../storage/storageKeys';
 
@@ -133,7 +133,7 @@ export const verifyTotpCode = async (
             DEFAULT_DIGITS
         );
 
-        if (candidate === cleanToken) {
+        if (constantTimeCompare(candidate, cleanToken)) {
             return { valid: true, step: checkStep };
         }
     }
@@ -183,13 +183,18 @@ export const verifyBackupCode = async (
     }
 
     const testHash = await hashBackupCode(code);
-    const index = hashedCodes.indexOf(testHash);
+    let foundIndex = -1;
+    for (let i = 0; i < hashedCodes.length; i++) {
+        if (constantTimeCompare(hashedCodes[i], testHash) && foundIndex === -1) {
+            foundIndex = i;
+        }
+    }
 
-    if (index === -1) {
+    if (foundIndex === -1) {
         return { valid: false, remainingHashes: hashedCodes };
     }
 
-    const remainingHashes = [...hashedCodes.slice(0, index), ...hashedCodes.slice(index + 1)];
+    const remainingHashes = [...hashedCodes.slice(0, foundIndex), ...hashedCodes.slice(foundIndex + 1)];
     return { valid: true, remainingHashes };
 };
 

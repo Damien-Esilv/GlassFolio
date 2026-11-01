@@ -185,7 +185,7 @@ In Settings, choose the Ollama provider and enter its address (`http://localhost
 
 GlassFolio is built once and ships in two modes.
 
-| | **Local** (Docker / `npm run dev`) | **Cloud** ([app.glassfolio.dev](https://app.glassfolio.dev)) |
+| | **Local** (Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
 |---|---|---|
 | Where data lives | Vault records on your server volume, the source of truth | Encrypted vault stored in Supabase |
 | Accounts | Master password, with TOTP (and backup codes) and passkeys inside the vault | Supabase Auth, email verification, TOTP and passkeys |

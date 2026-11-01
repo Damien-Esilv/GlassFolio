@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Community Discussions & Questions
+    url: https://github.com/Damien-Esilv/GlassFolio/discussions
+    about: Ask questions, share your self-hosted setups, or discuss portfolio ideas.
+  - name: 🛡️ Security Vulnerabilities
+    url: mailto:privacy@glassfolio.dev
+    about: Please report security vulnerabilities privately via email as outlined in our Security Policy.

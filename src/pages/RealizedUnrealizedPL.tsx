@@ -67,17 +67,26 @@ const RealizedUnrealizedPL: React.FC = () => {
 
       if (timeRange === '1M') {
          const weekMs = 7 * 24 * 60 * 60 * 1000;
-         return Array.from({ length: 4 }, (_, i) => {
-            const end = now.getTime() - (3 - i) * weekMs;
-            const start = end - weekMs;
-            const pl = showRealized
-               ? filteredRealized.reduce((sum, e) => {
-                  const time = new Date(e.date).getTime();
-                  return time > start && time <= end ? sum + e.value : sum;
-               }, 0)
-               : 0;
-            return { name: `W${i + 1}`, pl: round(pl) };
-         });
+         const nowTime = now.getTime();
+         const weeklyPL = [0, 0, 0, 0];
+         if (showRealized) {
+            const earliestStart = nowTime - 4 * weekMs;
+            for (const e of filteredRealized) {
+               const time = Date.parse(e.date);
+               if (time > earliestStart && time <= nowTime) {
+                  const bucketIdx = Math.min(3, Math.max(0, 3 - Math.floor((nowTime - time) / weekMs)));
+                  const end = nowTime - (3 - bucketIdx) * weekMs;
+                  const start = end - weekMs;
+                  if (time > start && time <= end) {
+                     weeklyPL[bucketIdx] += e.value;
+                  }
+               }
+            }
+         }
+         return Array.from({ length: 4 }, (_, i) => ({
+            name: `W${i + 1}`,
+            pl: round(weeklyPL[i])
+         }));
       }
 
       let monthsCount = 12;
@@ -105,34 +114,37 @@ const RealizedUnrealizedPL: React.FC = () => {
    const nonCashPositions = useMemo(() => filteredPositions.filter(p => p.type !== 'Cash'), [filteredPositions]);
 
    // Ranked in the display currency; a gainer is in profit and a loser at a loss (never both lists)
-   const plInBase = (p: Position) => currencyService.convertAmount(p.unrealizedPL, p.currency || 'EUR', currency);
-   const topGainers = useMemo(() => {
-      return nonCashPositions
-         .filter(p => p.unrealizedPL > 0)
-         .sort((a, b) => plInBase(b) - plInBase(a))
-         .slice(0, 5);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- plInBase only reads currency
+   const positionsWithConvertedPL = useMemo(() => {
+      return nonCashPositions.map(p => ({
+         position: p,
+         convertedPL: currencyService.convertAmount(p.unrealizedPL, p.currency || 'EUR', currency)
+      }));
    }, [nonCashPositions, currency]);
 
+   const topGainers = useMemo(() => {
+      return positionsWithConvertedPL
+         .filter(item => item.position.unrealizedPL > 0)
+         .sort((a, b) => b.convertedPL - a.convertedPL)
+         .slice(0, 5)
+         .map(item => item.position);
+   }, [positionsWithConvertedPL]);
+
    const topLosers = useMemo(() => {
-      return nonCashPositions
-         .filter(p => p.unrealizedPL < 0)
-         .sort((a, b) => plInBase(a) - plInBase(b))
-         .slice(0, 5);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- plInBase only reads currency
-   }, [nonCashPositions, currency]);
+      return positionsWithConvertedPL
+         .filter(item => item.position.unrealizedPL < 0)
+         .sort((a, b) => a.convertedPL - b.convertedPL)
+         .slice(0, 5)
+         .map(item => item.position);
+   }, [positionsWithConvertedPL]);
 
    // Chart data for Position P&L breakdown
    const positionPLChartData = useMemo(() => {
-      return nonCashPositions.map(p => {
-         const convertedPL = currencyService.convertAmount(p.unrealizedPL, p.currency || 'EUR', currency);
-         return {
-            symbol: p.symbol,
-            instrument: p.instrument,
-            pl: Math.round(convertedPL * 100) / 100
-         };
-      }).sort((a, b) => b.pl - a.pl);
-   }, [nonCashPositions, currency]);
+      return positionsWithConvertedPL.map(({ position: p, convertedPL }) => ({
+         symbol: p.symbol,
+         instrument: p.instrument,
+         pl: Math.round(convertedPL * 100) / 100
+      })).sort((a, b) => b.pl - a.pl);
+   }, [positionsWithConvertedPL]);
 
    // Distribution chart data
    const distributionData = useMemo(() => {
