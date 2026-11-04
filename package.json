@@ -24,7 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:shard": "VITEST_PARTIAL_COVERAGE=1 vitest run --coverage --reporter=blob",
+    "test:coverage:shard": "VITEST_PARTIAL_COVERAGE=1 vitest run --coverage --reporter=default --reporter=blob",
     "test:coverage:merge": "vitest run --merge-reports=.vitest-reports --coverage",
     "test:security": "vitest run tests/unit/services/security tests/unit/services/ai/tools/securityTools.test.ts",
     "test:property": "vitest run tests/property",

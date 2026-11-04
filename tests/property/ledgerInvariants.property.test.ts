@@ -109,7 +109,7 @@ describe('Position Ledger Algebraic Property-Based Invariants (TGLA-210)', () =>
     fc.assert(
       fc.property(
         fc.array(tradeSpecArb, { minLength: 2, maxLength: 25 }),
-        fc.infiniteStream(fc.double({ min: 0, max: 1, noNaN: true })),
+        fc.infiniteStream(fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true })),
         (specs, randStream) => {
           // Enforce strictly distinct timestamps via unique index offset
           const distinctSpecs = specs.map((s, idx) => ({ ...s, dayOffset: idx }));
@@ -120,7 +120,7 @@ describe('Position Ledger Algebraic Property-Based Invariants (TGLA-210)', () =>
           const iterator = randStream[Symbol.iterator]();
           for (let i = shuffledTxs.length - 1; i > 0; i--) {
             const r = iterator.next().value;
-            const j = Math.floor(r * (i + 1));
+            const j = Math.min(i, Math.floor(r * (i + 1)));
             [shuffledTxs[i], shuffledTxs[j]] = [shuffledTxs[j], shuffledTxs[i]];
           }
 
