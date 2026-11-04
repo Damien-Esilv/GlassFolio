@@ -1,6 +1,7 @@
 import { AIToolDefinition } from '../types';
 import { goalService } from '../../goalService';
 import { FinancialGoal } from '../../../types/domain';
+import { CreateGoalArgsSchema } from '../../contracts/externalSchemas';
 
 export const listGoalsTool: AIToolDefinition<
   Record<string, never>,
@@ -66,9 +67,19 @@ export const createGoalTool: AIToolDefinition<
     required: ['title', 'targetAmount'],
   },
   execute: async (params) => {
+    const validated = CreateGoalArgsSchema.safeParse(params);
+    if (!validated.success) {
+      return {
+        success: false,
+        goalId: '',
+        message: validated.error.issues[0]?.message || 'Invalid goal parameters.',
+      };
+    }
+
+    const { title, targetAmount } = validated.data;
     const newGoal: Omit<FinancialGoal, 'id'> = {
-      title: params.title,
-      targetAmount: params.targetAmount,
+      title,
+      targetAmount,
       isPinned: false,
       iconType: 'other',
       color: 'blue',
@@ -82,7 +93,7 @@ export const createGoalTool: AIToolDefinition<
     return {
       success: true,
       goalId: created?.id || `goal-${Date.now()}`,
-      message: `Goal '${params.title}' of ${params.targetAmount}€ successfully created.`,
+      message: `Goal '${title}' of ${targetAmount}€ successfully created.`,
     };
   },
 };

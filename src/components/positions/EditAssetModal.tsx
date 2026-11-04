@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info, X } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
 } from '../../services/instrumentService';
 import { saveManualPrice } from '../../services/priceService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface EditAssetModalProps {
     position: Position;
@@ -29,7 +30,9 @@ const fieldClass =
  * contract, currency) with live integrity checks, plus its manual price. A duplicate can be merged into.
  */
 export const EditAssetModal: React.FC<EditAssetModalProps> = ({ position, onClose, onSaved }) => {
+    const dialogRef = useRef<HTMLDivElement>(null);
     useEscapeKey(onClose);
+    useFocusTrap(dialogRef, true);
     const { t } = useTranslation('portfolio');
     const instrument = useMemo(() => instrumentService.findInstrumentForPosition(position), [position]);
 
@@ -98,7 +101,7 @@ export const EditAssetModal: React.FC<EditAssetModalProps> = ({ position, onClos
     if (typeof document === 'undefined') return null;
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div role="dialog" aria-modal="true" aria-label={t('positions.editAsset.title')} className="bg-card border border-subtle rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('positions.editAsset.title')} className="bg-card border border-subtle rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
                 <div className="flex items-center justify-between border-b border-subtle pb-3">
                     <div>
                         <h3 className="text-lg font-bold text-primary">{t('positions.editAsset.title')}</h3>

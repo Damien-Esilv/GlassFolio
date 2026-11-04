@@ -26,6 +26,8 @@ dist
 dist-ssr
 coverage
 .vitest-reports
+playwright-report/
+test-results/
 downloads/
 *.lcov
 

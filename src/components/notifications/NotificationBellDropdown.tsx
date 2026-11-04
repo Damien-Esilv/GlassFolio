@@ -89,12 +89,15 @@ export const NotificationBellDropdown: React.FC<NotificationBellDropdownProps> =
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="p-2 text-secondary hover:bg-subtle hover:text-primary rounded-full transition-colors relative"
-        aria-label={t('notifications:bell.ariaLabel')}
         aria-expanded={isOpen}
       >
+        <span className="sr-only">{t('notifications:bell.ariaLabel')} </span>
         <Bell size={20} />
         {unreadAlertsCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-card shadow-sm animate-in zoom-in-50">
+          <span
+            aria-hidden="true"
+            className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-card shadow-sm animate-in zoom-in-50"
+          >
             {unreadAlertsCount > 99 ? '99+' : unreadAlertsCount}
           </span>
         )}

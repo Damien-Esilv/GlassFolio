@@ -55,6 +55,7 @@ export const TrendBadge: React.FC<TrendBadgeProps> = ({
   return (
     <span
       className={`inline-flex items-center gap-1 font-bold rounded-md ${tokens.bgSubtle} ${tokens.text} ${paddingClass} ${className}`}
+      role={animated ? 'status' : undefined}
       aria-label={animated ? labelFinal : undefined}
     >
       {showIcon && <IconComponent size={iconSize} className="shrink-0" />}

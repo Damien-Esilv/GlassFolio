@@ -66,38 +66,48 @@ function extractI18nKeys(fileContent) {
 }
 
 /**
- * Flatten a nested i18n JSON object into dot-notation keys.
- * e.g. { nav: { dashboard: 'Dashboard' } } → ['nav.dashboard']
+ * Flatten a nested i18n JSON object into [dot-notation key, value] pairs.
  */
-function flattenKeys(obj, prefix = '') {
-  const keys = [];
+function flattenKeyEntries(obj, prefix = '') {
+  const entries = [];
   for (const [k, v] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${k}` : k;
     if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-      keys.push(...flattenKeys(v, fullKey));
+      entries.push(...flattenKeyEntries(v, fullKey));
     } else {
-      keys.push(fullKey);
+      entries.push([fullKey, v]);
     }
   }
-  return keys;
+  return entries;
+}
+
+function extractPlaceholders(value) {
+  if (typeof value !== 'string') return [];
+  const matches = value.matchAll(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g);
+  return Array.from(new Set(Array.from(matches, (m) => m[1]))).sort();
 }
 
 /**
- * Load all keys for a given locale across all namespace files.
+ * Load all keys and raw string values for a given locale across all namespace files.
  * Namespace files are named like 'common.json', 'portfolio.json', etc.
  * Keys are stored as 'namespace:dotted.key'.
  */
 function loadLocaleKeys(locale) {
   const localeDir = join(LOCALES_DIR, locale);
   const allKeys = new Set();
+  const valuesMap = new Map();
   try {
     const files = readdirSync(localeDir).filter(f => f.endsWith('.json'));
     for (const file of files) {
       const namespace = file.replace('.json', '');
       const raw = JSON.parse(readFileSync(join(localeDir, file), 'utf8'));
-      const flat = flattenKeys(raw);
-      for (const key of flat) {
-        allKeys.add(`${namespace}:${key}`);
+      const entries = flattenKeyEntries(raw);
+      for (const [key, val] of entries) {
+        const nsKey = `${namespace}:${key}`;
+        allKeys.add(nsKey);
+        if (typeof val === 'string') {
+          valuesMap.set(nsKey, val);
+        }
         // Also add without namespace prefix for backward compat
         allKeys.add(key);
         // i18next plural variants (key_one, key_other...) satisfy the base key used with { count }
@@ -111,7 +121,7 @@ function loadLocaleKeys(locale) {
   } catch (e) {
     console.warn(`[i18n-check] Could not load locale '${locale}': ${e.message}`);
   }
-  return allKeys;
+  return { allKeys, valuesMap };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -120,8 +130,11 @@ console.log('🔍 GlassFolio i18n key audit\n');
 
 // 1. Load locale keys
 const localeKeys = {};
+const localeValues = {};
 for (const locale of SUPPORTED_LOCALES) {
-  localeKeys[locale] = loadLocaleKeys(locale);
+  const { allKeys, valuesMap } = loadLocaleKeys(locale);
+  localeKeys[locale] = allKeys;
+  localeValues[locale] = valuesMap;
   console.log(`  ${locale}: ${localeKeys[locale].size} keys loaded`);
 }
 
@@ -181,9 +194,39 @@ for (const locale of SUPPORTED_LOCALES) {
   }
 }
 
-// 5. Exit code
+// 5. Check EN <-> FR {{placeholder}} interpolation parity & empty translation strings
+const enValues = localeValues.en ?? new Map();
+const frValues = localeValues.fr ?? new Map();
+const placeholderMismatches = [];
+
+for (const [nsKey, enVal] of enValues.entries()) {
+  if (!frValues.has(nsKey)) continue;
+  const frVal = frValues.get(nsKey);
+  const enPlaceholders = extractPlaceholders(enVal);
+  const frPlaceholders = extractPlaceholders(frVal);
+
+  if (enPlaceholders.join(',') !== frPlaceholders.join(',')) {
+    placeholderMismatches.push(
+      `${nsKey}: en={{${enPlaceholders.join(', ')}}} vs fr={{${frPlaceholders.join(', ')}}}`
+    );
+  } else if ((enVal.trim().length > 0) !== (frVal.trim().length > 0)) {
+    placeholderMismatches.push(`${nsKey}: empty string mismatch between en and fr`);
+  }
+}
+
+if (placeholderMismatches.length === 0) {
+  console.log('  ✅  en <-> fr: interpolation {{placeholder}} parity verified');
+} else {
+  console.log(`  ❌  en <-> fr: ${placeholderMismatches.length} interpolation/empty mismatch(es)`);
+  for (const mismatch of placeholderMismatches) {
+    console.log(`       - ${mismatch}`);
+  }
+  totalIssues += placeholderMismatches.length;
+}
+
+// 6. Exit code
 if (totalIssues > 0) {
-  console.log(`\n⚠️  ${totalIssues} missing i18n key(s) detected.`);
+  console.log(`\n⚠️  ${totalIssues} i18n issue(s) detected.`);
   console.log('   Run with --report for details.');
   process.exit(1);
 } else {

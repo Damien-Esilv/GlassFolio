@@ -27,6 +27,11 @@
     "test:coverage:shard": "VITEST_PARTIAL_COVERAGE=1 vitest run --coverage --reporter=blob",
     "test:coverage:merge": "vitest run --merge-reports=.vitest-reports --coverage",
     "test:security": "vitest run tests/unit/services/security tests/unit/services/ai/tools/securityTools.test.ts",
+    "test:property": "vitest run tests/property",
+    "test:contracts": "vitest run tests/unit/contracts",
+    "test:e2e": "playwright test --project=chromium-core",
+    "test:e2e:tier2": "playwright test --project=chromium-core --project=chromium-tier2",
+    "test:e2e:ui": "playwright test --ui",
     "test:sql": "node scripts/test-sql.mjs",
     "check:types": "tsc --noEmit",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
@@ -73,6 +78,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -86,6 +93,7 @@
     "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fast-check": "^4.10.2",
     "jsdom": "^30.1.2",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.2",

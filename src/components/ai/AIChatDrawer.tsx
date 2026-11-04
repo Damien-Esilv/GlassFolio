@@ -9,6 +9,7 @@ import { AIActionApprovalCard } from './AIActionApprovalCard';
 import { AIMarkdownRenderer } from './AIMarkdownRenderer';
 import { AppThinkingOrb } from '../ui/AppThinkingOrb';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 
 interface AIChatDrawerProps {
@@ -17,7 +18,9 @@ interface AIChatDrawerProps {
 }
 
 export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) => {
+  const drawerRef = useRef<HTMLElement>(null);
   useEscapeKey(onClose, isOpen);
+  useFocusTrap(drawerRef, isOpen);
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -216,7 +219,13 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({ isOpen, onClose }) =
       />
 
       {/* Drawer Panel */}
-      <aside className="fixed inset-y-0 right-0 w-full sm:w-[420px] md:w-[500px] bg-card border-l border-subtle z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+      <aside
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('ai:drawer.title')}
+        className="fixed inset-y-0 right-0 w-full sm:w-[420px] md:w-[500px] bg-card border-l border-subtle z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200"
+      >
         {/* Header */}
         <div className="h-16 px-4 border-b border-subtle flex items-center justify-between bg-card/80 backdrop-blur shrink-0">
           <div className="flex items-center gap-3">

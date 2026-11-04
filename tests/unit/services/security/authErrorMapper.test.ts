@@ -33,7 +33,7 @@ const hasKey = (lang: string, fullKey: string): boolean => {
 const INTERNAL_MESSAGES = [
     /^unsupported kdf/i, /^invalid kdf/i, /^invalid base32/i, /^pow solution/i, /^vault header is missing/i,
     /^vault must be unlocked/i, /^master password is required to enroll/i, /^secret value cannot be empty/i,
-    /^re-authentication is unavailable/i, /^vault recovery is not supported/i,
+    /^re-authentication is unavailable/i, /^vault recovery is not supported/i, /^malformed vault/i,
 ];
 
 const thrownMessages = (file: string): string[] => {
