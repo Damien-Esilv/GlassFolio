@@ -30,8 +30,11 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
   {
     id: 'v1-0-1',
     version: '1.0.1',
-    date: '2026-11-02',
+    date: '2026-11-19',
     highlights: [
+      { key: 'localMultiVault', kind: 'new' },
+      { key: 'multiTotpPasskeys', kind: 'new' },
+      { key: 'passwordManagerAutofill', kind: 'improved' },
       { key: 'smallRefinements', kind: 'improved' },
       { key: 'bugFixes', kind: 'improved' },
     ],

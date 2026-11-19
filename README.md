@@ -79,20 +79,20 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 
 <table>
   <tr>
-    <td width="50%"><img src="public/screenshots/dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b>: net worth, allocation, performers</sub></td>
-    <td width="50%"><img src="public/screenshots/positions.webp" alt="Positions" /><br /><sub><b>Positions</b>: holdings by account and asset class</sub></td>
+    <td width="50%"><img src="public/screenshots/en/dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b>: net worth, allocation, performers</sub></td>
+    <td width="50%"><img src="public/screenshots/en/positions.webp" alt="Positions" /><br /><sub><b>Positions</b>: holdings by account and asset class</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b>: benchmark comparison over time</sub></td>
-    <td width="50%"><img src="public/screenshots/fees.webp" alt="Fees" /><br /><sub><b>Fees</b>: yearly and compounded cost of each fund</sub></td>
+    <td width="50%"><img src="public/screenshots/en/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b>: benchmark comparison over time</sub></td>
+    <td width="50%"><img src="public/screenshots/en/fees.webp" alt="Fees" /><br /><sub><b>Fees</b>: yearly and compounded cost of each fund</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/tax.webp" alt="Tax engine" /><br /><sub><b>Tax engine</b>: PFU vs progressive scale, Cerfa assistant</sub></td>
-    <td width="50%"><img src="public/screenshots/import.webp" alt="Import" /><br /><sub><b>Import</b>: broker presets, column mapping, live preview</sub></td>
+    <td width="50%"><img src="public/screenshots/en/tax.webp" alt="Tax engine" /><br /><sub><b>Tax engine</b>: PFU vs progressive scale, Cerfa assistant</sub></td>
+    <td width="50%"><img src="public/screenshots/en/import.webp" alt="Import" /><br /><sub><b>Import</b>: broker presets, column mapping, live preview</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/ai-assistant.webp" alt="AI assistant" /><br /><sub><b>AI assistant</b>: questions answered from your data</sub></td>
-    <td width="50%"><img src="public/screenshots/progress.webp" alt="Progress" /><br /><sub><b>Progress</b>: savings goals, ranks and quests</sub></td>
+    <td width="50%"><img src="public/screenshots/en/ai-assistant.webp" alt="AI assistant" /><br /><sub><b>AI assistant</b>: questions answered from your data</sub></td>
+    <td width="50%"><img src="public/screenshots/en/progress.webp" alt="Progress" /><br /><sub><b>Progress</b>: savings goals, ranks and quests</sub></td>
   </tr>
 </table>
 
@@ -106,7 +106,7 @@ The image serves the app, proxies market data on the same origin and stores your
 git clone https://github.com/Damien-Esilv/GlassFolio.git && cd GlassFolio && npm run docker:up
 ```
 
-Open <http://localhost:3000>, create your master password, and you are in.
+Open <http://localhost:3780>, create your master password, and you are in.
 
 To explore the demo account instead, start it with `GLASSFOLIO_DEMO=1 npm run docker:up`: the app opens directly on the demo (`npm run docker:up` alone never offers it).
 
@@ -120,9 +120,15 @@ npm run docker:smoke   # build a throw-away container and verify it end to end
 
 Set these variables in `docker/docker.env` (non-secret defaults) or in your shell. Secrets such as the access token belong in your shell, never in a file.
 
+To change the local port (for example if `3780` is already in use), edit `GLASSFOLIO_PORT` in `docker/docker.env` or pass it inline:
+
+```bash
+GLASSFOLIO_PORT=8080 npm run docker:up
+```
+
 | Variable | Default | Purpose |
 |---|---|---|
-| `GLASSFOLIO_PORT` | `3000` | Host port the app is published on. |
+| `GLASSFOLIO_PORT` | `3780` | Host port the app is published on. |
 | `GLASSFOLIO_BIND` | `127.0.0.1` | Host address to listen on. Anything other than loopback exposes GlassFolio to your network and requires a token. |
 | `GLASSFOLIO_DATA` | named volume `glassfolio-data` | Host folder to store data in instead of the volume (must be writable by uid 1000). |
 | `GLASSFOLIO_ALLOWED_HOSTS` | empty | Comma-separated domain names allowed to reach the vault API when you use a reverse proxy. `localhost` and IP addresses always work. |
@@ -171,7 +177,7 @@ The image is rebuilt and the container replaced; the data volume is untouched.
 
 ### Local AI with Ollama
 
-In Settings, choose the Ollama provider and enter its address (`http://localhost:11434` by default). The call is made by your browser, so Ollama must allow the app origin (set `OLLAMA_ORIGINS`, for example `OLLAMA_ORIGINS=http://localhost:3000`). If Ollama runs on another machine, add its origin with `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`. The helper `npm run ollama:proxy` starts a small local CORS proxy on port 11435 if you need one.
+In Settings, choose the Ollama provider and enter its address (`http://localhost:11434` by default). The call is made by your browser, so Ollama must allow the app origin (set `OLLAMA_ORIGINS`, for example `OLLAMA_ORIGINS=http://localhost:3780`). If Ollama runs on another machine, add its origin with `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`. The helper `npm run ollama:proxy` starts a small local CORS proxy on port 11435 if you need one.
 
 ### Container hardening
 
@@ -203,7 +209,7 @@ Requirements: **Node 22.x** and npm.
 git clone https://github.com/Damien-Esilv/GlassFolio.git
 cd GlassFolio
 npm install
-npm run dev        # http://localhost:3000 (local mode)
+npm run dev        # http://localhost:3780 (local mode)
 ```
 
 To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLIO_DEMO=1 npm run docker:up`): the app opens on the demo account. A normal launch offers no demo. Sample broker CSV files are in [`test-data/`](test-data).

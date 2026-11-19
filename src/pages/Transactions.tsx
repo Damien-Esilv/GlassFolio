@@ -118,8 +118,9 @@ const Transactions: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                {/* Date Range */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.dateRange')}</label>
+                  <label htmlFor="tx-filter-date-range" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.dateRange')}</label>
                   <select
+                     id="tx-filter-date-range"
                      value={dateRange}
                      onChange={(e) => setDateRange(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
@@ -133,8 +134,9 @@ const Transactions: React.FC = () => {
 
                {/* Asset Class */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.class')}</label>
+                  <label htmlFor="tx-filter-class" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.class')}</label>
                   <select
+                     id="tx-filter-class"
                      value={assetClass}
                      onChange={(e) => setAssetClass(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
@@ -150,8 +152,9 @@ const Transactions: React.FC = () => {
 
                {/* Side */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.side')}</label>
+                  <label htmlFor="tx-filter-side" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.side')}</label>
                   <select
+                     id="tx-filter-side"
                      value={side}
                      onChange={(e) => setSide(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
@@ -166,8 +169,9 @@ const Transactions: React.FC = () => {
 
                {/* Source */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.source')}</label>
+                  <label htmlFor="tx-filter-source" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.source')}</label>
                   <select
+                     id="tx-filter-source"
                      value={source}
                      onChange={(e) => setSource(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
@@ -182,8 +186,9 @@ const Transactions: React.FC = () => {
 
                {/* Currency */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.currency')}</label>
+                  <label htmlFor="tx-filter-currency" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.currency')}</label>
                   <select
+                     id="tx-filter-currency"
                      value={currency}
                      onChange={(e) => setCurrency(e.target.value)}
                      className="w-full bg-subtle border border-subtle text-primary text-xs rounded-lg focus:ring-primary focus:border-primary p-2"
@@ -198,8 +203,8 @@ const Transactions: React.FC = () => {
 
                {/* Reconciliation */}
                <div className="space-y-1">
-                  <label className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.status')}</label>
-                  <select className="w-full bg-subtle border border-subtle text-tertiary text-xs rounded-lg focus:ring-primary focus:border-primary p-2" disabled>
+                  <label htmlFor="tx-filter-status" className="text-xs text-secondary font-medium ml-1">{t('transactions:filters.status')}</label>
+                  <select id="tx-filter-status" className="w-full bg-subtle border border-subtle text-tertiary text-xs rounded-lg focus:ring-primary focus:border-primary p-2" disabled>
                      <option>{t('transactions:filters.statusAll')}</option>
                      <option>{t('transactions:filters.statusCompleted')}</option>
                      <option>{t('transactions:filters.statusPending')}</option>
@@ -212,6 +217,7 @@ const Transactions: React.FC = () => {
                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={16} />
                <input
                   type="text"
+                  aria-label={t('transactions:filters.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('transactions:filters.search')}
@@ -222,7 +228,7 @@ const Transactions: React.FC = () => {
 
          {/* Data Table */}
          <div className={`${cardStyle} overflow-hidden`}>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t('transactions:title')}>
                <table className="w-full text-sm text-left text-secondary">
                   <thead className="text-xs text-tertiary uppercase bg-subtle border-b border-subtle">
                      <tr>

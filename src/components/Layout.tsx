@@ -17,9 +17,11 @@ import { NotificationBellDropdown } from './notifications/NotificationBellDropdo
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 import { UserAvatar } from './ui/UserAvatar';
 import { LocalPersistenceNotice } from './security/LocalPersistenceNotice';
+import { CloudSyncNotice } from './security/CloudSyncNotice';
 import { VaultIntegrityNotice } from './security/VaultIntegrityNotice';
 import { PullToRefresh } from './ui/PullToRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { isLocalVaultUser } from '../services/security/accountIdentity';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -480,7 +482,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
             <span className="text-xl font-bold tracking-tight">{t('navigation:brandName')}</span>
           </Link>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-subtle rounded-lg">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 hover:bg-subtle rounded-lg"
+            aria-label={t('common:buttons.close')}
+          >
             <X size={20} />
           </button>
         </div>
@@ -497,6 +503,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="p-2 hover:bg-subtle rounded-lg md:hidden"
+              aria-label={t('navigation:expandSidebar')}
             >
               <Menu size={20} />
             </button>
@@ -581,7 +588,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="absolute right-0 mt-2 w-56 bg-card rounded-xl border border-subtle shadow-xl py-2 animate-in fade-in slide-in-from-top-2 z-50">
                   <div className="px-4 py-3 border-b border-subtle mb-1">
                     <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-secondary truncate">{user.email}</p>
+                    <p className="text-xs text-secondary truncate">
+                      {isLocalVaultUser(user) ? t('navigation:header.localVaultBadge') : user.email}
+                    </p>
                   </div>
 
                   <Link
@@ -634,6 +643,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="p-4 md:p-6 lg:p-8">
           <LocalPersistenceNotice />
+          <CloudSyncNotice />
           <VaultIntegrityNotice />
           {/* Reloads the data in place: a page reload would lock the vault and drop unsaved input */}
           <PullToRefresh onRefresh={handleForceRefresh}>

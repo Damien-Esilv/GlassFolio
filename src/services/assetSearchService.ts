@@ -6,6 +6,11 @@
  */
 
 import { yahooFinanceUrl } from '../config/marketData';
+import {
+  CoinGeckoSearchResponseSchema,
+  YahooChartResponseSchema,
+  YahooSearchResponseSchema,
+} from './contracts/externalSchemas';
 
 export interface SearchResultItem {
   symbol: string;
@@ -141,9 +146,10 @@ export async function searchLiveAssets(query: string): Promise<SearchResultItem[
     });
 
     if (response.ok) {
-      const data: YahooSearchResponse = await response.json();
-      if (data.quotes && Array.isArray(data.quotes)) {
-        data.quotes.forEach((q) => {
+      const parsed = YahooSearchResponseSchema.safeParse(await response.json());
+      const quotes = parsed.success ? parsed.data.quotes : null;
+      if (quotes && Array.isArray(quotes)) {
+        quotes.forEach((q) => {
           if (!q.symbol) return;
           const symbol = q.symbol.toUpperCase();
           if (seenSymbols.has(symbol)) return;
@@ -182,9 +188,10 @@ export async function searchLiveAssets(query: string): Promise<SearchResultItem[
       const cgUrl = `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(cleanQuery)}`;
       const response = await fetch(cgUrl);
       if (response.ok) {
-        const data: CoinGeckoSearchResponse = await response.json();
-        if (data.coins && Array.isArray(data.coins)) {
-          data.coins.slice(0, 4).forEach((coin) => {
+        const parsed = CoinGeckoSearchResponseSchema.safeParse(await response.json());
+        const coins = parsed.success ? parsed.data.coins : null;
+        if (coins && Array.isArray(coins)) {
+          coins.slice(0, 4).forEach((coin) => {
             const symbol = `${coin.symbol.toUpperCase()}-USD`;
             if (seenSymbols.has(symbol)) return;
 
@@ -266,10 +273,10 @@ export async function fetchAssetHistory(
     const yfChartUrl = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(cleanTicker)}?range=${rangeParam}&interval=${intervalParam}`);
     const res = await fetch(yfChartUrl);
     if (res.ok) {
-      const data: YahooChartAPIResponse = await res.json();
-      const rawCloses = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      const parsed = YahooChartResponseSchema.safeParse(await res.json());
+      const rawCloses = parsed.success ? parsed.data.chart?.result?.[0]?.indicators?.quote?.[0]?.close : null;
       if (rawCloses && Array.isArray(rawCloses)) {
-        const validPrices = rawCloses.filter((p): p is number => typeof p === 'number' && !isNaN(p) && p > 0);
+        const validPrices = rawCloses.filter((p): p is number => typeof p === 'number' && Number.isFinite(p) && p > 0);
         if (validPrices.length >= 2) {
           const firstPrice = validPrices[0];
           const sampledReturns: number[] = [];

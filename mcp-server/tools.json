@@ -222,7 +222,7 @@
     },
     {
       "name": "get_storage_status",
-      "description": "Report where GlassFolio keeps the data in local mode (the local server / Docker volume, or only this browser) and whether recent changes were saved. Read-only; never exposes data or error internals.",
+      "description": "Report where GlassFolio keeps the data (cloud vault, local server / Docker volume, or browser), whether recent changes were saved, active local vault profile, and cloud vault quota usage. Read-only; never exposes data or error internals.",
       "inputSchema": {
         "type": "object",
         "properties": {}

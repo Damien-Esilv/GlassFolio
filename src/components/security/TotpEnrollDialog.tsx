@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, Copy, Check, Download, AlertCircle, X, KeyRound } from 'lucide-react';
+import { ShieldCheck, Copy, Check, Download, AlertCircle, X, KeyRound, Smartphone } from 'lucide-react';
 import Button from '../Button';
 import { mfaService, TotpEnrollmentDraft } from '../../services/security/mfaService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
 import { toTrustedQrHtml } from '../../services/security/trustedTypes';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { PasswordManagerUsernameField } from './PasswordManagerUsernameField';
+import { deduplicateLabel } from '../../services/security/passkeyAaguid';
+
+const AUTHENTICATOR_PRESETS = [
+    'Apple Passwords',
+    'Google Authenticator',
+    'Microsoft Authenticator',
+    '1Password',
+    'Bitwarden',
+    'Authy',
+    'YubiKey',
+] as const;
 
 interface TotpEnrollDialogProps {
     isOpen: boolean;
     onClose: () => void;
     userEmail: string;
+    existingNames?: string[];
     onEnrolled: () => void;
 }
 
@@ -19,18 +32,21 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     isOpen,
     onClose,
     userEmail,
+    existingNames = [],
     onEnrolled,
 }) => {
     const { t } = useTranslation();
 
     const [enrollment, setEnrollment] = useState<TotpEnrollmentDraft | null>(null);
+    const [friendlyName, setFriendlyName] = useState('');
+    const [isStarting, setIsStarting] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
-    const [step, setStep] = useState<'scan' | 'backup'>('scan');
+    const [step, setStep] = useState<'name' | 'scan' | 'backup'>('name');
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState('');
     const [copiedSecret, setCopiedSecret] = useState(false);
     // Not on the backup codes step: they are shown once and must be saved first
-    useEscapeKey(() => handleClose(), isOpen && step === 'scan' && !isVerifying);
+    useEscapeKey(() => handleClose(), isOpen && step !== 'backup' && !isVerifying && !isStarting);
     const [copiedBackup, setCopiedBackup] = useState(false);
     const [hasConfirmedBackup, setHasConfirmedBackup] = useState(false);
     const [isConfirmed, setIsConfirmed] = useState(false);
@@ -38,29 +54,17 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     useEffect(() => {
         if (!isOpen) {
             setEnrollment(null);
+            setFriendlyName('');
+            setIsStarting(false);
             setVerificationCode('');
-            setStep('scan');
+            setStep('name');
             setError('');
+            setHasConfirmedBackup(false);
             setIsConfirmed(false);
             return;
         }
-
-        let cancelled = false;
-        mfaService.startTotpEnrollment(userEmail || 'user@glassfolio.com')
-            .then((draft) => {
-                if (cancelled) {
-                    void mfaService.cancelTotpEnrollment(draft);
-                    return;
-                }
-                setEnrollment(draft);
-            })
-            .catch((err: unknown) => {
-                if (!cancelled) setError(mapAuthErrorMessage(err, t, 'security:totp.invalidCode'));
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [isOpen, userEmail, t]);
+        setFriendlyName(deduplicateLabel('Authenticator', existingNames));
+    }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!isOpen) return null;
 
@@ -69,24 +73,39 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
         onClose();
     };
 
-    if (!enrollment) {
-        return error ? createPortal(
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
-                <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 shadow-2xl space-y-4">
-                    <div className="p-3 bg-error/10 border border-error/20 rounded-xl flex items-center gap-2 text-error text-xs">
-                        <AlertCircle size={16} className="shrink-0" />
-                        <span>{error}</span>
-                    </div>
-                    <Button type="button" variant="secondary" className="w-full" onClick={onClose}>
-                        {t('common:buttons.close')}
-                    </Button>
-                </div>
-            </div>,
-            document.body
-        ) : null;
-    }
+    const handleSelectPreset = (preset: string) => {
+        setError('');
+        setFriendlyName(deduplicateLabel(preset, existingNames));
+    };
+
+    const handleStartEnrollment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const cleanName = friendlyName.trim();
+        if (!cleanName) {
+            setError(t('security:totp.nameRequired'));
+            return;
+        }
+        const normalizedExisting = new Set(existingNames.map(n => n.trim().toLowerCase()));
+        if (normalizedExisting.has(cleanName.toLowerCase())) {
+            setError(t('common:errors.auth.totpNameConflict'));
+            return;
+        }
+
+        setError('');
+        setIsStarting(true);
+        try {
+            const draft = await mfaService.startTotpEnrollment(userEmail || 'Local Vault', cleanName);
+            setEnrollment(draft);
+            setStep('scan');
+        } catch (err: unknown) {
+            setError(mapAuthErrorMessage(err, t, 'common:errors.auth.totpEnrollFailed'));
+        } finally {
+            setIsStarting(false);
+        }
+    };
 
     const handleCopySecret = async () => {
+        if (!enrollment) return;
         try {
             await navigator.clipboard.writeText(enrollment.secret);
             setCopiedSecret(true);
@@ -98,6 +117,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
 
     const handleVerify = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!enrollment) return;
         setError('');
         setIsVerifying(true);
 
@@ -109,7 +129,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                 setIsConfirmed(true);
                 setStep('backup');
             } else {
-                // Cloud: Supabase has no recovery codes, the factor is active right away.
+                // Cloud or 2nd+ local factor (existing vault-wide backup codes preserved)
                 setIsConfirmed(true);
                 onEnrolled();
                 onClose();
@@ -122,6 +142,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     };
 
     const handleCopyBackupCodes = async () => {
+        if (!enrollment) return;
         try {
             const text = enrollment.plainBackupCodes.join('\n');
             await navigator.clipboard.writeText(text);
@@ -133,6 +154,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
     };
 
     const handleDownloadBackupCodes = () => {
+        if (!enrollment) return;
         const content = [
             '================================================================',
             'GlassFolio — Emergency 2FA Backup Codes',
@@ -198,13 +220,74 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                     </div>
                 )}
 
-                {step === 'scan' ? (
+                {step === 'name' ? (
+                    <form onSubmit={handleStartEnrollment} className="space-y-5">
+                        <div className="space-y-2">
+                            <label htmlFor="totp-friendly-name" className="block text-xs font-semibold uppercase tracking-wider text-primary">
+                                {t('security:totp.nameStepTitle')}
+                            </label>
+                            <p className="text-xs text-secondary">
+                                {t('security:totp.nameStepSubtitle')}
+                            </p>
+                            <div className="relative pt-1">
+                                <Smartphone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 mt-0.5 text-tertiary pointer-events-none" />
+                                <input
+                                    id="totp-friendly-name"
+                                    type="text"
+                                    required
+                                    maxLength={60}
+                                    autoFocus
+                                    value={friendlyName}
+                                    onChange={(e) => {
+                                        setFriendlyName(e.target.value);
+                                        if (error) setError('');
+                                    }}
+                                    placeholder={t('security:totp.namePlaceholder')}
+                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm placeholder-tertiary"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <span className="block text-[11px] font-medium text-tertiary">
+                                {t('security:totp.quickPresetsLabel')}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {AUTHENTICATOR_PRESETS.map(preset => (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => handleSelectPreset(preset)}
+                                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-subtle border border-subtle text-secondary hover:text-primary hover:border-primary/40 transition-colors"
+                                    >
+                                        {preset}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                            <Button type="button" variant="secondary" onClick={handleClose} disabled={isStarting} className="flex-1">
+                                {t('common:buttons.cancel')}
+                            </Button>
+                            <Button type="submit" isLoading={isStarting} disabled={!friendlyName.trim()} className="flex-1">
+                                {t('security:totp.continueToQrButton')}
+                            </Button>
+                        </div>
+                    </form>
+                ) : step === 'scan' && enrollment ? (
                     <div className="space-y-5">
                         {/* 1. QR Code */}
                         <div className="space-y-2">
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">
-                                {t('security:totp.scanQrTitle')}
-                            </h3>
+                            <div className="flex items-center justify-between gap-2">
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">
+                                    {t('security:totp.scanQrTitle')}
+                                </h3>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-brand/10 text-brand border border-brand/20">
+                                    <Smartphone size={11} />
+                                    {enrollment.friendlyName}
+                                </span>
+                            </div>
                             <p className="text-xs text-secondary">
                                 {t('security:totp.scanQrSubtitle')}
                             </p>
@@ -237,7 +320,8 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                         </div>
 
                         {/* 2. Verification Form */}
-                        <form onSubmit={handleVerify} className="space-y-3 pt-2">
+                        <form onSubmit={handleVerify} method="post" action="/settings" className="space-y-3 pt-2">
+                            {userEmail && <PasswordManagerUsernameField username={userEmail} />}
                             <div>
                                 <label htmlFor="totp-enroll-code" className="block text-xs font-medium text-secondary mb-1">
                                     {t('security:totp.verifyTitle')}
@@ -269,7 +353,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                             </Button>
                         </form>
                     </div>
-                ) : (
+                ) : enrollment ? (
                     /* Step 3: Backup Codes */
                     <div className="space-y-5 animate-in fade-in">
                         <div className="space-y-1.5">
@@ -336,7 +420,7 @@ export const TotpEnrollDialog: React.FC<TotpEnrollDialogProps> = ({
                             {t('security:totp.finishEnrollment')}
                         </Button>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>,
         document.body

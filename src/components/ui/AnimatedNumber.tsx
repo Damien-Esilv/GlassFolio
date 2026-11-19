@@ -30,7 +30,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     const format = (n: number): string => `${prefix}${new Intl.NumberFormat(locale, options).format(n)}${suffix}`;
 
     return (
-        <span className={className} aria-label={format(value)}>
+        <span className={className} role="status" aria-label={format(value)}>
             <StableNumber display={format(shown)} final={format(value)} hidden />
         </span>
     );

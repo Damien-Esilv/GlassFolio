@@ -5,9 +5,9 @@
  * Zero dependencies: drives a local Chrome/Chromium in headless mode over the DevTools protocol
  * with Node's built-in WebSocket. Start the app first (`npm run dev`), then:
  *
- *   npm run screenshots           (English: public/screenshots/)
+ *   npm run screenshots           (English: public/screenshots/en/)
  *   npm run screenshots -- --lang fr (French: public/screenshots/fr/)
- *   CHROME_PATH=/usr/bin/chromium npm run screenshots -- --base http://localhost:3000
+ *   CHROME_PATH=/usr/bin/chromium npm run screenshots -- --base http://localhost:3780
  *
  * It signs in with the demo account (`/?demo=1`), so no personal data ends up in the images.
  */
@@ -25,10 +25,11 @@ const args = Object.fromEntries(
   }, [])
 );
 
-const BASE_URL = args.base ?? 'http://localhost:3000';
+const DEFAULT_PORT = process.env.GLASSFOLIO_PORT || '3780';
+const BASE_URL = args.base ?? `http://localhost:${DEFAULT_PORT}`;
 const LANG = args.lang ?? 'en';
-/** English set at the root (used by the showcase), other languages in a sub-folder (README.<lang>.md). */
-const OUT_DIR = path.resolve(args.out ?? (LANG === 'en' ? 'public/screenshots' : `public/screenshots/${LANG}`));
+/** Localized screenshots live in public/screenshots/<lang>/ (en, fr). */
+const OUT_DIR = path.resolve(args.out ?? `public/screenshots/${LANG}`);
 const README_HERO = path.resolve('public/screenshots/readme-hero.webp');
 const OG_COVER = path.resolve('public/screenshots/og-cover.png');
 const README_MOCKUP = path.resolve('scripts/readme-mockup.html');

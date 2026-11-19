@@ -2,6 +2,7 @@ import { appStorage } from '../storage/appStorage';
 import { MCP_BRIDGE_STORAGE_KEY } from '../storage/storageKeys';
 import { getDeploymentMode } from '../../config/deployment';
 import { DEFAULT_MCP_CLIENT_ID, MCP_CLIENTS } from '../../config/mcpClients';
+import { STANDALONE_BRIDGE_DEFAULT_URL } from '../../config/project';
 
 /**
  * Device settings of the MCP bridge (TGLA-198): whether AI clients (Claude Code, Codex, Cursor...) may call
@@ -17,7 +18,7 @@ export interface McpBridgeSettings {
 }
 
 /** Where the standalone bridge (`glassfolio-mcp serve`) listens by default. */
-export const STANDALONE_BRIDGE_URL = 'http://127.0.0.1:47831';
+export const STANDALONE_BRIDGE_URL = STANDALONE_BRIDGE_DEFAULT_URL;
 export const MCP_TOKEN_HEADER = 'X-GlassFolio-Token';
 
 const DEFAULTS: McpBridgeSettings = { enabled: false, url: '', token: '', client: DEFAULT_MCP_CLIENT_ID };

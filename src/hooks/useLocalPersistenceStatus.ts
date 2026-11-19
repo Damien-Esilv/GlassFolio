@@ -8,6 +8,8 @@ const NO_PROVIDER: LocalPersistenceStatus = {
     lastSavedAt: null,
     lastError: null,
     legacyBrowserVaultIgnored: false,
+    activeVaultId: 'default',
+    profiles: [],
 };
 
 /** Live persistence status of local mode (server volume vs browser). `uninitialized` in cloud mode. */

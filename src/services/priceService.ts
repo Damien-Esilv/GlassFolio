@@ -17,6 +17,11 @@ import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
 import { currencyService } from './currencyService';
 import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
+import {
+    CoinGeckoSimplePriceSchema,
+    PriceCacheSchema,
+    YahooChartResponseSchema,
+} from './contracts/externalSchemas';
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
@@ -249,9 +254,11 @@ function readCache(): PriceCache | null {
     try {
         const raw = appStorage.getItem(CACHE_KEY);
         if (!raw) return null;
-        const parsed: PriceCache = JSON.parse(raw);
+        const validated = PriceCacheSchema.safeParse(JSON.parse(raw));
+        if (!validated.success) return null;
+        const parsed = validated.data;
         const age = Date.now() - new Date(parsed.fetchedAt).getTime();
-        if (age > CACHE_TTL_MS) return null; // Expired cache
+        if (!Number.isFinite(age) || age < 0 || age > CACHE_TTL_MS) return null; // Expired or invalid cache
         return parsed;
     } catch {
         return null;
@@ -331,13 +338,14 @@ async function fetchYahooTickerPrice(ticker: string): Promise<PriceQuote | null>
 
         if (!response.ok) return null;
 
-        const json: YahooChartResponse = await response.json();
-        const meta = json.chart?.result?.[0]?.meta;
+        const validated = YahooChartResponseSchema.safeParse(await response.json());
+        if (!validated.success) return null;
+        const meta = validated.data.chart?.result?.[0]?.meta;
         if (!meta) return null;
 
-        const price = meta.regularMarketPrice ?? meta.chartPreviousClose;
-        if (price !== undefined && price > 0) {
-            return normalizeQuote(price, meta.currency);
+        const price = meta.regularMarketPrice ?? meta.chartPreviousClose ?? undefined;
+        if (typeof price === 'number' && Number.isFinite(price) && price > 0) {
+            return normalizeQuote(price, meta.currency ?? undefined);
         }
         return null;
     } catch {
@@ -357,8 +365,9 @@ async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
         const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`;
         const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
         if (!res.ok) return null;
-        const data: CoinGeckoPriceResponse = await res.json();
-        return data[geckoId]?.usd ?? null;
+        const validated = CoinGeckoSimplePriceSchema.safeParse(await res.json());
+        if (!validated.success) return null;
+        return validated.data[geckoId]?.usd ?? null;
     } catch {
         return null;
     }

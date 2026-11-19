@@ -422,7 +422,7 @@
       },
       "q7": {
         "question": "Comment installer l'édition Docker ?",
-        "answer": "Installez Docker et Node.js 22, puis lancez trois commandes : git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio et npm run docker:up. Ouvrez http://localhost:3000 et créez votre coffre. Le guide d'auto-hébergement détaille la configuration, l'accès réseau, les sauvegardes et les mises à jour."
+        "answer": "Installez Docker et Node.js 22, puis lancez trois commandes : git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio et npm run docker:up. Ouvrez http://localhost:3780 et créez votre coffre. Le guide d'auto-hébergement détaille la configuration, l'accès réseau, les sauvegardes et les mises à jour."
       }
     }
   },

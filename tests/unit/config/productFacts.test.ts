@@ -13,7 +13,12 @@ import {
   SUPPORTED_LANGUAGE_COUNT,
   VAULT_PBKDF2_ITERATIONS,
 } from '../../../src/constants/productFacts';
-import { GITHUB_REPO_URL, DOCKER_QUICKSTART_COMMANDS, SELF_HOST_DEFAULT_URL } from '../../../src/config/project';
+import {
+  GITHUB_REPO_URL,
+  DOCKER_QUICKSTART_COMMANDS,
+  SELF_HOST_DEFAULT_PORT,
+  SELF_HOST_DEFAULT_URL,
+} from '../../../src/config/project';
 
 /**
  * The showcase advertises these numbers without importing the registries (bundle budget).
@@ -64,6 +69,7 @@ describe('project config', () => {
   it('documents a Docker quick start that clones the repository and uses the guarded npm script', () => {
     expect(DOCKER_QUICKSTART_COMMANDS[0]).toBe(`git clone ${GITHUB_REPO_URL}.git`);
     expect(DOCKER_QUICKSTART_COMMANDS).toContain('npm run docker:up');
-    expect(SELF_HOST_DEFAULT_URL).toBe('http://localhost:3000');
+    expect(SELF_HOST_DEFAULT_PORT).toBe('3780');
+    expect(SELF_HOST_DEFAULT_URL).toBe(`http://localhost:${SELF_HOST_DEFAULT_PORT}`);
   });
 });

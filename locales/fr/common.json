@@ -100,6 +100,8 @@
             "totpChallengeExpired": "La demande de vérification a expiré. Saisissez un nouveau code.",
             "noTotpFactor": "Aucune application d'authentification n'est configurée sur ce compte.",
             "totpEnrollFailed": "La double authentification n'a pas pu être configurée. Réessayez.",
+            "totpNameConflict": "Une application d'authentification porte déjà ce nom. Choisissez un autre nom.",
+            "totpLimitReached": "Vous avez atteint le nombre maximum d'applications d'authentification.",
             "totpRemoveFailed": "La double authentification n'a pas pu être supprimée. Réessayez.",
             "passkeyOtherAccount": "Cette passkey appartient à un autre compte.",
             "passkeyRequired": "Confirmez avec l'une de vos passkeys.",

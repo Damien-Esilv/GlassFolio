@@ -36,6 +36,10 @@
       "title": "Direct broker connections",
       "body": "Refresh positions straight from supported brokers and exchanges, without exporting files."
     },
+    "autoCashflow": {
+      "title": "Expense tracking & automatic cashflow",
+      "body": "Track your expenses, accounts and cashflow automatically. We are exploring several technical options (SnapTrade Personal, Crypto & On-chain, Enable Banking or Woob via woob.tech); these choices are not final and automatic tracking capabilities may evolve or be dropped if technical constraints make them impossible."
+    },
     "jurisdictions": {
       "title": "New tax jurisdictions",
       "body": "Extend the modular tax engine beyond France, starting with the countries most requested by users."

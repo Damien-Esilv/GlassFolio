@@ -25,9 +25,11 @@ const excludeReadmeAssets = (): Plugin => {
   };
 };
 
+const DEFAULT_DEV_PORT = Number(process.env.GLASSFOLIO_PORT) || 3780;
+
 export default defineConfig({
   server: {
-    port: 3000,
+    port: DEFAULT_DEV_PORT,
     host: process.env.GLASSFOLIO_DEV_HOST || '127.0.0.1',
     proxy: {
       // Proxy Yahoo Finance requests in dev to avoid CORS / 403 issues
@@ -43,7 +45,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 3000,
+    port: DEFAULT_DEV_PORT,
     host: process.env.GLASSFOLIO_PREVIEW_HOST || '127.0.0.1',
   },
   plugins: [react(), localVaultPlugin(), excludeReadmeAssets()],

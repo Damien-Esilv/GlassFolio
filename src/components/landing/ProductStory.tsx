@@ -16,9 +16,9 @@ export const STORY_STEPS = [
 
 const POINT_KEYS = ['p1', 'p2', 'p3'] as const;
 
-const Screenshot: React.FC<{ shot: string; alt: string; eager?: boolean }> = ({ shot, alt, eager }) => (
+const Screenshot: React.FC<{ shot: string; lang: 'en' | 'fr'; alt: string; eager?: boolean }> = ({ shot, lang, alt, eager }) => (
   <img
-    src={`/screenshots/${shot}.webp`}
+    src={`/screenshots/${lang}/${shot}.webp`}
     alt={alt}
     width={SCREENSHOT_WIDTH}
     height={SCREENSHOT_HEIGHT}
@@ -34,7 +34,8 @@ const Screenshot: React.FC<{ shot: string; alt: string; eager?: boolean }> = ({ 
  * screens every step carries its own screenshot (no sticky layout).
  */
 export const ProductStory: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang: 'en' | 'fr' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
   const [active, setActive] = useState(0);
   const stepRefs = useRef<(HTMLElement | null)[]>([]);
 
@@ -109,7 +110,7 @@ export const ProductStory: React.FC = () => {
                   <div className="lg:hidden">
                     <BrowserFrame address={t('landing:story.addressBar')}>
                       <div style={{ aspectRatio: `${SCREENSHOT_WIDTH} / ${SCREENSHOT_HEIGHT}` }}>
-                        <Screenshot shot={step.shot} alt={t(`landing:story.steps.${step.key}.alt`)} />
+                        <Screenshot shot={step.shot} lang={lang} alt={t(`landing:story.steps.${step.key}.alt`)} />
                       </div>
                     </BrowserFrame>
                   </div>
@@ -132,7 +133,7 @@ export const ProductStory: React.FC = () => {
                       exit={{ opacity: 0, y: -16 }}
                       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <Screenshot shot={current.shot} alt={t(`landing:story.steps.${current.key}.alt`)} eager={active === 0} />
+                      <Screenshot shot={current.shot} lang={lang} alt={t(`landing:story.steps.${current.key}.alt`)} eager={active === 0} />
                     </m.div>
                   </AnimatePresence>
                 </div>

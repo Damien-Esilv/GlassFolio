@@ -12,7 +12,7 @@ import { User } from '../../types/domain';
 import { getAuthCapabilities } from './authCapabilities';
 import { authService } from './authService';
 import { SecondFactorMethod, StepUpProof } from './authTypes';
-import { mfaService } from './mfaService';
+import { mfaService, TotpFactorInfo } from './mfaService';
 import { passkeyAccountService } from './passkeyAccountService';
 
 /** Matches the recency window enforced by the account deletion RPC (migration 0004). */
@@ -22,6 +22,8 @@ export interface StepUpRequirements {
     password: boolean;
     /** The user proves one of these. Cloud accounts with TOTP must use it (AAL2). */
     secondFactor: SecondFactorMethod[];
+    /** Enrolled TOTP factors (used in Cloud when multiple authenticators exist). */
+    totpFactors: TotpFactorInfo[];
     /** Google accounts: a recent sign-in replaces the password. */
     recentSignInRequired: boolean;
     recentSignInSatisfied: boolean;
@@ -45,12 +47,13 @@ export const stepUpService = {
     async getRequirements(user: User | null, options?: StepUpOptions): Promise<StepUpRequirements> {
         if (user?.authProvider === 'google') {
             if (options?.googleRoundTrip) {
-                return { password: false, secondFactor: [], recentSignInRequired: false, recentSignInSatisfied: true };
+                return { password: false, secondFactor: [], totpFactors: [], recentSignInRequired: false, recentSignInSatisfied: true };
             }
-            return { password: false, secondFactor: [], recentSignInRequired: true, recentSignInSatisfied: isRecent() };
+            return { password: false, secondFactor: [], totpFactors: [], recentSignInRequired: true, recentSignInSatisfied: isRecent() };
         }
 
-        const hasTotp = (await mfaService.getTotpStatus()).enabled;
+        const totpStatus = await mfaService.getTotpStatus();
+        const hasTotp = totpStatus.enabled;
         const hasPasskeys = (await passkeyAccountService.list().catch(() => [])).length > 0;
         let secondFactor: SecondFactorMethod[];
         if (getAuthCapabilities().serverMfa) {
@@ -58,7 +61,13 @@ export const stepUpService = {
         } else {
             secondFactor = [...(hasTotp ? ['totp' as const] : []), ...(hasPasskeys ? ['passkey' as const] : [])];
         }
-        return { password: true, secondFactor, recentSignInRequired: false, recentSignInSatisfied: true };
+        return {
+            password: true,
+            secondFactor,
+            totpFactors: totpStatus.factors,
+            recentSignInRequired: false,
+            recentSignInSatisfied: true,
+        };
     },
 
     async verify(user: User | null, proof: StepUpProof, options?: StepUpOptions): Promise<void> {

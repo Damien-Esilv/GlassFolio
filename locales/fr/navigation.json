@@ -23,7 +23,8 @@
     "header": {
         "proPlan": "Plan Pro",
         "profileAndAccount": "Profil & Compte",
-        "preferences": "Paramètres"
+        "preferences": "Paramètres",
+        "localVaultBadge": "Coffre local chiffré"
     },
     "brandName": "Glassfolio",
     "collapseSidebar": "Réduire le menu latéral",

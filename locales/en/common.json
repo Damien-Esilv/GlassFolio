@@ -100,6 +100,8 @@
             "totpChallengeExpired": "The verification request expired. Enter a new code.",
             "noTotpFactor": "No authenticator app is set up on this account.",
             "totpEnrollFailed": "Two-factor authentication could not be set up. Please try again.",
+            "totpNameConflict": "An authenticator app with this name already exists. Choose a different name.",
+            "totpLimitReached": "You have reached the maximum number of authenticator apps.",
             "totpRemoveFailed": "Two-factor authentication could not be removed. Please try again.",
             "passkeyOtherAccount": "This passkey belongs to another account.",
             "passkeyRequired": "Confirm with one of your passkeys.",

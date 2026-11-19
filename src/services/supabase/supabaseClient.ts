@@ -7,6 +7,11 @@
  */
 
 import { appStorage } from '../storage/appStorage';
+import { parseVaultQuotaError } from '../storage/vaultQuota';
+import {
+    SupabaseVaultHeaderRowsSchema,
+    SupabaseVaultRecordRowsSchema,
+} from '../contracts/externalSchemas';
 
 export interface SupabaseConfig {
     url: string;
@@ -58,6 +63,7 @@ export interface SupabaseMfaFactor {
     factor_type: SupabaseMfaFactorType;
     status: 'verified' | 'unverified';
     friendly_name?: string;
+    created_at?: string;
 }
 
 export interface SupabaseMfaChallenge { id: string; }
@@ -715,8 +721,11 @@ export const supabaseClient = {
 
         // Fail loudly: callers must never mistake an unreachable vault for a missing one.
         if (!res.ok) throw new Error(`Unable to read the vault header (HTTP ${res.status}).`);
-        const rows = (await res.json()) as SupabaseVaultHeaderRow[];
-        return rows[0] || null;
+        const parsed = SupabaseVaultHeaderRowsSchema.safeParse(await res.json());
+        if (!parsed.success) {
+            throw new Error('Malformed vault header response from Supabase.');
+        }
+        return (parsed.data[0] as SupabaseVaultHeaderRow | undefined) || null;
     },
 
     async upsertVaultHeader(
@@ -742,6 +751,8 @@ export const supabaseClient = {
 
         if (!res.ok) {
             const err = await res.text();
+            const quotaError = parseVaultQuotaError(err);
+            if (quotaError) throw quotaError;
             throw new Error(`Failed to save vault header to Supabase: ${err}`);
         }
     },
@@ -757,7 +768,11 @@ export const supabaseClient = {
         });
 
         if (!res.ok) throw new Error(`Unable to read vault records (HTTP ${res.status}).`);
-        return (await res.json()) as SupabaseVaultRecordRow[];
+        const parsed = SupabaseVaultRecordRowsSchema.safeParse(await res.json());
+        if (!parsed.success) {
+            throw new Error('Malformed vault records response from Supabase.');
+        }
+        return parsed.data as SupabaseVaultRecordRow[];
     },
 
     async upsertVaultRecord(
@@ -783,6 +798,8 @@ export const supabaseClient = {
 
         if (!res.ok) {
             const err = await res.text();
+            const quotaError = parseVaultQuotaError(err);
+            if (quotaError) throw quotaError;
             throw new Error(`Failed to save encrypted record "${recordKey}" to Supabase: ${err}`);
         }
     },
@@ -820,8 +837,16 @@ export const supabaseClient = {
             body: JSON.stringify({ p_header: header, p_records: records }),
         });
         if (!res.ok) {
-            const data = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(data.message || `Vault migration commit failed (HTTP ${res.status}).`);
+            const raw = await res.text().catch(() => '');
+            const quotaError = parseVaultQuotaError(raw);
+            if (quotaError) throw quotaError;
+            let message: string | undefined;
+            try {
+                message = (JSON.parse(raw) as { message?: string }).message;
+            } catch {
+                // Non-JSON error body
+            }
+            throw new Error(message || `Vault migration commit failed (HTTP ${res.status}).`);
         }
     },
 

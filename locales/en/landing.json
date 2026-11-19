@@ -422,7 +422,7 @@
       },
       "q7": {
         "question": "How do I install the Docker edition?",
-        "answer": "Install Docker and Node.js 22, then run three commands: git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio and npm run docker:up. Open http://localhost:3000 and create your vault. The self-hosting guide covers configuration, network access, backups and updates."
+        "answer": "Install Docker and Node.js 22, then run three commands: git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio and npm run docker:up. Open http://localhost:3780 and create your vault. The self-hosting guide covers configuration, network access, backups and updates."
       }
     }
   },

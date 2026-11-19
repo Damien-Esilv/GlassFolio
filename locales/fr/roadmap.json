@@ -36,6 +36,10 @@
       "title": "Connexions directes aux courtiers",
       "body": "Actualisez vos positions directement depuis les courtiers et plateformes partenaires, sans export de fichiers."
     },
+    "autoCashflow": {
+      "title": "Suivi des dépenses & Cashflow automatique",
+      "body": "Suivez automatiquement vos dépenses, comptes et flux de trésorerie. Nous explorons plusieurs pistes techniques (SnapTrade Personal, Crypto & On-chain, Enable Banking ou Woob via woob.tech) ; ces choix restent ouverts et certaines synchronisations automatiques pourront évoluer ou être abandonnées en cas d'impossibilité technique."
+    },
     "jurisdictions": {
       "title": "Nouvelles juridictions fiscales",
       "body": "Étendez le moteur fiscal modulaire au-delà de la France, en commençant par les pays les plus demandés."

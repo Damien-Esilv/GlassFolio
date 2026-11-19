@@ -61,8 +61,11 @@ const expectations = {
   'quota.sql': [
     /ROWS: insert #65 rejected -> Vault record quota exceeded/,
     /ROWS: user A stored 64 records/,
-    /BYTES: 5 MB insert #6 rejected -> Vault storage quota exceeded/,
-    /BYTES: user B stored 5 x 5 MB records \(25 MB\)/,
+    /BYTES: 5 MB insert #3 rejected -> Vault storage quota exceeded/,
+    /BYTES: user B stored 2 x 5 MB records \(10 MB\)/,
+    /HEADER: direct oversized insert rejected -> .*check_vault_header_size_limit/,
+    /HEADER: rpc oversized insert rejected -> .*check_vault_header_size_limit/,
+    /HEADER: user C headers=0, records=0/,
     /ORDER: tr_enforce_vault_record_quotas -> trg_vault_records_integrity/,
   ],
   'rpc.sql': [

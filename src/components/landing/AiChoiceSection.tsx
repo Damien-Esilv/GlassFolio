@@ -22,7 +22,8 @@ const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
 /** Three equal ways to run the assistant, then the guardrails that apply to all of them. */
 export const AiChoiceSection: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang: 'en' | 'fr' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
 
   return (
     <section id="ai" className="relative py-16 lg:py-24 border-t border-subtle bg-canvas overflow-hidden scroll-mt-16">
@@ -44,7 +45,7 @@ export const AiChoiceSection: React.FC = () => {
             <BrowserFrame address={t('landing:story.addressBar')} className="w-full shadow-2xl">
               <div style={{ aspectRatio: `${SCREENSHOT_WIDTH} / ${SCREENSHOT_HEIGHT}` }}>
                 <img
-                  src="/screenshots/ai-assistant.webp"
+                  src={`/screenshots/${lang}/ai-assistant.webp`}
                   alt={t('landing:aiChoice.screenshotAlt')}
                   width={SCREENSHOT_WIDTH}
                   height={SCREENSHOT_HEIGHT}

@@ -13,6 +13,7 @@ import { getAuthCapabilities } from './authCapabilities';
 import { authService } from './authService';
 import { auditLogService } from './auditLogService';
 import { passkeyService, PasskeyRecord } from './passkeyService';
+import { resolvePasskeyLabel } from './passkeyAaguid';
 import { vaultService } from './vaultService';
 import { getSessionAssurance, supabaseClient } from '../supabase/supabaseClient';
 import { getSyncedPublicLanguage } from '../storage/publicPreferencesSync';
@@ -108,9 +109,9 @@ export const passkeyAccountService = {
     /** The master password wraps the vault key into the new PRF slot (it is never stored). */
     async register(params: {
         user: { id: string; email: string; name: string };
-        label: string;
+        label?: string;
         masterPassword: string;
-    }): Promise<{ unlocksVault: boolean; pendingVaultUnlock?: { credentialId: string; label: string; rpId: string; transports?: string[] } }> {
+    }): Promise<{ unlocksVault: boolean; label: string; pendingVaultUnlock?: { credentialId: string; label: string; rpId: string; transports?: string[] } }> {
         if (!(await vaultService.verifyPassword(params.masterPassword))) {
             throw new Error('Invalid master password.');
         }
@@ -148,6 +149,12 @@ export const passkeyAccountService = {
             }
         }
 
+        const resolvedLabel = params.label?.trim() || resolvePasskeyLabel({
+            aaguid: attestation.aaguid,
+            transports: attestation.transports,
+            existingNames: existing.map(record => record.name),
+        });
+
         // Some authenticators only return the PRF output on an assertion, not at creation. Safari
         // refuses that second ceremony within the same gesture: the user then confirms it with a click.
         const slotMeta = { rpId: attestation.rpId, transports: attestation.transports };
@@ -161,33 +168,57 @@ export const passkeyAccountService = {
                     withPrf: true,
                 })).prfSecret;
             } catch {
-                pendingVaultUnlock = { credentialId: attestation.credentialId, label: params.label, ...slotMeta };
+                pendingVaultUnlock = { credentialId: attestation.credentialId, label: resolvedLabel, ...slotMeta };
             }
         }
         if (prfSecret) {
-            await vaultService.enrollPasskeyPrf(attestation.credentialId, params.label, prfSecret, params.masterPassword, slotMeta);
+            await vaultService.enrollPasskeyPrf(attestation.credentialId, resolvedLabel, prfSecret, params.masterPassword, slotMeta);
         } else if (!usesSupabasePasskeys() && !pendingVaultUnlock) {
             throw new Error('This authenticator cannot unlock the vault (PRF extension unsupported).');
         }
 
         await passkeyService.saveRecord({
             id: attestation.credentialId,
-            name: params.label,
+            name: resolvedLabel,
             createdAt: new Date().toISOString(),
             algorithm: attestation.algorithm,
             transports: attestation.transports,
+            aaguid: attestation.aaguid,
             prfEnabled: Boolean(prfSecret),
             serverId,
         });
-        await auditLogService.record('passkey_registered', `Passkey "${params.label}" registered`);
+        await auditLogService.record('passkey_registered', `Passkey "${resolvedLabel}" registered`);
         if (usesSupabasePasskeys()) {
             const token = await authService.getActiveAccessToken?.();
             if (token) {
                 const locale = getSyncedPublicLanguage();
-                void supabaseClient.notifySecurityEvent(token, 'passkey_added', params.label, locale);
+                void supabaseClient.notifySecurityEvent(token, 'passkey_added', resolvedLabel, locale);
             }
         }
-        return { unlocksVault: Boolean(prfSecret), pendingVaultUnlock };
+        return { unlocksVault: Boolean(prfSecret), label: resolvedLabel, pendingVaultUnlock };
+    },
+
+    /** Updates the friendly label inside the encrypted vault (works in both Local and Cloud). */
+    async rename(passkey: AccountPasskey, newName: string): Promise<void> {
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        const records = await passkeyService.listPasskeys();
+        const existing = records.find(
+            record => (passkey.credentialId && record.id === passkey.credentialId)
+                || (passkey.serverId && record.serverId === passkey.serverId)
+        );
+        if (existing) {
+            await passkeyService.saveRecord({ ...existing, name: trimmed });
+            vaultService.updatePasskeySlotMeta(existing.id, { label: trimmed });
+        } else if (passkey.serverId) {
+            await passkeyService.saveRecord({
+                id: passkey.credentialId || passkey.serverId,
+                name: trimmed,
+                createdAt: passkey.createdAt,
+                algorithm: -7,
+                serverId: passkey.serverId,
+            });
+        }
     },
 
     async remove(passkey: AccountPasskey): Promise<void> {

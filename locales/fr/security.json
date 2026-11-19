@@ -29,7 +29,9 @@
         "vaultStatusLocked": "Coffre verrouillé",
         "resetFailed": "Le coffre n’a pas pu être réinitialisé. Réessayez.",
         "signOutPrompt": "Ce n'est pas vous, ou vous préférez vous reconnecter ? Vous êtes connecté en tant que {{email}}.",
-        "signOutButton": "Se déconnecter"
+        "signOutButton": "Se déconnecter",
+        "switchVaultPrompt": "Vous souhaitez ouvrir un autre coffre ? Coffre actif : {{name}}.",
+        "switchVaultButton": "Changer de coffre"
     },
     "header": {
         "lockVaultTooltip": "Verrouiller le coffre-fort immédiatement"
@@ -91,6 +93,24 @@
         "downloadBackupCodes": "Télécharger .txt",
         "confirmBackupCheckbox": "J'ai sauvegardé ces codes de secours dans un endroit sûr",
         "finishEnrollment": "Finaliser la configuration 2FA",
+        "addFactorTitle": "Ajouter une application d'authentification",
+        "addFactorButton": "Ajouter un Authenticator",
+        "nameStepTitle": "Nommez votre application d'authentification",
+        "nameStepSubtitle": "Donnez-lui un nom facile à reconnaître (ex. votre téléphone ou gestionnaire de mots de passe).",
+        "namePlaceholder": "ex. Apple Passwords, iPhone...",
+        "nameRequired": "Veuillez saisir un nom pour cette application.",
+        "quickPresetsLabel": "Suggestions rapides",
+        "continueToQrButton": "Continuer vers le QR code",
+        "selectFactorLabel": "Application d'authentification",
+        "renameTooltip": "Renommer cet Authenticator",
+        "renameInputLabel": "Nom de l'Authenticator",
+        "removeFactorTooltip": "Supprimer cet Authenticator",
+        "removeFactorConfirmTitle": "Supprimer {{name}} ?",
+        "removeFactorConfirmMessage": "Les codes générés par cette application ne seront plus acceptés. Vos autres Authenticators restent actifs.",
+        "backupCodesRemaining": "{{count}} codes de secours restants",
+        "regenerateBackupTitle": "Régénérer les codes de secours",
+        "regenerateBackupDescription": "La génération de 10 nouveaux codes de secours invalide immédiatement tous les anciens codes.",
+        "regenerateBackupButton": "Régénérer les codes",
         "disableConfirmTitle": "Désactiver l'authentification à deux facteurs ?",
         "disableConfirmMessage": "Êtes-vous certain de vouloir désactiver la 2FA ? Votre compte ne sera plus protégé que par votre mot de passe maître.",
         "confirmDisable": "Oui, désactiver la 2FA",
@@ -108,6 +128,8 @@
         "noPasskeys": "Aucune passkey enregistrée pour le moment",
         "createdOn": "Créée le {{date}}",
         "deleteTooltip": "Supprimer cette passkey",
+        "renameTooltip": "Renommer cette passkey",
+        "renameInputLabel": "Nom de la passkey",
         "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette passkey ?",
         "promptLabel": "Nom de la passkey (ex: MacBook Touch ID)",
         "registerError": "Échec de l'enregistrement de la passkey",
@@ -214,7 +236,9 @@
             "neverSaved": "Rien d'enregistré pour l'instant dans cette session",
             "pending": "Modifications en attente d'enregistrement",
             "serverHelp": "Vos données chiffrées sont stockées sur la machine qui exécute GlassFolio. Vider ou changer de navigateur n'a aucun effet dessus.",
-            "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine."
+            "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine.",
+            "activeVault": "Coffre actif",
+            "demoVault": "Coffre Démo (Isolé)"
         }
     },
     "vaultIntegrity": {
@@ -225,6 +249,46 @@
         "writeFailed": {
             "title": "Vos dernières modifications ne sont pas encore enregistrées",
             "description": "Elles n’ont pas pu être écrites (le stockage est peut-être plein). Elles restent en attente et seront réessayées à votre prochaine modification. Libérez de l’espace ou exportez une sauvegarde avant de fermer cet onglet."
+        }
+    },
+    "cloudSync": {
+        "notice": {
+            "storage_limit": {
+                "title": "Quota de stockage cloud atteint ({{maxMb}} Mo)",
+                "description": "Vos dernières modifications restent conservées sur cet appareil mais n’ont pas pu être synchronisées dans le cloud car votre coffre chiffré dépasse la limite de {{maxMb}} Mo. Exportez une sauvegarde ou libérez de l’espace pour reprendre la synchronisation."
+            },
+            "record_limit": {
+                "title": "Limite de clés de stockage cloud atteinte ({{maxRecords}} clés)",
+                "description": "Vos dernières modifications restent conservées sur cet appareil mais n’ont pas pu être synchronisées dans le cloud car votre compte dépasse la limite de {{maxRecords}} clés. Exportez une sauvegarde ou supprimez des données inutilisées pour reprendre la synchronisation."
+            },
+            "record_size": {
+                "title": "Taille maximale par enregistrement dépassée ({{maxRecordMb}} Mo)",
+                "description": "L’un de vos enregistrements chiffrés dépasse la limite cloud de {{maxRecordMb}} Mo et n’a pas pu être synchronisé. Exportez une sauvegarde ou réduisez la taille de votre historique pour reprendre la synchronisation."
+            },
+            "header_size": {
+                "title": "Taille maximale de l’en-tête du coffre dépassée ({{maxHeaderKb}} Ko)",
+                "description": "Les métadonnées de votre coffre dépassent la limite cloud de {{maxHeaderKb}} Ko et n’ont pas pu être synchronisées. Exportez une sauvegarde ou nettoyez les entrées inutilisées avant de fermer cet onglet."
+            },
+            "nearLimit": {
+                "title": "Stockage cloud bientôt plein ({{percent}} %)",
+                "description": "Votre coffre chiffré utilise {{percent}} % du quota cloud ({{maxMb}} Mo / {{maxRecords}} clés). Pensez à exporter une sauvegarde d’archive avant d’atteindre la limite."
+            }
+        },
+        "settings": {
+            "title": "Stockage du coffre cloud",
+            "help": "Vos données chiffrées de bout en bout sont répliquées dans le cloud dans la limite d’un quota de {{maxMb}} Mo et {{maxRecords}} clés par compte.",
+            "storageUsed": "Espace chiffré utilisé",
+            "usageSummary": "{{usedMb}} Mo / {{maxMb}} Mo ({{percent}} %)",
+            "records": "Clés de stockage",
+            "recordsCount": "{{used}} / {{max}}",
+            "pending": "Modifications en attente",
+            "statusLabel": "État de synchronisation",
+            "status": {
+                "healthy": "Synchronisé",
+                "syncing": "Synchronisation…",
+                "syncError": "Erreur de synchronisation",
+                "quotaExceeded": "Quota atteint"
+            }
         }
     }
 }
