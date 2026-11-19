@@ -13,6 +13,10 @@ export const LocalStorageStatusCard: React.FC = () => {
     const lastSaved = status.lastSavedAt
         ? new Date(status.lastSavedAt).toLocaleString(i18n.language)
         : t('localPersistence.settings.neverSaved');
+    const activeProfile = status.profiles.find(p => p.id === status.activeVaultId);
+    const activeVaultLabel = status.activeVaultId === 'demo'
+        ? t('localPersistence.settings.demoVault')
+        : (activeProfile?.name || status.activeVaultId);
 
     return (
         <div className="bg-card rounded-xl p-6 shadow-lg border border-border" data-testid="local-storage-status">
@@ -32,6 +36,10 @@ export const LocalStorageStatusCard: React.FC = () => {
                 </div>
                 {isServer && (
                     <>
+                        <div>
+                            <dt className="text-xs text-tertiary">{t('localPersistence.settings.activeVault')}</dt>
+                            <dd className="font-medium text-primary">{activeVaultLabel}</dd>
+                        </div>
                         <div>
                             <dt className="text-xs text-tertiary">{t('localPersistence.settings.lastSaved')}</dt>
                             <dd className="font-medium text-primary">{lastSaved}</dd>

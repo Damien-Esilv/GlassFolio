@@ -13,11 +13,13 @@
 import { constantTimeCompare, fromBase32, toBase32, toBase64, utf8Encode } from './encoding';
 import { appStorage } from '../storage/appStorage';
 import { LEGACY_TOTP_FLAG_KEY } from '../storage/storageKeys';
+import { deduplicateLabel } from './passkeyAaguid';
 
 const TOTP_STORAGE_KEY = 'glassfolio_security_totp';
 const DEFAULT_STEP_SEC = 30;
 const DEFAULT_DIGITS = 6;
 const DEFAULT_TOLERANCE_STEPS = 1;
+export const MAX_TOTP_FACTORS = 5;
 
 export interface TotpConfig {
     secret: string;
@@ -25,6 +27,20 @@ export interface TotpConfig {
     hashedBackupCodes: string[];
     lastVerifiedStep?: number;
     enrolledAt: string;
+}
+
+export interface TotpFactorRecord {
+    id: string;
+    friendlyName: string;
+    secret: string;
+    enrolledAt: string;
+    lastVerifiedStep?: number;
+}
+
+export interface TotpStore {
+    version: 2;
+    factors: TotpFactorRecord[];
+    hashedBackupCodes: string[];
 }
 
 export interface TotpEnrollment {
@@ -200,27 +216,102 @@ export const verifyBackupCode = async (
 
 // ── Persistent Configuration Service ─────────────────────────────────────────
 
-export const totpService = {
-    async getConfig(): Promise<TotpConfig | null> {
-        const raw = appStorage.getItem(TOTP_STORAGE_KEY);
-        if (!raw) return null;
-        try {
-            return JSON.parse(raw) as TotpConfig;
-        } catch {
-            return null;
+const generateFactorId = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const isV2Store = (parsed: unknown): parsed is TotpStore =>
+    Boolean(
+        parsed
+        && typeof parsed === 'object'
+        && (parsed as { version?: unknown }).version === 2
+        && Array.isArray((parsed as { factors?: unknown }).factors)
+    );
+
+const readStore = (): TotpStore | null => {
+    const raw = appStorage.getItem(TOTP_STORAGE_KEY);
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (isV2Store(parsed)) {
+            return {
+                version: 2,
+                factors: parsed.factors,
+                hashedBackupCodes: Array.isArray(parsed.hashedBackupCodes) ? parsed.hashedBackupCodes : [],
+            };
         }
+        // Transparent migration from v1 single-factor TotpConfig
+        const legacy = parsed as Partial<TotpConfig>;
+        if (legacy && legacy.enabled && typeof legacy.secret === 'string' && legacy.secret.length > 0) {
+            return {
+                version: 2,
+                factors: [{
+                    id: 'legacy-totp',
+                    friendlyName: 'Authenticator',
+                    secret: legacy.secret,
+                    enrolledAt: legacy.enrolledAt || new Date().toISOString(),
+                    lastVerifiedStep: legacy.lastVerifiedStep,
+                }],
+                hashedBackupCodes: Array.isArray(legacy.hashedBackupCodes) ? legacy.hashedBackupCodes : [],
+            };
+        }
+        return null;
+    } catch {
+        return null;
+    }
+};
+
+const writeStore = (store: TotpStore): void => {
+    appStorage.setItem(TOTP_STORAGE_KEY, JSON.stringify(store));
+};
+
+export const totpService = {
+    async getStore(): Promise<TotpStore | null> {
+        return readStore();
+    },
+
+    async listFactors(): Promise<TotpFactorRecord[]> {
+        const store = readStore();
+        return store ? store.factors : [];
+    },
+
+    async getRemainingBackupCodesCount(): Promise<number> {
+        const store = readStore();
+        return store ? store.hashedBackupCodes.length : 0;
+    },
+
+    async getConfig(): Promise<TotpConfig | null> {
+        const store = readStore();
+        const primary = store?.factors[0];
+        if (!store || !primary) return null;
+        return {
+            secret: primary.secret,
+            enabled: true,
+            hashedBackupCodes: store.hashedBackupCodes,
+            lastVerifiedStep: primary.lastVerifiedStep,
+            enrolledAt: primary.enrolledAt,
+        };
     },
 
     /** Local mode only: reads the vault, so it must be called once the vault is unlocked. */
     async isEnabled(): Promise<boolean> {
-        const config = await this.getConfig();
-        return Boolean(config && config.enabled);
+        const store = readStore();
+        return Boolean(store && store.factors.length > 0);
     },
 
     async initEnrollment(accountName: string, customSecret?: string, customUri?: string): Promise<TotpEnrollment> {
         const secret = customSecret || generateTotpSecret(20);
         const uri = customUri || generateTotpUri(accountName, secret);
-        const { plainCodes, hashedCodes } = await generateBackupCodes(10);
+        const store = readStore();
+        const hasExistingFactors = Boolean(store && store.factors.length > 0);
+        const { plainCodes, hashedCodes } = hasExistingFactors
+            ? { plainCodes: [], hashedCodes: [] }
+            : await generateBackupCodes(10);
         return {
             secret,
             uri,
@@ -232,49 +323,117 @@ export const totpService = {
     async confirmEnrollment(
         secret: string,
         token: string,
-        hashedBackupCodes: string[]
+        hashedBackupCodes: string[],
+        friendlyName?: string
     ): Promise<boolean> {
+        const existing = readStore();
+        const currentFactors = existing?.factors ?? [];
+        if (currentFactors.length >= MAX_TOTP_FACTORS) {
+            throw new Error('Maximum number of authenticator apps reached.');
+        }
+
+        const trimmedName = friendlyName?.trim();
+        if (trimmedName) {
+            const lower = trimmedName.toLowerCase();
+            if (currentFactors.some(f => f.friendlyName.trim().toLowerCase() === lower)) {
+                throw new Error('An authenticator app with this name already exists.');
+            }
+        }
+
         const result = await verifyTotpCode(secret, token);
         if (!result.valid || result.step === undefined) {
             return false;
         }
 
-        const config: TotpConfig = {
+        const resolvedName = trimmedName || deduplicateLabel(
+            'Authenticator',
+            currentFactors.map(f => f.friendlyName)
+        );
+
+        const nextFactor: TotpFactorRecord = {
+            id: generateFactorId(),
+            friendlyName: resolvedName,
             secret,
-            enabled: true,
-            hashedBackupCodes,
-            lastVerifiedStep: result.step,
             enrolledAt: new Date().toISOString(),
+            lastVerifiedStep: result.step,
         };
 
-        appStorage.setItem(TOTP_STORAGE_KEY, JSON.stringify(config));
+        const preservedBackupCodes = existing && existing.factors.length > 0
+            ? existing.hashedBackupCodes
+            : hashedBackupCodes;
+
+        writeStore({
+            version: 2,
+            factors: [...currentFactors, nextFactor],
+            hashedBackupCodes: preservedBackupCodes,
+        });
         return true;
     },
 
-    async verify(tokenOrBackupCode: string): Promise<boolean> {
-        const config = await this.getConfig();
-        if (!config || !config.enabled) return false;
+    async verify(tokenOrBackupCode: string, factorId?: string): Promise<boolean> {
+        const store = readStore();
+        if (!store || store.factors.length === 0) return false;
 
-        // Try TOTP 6-digit first
-        const totpRes = await verifyTotpCode(config.secret, tokenOrBackupCode, {
-            lastVerifiedStep: config.lastVerifiedStep,
-        });
+        const candidates = factorId
+            ? store.factors.filter(f => f.id === factorId)
+            : store.factors;
 
-        if (totpRes.valid && totpRes.step !== undefined) {
-            config.lastVerifiedStep = totpRes.step;
-            appStorage.setItem(TOTP_STORAGE_KEY, JSON.stringify(config));
-            return true;
+        for (const candidate of candidates) {
+            const totpRes = await verifyTotpCode(candidate.secret, tokenOrBackupCode, {
+                lastVerifiedStep: candidate.lastVerifiedStep,
+            });
+
+            if (totpRes.valid && totpRes.step !== undefined) {
+                const updatedFactors = store.factors.map(f =>
+                    f.id === candidate.id ? { ...f, lastVerifiedStep: totpRes.step } : f
+                );
+                writeStore({ ...store, factors: updatedFactors });
+                return true;
+            }
         }
 
-        // Fallback to emergency backup code
-        const backupRes = await verifyBackupCode(tokenOrBackupCode, config.hashedBackupCodes);
+        // Fallback to vault-wide single-use emergency backup codes
+        const backupRes = await verifyBackupCode(tokenOrBackupCode, store.hashedBackupCodes);
         if (backupRes.valid) {
-            config.hashedBackupCodes = backupRes.remainingHashes;
-            appStorage.setItem(TOTP_STORAGE_KEY, JSON.stringify(config));
+            writeStore({ ...store, hashedBackupCodes: backupRes.remainingHashes });
             return true;
         }
 
         return false;
+    },
+
+    async removeFactor(factorId: string): Promise<void> {
+        const store = readStore();
+        if (!store) return;
+        const remaining = store.factors.filter(f => f.id !== factorId);
+        if (remaining.length === 0) {
+            await this.disable();
+            return;
+        }
+        writeStore({ ...store, factors: remaining });
+    },
+
+    async renameFactor(factorId: string, newName: string): Promise<void> {
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        const store = readStore();
+        if (!store) return;
+        const lower = trimmed.toLowerCase();
+        if (store.factors.some(f => f.id !== factorId && f.friendlyName.trim().toLowerCase() === lower)) {
+            throw new Error('An authenticator app with this name already exists.');
+        }
+        const updated = store.factors.map(f => (f.id === factorId ? { ...f, friendlyName: trimmed } : f));
+        writeStore({ ...store, factors: updated });
+    },
+
+    async regenerateBackupCodes(): Promise<string[]> {
+        const store = readStore();
+        if (!store || store.factors.length === 0) {
+            throw new Error('No verified authenticator app is enrolled on this account.');
+        }
+        const { plainCodes, hashedCodes } = await generateBackupCodes(10);
+        writeStore({ ...store, hashedBackupCodes: hashedCodes });
+        return plainCodes;
     },
 
     async disable(): Promise<void> {

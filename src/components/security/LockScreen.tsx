@@ -9,8 +9,11 @@ import { passkeyAccountService } from '../../services/security/passkeyAccountSer
 import { getAuthCapabilities } from '../../services/security/authCapabilities';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLocalPersistenceStatus } from '../../hooks/useLocalPersistenceStatus';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
+import { getAccountIdentifier } from '../../services/security/accountIdentity';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { PasswordManagerUsernameField } from './PasswordManagerUsernameField';
 
 interface LockScreenProps {
     onUnlocked?: () => void;
@@ -20,11 +23,15 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
     const { t } = useTranslation();
     const { refreshData } = useData();
     const { user, logout } = useAuth();
+    const localStatus = useLocalPersistenceStatus();
     const isDemo = vaultService.isDemoVault();
     // Online: the account lives on the server, so the lock screen also offers to sign out and never
-    // wipes the (synced) vault. Local: the vault is the account; locking is the only "sign out".
+    // wipes the (synced) vault. Local: offered when multiple local vault profiles exist on the server.
     const isCloud = getAuthCapabilities().mode === 'cloud';
-    const canSignOut = isCloud && !!user && !isDemo;
+    const hasMultipleLocalVaults = !isCloud && localStatus.profiles.length > 1;
+    const canSignOut = (isCloud || hasMultipleLocalVaults) && !!user && !isDemo;
+    const activeLocalProfileName = localStatus.profiles.find(p => p.id === localStatus.activeVaultId)?.name;
+    const passwordManagerUsername = getAccountIdentifier(user, activeLocalProfileName);
 
     const [password, setPassword] = useState(isDemo ? 'password' : '');
     const [recoveryKey, setRecoveryKey] = useState('');
@@ -188,17 +195,8 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                 )}
 
                 {mode === 'password' ? (
-                    <form onSubmit={handleUnlockWithPassword} className="space-y-4">
-                        {/* Hidden username to anchor password manager identification */}
-                        <input
-                            type="text"
-                            name="username"
-                            autoComplete="username"
-                            defaultValue={user?.email || 'user'}
-                            className="sr-only"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                        />
+                    <form onSubmit={handleUnlockWithPassword} method="post" action="/login" className="space-y-4">
+                        <PasswordManagerUsernameField username={passwordManagerUsername} />
                         <div>
                             <label className="block text-xs font-medium text-secondary mb-1.5" htmlFor="vault-password">
                                 {t('security:lockScreen.passwordLabel')}
@@ -304,7 +302,9 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                 {canSignOut ? (
                     <div className="mt-8 pt-6 border-t border-subtle text-center">
                         <p className="text-[11px] text-tertiary mb-2">
-                            {t('security:lockScreen.signOutPrompt', { email: user?.email })}
+                            {isCloud
+                                ? t('security:lockScreen.signOutPrompt', { email: user?.email })
+                                : t('security:lockScreen.switchVaultPrompt', { name: user?.name })}
                         </p>
                         <button
                             type="button"
@@ -312,7 +312,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlocked }) => {
                             className="text-xs text-secondary hover:text-primary transition-colors inline-flex items-center gap-1.5"
                         >
                             <LogOut size={14} />
-                            {t('security:lockScreen.signOutButton')}
+                            {isCloud ? t('security:lockScreen.signOutButton') : t('security:lockScreen.switchVaultButton')}
                         </button>
                     </div>
                 ) : isDemo && (

@@ -120,6 +120,12 @@ npm run docker:smoke   # construire un conteneur jetable et le vérifier de bout
 
 Définissez ces variables dans `docker/docker.env` (valeurs par défaut non secrètes) ou dans votre shell. Les secrets, comme le jeton d'accès, vont dans votre shell, jamais dans un fichier.
 
+Pour changer le port local (par exemple si `3780` est déjà utilisé), modifiez `GLASSFOLIO_PORT` dans `docker/docker.env` ou passez-le directement en ligne de commande :
+
+```bash
+GLASSFOLIO_PORT=8080 npm run docker:up
+```
+
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `GLASSFOLIO_PORT` | `3780` | Port de l'hôte sur lequel l'application est publiée. |

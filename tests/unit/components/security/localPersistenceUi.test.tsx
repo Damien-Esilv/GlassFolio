@@ -26,6 +26,8 @@ const status = (patch: Partial<LocalPersistenceStatus>): LocalPersistenceStatus 
     lastSavedAt: null,
     lastError: null,
     legacyBrowserVaultIgnored: false,
+    activeVaultId: 'default',
+    profiles: [],
     ...patch,
 });
 

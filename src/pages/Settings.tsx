@@ -5,7 +5,7 @@ import Button from '../components/Button';
 import {
     User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette,
     TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles,
-    Info, AlertCircle, X, FileSpreadsheet, UserX, AlertTriangle
+    Info, AlertCircle, FileSpreadsheet, UserX, AlertTriangle
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +28,8 @@ import { LocalStorageStatusCard } from '../components/security/LocalStorageStatu
 import { CloudStorageStatusCard } from '../components/security/CloudStorageStatusCard';
 import { AssetLookupToggle } from '../components/settings/AssetLookupToggle';
 import { getAuthCapabilities } from '../services/security/authCapabilities';
+import { isShowcaseAvailable } from '../config/deployment';
+import { LegalLink } from '../components/ui/LegalLink';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const Settings: React.FC = () => {
@@ -958,41 +960,44 @@ const Settings: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Legal & Privacy (E15) */}
-                            <div className={cardStyle}>
-                                <div className="flex items-start gap-3 mb-4">
-                                    <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-                                        <Scale size={18} />
+                            {/* Legal & Privacy (E15) — shown only when showcase legal documents are available */}
+                            {isShowcaseAvailable() && (
+                                <div className={cardStyle}>
+                                    <div className="flex items-start gap-3 mb-4">
+                                        <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                                            <Scale size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-semibold text-primary">{t('settings:legal.title')}</h3>
+                                            <p className="text-xs text-tertiary mt-0.5 leading-relaxed">
+                                                {t('settings:legal.subtitle', { version: LEGAL_DOCUMENTS_VERSION })}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-base font-semibold text-primary">{t('settings:legal.title')}</h3>
-                                        <p className="text-xs text-tertiary mt-0.5 leading-relaxed">
-                                            {t('settings:legal.subtitle', { version: LEGAL_DOCUMENTS_VERSION })}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {(['legal', 'privacy', 'terms', 'cookies', 'accessibility'] as const).map((doc) => (
-                                        <Link
-                                            key={doc}
-                                            to={`/${doc}`}
+                                    <div className="flex flex-wrap gap-2">
+                                        {(['legal', 'privacy', 'terms', 'cookies', 'accessibility'] as const).map((doc) => (
+                                            <LegalLink
+                                                key={doc}
+                                                path={`/${doc}`}
+                                                newTab
+                                                className="px-3 py-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-secondary hover:text-primary transition-colors"
+                                            >
+                                                {t(`legal:center.tabs.${doc}`)}
+                                            </LegalLink>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={openConsentPreferences}
                                             className="px-3 py-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-secondary hover:text-primary transition-colors"
                                         >
-                                            {t(`legal:center.tabs.${doc}`)}
-                                        </Link>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={openConsentPreferences}
-                                        className="px-3 py-2 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-secondary hover:text-primary transition-colors"
-                                    >
-                                        {t('settings:legal.cookiePreferences')}
-                                    </button>
+                                            {t('settings:legal.cookiePreferences')}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-tertiary mt-4 leading-relaxed">
+                                        {t('settings:legal.rightsHint', { email: LEGAL_CONTACT_EMAIL })}
+                                    </p>
                                 </div>
-                                <p className="text-xs text-tertiary mt-4 leading-relaxed">
-                                    {t('settings:legal.rightsHint', { email: LEGAL_CONTACT_EMAIL })}
-                                </p>
-                            </div>
+                            )}
 
                             {/* Delete Account (GDPR) */}
                             <div className="p-4 rounded-xl border border-negative/40 bg-negative-subtle">
@@ -1018,19 +1023,6 @@ const Settings: React.FC = () => {
                     {showDeleteAccountModal && typeof document !== 'undefined' && createPortal(
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                             <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowDeleteAccountModal(false);
-                                        setDeleteConfirmText('');
-                                        setDeleteError('');
-                                    }}
-                                    className="absolute top-4 right-4 p-1.5 text-tertiary hover:text-primary rounded-lg hover:bg-subtle transition-colors"
-                                    aria-label={t('settings:dataAndBackup.cancel')}
-                                >
-                                    <X size={18} />
-                                </button>
-
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-negative-subtle text-negative flex items-center justify-center shrink-0">
                                         <AlertTriangle size={20} />

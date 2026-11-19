@@ -8,13 +8,30 @@
 
 export const LOCAL_VAULT_ENDPOINT = '/api/local-vault';
 const BATCH_ENDPOINT = `${LOCAL_VAULT_ENDPOINT}/batch`;
+const PROFILES_ENDPOINT = `${LOCAL_VAULT_ENDPOINT}/profiles`;
 /** Browsers cap the total body of in-flight `keepalive` requests at 64 KiB. */
 export const KEEPALIVE_CHUNK_BYTES = 60 * 1024;
+
+export interface LocalVaultProfileSummary {
+    id: string;
+    name: string;
+    initialized: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
 
 export interface VaultSnapshot {
     revision: number;
     records: Record<string, string>;
+    activeVaultId?: string;
+    profiles?: LocalVaultProfileSummary[];
 }
+
+export type VaultProfileAction =
+    | { action: 'select'; vaultId: string }
+    | { action: 'create'; name: string }
+    | { action: 'rename'; vaultId?: string; name: string }
+    | { action: 'delete'; vaultId?: string };
 
 export interface VaultBatch {
     clear?: boolean;
@@ -55,6 +72,54 @@ export async function fetchLocalConfig(fetchImpl: FetchLike = fetch): Promise<Lo
     }
 }
 
+const parseProfiles = (raw: unknown): LocalVaultProfileSummary[] | undefined => {
+    if (!Array.isArray(raw)) return undefined;
+    const result: LocalVaultProfileSummary[] = [];
+    for (const item of raw) {
+        if (item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string' && typeof (item as { name?: unknown }).name === 'string') {
+            const p = item as { id: string; name: string; initialized?: unknown; createdAt?: unknown; updatedAt?: unknown };
+            result.push({
+                id: p.id,
+                name: p.name,
+                initialized: p.initialized === true,
+                ...(typeof p.createdAt === 'string' ? { createdAt: p.createdAt } : {}),
+                ...(typeof p.updatedAt === 'string' ? { updatedAt: p.updatedAt } : {}),
+            });
+        }
+    }
+    return result;
+};
+
+const parseSnapshotResponse = async (response: Response): Promise<SnapshotOutcome> => {
+    if (response.status === 404 || response.status === 405) return { status: 'unavailable' };
+    if (!response.ok) return { status: 'error', message: `HTTP ${response.status}` };
+
+    // A SPA fallback answers 200 with HTML for unknown routes: that is "no vault API", not an error.
+    if (!(response.headers.get('content-type') ?? '').includes('application/json')) return { status: 'unavailable' };
+
+    try {
+        const body = (await response.json()) as {
+            revision?: unknown;
+            records?: unknown;
+            activeVaultId?: unknown;
+            profiles?: unknown;
+        };
+        if (!isRecordMap(body.records)) return { status: 'error', message: 'Malformed vault snapshot' };
+        const profiles = parseProfiles(body.profiles);
+        return {
+            status: 'ok',
+            snapshot: {
+                revision: typeof body.revision === 'number' ? body.revision : 0,
+                records: body.records,
+                ...(typeof body.activeVaultId === 'string' ? { activeVaultId: body.activeVaultId } : {}),
+                ...(profiles !== undefined ? { profiles } : {}),
+            },
+        };
+    } catch {
+        return { status: 'error', message: 'Malformed vault snapshot' };
+    }
+};
+
 export async function fetchSnapshot(fetchImpl: FetchLike = fetch): Promise<SnapshotOutcome> {
     let response: Response;
     try {
@@ -65,20 +130,29 @@ export async function fetchSnapshot(fetchImpl: FetchLike = fetch): Promise<Snaps
     } catch (err) {
         return { status: 'error', message: err instanceof Error ? err.message : 'Network error' };
     }
+    return parseSnapshotResponse(response);
+}
 
-    if (response.status === 404 || response.status === 405) return { status: 'unavailable' };
-    if (!response.ok) return { status: 'error', message: `HTTP ${response.status}` };
-
-    // A SPA fallback answers 200 with HTML for unknown routes: that is "no vault API", not an error.
-    if (!(response.headers.get('content-type') ?? '').includes('application/json')) return { status: 'unavailable' };
-
+export async function mutateVaultProfile(
+    payload: VaultProfileAction,
+    fetchImpl: FetchLike = fetch,
+): Promise<SnapshotOutcome> {
+    let response: Response;
     try {
-        const body = (await response.json()) as { revision?: unknown; records?: unknown };
-        if (!isRecordMap(body.records)) return { status: 'error', message: 'Malformed vault snapshot' };
-        return { status: 'ok', snapshot: { revision: typeof body.revision === 'number' ? body.revision : 0, records: body.records } };
-    } catch {
-        return { status: 'error', message: 'Malformed vault snapshot' };
+        response = await fetchImpl(PROFILES_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-GlassFolio-Local': '1',
+            },
+            body: JSON.stringify(payload),
+            cache: 'no-store',
+        });
+    } catch (err) {
+        return { status: 'error', message: err instanceof Error ? err.message : 'Network error' };
     }
+    return parseSnapshotResponse(response);
 }
 
 export const byteLength = (value: string): number => new TextEncoder().encode(value).length;

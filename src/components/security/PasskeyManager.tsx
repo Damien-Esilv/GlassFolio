@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info, Unlock } from 'lucide-react';
+import { Fingerprint, Plus, Trash2, AlertCircle, ShieldCheck, Info, Unlock, Pencil, Check, X } from 'lucide-react';
 import Button from '../Button';
 import { passkeyService } from '../../services/security/passkeyService';
 import { passkeyAccountService, AccountPasskey } from '../../services/security/passkeyAccountService';
@@ -19,6 +19,9 @@ export const PasskeyManager: React.FC = () => {
     const [notice, setNotice] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [passkeyToDelete, setPasskeyToDelete] = useState<AccountPasskey | null>(null);
+    const [renamingKey, setRenamingKey] = useState<string | null>(null);
+    const [renameDraft, setRenameDraft] = useState('');
+    const [isRenaming, setIsRenaming] = useState(false);
     // Safari refuses a second WebAuthn prompt in the same click: the vault slot is then added by a
     // follow-up click. The master password stays in memory only until that click or a reload.
     const [pendingUnlock, setPendingUnlock] = useState<{ credentialId: string; label: string; rpId: string; transports?: string[] } | null>(null);
@@ -48,11 +51,9 @@ export const PasskeyManager: React.FC = () => {
         if (!user) return;
         setError('');
         setNotice('');
-        const label = `${typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? 'Mac' : 'Device'} Passkey`;
         try {
             const { unlocksVault, pendingVaultUnlock } = await passkeyAccountService.register({
                 user: { id: user.id, email: user.email, name: user.name },
-                label,
                 masterPassword: password,
             });
             if (pendingVaultUnlock) {
@@ -87,6 +88,35 @@ export const PasskeyManager: React.FC = () => {
         await passkeyAccountService.remove(passkeyToDelete);
         await loadPasskeys();
         setPasskeyToDelete(null);
+    };
+
+    const startRename = (passkey: AccountPasskey) => {
+        setRenamingKey(passkey.key);
+        setRenameDraft(passkey.name);
+        setError('');
+    };
+
+    const cancelRename = () => {
+        setRenamingKey(null);
+        setRenameDraft('');
+    };
+
+    const commitRename = async (passkey: AccountPasskey) => {
+        const trimmed = renameDraft.trim();
+        if (!trimmed || trimmed === passkey.name) {
+            cancelRename();
+            return;
+        }
+        setIsRenaming(true);
+        try {
+            await passkeyAccountService.rename(passkey, trimmed);
+            await loadPasskeys();
+            cancelRename();
+        } catch (err: unknown) {
+            setError(mapAuthErrorMessage(err, t, 'common:errors.auth.actionFailed'));
+        } finally {
+            setIsRenaming(false);
+        }
     };
 
     return (
@@ -183,12 +213,55 @@ export const PasskeyManager: React.FC = () => {
                                     key={passkey.key}
                                     className="flex items-center justify-between p-3 bg-subtle border border-subtle rounded-xl hover:border-border transition-colors"
                                 >
-                                    <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <ShieldCheck size={18} className="text-success shrink-0" />
-                                        <div>
-                                            <div className="text-xs font-semibold text-primary">
-                                                {passkey.name}
-                                            </div>
+                                        <div className="min-w-0 flex-1">
+                                            {renamingKey === passkey.key ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <input
+                                                        type="text"
+                                                        value={renameDraft}
+                                                        onChange={(e) => setRenameDraft(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                void commitRename(passkey);
+                                                            } else if (e.key === 'Escape') {
+                                                                cancelRename();
+                                                            }
+                                                        }}
+                                                        maxLength={60}
+                                                        autoFocus
+                                                        disabled={isRenaming}
+                                                        aria-label={t('security:passkeys.renameInputLabel')}
+                                                        className="w-full max-w-[220px] px-2 py-1 text-xs rounded-lg bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void commitRename(passkey)}
+                                                        disabled={isRenaming || !renameDraft.trim()}
+                                                        title={t('common:buttons.save')}
+                                                        aria-label={t('common:buttons.save')}
+                                                        className="p-1.5 text-positive hover:bg-card rounded-lg transition-colors disabled:opacity-40"
+                                                    >
+                                                        <Check size={14} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={cancelRename}
+                                                        disabled={isRenaming}
+                                                        title={t('common:buttons.cancel')}
+                                                        aria-label={t('common:buttons.cancel')}
+                                                        className="p-1.5 text-tertiary hover:text-primary hover:bg-card rounded-lg transition-colors"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs font-semibold text-primary truncate">
+                                                    {passkey.name}
+                                                </div>
+                                            )}
                                             <div className="text-[11px] text-tertiary">
                                                 {t('security:passkeys.createdOn', {
                                                     date: new Date(passkey.createdAt).toLocaleDateString(),
@@ -203,14 +276,28 @@ export const PasskeyManager: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => setPasskeyToDelete(passkey)}
-                                        title={t('security:passkeys.deleteTooltip')}
-                                        className="p-2 text-tertiary hover:text-error rounded-lg hover:bg-card transition-colors"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {renamingKey !== passkey.key && (
+                                            <button
+                                                type="button"
+                                                onClick={() => startRename(passkey)}
+                                                title={t('security:passkeys.renameTooltip')}
+                                                aria-label={t('security:passkeys.renameTooltip')}
+                                                className="p-2 text-tertiary hover:text-primary rounded-lg hover:bg-card transition-colors"
+                                            >
+                                                <Pencil size={15} />
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setPasskeyToDelete(passkey)}
+                                            title={t('security:passkeys.deleteTooltip')}
+                                            aria-label={t('security:passkeys.deleteTooltip')}
+                                            className="p-2 text-tertiary hover:text-error rounded-lg hover:bg-card transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

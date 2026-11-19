@@ -76,6 +76,64 @@ describe('local vault store (E33 — TGLA-138)', () => {
     expect(() => store.apply({ set: { glassfolio_a: 'lost' } })).toThrow();
     expect(store.snapshot().records).toEqual({ glassfolio_a: 'kept' });
   });
+
+  it('supports multiple independent vault profiles, demo isolation, renaming and deletion', () => {
+    const store = createLocalVaultStore({ dataDir: dir, logger: silentLogger });
+    expect(store.snapshot().activeVaultId).toBe('default');
+    expect(store.snapshot().profiles).toHaveLength(1);
+    expect(store.snapshot().profiles[0]).toMatchObject({ id: 'default', name: 'Local Vault', initialized: false });
+
+    // First createProfile reuses and renames the uninitialized 'default' profile
+    const first = store.createProfile('Damien Perso');
+    expect(first.activeVaultId).toBe('default');
+    expect(first.profiles).toHaveLength(1);
+    expect(first.profiles[0]).toMatchObject({ id: 'default', name: 'Damien Perso', initialized: false });
+
+    // Initialize 'default' vault with a header and a record
+    store.apply({ set: { gf_vault_header: '{"v":1,"vault":"damien"}', glassfolio_user: 'cipher-damien' } });
+    expect(store.snapshot().profiles[0].initialized).toBe(true);
+
+    // Second createProfile creates a brand-new profile file since 'default' is initialized
+    const second = store.createProfile('Holding SCI');
+    const secondId = second.activeVaultId;
+    expect(secondId).toMatch(/^vault-[a-z0-9]{12}$/);
+    expect(second.profiles).toHaveLength(2);
+    expect(second.records).toEqual({});
+    store.apply({ set: { gf_vault_header: '{"v":1,"vault":"sci"}', glassfolio_user: 'cipher-sci' } });
+
+    // Switch to isolated 'demo' profile without affecting either personal vault
+    const demoSnap = store.selectProfile('demo');
+    expect(demoSnap.activeVaultId).toBe('demo');
+    expect(demoSnap.records).toEqual({});
+    store.apply({ set: { gf_vault_header: '{"v":1,"isDemo":true}', glassfolio_user: 'cipher-demo' } });
+
+    // Switch back to 'personal' restores the last personal vault (secondId)
+    const backToPersonal = store.selectProfile('personal');
+    expect(backToPersonal.activeVaultId).toBe(secondId);
+    expect(backToPersonal.records.glassfolio_user).toBe('cipher-sci');
+
+    // Switch to 'default' vault
+    const backToDefault = store.selectProfile('default');
+    expect(backToDefault.activeVaultId).toBe('default');
+    expect(backToDefault.records.glassfolio_user).toBe('cipher-damien');
+
+    // Rename 'default' vault
+    const renamed = store.renameProfile('default', 'Damien Principal');
+    expect(renamed.profiles.find((p: { id: string }) => p.id === 'default')?.name).toBe('Damien Principal');
+
+    // Persist across restart
+    const restarted = createLocalVaultStore({ dataDir: dir, logger: silentLogger });
+    expect(restarted.snapshot().activeVaultId).toBe('default');
+    expect(restarted.snapshot().profiles).toHaveLength(2);
+    expect(restarted.snapshot().records.glassfolio_user).toBe('cipher-damien');
+
+    // Delete 'default' vault -> switches to remaining personal vault (secondId)
+    const afterDelete = restarted.deleteProfile('default');
+    expect(afterDelete.activeVaultId).toBe(secondId);
+    expect(afterDelete.profiles).toHaveLength(1);
+    expect(afterDelete.records.glassfolio_user).toBe('cipher-sci');
+    expect(fs.existsSync(path.join(dir, 'vault-store.json'))).toBe(false);
+  });
 });
 
 describe('local vault validation (E33 — TGLA-138)', () => {
@@ -221,5 +279,43 @@ describe('local vault HTTP API (E33 — TGLA-138)', () => {
     const huge = JSON.stringify({ set: { glassfolio_a: 'x'.repeat(21 * 1024 * 1024) } });
     const res = await call('POST', '/api/local-vault/batch', { headers: json, body: huge }).catch(() => ({ status: 413 }));
     expect(res.status).toBe(413);
+  });
+
+  it('manages multiple vault profiles via POST /api/local-vault/profiles', async () => {
+    const created1 = await call('POST', '/api/local-vault/profiles', {
+      headers: json,
+      body: JSON.stringify({ action: 'create', name: 'Vault Alpha' }),
+    });
+    expect(created1.status).toBe(200);
+    expect(JSON.parse(created1.body).activeVaultId).toBe('default');
+
+    await call('POST', '/api/local-vault/batch', {
+      headers: json,
+      body: JSON.stringify({ set: { gf_vault_header: '{"v":1}', glassfolio_user: 'alpha' } }),
+    });
+
+    const created2 = await call('POST', '/api/local-vault/profiles', {
+      headers: json,
+      body: JSON.stringify({ action: 'create', name: 'Vault Beta' }),
+    });
+    expect(created2.status).toBe(200);
+    const betaBody = JSON.parse(created2.body);
+    expect(betaBody.activeVaultId).not.toBe('default');
+    expect(betaBody.profiles).toHaveLength(2);
+    expect(betaBody.records).toEqual({});
+
+    const renamed = await call('POST', '/api/local-vault/profiles', {
+      headers: json,
+      body: JSON.stringify({ action: 'rename', name: 'Vault Beta Renamed' }),
+    });
+    expect(renamed.status).toBe(200);
+    expect(JSON.parse(renamed.body).profiles.find((p: { id: string }) => p.id === betaBody.activeVaultId).name).toBe('Vault Beta Renamed');
+
+    const selected = await call('POST', '/api/local-vault/profiles', {
+      headers: json,
+      body: JSON.stringify({ action: 'select', vaultId: 'default' }),
+    });
+    expect(selected.status).toBe(200);
+    expect(JSON.parse(selected.body).records.glassfolio_user).toBe('alpha');
   });
 });

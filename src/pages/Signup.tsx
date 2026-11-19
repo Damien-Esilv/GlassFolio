@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { isDemoAccount } from '../services/security/demoAccount';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key, Info } from 'lucide-react';
+import { Hexagon, Mail, Lock, User, AlertCircle, ArrowLeft, Key, Info, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { createLegalAcceptance, LEGAL_DOCUMENTS_VERSION } from '../config/legal';
 import { PasswordStrengthMeter } from '../components/security/PasswordStrengthMeter';
@@ -17,6 +17,7 @@ import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiB
 import { captchaTokenForResend, CaptchaRequiredError } from '../services/security/captchaResend';
 import { GoogleDrivePrivacyTooltip } from '../components/security/GoogleDrivePrivacyTooltip';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
+import { persistPasswordCredential } from '../services/security/accountIdentity';
 import { LegalLink } from '../components/ui/LegalLink';
 
 const Signup: React.FC = () => {
@@ -46,6 +47,8 @@ const Signup: React.FC = () => {
    const [name, setName] = useState('');
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
+   const [showPassword, setShowPassword] = useState(false);
+   const [passwordCopied, setPasswordCopied] = useState(false);
    const [error, setError] = useState('');
    const [acceptedLegal, setAcceptedLegal] = useState(false);
    const [isLoading, setIsLoading] = useState(false);
@@ -167,9 +170,21 @@ const Signup: React.FC = () => {
       }
    };
 
+   const handleCopyPassword = async () => {
+      if (!password) return;
+      try {
+         await navigator.clipboard.writeText(password);
+         setPasswordCopied(true);
+         setTimeout(() => setPasswordCopied(false), 2000);
+      } catch {
+         // Clipboard unavailable
+      }
+   };
+
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
+      setShowPassword(false);
 
       // The Terms and the Privacy Policy cover the hosted service; a local vault sends nothing to the publisher
       if (!isLocal && !acceptedLegal) {
@@ -212,6 +227,11 @@ const Signup: React.FC = () => {
          }
 
          if (recoveryKey) {
+            if (typeof window !== 'undefined') {
+               const credId = (isLocal ? name.trim() : email.trim()) || 'local-vault';
+               persistPasswordCredential({ id: credId, name: name.trim() || credId, password });
+               window.history.replaceState(window.history.state, '', window.location.pathname);
+            }
             setPendingRecoveryKey(recoveryKey);
          } else {
             navigate('/', { replace: true });
@@ -321,34 +341,24 @@ const Signup: React.FC = () => {
                </div>
             )}
 
-            {signupStage === 'form' ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-               {isLocal && (
-                  <input
-                     type="text"
-                     name="username"
-                     id="local-signup-username"
-                     autoComplete="username"
-                     defaultValue="local-user"
-                     className="sr-only"
-                     tabIndex={-1}
-                     aria-hidden="true"
-                  />
-               )}
+            {!pendingRecoveryKey && (signupStage === 'form' ? (
+            <form onSubmit={handleSubmit} method="post" action="/signup" className="space-y-4">
                <div>
-                  <label htmlFor="signup-name" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:signup.fullNameLabel')}</label>
+                  <label htmlFor="signup-name" className="block text-xs font-medium text-secondary mb-1.5">
+                     {isLocal ? t('auth:signup.localVaultNameLabel') : t('auth:signup.fullNameLabel')}
+                  </label>
                   <div className="relative">
                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
                      <input
                         id="signup-name"
-                        name="name"
+                        name={isLocal ? 'username' : 'name'}
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        autoComplete="name"
+                        autoComplete={isLocal ? 'username' : 'name'}
                         className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
-                        placeholder={t('auth:signup.fullNamePlaceholder')}
+                        placeholder={isLocal ? t('auth:signup.localVaultNamePlaceholder') : t('auth:signup.fullNamePlaceholder')}
                      />
                   </div>
                </div>
@@ -387,14 +397,36 @@ const Signup: React.FC = () => {
                      <input
                         id="signup-password"
                         name="password"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="new-password"
-                        className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
+                        className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 pr-20 p-2.5 placeholder-tertiary"
                         placeholder={isLocal ? t('auth:signup.masterPasswordPlaceholder') : t('auth:signup.passwordPlaceholder')}
                      />
+                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {password.length > 0 && (
+                           <button
+                              type="button"
+                              onClick={() => void handleCopyPassword()}
+                              title={passwordCopied ? t('auth:signup.passwordCopied') : t('auth:signup.copyPassword')}
+                              aria-label={passwordCopied ? t('auth:signup.passwordCopied') : t('auth:signup.copyPassword')}
+                              className="p-1.5 text-tertiary hover:text-primary rounded-md transition-colors"
+                           >
+                              {passwordCopied ? <Check size={15} className="text-positive" /> : <Copy size={15} />}
+                           </button>
+                        )}
+                        <button
+                           type="button"
+                           onClick={() => setShowPassword(prev => !prev)}
+                           title={showPassword ? t('auth:signup.hidePassword') : t('auth:signup.showPassword')}
+                           aria-label={showPassword ? t('auth:signup.hidePassword') : t('auth:signup.showPassword')}
+                           className="p-1.5 text-tertiary hover:text-primary rounded-md transition-colors"
+                        >
+                           {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                     </div>
                   </div>
                   <PasswordStrengthMeter password={password} />
                </div>
@@ -476,7 +508,7 @@ const Signup: React.FC = () => {
                      </button>
                   </div>
                </form>
-            )}
+            ))}
 
             {/* Also on the verification step: resending the email needs a new captcha token */}
             {!isLocal && <AntiBotShield ref={antiBotRef} />}

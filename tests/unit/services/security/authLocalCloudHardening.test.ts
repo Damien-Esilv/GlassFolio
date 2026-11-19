@@ -130,7 +130,12 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
             provider.verifyTotpCode = vi.fn().mockRejectedValueOnce(new Error('bad')).mockResolvedValue(undefined);
             const localVerify = vi.spyOn(totpService, 'verify');
 
-            expect(await mfaService.getTotpStatus()).toEqual({ enabled: true, factorId: 'f-1' });
+            expect(await mfaService.getTotpStatus()).toMatchObject({
+                enabled: true,
+                factorId: 'f-1',
+                factors: [{ id: 'f-1', friendlyName: 'Authenticator' }],
+                maxFactors: 5,
+            });
 
             const draft = await mfaService.startTotpEnrollment('user@example.com');
             expect(draft.factorId).toBe('f-2');
@@ -159,7 +164,7 @@ describe('TGLA-101 — local/cloud auth hardening', () => {
         it('asks local accounts for the password plus any local factor', async () => {
             await vaultService.setup(PASSWORD);
             expect(await stepUpService.getRequirements(user())).toEqual({
-                password: true, secondFactor: [], recentSignInRequired: false, recentSignInSatisfied: true,
+                password: true, secondFactor: [], totpFactors: [], recentSignInRequired: false, recentSignInSatisfied: true,
             });
             await enrollLocalTotp();
             await passkeyService.saveRecord({ id: CRED_ID, name: 'Key', createdAt: new Date().toISOString(), algorithm: -7 });
