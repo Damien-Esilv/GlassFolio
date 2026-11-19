@@ -226,5 +226,45 @@
             "title": "Vos dernières modifications ne sont pas encore enregistrées",
             "description": "Elles n’ont pas pu être écrites (le stockage est peut-être plein). Elles restent en attente et seront réessayées à votre prochaine modification. Libérez de l’espace ou exportez une sauvegarde avant de fermer cet onglet."
         }
+    },
+    "cloudSync": {
+        "notice": {
+            "storage_limit": {
+                "title": "Quota de stockage cloud atteint ({{maxMb}} Mo)",
+                "description": "Vos dernières modifications restent conservées sur cet appareil mais n’ont pas pu être synchronisées dans le cloud car votre coffre chiffré dépasse la limite de {{maxMb}} Mo. Exportez une sauvegarde ou libérez de l’espace pour reprendre la synchronisation."
+            },
+            "record_limit": {
+                "title": "Limite de clés de stockage cloud atteinte ({{maxRecords}} clés)",
+                "description": "Vos dernières modifications restent conservées sur cet appareil mais n’ont pas pu être synchronisées dans le cloud car votre compte dépasse la limite de {{maxRecords}} clés. Exportez une sauvegarde ou supprimez des données inutilisées pour reprendre la synchronisation."
+            },
+            "record_size": {
+                "title": "Taille maximale par enregistrement dépassée ({{maxRecordMb}} Mo)",
+                "description": "L’un de vos enregistrements chiffrés dépasse la limite cloud de {{maxRecordMb}} Mo et n’a pas pu être synchronisé. Exportez une sauvegarde ou réduisez la taille de votre historique pour reprendre la synchronisation."
+            },
+            "header_size": {
+                "title": "Taille maximale de l’en-tête du coffre dépassée ({{maxHeaderKb}} Ko)",
+                "description": "Les métadonnées de votre coffre dépassent la limite cloud de {{maxHeaderKb}} Ko et n’ont pas pu être synchronisées. Exportez une sauvegarde ou nettoyez les entrées inutilisées avant de fermer cet onglet."
+            },
+            "nearLimit": {
+                "title": "Stockage cloud bientôt plein ({{percent}} %)",
+                "description": "Votre coffre chiffré utilise {{percent}} % du quota cloud ({{maxMb}} Mo / {{maxRecords}} clés). Pensez à exporter une sauvegarde d’archive avant d’atteindre la limite."
+            }
+        },
+        "settings": {
+            "title": "Stockage du coffre cloud",
+            "help": "Vos données chiffrées de bout en bout sont répliquées dans le cloud dans la limite d’un quota de {{maxMb}} Mo et {{maxRecords}} clés par compte.",
+            "storageUsed": "Espace chiffré utilisé",
+            "usageSummary": "{{usedMb}} Mo / {{maxMb}} Mo ({{percent}} %)",
+            "records": "Clés de stockage",
+            "recordsCount": "{{used}} / {{max}}",
+            "pending": "Modifications en attente",
+            "statusLabel": "État de synchronisation",
+            "status": {
+                "healthy": "Synchronisé",
+                "syncing": "Synchronisation…",
+                "syncError": "Erreur de synchronisation",
+                "quotaExceeded": "Quota atteint"
+            }
+        }
     }
 }

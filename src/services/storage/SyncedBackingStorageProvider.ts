@@ -1,5 +1,5 @@
 /**
- * SyncedBackingStorageProvider (TGLA-060 & TGLA-061).
+ * SyncedBackingStorageProvider (TGLA-060, TGLA-061 & E38 / TGLA-214).
  *
  * Implements IStorageProvider by wrapping a local synchronous backing store (LocalStorageProvider)
  * and automatically synchronizing ciphertext records:
@@ -13,6 +13,16 @@ import { ExternalChangeListener, IStorageProvider } from '../../types/storage';
 import { SupabaseAuthSession, supabaseClient, isSupabaseConfigured } from '../supabase/supabaseClient';
 import { parseEnvelope, PBKDF2_ITERATIONS } from '../security/crypto';
 import { isSensitiveKey, VAULT_HEADER_KEY } from './storageKeys';
+import {
+    isVaultQuotaError,
+    utf8ByteLength,
+    VAULT_MAX_HEADER_BYTES,
+    VAULT_MAX_RECORD_BYTES,
+    VAULT_MAX_RECORDS,
+    VAULT_MAX_TOTAL_BYTES,
+    VaultQuotaError,
+    VaultQuotaReason,
+} from './vaultQuota';
 
 const RETRY_BASE_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
@@ -23,24 +33,50 @@ export interface PullResult {
     hasRemoteHeader: boolean;
 }
 
+export interface CloudSyncStatus {
+    mode: DeploymentMode;
+    pendingCount: number;
+    quotaError: VaultQuotaReason | null;
+    syncError: boolean;
+    usageBytes: number;
+    recordCount: number;
+    maxBytes: number;
+    maxRecords: number;
+}
+
 export class SyncedBackingStorageProvider implements IStorageProvider {
     private session: SupabaseAuthSession | null = null;
     /** Cloud writes are replicated only for this user, once their vault is unlocked in the UI. */
     private replicationUserId: string | null = null;
     private isPulling = false;
     private lastSyncError: unknown = null;
+    private quotaError: VaultQuotaReason | null = null;
     /** Keys whose latest local change the server has not confirmed yet: retried, and kept by a pull. */
     private readonly unsynced = new Set<string>();
+    private readonly listeners = new Set<() => void>();
     private retryTimer: ReturnType<typeof setTimeout> | null = null;
     private retryDelayMs = RETRY_BASE_MS;
+    private status: CloudSyncStatus;
 
     constructor(
         private readonly local: IStorageProvider,
         private readonly mode: DeploymentMode
     ) {
+        this.status = this.computeStatus();
         if (mode === 'cloud' && typeof window !== 'undefined') {
-            window.addEventListener('online', () => this.retryNow());
+            window.addEventListener('online', () => {
+                if (this.quotaError === null) this.retryNow();
+            });
         }
+    }
+
+    public getCloudSyncStatus(): CloudSyncStatus {
+        return this.status;
+    }
+
+    public subscribe(listener: () => void): () => void {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
     }
 
     public setSupabaseSession(session: SupabaseAuthSession | null): void {
@@ -48,12 +84,14 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         if (session?.user.id !== this.session?.user.id) this.forgetUnsynced();
         this.session = session;
         if (!session) this.replicationUserId = null;
+        this.refreshStatus();
     }
 
     /** Allows cloud replication for `userId`; ignored unless it matches the attached session. */
     public enableReplication(userId: string): void {
         this.replicationUserId = userId;
-        this.retryNow();
+        this.refreshStatus();
+        if (this.quotaError === null) this.retryNow();
     }
 
     /** Number of local changes not confirmed by the server yet (cloud mode). */
@@ -63,6 +101,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
 
     public disableReplication(): void {
         this.replicationUserId = null;
+        this.refreshStatus();
     }
 
     public isReplicationEnabled(): boolean {
@@ -124,7 +163,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
                     }
                 }
                 if (headerRow && this.unsynced.has(VAULT_HEADER_KEY)) result = { ok: true, hasRemoteHeader: true };
-                this.retryNow();
+                if (this.quotaError === null) this.retryNow();
             } else if (this.mode === 'local') {
                 // Local mode: the server snapshot was loaded into memory at startup (LocalVaultStorageProvider).
                 result = { ok: true, hasRemoteHeader: this.local.getItem(VAULT_HEADER_KEY) !== null };
@@ -135,6 +174,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             console.warn('[storage] pullFromRemote encountered error, operating on local cache', err);
         } finally {
             this.isPulling = false;
+            this.refreshStatus();
         }
         return result;
     }
@@ -168,6 +208,7 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             if (!shouldRemove(key)) continue;
             this.local.removeItem(key);
         }
+        this.refreshStatus();
     }
 
     // ── IStorageProvider Synchronous Contract ─────────────────────────────────
@@ -179,16 +220,19 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
     public setItem(key: string, value: string): void {
         this.local.setItem(key, value);
         this.replicateSet(key, value);
+        if (isSensitiveKey(key) || key === VAULT_HEADER_KEY) this.refreshStatus();
     }
 
     public removeItem(key: string): void {
         this.local.removeItem(key);
         this.replicateRemove(key);
+        if (isSensitiveKey(key) || key === VAULT_HEADER_KEY) this.refreshStatus();
     }
 
     public clear(): void {
         // Cloud: a local clear never wipes the remote vault (see replicateRemove).
         this.local.clear();
+        this.refreshStatus();
     }
 
     public keys(): string[] {
@@ -214,12 +258,14 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
         if (this.mode === 'cloud' && key !== VAULT_HEADER_KEY) this.push(key);
     }
 
-    /** Sends the current local state of `key`; a failure keeps it queued and retried with backoff. */
+    /** Sends the current local state of `key`; transient failures retry with backoff, quota rejections do not. */
     private push(key: string): void {
         if (!this.canReplicateToCloud() || !this.session) return;
         const token = this.session.accessToken;
         const value = this.local.getItem(key);
+        const wasQuotaBlocked = this.quotaError !== null;
         let request: Promise<void>;
+
         if (key === VAULT_HEADER_KEY) {
             if (value === null) return;
             let parsed: Record<string, unknown>;
@@ -228,24 +274,125 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
             } catch {
                 return; // Ignored if non-json
             }
+            const serializedHeader = JSON.stringify(parsed);
+            if (utf8ByteLength(serializedHeader) > VAULT_MAX_HEADER_BYTES) {
+                this.recordQuotaRejection(key, new VaultQuotaError('header_size'));
+                return;
+            }
             request = supabaseClient.upsertVaultHeader(token, parsed, Boolean(parsed.totpEnabled));
         } else if (value === null) {
             request = supabaseClient.deleteVaultRecord(token, key);
         } else {
             // Only ciphertext ever leaves the device.
             if (parseEnvelope(value) === null) return;
+            const preflightViolation = this.checkRecordPreflightQuota(value);
+            if (preflightViolation !== null) {
+                this.recordQuotaRejection(key, new VaultQuotaError(preflightViolation));
+                return;
+            }
             request = supabaseClient.upsertVaultRecord(token, key, value);
         }
+
+        if (wasQuotaBlocked && this.isLocalUsageWithinQuotas()) {
+            this.quotaError = null;
+        }
         this.unsynced.add(key);
+        this.refreshStatus();
+
         request.then(() => {
             // A newer change sent its own request
             if (this.local.getItem(key) === value) this.unsynced.delete(key);
             this.retryDelayMs = RETRY_BASE_MS;
-            if (this.unsynced.size === 0) this.lastSyncError = null;
+            if (this.isLocalUsageWithinQuotas()) this.quotaError = null;
+            if (this.unsynced.size === 0) {
+                this.lastSyncError = null;
+                this.quotaError = null;
+            }
+            this.refreshStatus();
+            // If freeing space or shrinking a record cleared a quota block, flush remaining queued keys.
+            if (wasQuotaBlocked && this.quotaError === null && this.unsynced.size > 0) {
+                this.retryNow();
+            }
         }).catch((err) => {
             this.lastSyncError = err;
+            if (isVaultQuotaError(err)) {
+                this.quotaError = err.reason;
+                this.clearRetryTimer();
+                this.refreshStatus();
+                return;
+            }
+            this.refreshStatus();
             this.scheduleRetry();
         });
+    }
+
+    private checkRecordPreflightQuota(ciphertext: string): VaultQuotaReason | null {
+        if (utf8ByteLength(ciphertext) > VAULT_MAX_RECORD_BYTES) return 'record_size';
+        const usage = this.measureEncryptedUsage();
+        if (usage.recordCount > VAULT_MAX_RECORDS) return 'record_limit';
+        if (usage.usageBytes > VAULT_MAX_TOTAL_BYTES) return 'storage_limit';
+        return null;
+    }
+
+    private isLocalUsageWithinQuotas(): boolean {
+        const usage = this.measureEncryptedUsage();
+        return usage.recordCount <= VAULT_MAX_RECORDS && usage.usageBytes <= VAULT_MAX_TOTAL_BYTES;
+    }
+
+    private recordQuotaRejection(key: string, err: VaultQuotaError): void {
+        this.unsynced.add(key);
+        this.lastSyncError = err;
+        this.quotaError = err.reason;
+        this.clearRetryTimer();
+        this.refreshStatus();
+    }
+
+    private measureEncryptedUsage(): { usageBytes: number; recordCount: number } {
+        let usageBytes = 0;
+        let recordCount = 0;
+        for (const key of this.local.keys()) {
+            if (!isSensitiveKey(key)) continue;
+            const value = this.local.getItem(key);
+            if (value === null || parseEnvelope(value) === null) continue;
+            recordCount += 1;
+            usageBytes += utf8ByteLength(value);
+        }
+        return { usageBytes, recordCount };
+    }
+
+    private computeStatus(): CloudSyncStatus {
+        const usage = this.mode === 'cloud'
+            ? this.measureEncryptedUsage()
+            : { usageBytes: 0, recordCount: 0 };
+        return {
+            mode: this.mode,
+            pendingCount: this.unsynced.size,
+            quotaError: this.quotaError,
+            syncError: this.lastSyncError !== null,
+            usageBytes: usage.usageBytes,
+            recordCount: usage.recordCount,
+            maxBytes: VAULT_MAX_TOTAL_BYTES,
+            maxRecords: VAULT_MAX_RECORDS,
+        };
+    }
+
+    private refreshStatus(): void {
+        const next = this.computeStatus();
+        const prev = this.status;
+        if (
+            next.mode === prev.mode
+            && next.pendingCount === prev.pendingCount
+            && next.quotaError === prev.quotaError
+            && next.syncError === prev.syncError
+            && next.usageBytes === prev.usageBytes
+            && next.recordCount === prev.recordCount
+            && next.maxBytes === prev.maxBytes
+            && next.maxRecords === prev.maxRecords
+        ) {
+            return;
+        }
+        this.status = next;
+        this.listeners.forEach(listener => listener());
     }
 
     private scheduleRetry(): void {
@@ -260,15 +407,21 @@ export class SyncedBackingStorageProvider implements IStorageProvider {
 
     private retryNow(): void {
         if (this.unsynced.size === 0 || !this.canReplicateToCloud()) return;
+        this.clearRetryTimer();
+        Array.from(this.unsynced).forEach(key => this.push(key));
+    }
+
+    private clearRetryTimer(): void {
         if (this.retryTimer !== null) clearTimeout(this.retryTimer);
         this.retryTimer = null;
-        Array.from(this.unsynced).forEach(key => this.push(key));
     }
 
     private forgetUnsynced(): void {
         this.unsynced.clear();
-        if (this.retryTimer !== null) clearTimeout(this.retryTimer);
-        this.retryTimer = null;
+        this.lastSyncError = null;
+        this.quotaError = null;
+        this.clearRetryTimer();
         this.retryDelayMs = RETRY_BASE_MS;
+        this.refreshStatus();
     }
 }

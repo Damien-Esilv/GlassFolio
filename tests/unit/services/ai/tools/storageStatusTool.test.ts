@@ -26,6 +26,12 @@ describe('get_storage_status AI/MCP tool (E33 — TGLA-140)', () => {
             lastSavedAt: null,
             saveError: false,
             legacyBrowserVaultIgnored: false,
+            quotaExceeded: false,
+            quotaReason: null,
+            quotaUsageBytes: null,
+            quotaLimitBytes: null,
+            quotaRecordCount: null,
+            quotaMaxRecords: null,
         });
     });
 
