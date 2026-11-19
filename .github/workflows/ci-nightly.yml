@@ -1,0 +1,46 @@
+name: 🌙 GlassFolio Nightly Deep Fuzz & Live Contract Probes (Tier 3)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deep-property-fuzz:
+    name: 🎲 Deep Property-Based Fuzzing (10,000 runs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Run 10,000-iteration fast-check property & fuzz suites
+        env:
+          FAST_CHECK_RUNS: '10000'
+        run: npm run test:property
+
+  live-upstream-contracts:
+    name: 🌐 Live Upstream Contract Drift Probes (Yahoo & CoinGecko)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Probe live upstream endpoints against Zod contracts
+        env:
+          LIVE_CONTRACT_PROBE: '1'
+        run: npx vitest run tests/unit/contracts/liveUpstreamDrift.test.ts --reporter=verbose

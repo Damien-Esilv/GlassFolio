@@ -384,8 +384,9 @@ const Settings: React.FC = () => {
                                 <form onSubmit={handleSaveProfile} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.displayName')}</label>
+                                            <label htmlFor="settings-profile-name" className="block text-xs font-medium text-secondary mb-1.5">{t('settings:profile.displayName')}</label>
                                             <input
+                                                id="settings-profile-name"
                                                 type="text"
                                                 name="name"
                                                 value={profileData.name}
@@ -396,7 +397,7 @@ const Settings: React.FC = () => {
                                         {emailManagedHere && (
                                         <div>
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <label className="block text-xs font-medium text-secondary">{t('settings:profile.emailAddress')}</label>
+                                                <label htmlFor="settings-profile-email" className="block text-xs font-medium text-secondary">{t('settings:profile.emailAddress')}</label>
                                                 {user?.authProvider === 'google' && (
                                                     <span className="text-[10px] text-subtle flex items-center gap-1 font-medium bg-subtle px-2 py-0.5 rounded border border-subtle">
                                                         <Lock size={10} className="text-brand" />
@@ -405,6 +406,7 @@ const Settings: React.FC = () => {
                                                 )}
                                             </div>
                                             <input
+                                                id="settings-profile-email"
                                                 type="email"
                                                 name="email"
                                                 value={profileData.email}
