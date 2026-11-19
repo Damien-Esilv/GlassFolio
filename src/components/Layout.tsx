@@ -17,6 +17,7 @@ import { NotificationBellDropdown } from './notifications/NotificationBellDropdo
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
 import { UserAvatar } from './ui/UserAvatar';
 import { LocalPersistenceNotice } from './security/LocalPersistenceNotice';
+import { CloudSyncNotice } from './security/CloudSyncNotice';
 import { VaultIntegrityNotice } from './security/VaultIntegrityNotice';
 import { PullToRefresh } from './ui/PullToRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
@@ -639,6 +640,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Main Content */}
         <main className="p-4 md:p-6 lg:p-8">
           <LocalPersistenceNotice />
+          <CloudSyncNotice />
           <VaultIntegrityNotice />
           {/* Reloads the data in place: a page reload would lock the vault and drop unsaved input */}
           <PullToRefresh onRefresh={handleForceRefresh}>

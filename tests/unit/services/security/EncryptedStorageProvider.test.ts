@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LocalStorageProvider, InMemoryStorageProvider, ExternalChangeListener } from '../../../../src/types/storage';
 import { generateExtractableDek, parseEnvelope } from '../../../../src/services/security/crypto';
 import { EncryptedStorageProvider } from '../../../../src/services/storage/EncryptedStorageProvider';
@@ -269,10 +269,10 @@ describe('EncryptedStorageProvider — Zero-Plaintext Leakage & Sync Queue (TGLA
             tabA.setItem('glassfolio_transactions', '[{"id":"tx-from-A"}]');
             await tabA.flush();
             listeners.forEach((listener) => listener(['glassfolio_transactions']));
-            await new Promise((resolve) => setTimeout(resolve, 0));
-
-            expect(tabB.getItem('glassfolio_transactions')).toBe('[{"id":"tx-from-A"}]');
-            expect(reloaded).toEqual([['glassfolio_transactions']]);
+            await vi.waitFor(() => {
+                expect(tabB.getItem('glassfolio_transactions')).toBe('[{"id":"tx-from-A"}]');
+                expect(reloaded).toEqual([['glassfolio_transactions']]);
+            });
         });
     });
 });

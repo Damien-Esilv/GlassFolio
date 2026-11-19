@@ -28,7 +28,8 @@ import { getAuthCapabilities } from '../../security/authCapabilities';
 import { getDeploymentMode } from '../../../config/deployment';
 import { isTurnstileEnabled } from '../../security/antiBotService';
 import { getSessionAssurance } from '../../supabase/supabaseClient';
-import { getLocalVaultProvider } from '../../storage/storageFactory';
+import { getLocalVaultProvider, getSyncedStorageProvider } from '../../storage/storageFactory';
+import { VaultQuotaReason } from '../../storage/vaultQuota';
 
 /** Masks the local part of an email so the assistant never exposes the full address. */
 const maskEmail = (email: string): string => {
@@ -335,11 +336,17 @@ export const getStorageStatusTool: AIToolDefinition<
     lastSavedAt: string | null;
     saveError: boolean;
     legacyBrowserVaultIgnored: boolean;
+    quotaExceeded: boolean;
+    quotaReason: VaultQuotaReason | null;
+    quotaUsageBytes: number | null;
+    quotaLimitBytes: number | null;
+    quotaRecordCount: number | null;
+    quotaMaxRecords: number | null;
   }
 > = {
   name: 'get_storage_status',
   description:
-    'Report where GlassFolio keeps the data in local mode (the local server / Docker volume, or only this browser) and whether recent changes were saved. Read-only; never exposes data or error internals.',
+    'Report where GlassFolio keeps the data (cloud vault, local server / Docker volume, or browser), whether recent changes were saved, and cloud vault quota usage. Read-only; never exposes data or error internals.',
   requiresConfirmation: false,
   parameters: {
     type: 'object',
@@ -349,13 +356,20 @@ export const getStorageStatusTool: AIToolDefinition<
     const deploymentMode = getDeploymentMode();
     const status = getLocalVaultProvider()?.getStatus();
     if (deploymentMode === 'cloud' || !status) {
+      const cloudStatus = getSyncedStorageProvider()?.getCloudSyncStatus();
       return {
         deploymentMode,
         storageLocation: 'cloud',
-        pendingChanges: 0,
+        pendingChanges: cloudStatus?.pendingCount ?? 0,
         lastSavedAt: null,
-        saveError: false,
+        saveError: cloudStatus?.syncError ?? false,
         legacyBrowserVaultIgnored: false,
+        quotaExceeded: cloudStatus?.quotaError !== null && cloudStatus?.quotaError !== undefined,
+        quotaReason: cloudStatus?.quotaError ?? null,
+        quotaUsageBytes: cloudStatus?.usageBytes ?? null,
+        quotaLimitBytes: cloudStatus?.maxBytes ?? null,
+        quotaRecordCount: cloudStatus?.recordCount ?? null,
+        quotaMaxRecords: cloudStatus?.maxRecords ?? null,
       };
     }
     return {
@@ -365,6 +379,12 @@ export const getStorageStatusTool: AIToolDefinition<
       lastSavedAt: status.lastSavedAt,
       saveError: status.lastError !== null,
       legacyBrowserVaultIgnored: status.legacyBrowserVaultIgnored,
+      quotaExceeded: false,
+      quotaReason: null,
+      quotaUsageBytes: null,
+      quotaLimitBytes: null,
+      quotaRecordCount: null,
+      quotaMaxRecords: null,
     };
   },
 };

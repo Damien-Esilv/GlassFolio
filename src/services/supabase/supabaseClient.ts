@@ -7,6 +7,7 @@
  */
 
 import { appStorage } from '../storage/appStorage';
+import { parseVaultQuotaError } from '../storage/vaultQuota';
 import {
     SupabaseVaultHeaderRowsSchema,
     SupabaseVaultRecordRowsSchema,
@@ -749,6 +750,8 @@ export const supabaseClient = {
 
         if (!res.ok) {
             const err = await res.text();
+            const quotaError = parseVaultQuotaError(err);
+            if (quotaError) throw quotaError;
             throw new Error(`Failed to save vault header to Supabase: ${err}`);
         }
     },
@@ -794,6 +797,8 @@ export const supabaseClient = {
 
         if (!res.ok) {
             const err = await res.text();
+            const quotaError = parseVaultQuotaError(err);
+            if (quotaError) throw quotaError;
             throw new Error(`Failed to save encrypted record "${recordKey}" to Supabase: ${err}`);
         }
     },
@@ -831,8 +836,16 @@ export const supabaseClient = {
             body: JSON.stringify({ p_header: header, p_records: records }),
         });
         if (!res.ok) {
-            const data = (await res.json().catch(() => ({}))) as { message?: string };
-            throw new Error(data.message || `Vault migration commit failed (HTTP ${res.status}).`);
+            const raw = await res.text().catch(() => '');
+            const quotaError = parseVaultQuotaError(raw);
+            if (quotaError) throw quotaError;
+            let message: string | undefined;
+            try {
+                message = (JSON.parse(raw) as { message?: string }).message;
+            } catch {
+                // Non-JSON error body
+            }
+            throw new Error(message || `Vault migration commit failed (HTTP ${res.status}).`);
         }
     },
 

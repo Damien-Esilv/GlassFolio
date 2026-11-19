@@ -25,6 +25,7 @@ import { THEME_CATALOG, isThemeUnlocked, ThemeKey } from '../constants/themeCata
 import { authService } from '../services/security/authService';
 import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
 import { LocalStorageStatusCard } from '../components/security/LocalStorageStatusCard';
+import { CloudStorageStatusCard } from '../components/security/CloudStorageStatusCard';
 import { AssetLookupToggle } from '../components/settings/AssetLookupToggle';
 import { getAuthCapabilities } from '../services/security/authCapabilities';
 import { useEscapeKey } from '../hooks/useEscapeKey';
@@ -789,6 +790,7 @@ const Settings: React.FC = () => {
                             </div>
 
                             <LocalStorageStatusCard />
+                            <CloudStorageStatusCard />
 
                             <div className={cardStyle}>
                                 <h2 className="text-xl font-semibold text-primary mb-2 flex items-center gap-2">

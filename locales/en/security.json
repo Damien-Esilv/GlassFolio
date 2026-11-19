@@ -226,5 +226,45 @@
             "title": "Your latest changes are not saved yet",
             "description": "They could not be written to storage (it may be full). They stay queued and are retried with your next change. Free some space or export a backup before closing this tab."
         }
+    },
+    "cloudSync": {
+        "notice": {
+            "storage_limit": {
+                "title": "Cloud storage quota reached ({{maxMb}} MB)",
+                "description": "Your latest changes remain saved on this device but could not sync to the cloud because your encrypted vault exceeds the {{maxMb}} MB limit. Export a backup or remove unused data to resume syncing."
+            },
+            "record_limit": {
+                "title": "Cloud storage key limit reached ({{maxRecords}} keys)",
+                "description": "Your latest changes remain saved on this device but could not sync to the cloud because your account exceeds the maximum of {{maxRecords}} storage keys. Export a backup or clean up unused data to resume syncing."
+            },
+            "record_size": {
+                "title": "Single record size limit exceeded ({{maxRecordMb}} MB)",
+                "description": "One of your encrypted records exceeds the {{maxRecordMb}} MB cloud limit and could not sync. Export a backup or reduce the size of your history to resume syncing."
+            },
+            "header_size": {
+                "title": "Vault header size limit exceeded ({{maxHeaderKb}} KB)",
+                "description": "Your vault metadata exceeds the {{maxHeaderKb}} KB cloud limit and could not sync. Remove unused recovery or authentication entries or export a backup before closing this tab."
+            },
+            "nearLimit": {
+                "title": "Cloud storage almost full ({{percent}}%)",
+                "description": "Your encrypted vault is using {{percent}}% of the {{maxMb}} MB / {{maxRecords}} keys cloud quota. Consider exporting an archive backup before reaching the limit."
+            }
+        },
+        "settings": {
+            "title": "Cloud vault storage",
+            "help": "Your end-to-end encrypted data is replicated to the cloud within a {{maxMb}} MB and {{maxRecords}}-key per-account quota.",
+            "storageUsed": "Encrypted storage used",
+            "usageSummary": "{{usedMb}} MB / {{maxMb}} MB ({{percent}}%)",
+            "records": "Storage keys",
+            "recordsCount": "{{used}} / {{max}}",
+            "pending": "Pending cloud sync",
+            "statusLabel": "Sync status",
+            "status": {
+                "healthy": "Synchronized",
+                "syncing": "Syncing…",
+                "syncError": "Sync error",
+                "quotaExceeded": "Quota reached"
+            }
+        }
     }
 }
