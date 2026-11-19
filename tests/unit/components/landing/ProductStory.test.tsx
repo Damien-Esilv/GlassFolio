@@ -49,14 +49,20 @@ describe('<ProductStory />', () => {
     const steps = document.querySelectorAll('[data-step]');
     expect(steps).toHaveLength(STORY_STEPS.length);
     for (const step of STORY_STEPS) {
-      expect(document.querySelector(`[data-step="${step.key}"] img`)?.getAttribute('src')).toBe(`/screenshots/${step.shot}.webp`);
+      expect(document.querySelector(`[data-step="${step.key}"] img`)?.getAttribute('src')).toBe(`/screenshots/en/${step.shot}.webp`);
     }
   });
 
   it('starts on the dashboard in the pinned frame', () => {
     renderStory();
-    expect(pinnedScreenshot()?.getAttribute('src')).toBe('/screenshots/dashboard.webp');
+    expect(pinnedScreenshot()?.getAttribute('src')).toBe('/screenshots/en/dashboard.webp');
     expect(document.querySelector('[data-step="dashboard"]')?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('uses French screenshots when the interface language is French', async () => {
+    await i18n.changeLanguage('fr');
+    renderStory();
+    expect(pinnedScreenshot()?.getAttribute('src')).toBe('/screenshots/fr/dashboard.webp');
   });
 
   it('switches the pinned screenshot when a step crosses the middle of the viewport', () => {
@@ -66,7 +72,7 @@ describe('<ProductStory />', () => {
       observerCallback?.([{ isIntersecting: true, target: taxStep } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
     });
     expect(taxStep.getAttribute('aria-current')).toBe('step');
-    expect(screen.getAllByRole('img', { name: /Tax assistant/ }).some((img) => img.getAttribute('src') === '/screenshots/tax.webp')).toBe(true);
+    expect(screen.getAllByRole('img', { name: /Tax assistant/ }).some((img) => img.getAttribute('src') === '/screenshots/en/tax.webp')).toBe(true);
   });
 
   it('jumps to a step from the dot navigation', () => {

@@ -79,20 +79,20 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 
 <table>
   <tr>
-    <td width="50%"><img src="public/screenshots/dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b>: net worth, allocation, performers</sub></td>
-    <td width="50%"><img src="public/screenshots/positions.webp" alt="Positions" /><br /><sub><b>Positions</b>: holdings by account and asset class</sub></td>
+    <td width="50%"><img src="public/screenshots/en/dashboard.webp" alt="Dashboard" /><br /><sub><b>Dashboard</b>: net worth, allocation, performers</sub></td>
+    <td width="50%"><img src="public/screenshots/en/positions.webp" alt="Positions" /><br /><sub><b>Positions</b>: holdings by account and asset class</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b>: benchmark comparison over time</sub></td>
-    <td width="50%"><img src="public/screenshots/fees.webp" alt="Fees" /><br /><sub><b>Fees</b>: yearly and compounded cost of each fund</sub></td>
+    <td width="50%"><img src="public/screenshots/en/analytics.webp" alt="Performance" /><br /><sub><b>Performance</b>: benchmark comparison over time</sub></td>
+    <td width="50%"><img src="public/screenshots/en/fees.webp" alt="Fees" /><br /><sub><b>Fees</b>: yearly and compounded cost of each fund</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/tax.webp" alt="Tax engine" /><br /><sub><b>Tax engine</b>: PFU vs progressive scale, Cerfa assistant</sub></td>
-    <td width="50%"><img src="public/screenshots/import.webp" alt="Import" /><br /><sub><b>Import</b>: broker presets, column mapping, live preview</sub></td>
+    <td width="50%"><img src="public/screenshots/en/tax.webp" alt="Tax engine" /><br /><sub><b>Tax engine</b>: PFU vs progressive scale, Cerfa assistant</sub></td>
+    <td width="50%"><img src="public/screenshots/en/import.webp" alt="Import" /><br /><sub><b>Import</b>: broker presets, column mapping, live preview</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="public/screenshots/ai-assistant.webp" alt="AI assistant" /><br /><sub><b>AI assistant</b>: questions answered from your data</sub></td>
-    <td width="50%"><img src="public/screenshots/progress.webp" alt="Progress" /><br /><sub><b>Progress</b>: savings goals, ranks and quests</sub></td>
+    <td width="50%"><img src="public/screenshots/en/ai-assistant.webp" alt="AI assistant" /><br /><sub><b>AI assistant</b>: questions answered from your data</sub></td>
+    <td width="50%"><img src="public/screenshots/en/progress.webp" alt="Progress" /><br /><sub><b>Progress</b>: savings goals, ranks and quests</sub></td>
   </tr>
 </table>
 
