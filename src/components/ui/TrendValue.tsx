@@ -78,6 +78,7 @@ export const TrendValue: React.FC<TrendValueProps> = ({
   return (
     <span
       className={`inline-flex items-center gap-1 font-semibold ${tokens.text} ${className}`}
+      role={animated ? 'status' : undefined}
       aria-label={animated ? formattedFinal : undefined}
     >
       {showIcon && <IconComponent size={iconSize} className="shrink-0" />}

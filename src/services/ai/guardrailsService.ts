@@ -136,10 +136,13 @@ class GuardrailsService {
     sanitized = sanitized.replace(/otpauth:\/\/[^\s"']+/g, '[REDACTED_TOTP_URI]');
     sanitized = sanitized.replace(/secret=[A-Z2-7]{20,}/g, 'secret=[REDACTED_TOTP_SEED]');
 
-    // 4. Encrypted vault envelopes / header payloads
-    sanitized = sanitized.replace(/\{"v":1,"alg":"A256GCM"[^}]+\}/g, '[REDACTED_ENCRYPTED_ENVELOPE]');
-    sanitized = sanitized.replace(/"wrappedKeys":\{[^}]+\}/g, '"wrappedKeys":[REDACTED_VAULT_KEYS]');
-    sanitized = sanitized.replace(/gf_vault_header["']?\s*[:=]\s*\{[^}]+\}/gi, 'gf_vault_header:[REDACTED_VAULT_HEADER]');
+    // 4. Encrypted vault envelopes / header payloads (independent of JSON key ordering)
+    sanitized = sanitized.replace(
+      /\{[^{}]*"alg"\s*:\s*"A256GCM"[^{}]*\}/g,
+      '[REDACTED_ENCRYPTED_ENVELOPE]'
+    );
+    sanitized = sanitized.replace(/"wrappedKeys"\s*:\s*\{[\s\S]*?\}/g, '"wrappedKeys":[REDACTED_VAULT_KEYS]');
+    sanitized = sanitized.replace(/gf_vault_header["']?\s*[:=]\s*\{[\s\S]*?\}/gi, 'gf_vault_header:[REDACTED_VAULT_HEADER]');
 
     return sanitized;
   }
@@ -165,7 +168,11 @@ class GuardrailsService {
       throw new Error('Potential Master Recovery Key exfiltration detected in AI context');
     }
 
-    if (/"wrappedKeys":\{/.test(content) || /gf_vault_header/i.test(content)) {
+    if (
+      /"wrappedKeys"\s*:\s*\{/.test(content) ||
+      /gf_vault_header/i.test(content) ||
+      /\{[^{}]*"alg"\s*:\s*"A256GCM"[^{}]*\}/.test(content)
+    ) {
       throw new Error('Potential Vault Header/DEK exfiltration detected in AI context');
     }
   }

@@ -7,6 +7,10 @@
  */
 
 import { appStorage } from '../storage/appStorage';
+import {
+    SupabaseVaultHeaderRowsSchema,
+    SupabaseVaultRecordRowsSchema,
+} from '../contracts/externalSchemas';
 
 export interface SupabaseConfig {
     url: string;
@@ -715,8 +719,11 @@ export const supabaseClient = {
 
         // Fail loudly: callers must never mistake an unreachable vault for a missing one.
         if (!res.ok) throw new Error(`Unable to read the vault header (HTTP ${res.status}).`);
-        const rows = (await res.json()) as SupabaseVaultHeaderRow[];
-        return rows[0] || null;
+        const parsed = SupabaseVaultHeaderRowsSchema.safeParse(await res.json());
+        if (!parsed.success) {
+            throw new Error('Malformed vault header response from Supabase.');
+        }
+        return (parsed.data[0] as SupabaseVaultHeaderRow | undefined) || null;
     },
 
     async upsertVaultHeader(
@@ -757,7 +764,11 @@ export const supabaseClient = {
         });
 
         if (!res.ok) throw new Error(`Unable to read vault records (HTTP ${res.status}).`);
-        return (await res.json()) as SupabaseVaultRecordRow[];
+        const parsed = SupabaseVaultRecordRowsSchema.safeParse(await res.json());
+        if (!parsed.success) {
+            throw new Error('Malformed vault records response from Supabase.');
+        }
+        return parsed.data as SupabaseVaultRecordRow[];
     },
 
     async upsertVaultRecord(

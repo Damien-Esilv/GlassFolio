@@ -480,7 +480,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
             <span className="text-xl font-bold tracking-tight">{t('navigation:brandName')}</span>
           </Link>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-subtle rounded-lg">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 hover:bg-subtle rounded-lg"
+            aria-label={t('common:buttons.close')}
+          >
             <X size={20} />
           </button>
         </div>
@@ -497,6 +501,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="p-2 hover:bg-subtle rounded-lg md:hidden"
+              aria-label={t('navigation:expandSidebar')}
             >
               <Menu size={20} />
             </button>

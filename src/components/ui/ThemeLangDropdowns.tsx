@@ -87,7 +87,7 @@ export const ThemeLangDropdowns: React.FC<ThemeLangDropdownsProps> = ({
           }}
           aria-expanded={isLangOpen}
           aria-haspopup="listbox"
-          aria-label={t('settings:preferences.language')}
+          aria-label={`${t('settings:preferences.language')}: ${language.toUpperCase()}`}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-bold text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <Globe size={14} className="text-secondary" />
@@ -151,7 +151,7 @@ export const ThemeLangDropdowns: React.FC<ThemeLangDropdownsProps> = ({
           }}
           aria-expanded={isThemeOpen}
           aria-haspopup="listbox"
-          aria-label={t('settings:preferences.appearance')}
+          aria-label={`${t('settings:preferences.appearance')}: ${getThemeLabel(theme)}`}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-subtle hover:bg-card-hover border border-subtle text-xs font-semibold text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {getThemeIcon(theme)}
