@@ -23,7 +23,7 @@ import { auditLogService } from './auditLogService';
 import { ExistingVaultError } from './vaultTypes';
 import { appStorage } from '../storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY, VAULT_HEADER_KEY } from '../storage/storageKeys';
-import { getSyncedStorageProvider, requireLocalPersistence } from '../storage/storageFactory';
+import { getLocalVaultProvider, getSyncedStorageProvider, requireLocalPersistence } from '../storage/storageFactory';
 import { purgeLocalAccountFootprint } from '../storage/accountErasure';
 import { googleOidcService, GoogleCallbackResult, GoogleCeremonyIntent, readIdTokenEmail } from './googleOidcService';
 import { googleDriveVaultKeyService } from './googleDriveVaultKeyService';
@@ -150,6 +150,18 @@ export class LocalAuthProvider implements IAuthProvider {
         }
     }
 
+    public async selectLocalVaultProfile(vaultId: string): Promise<void> {
+        const localProvider = getLocalVaultProvider();
+        if (localProvider?.getStatus().mode !== 'server') return;
+        if (vaultService.isUnlocked()) {
+            await vaultService.lock();
+        }
+        await localProvider.selectProfile(vaultId);
+        vaultService.syncStatus();
+        this.pendingLocalSignIn = null;
+        this.resetFailures();
+    }
+
     public async setupLocalVault(
         name: string,
         masterPassword: string,
@@ -162,15 +174,36 @@ export class LocalAuthProvider implements IAuthProvider {
             throw new Error('Password does not meet NIST security requirements (minimum 12 characters, complexity required).');
         }
 
-        this.assertVaultReplaceable(options?.overwriteExisting);
-        await vaultService.resetVault();
+        const cleanName = name.trim() || 'Local Vault Master';
+        const localProvider = getLocalVaultProvider();
+        const isServerMultiVault = !this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server';
+
+        if (isServerMultiVault) {
+            if (options?.overwriteExisting) {
+                await vaultService.resetVault();
+                await localProvider.renameActiveProfile(cleanName);
+            } else {
+                if (vaultService.isUnlocked()) {
+                    await vaultService.lock();
+                }
+                const created = await localProvider.createProfile(cleanName);
+                if (!created) {
+                    throw new Error(VAULT_UNREACHABLE);
+                }
+                vaultService.syncStatus();
+            }
+        } else {
+            this.assertVaultReplaceable(options?.overwriteExisting);
+            await vaultService.resetVault();
+        }
+
         const setupRes = await vaultService.setup(masterPassword);
         const recoveryKey = setupRes.recoveryKey;
 
         const userId = `usr-local-${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`;
         const localUser: User = {
             id: userId,
-            name: name.trim() || 'Local Vault Master',
+            name: cleanName,
             email: 'local@glassfolio.vault',
             avatar: '',
             preferences: getInitialAuthPreferences(),
@@ -181,6 +214,9 @@ export class LocalAuthProvider implements IAuthProvider {
         };
 
         await userRepository.saveUser(localUser);
+        if (isServerMultiVault) {
+            await requireLocalPersistence();
+        }
         this.resetFailures();
         const session = createSessionRecord(localUser.id);
         this.currentSession = session;
@@ -190,9 +226,18 @@ export class LocalAuthProvider implements IAuthProvider {
         return { user: localUser, recoveryKey, session };
     }
 
-    public async unlockLocalVault(masterPassword: string): Promise<AuthResult> {
+    public async unlockLocalVault(masterPassword: string, vaultId?: string): Promise<AuthResult> {
         await delay(250);
         this.checkLockout();
+
+        const localProvider = getLocalVaultProvider();
+        if (!this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server') {
+            if (vaultId && vaultId !== localProvider.getStatus().activeVaultId) {
+                await this.selectLocalVaultProfile(vaultId);
+            } else if (!vaultId && localProvider.getStatus().activeVaultId === 'demo') {
+                await this.selectLocalVaultProfile('personal');
+            }
+        }
 
         if (!vaultService.isInitialized()) {
             throw new Error('No vault exists on this device yet. Initialize one first.');
@@ -211,7 +256,17 @@ export class LocalAuthProvider implements IAuthProvider {
     /** Local vault profile (created on first unlock of a vault set up without one). */
     protected async loadLocalUser(): Promise<User> {
         const stored = await userRepository.getUser();
-        if (stored) return stored;
+        if (stored) {
+            const localProvider = getLocalVaultProvider();
+            if (!this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server' && stored.name && !vaultService.isDemoVault()) {
+                const activeId = localProvider.getStatus().activeVaultId;
+                const activeProfile = localProvider.getStatus().profiles.find(p => p.id === activeId);
+                if (activeProfile && activeProfile.name !== stored.name) {
+                    void localProvider.renameActiveProfile(stored.name);
+                }
+            }
+            return stored;
+        }
         const user: User = {
             id: 'usr-local-default',
             name: 'Local Vault Master',
@@ -231,7 +286,15 @@ export class LocalAuthProvider implements IAuthProvider {
      * Passwordless unlock through a PRF passkey. A passkey with user verification is a strong
      * factor on its own, so no second factor is asked on top of it.
      */
-    public async signInWithPasskey(): Promise<AuthResult> {
+    public async signInWithPasskey(vaultId?: string): Promise<AuthResult> {
+        const localProvider = getLocalVaultProvider();
+        if (!this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server') {
+            if (vaultId && vaultId !== localProvider.getStatus().activeVaultId) {
+                await this.selectLocalVaultProfile(vaultId);
+            } else if (!vaultId && localProvider.getStatus().activeVaultId === 'demo') {
+                await this.selectLocalVaultProfile('personal');
+            }
+        }
         if (!vaultService.isInitialized()) {
             throw new Error('No vault exists on this device yet. Initialize one first.');
         }
@@ -261,7 +324,9 @@ export class LocalAuthProvider implements IAuthProvider {
      */
     protected async requireLocalSecondFactor(user: User, auditDetails: string): Promise<AuthResult> {
         const methods: SecondFactorMethod[] = [];
-        if (await totpService.isEnabled()) methods.push('totp');
+        const localFactors = await totpService.listFactors();
+        const totpFactors = localFactors.map(factor => ({ id: factor.id, friendlyName: factor.friendlyName }));
+        if (totpFactors.length > 0) methods.push('totp');
         if ((await passkeyService.listPasskeys()).length > 0) methods.push('passkey');
         if (methods.length > 0) {
             this.pendingLocalSignIn = user;
@@ -270,6 +335,7 @@ export class LocalAuthProvider implements IAuthProvider {
                 session: createSessionRecord(user.id),
                 requiresTwoFactor: true,
                 secondFactorMethods: methods,
+                ...(totpFactors.length > 0 ? { totpFactors } : {}),
                 tempUserId: user.id,
             };
         }
@@ -343,8 +409,12 @@ export class LocalAuthProvider implements IAuthProvider {
                 localStorage.removeItem('gf_sb_session');
             }
 
-            // Guard: a real vault is only replaced when it is a disposable cache (cloud)
-            if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
+            // Guard: a real vault is only replaced when it is a disposable cache (cloud).
+            // In local server mode, the demo account switches to an isolated 'demo' vault profile.
+            const localProvider = getLocalVaultProvider();
+            if (!this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server') {
+                await this.selectLocalVaultProfile('demo');
+            } else if (vaultService.isInitialized() && !vaultService.isDemoVault()) {
                 this.assertVaultReplaceable();
                 await vaultService.resetVault();
             }
@@ -422,14 +492,14 @@ export class LocalAuthProvider implements IAuthProvider {
         throw new Error('Invalid email or password.');
     }
 
-    public async verifySecondFactor(tokenOrCode: string): Promise<AuthResult> {
+    public async verifySecondFactor(tokenOrCode: string, factorId?: string): Promise<AuthResult> {
         this.checkLockout();
 
         const user = this.pendingLocalSignIn;
         if (!user || !vaultService.isUnlocked()) {
             throw new Error(SIGN_IN_EXPIRED);
         }
-        if (!(await totpService.verify(tokenOrCode))) {
+        if (!(await totpService.verify(tokenOrCode, factorId))) {
             this.registerFailure();
             throw new Error('Invalid two-factor authentication code or backup code.');
         }
@@ -472,7 +542,7 @@ export class LocalAuthProvider implements IAuthProvider {
         }
     }
 
-    public async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void> {
+    public async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string; factorId?: string }): Promise<void> {
         this.checkLockout();
 
         const user = await userRepository.getUser();
@@ -488,7 +558,7 @@ export class LocalAuthProvider implements IAuthProvider {
         // The settings form asks for the code when 2FA is on: it must really be checked
         if (await totpService.isEnabled()) {
             if (!options?.totpCode) throw new Error('Two-factor authentication code is required.');
-            if (!(await totpService.verify(options.totpCode))) {
+            if (!(await totpService.verify(options.totpCode, options.factorId))) {
                 this.registerFailure();
                 throw new Error('Invalid two-factor authentication code or backup code.');
             }
@@ -555,6 +625,11 @@ export class LocalAuthProvider implements IAuthProvider {
         this.currentSession = null;
         this.pendingLocalSignIn = null;
         await vaultService.lock();
+        const localProvider = getLocalVaultProvider();
+        if (!this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server' && localProvider.getStatus().activeVaultId === 'demo') {
+            await localProvider.selectProfile('personal');
+            vaultService.syncStatus();
+        }
     }
 
     public async getCurrentUser(): Promise<User | null> {
@@ -573,7 +648,7 @@ export class LocalAuthProvider implements IAuthProvider {
         if (proof.usePasskey && passkeys.length > 0) {
             await passkeyService.authenticate({ allowCredentialIds: passkeys.map(record => record.id) });
         } else if (hasTotp) {
-            if (!proof.totpCode || !(await totpService.verify(proof.totpCode))) {
+            if (!proof.totpCode || !(await totpService.verify(proof.totpCode, proof.factorId))) {
                 this.registerFailure();
                 throw new Error('Invalid two-factor authentication code or backup code.');
             }
@@ -590,11 +665,18 @@ export class LocalAuthProvider implements IAuthProvider {
             }
         }
 
+        const localProvider = getLocalVaultProvider();
+        const isServerMultiVault = !this.canDiscardLocalVault() && localProvider?.getStatus().mode === 'server';
+
         await vaultService.resetVault();
         await userRepository.clearUser();
         db.resetToInitialData();
         await this.signOut();
         purgeLocalAccountFootprint();
+        if (isServerMultiVault) {
+            await localProvider.deleteActiveProfile();
+            vaultService.syncStatus();
+        }
         await requireLocalPersistence();
     }
 }
@@ -781,7 +863,13 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     ): Promise<AuthResult> {
         const factors = await supabaseClient.listMfaFactors(session.accessToken);
         const methods: SecondFactorMethod[] = [];
-        if (factors.some(factor => factor.factor_type === 'totp')) {
+        const verifiedTotpFactors = factors
+            .filter(factor => factor.factor_type === 'totp')
+            .map((factor, idx) => ({
+                id: factor.id,
+                friendlyName: factor.friendly_name?.trim() || (idx === 0 ? 'Authenticator' : `Authenticator (${idx + 1})`),
+            }));
+        if (verifiedTotpFactors.length > 0) {
             if (getSessionAssurance(session.accessToken).aal !== 'aal2') methods.push('totp');
         }
         if (options?.offerPasskey) {
@@ -796,6 +884,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
                 session: createSessionRecord(session.user.id),
                 requiresTwoFactor: true,
                 secondFactorMethods: methods,
+                ...(methods.includes('totp') ? { totpFactors: verifiedTotpFactors } : {}),
                 tempUserId: session.user.id,
             };
         }
@@ -1481,7 +1570,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await auditLogService.record('email_change_requested', `Confirmation emails sent to verify change to ${cleanNewEmail}`);
     }
 
-    public override async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void> {
+    public override async changePassword(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string; factorId?: string }): Promise<void> {
         this.checkLockout();
 
         const user = await userRepository.getUser();
@@ -1515,7 +1604,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
             const hasTotp = factors.some(f => f.factor_type === 'totp' && f.status === 'verified');
             if (hasTotp) {
                 if (options?.totpCode) {
-                    freshSession = await this.verifyTotpForSession(freshSession, options.totpCode);
+                    freshSession = await this.verifyTotpForSession(freshSession, options.totpCode, options.factorId);
                 } else if (getSessionAssurance(active.accessToken).aal === 'aal2') {
                     freshSession = active;
                 } else {
@@ -1726,8 +1815,8 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await supabaseClient.updateUser(active.accessToken, { data: { locale: normalized } }).catch(() => undefined);
     }
 
-    public override async verifySecondFactor(tokenOrCode: string): Promise<AuthResult> {
-        if (!this.pendingMfa) return super.verifySecondFactor(tokenOrCode);
+    public override async verifySecondFactor(tokenOrCode: string, factorId?: string): Promise<AuthResult> {
+        if (!this.pendingMfa) return super.verifySecondFactor(tokenOrCode, factorId);
         this.checkLockout();
 
         const pending = this.pendingMfa;
@@ -1736,7 +1825,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         }
         let upgraded: SupabaseAuthSession;
         try {
-            upgraded = await this.verifyTotpForSession(pending.session, tokenOrCode);
+            upgraded = await this.verifyTotpForSession(pending.session, tokenOrCode, factorId);
         } catch {
             this.registerFailure();
             throw new Error('Invalid two-factor authentication code.');
@@ -1811,16 +1900,19 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
     }
 
     /** Proves possession of the TOTP factor and upgrades the current session to AAL2. */
-    public async verifyTotpCode(code: string): Promise<void> {
+    public async verifyTotpCode(code: string, factorId?: string): Promise<void> {
         const active = await this.getActiveSession();
         if (!active) throw new Error('Active session required for two-factor verification.');
-        const upgraded = await this.verifyTotpForSession(active, code);
+        const upgraded = await this.verifyTotpForSession(active, code, factorId);
         this.persistSession(upgraded);
     }
 
-    private async verifyTotpForSession(session: SupabaseAuthSession, code: string): Promise<SupabaseAuthSession> {
+    private async verifyTotpForSession(session: SupabaseAuthSession, code: string, factorId?: string): Promise<SupabaseAuthSession> {
         const factors = await supabaseClient.listMfaFactors(session.accessToken);
-        const factor = factors.find(candidate => candidate.factor_type === 'totp');
+        const totpFactors = factors.filter(candidate => candidate.factor_type === 'totp');
+        const factor = factorId
+            ? totpFactors.find(candidate => candidate.id === factorId)
+            : totpFactors[0];
         if (!factor) throw new Error('No verified authenticator app is enrolled on this account.');
         const challenge = await supabaseClient.challengeMfaFactor(session.accessToken, factor.id);
         return supabaseClient.verifyMfaFactor(session.accessToken, factor.id, challenge.id, code.trim());
@@ -1840,7 +1932,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         await supabaseClient.unenrollMfaFactor(active.accessToken, factorId);
     }
 
-    public async listMfaFactors(): Promise<Array<{ id: string; factor_type: string; friendly_name?: string }>> {
+    public async listMfaFactors(): Promise<Array<{ id: string; factor_type: string; friendly_name?: string; created_at?: string }>> {
         const active = await this.getActiveSession();
         if (!active) return [];
         return supabaseClient.listMfaFactors(active.accessToken);
@@ -1908,7 +2000,7 @@ export class SupabaseAuthProvider extends LocalAuthProvider implements IAuthProv
         const factors = await supabaseClient.listMfaFactors(session.accessToken);
         if (factors.some(factor => factor.factor_type === 'totp')) {
             try {
-                session = await this.verifyTotpForSession(session, proof.totpCode || '');
+                session = await this.verifyTotpForSession(session, proof.totpCode || '', proof.factorId);
             } catch {
                 await supabaseClient.signOut(session.accessToken);
                 this.registerFailure();

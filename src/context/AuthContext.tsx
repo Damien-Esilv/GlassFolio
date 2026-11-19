@@ -5,7 +5,7 @@ import { User, UserPreferences } from '../types';
 import { userRepository } from '../services/repositories';
 import { vaultService } from '../services/security/vaultService';
 import { authService } from '../services/security/authService';
-import { AuthResult, SecondFactorMethod, SignUpOptions } from '../services/security/authTypes';
+import { AuthResult, SecondFactorMethod, SignUpOptions, TotpChallengeFactor } from '../services/security/authTypes';
 import type { GoogleCallbackResult } from '../services/security/googleOidcService';
 import { appStorage } from '../services/storage/appStorage';
 import { PUBLIC_LANG_STORAGE_KEY, PUBLIC_THEME_STORAGE_KEY } from '../services/storage/storageKeys';
@@ -18,6 +18,8 @@ import {
 
 import { consumeUrlBootstrapParams } from '../config/urlBootstrap';
 import { demoAvailability } from '../services/demoAvailability';
+import { getLocalVaultProvider } from '../services/storage/storageFactory';
+import { isDemoAccount } from '../services/security/demoAccount';
 
 interface AuthContextType {
   user: User | null;
@@ -31,10 +33,13 @@ interface AuthContextType {
   resumeSignup: () => Promise<string>;
   cancelSignup: () => Promise<void>;
   completeSignup: () => Promise<void>;
-  unlockLocalVault: (password: string) => Promise<AuthResult>;
+  unlockLocalVault: (password: string, vaultId?: string) => Promise<AuthResult>;
+  selectLocalVaultProfile: (vaultId: string) => Promise<void>;
   /** Methods offered while a sign-in waits for its second factor; null when none is pending. */
   pendingSecondFactor: SecondFactorMethod[] | null;
-  completeSecondFactor: (code: string) => Promise<AuthResult>;
+  /** Enrolled TOTP factors for the pending second-factor challenge (empty when none). */
+  pendingTotpFactors: TotpChallengeFactor[];
+  completeSecondFactor: (code: string, factorId?: string) => Promise<AuthResult>;
   completeSecondFactorWithPasskey: () => Promise<AuthResult>;
   /** Direct Google OIDC callback: may leave a second factor pending, like a password sign-in. */
   handleGoogleCallback: (params: GoogleCallbackResult) => Promise<AuthResult>;
@@ -50,7 +55,7 @@ interface AuthContextType {
   /** Reloads the profile from the unlocked vault (used once a sign-in flow finished outside the context). */
   loadUserFromRepo: () => Promise<void>;
   /** Local: passwordless vault unlock. Cloud: Supabase passkey sign-in. */
-  signInWithPasskey: () => Promise<AuthResult>;
+  signInWithPasskey: (vaultId?: string) => Promise<AuthResult>;
   setupLocalVault: (name: string, password: string, options?: { overwriteExisting?: boolean }) => Promise<string | undefined>;
   logout: () => void;
   lockVault: () => Promise<void>;
@@ -83,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [vaultStatus, setVaultStatus] = useState<string>(() => vaultService.getStatus());
   const [pendingSecondFactor, setPendingSecondFactor] = useState<SecondFactorMethod[] | null>(null);
+  const [pendingTotpFactors, setPendingTotpFactors] = useState<TotpChallengeFactor[]>([]);
   const [pendingSignupCompletion, setPendingSignupCompletion] = useState(false);
   // Local vault created but its recovery key not confirmed yet: the user is signed in on confirmation.
   const pendingLocalUserRef = useRef<User | null>(null);
@@ -95,10 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const applyAuthResult = (res: AuthResult): AuthResult => {
     if (res.requiresTwoFactor) {
       setPendingSecondFactor(res.secondFactorMethods ?? ['totp']);
+      setPendingTotpFactors(res.totpFactors ?? []);
     } else if (res.requiresSignupCompletion) {
       setPendingSignupCompletion(true);
     } else {
       setPendingSecondFactor(null);
+      setPendingTotpFactors([]);
       setUser(res.user);
     }
     return res;
@@ -259,14 +267,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return applyAuthResult(await authService.signIn(email, password, options));
   };
 
-  const unlockLocalVault = async (password: string): Promise<AuthResult> => {
+  const unlockLocalVault = async (password: string, vaultId?: string): Promise<AuthResult> => {
     if (!authService.unlockLocalVault) throw new Error('Local vault unlock is unavailable.');
-    return applyAuthResult(await authService.unlockLocalVault(password));
+    return applyAuthResult(await authService.unlockLocalVault(password, vaultId));
   };
 
-  const completeSecondFactor = async (code: string): Promise<AuthResult> => {
+  const selectLocalVaultProfile = async (vaultId: string): Promise<void> => {
+    setPendingSecondFactor(null);
+    setPendingTotpFactors([]);
+    await authService.selectLocalVaultProfile?.(vaultId);
+  };
+
+  const completeSecondFactor = async (code: string, factorId?: string): Promise<AuthResult> => {
     if (!authService.verifySecondFactor) throw new Error('Second factor verification is unavailable.');
-    return applyAuthResult(await authService.verifySecondFactor(code));
+    return applyAuthResult(
+      factorId
+        ? await authService.verifySecondFactor(code, factorId)
+        : await authService.verifySecondFactor(code)
+    );
   };
 
   const completeSecondFactorWithPasskey = async (): Promise<AuthResult> => {
@@ -300,13 +318,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return authService.createGoogleRecoveryKey(params);
   };
 
-  const signInWithPasskey = async (): Promise<AuthResult> => {
+  const signInWithPasskey = async (vaultId?: string): Promise<AuthResult> => {
     if (!authService.signInWithPasskey) throw new Error('Passkey sign-in is unavailable.');
-    return applyAuthResult(await authService.signInWithPasskey());
+    return applyAuthResult(await authService.signInWithPasskey(vaultId));
   };
 
   const cancelSecondFactor = async (): Promise<void> => {
     setPendingSecondFactor(null);
+    setPendingTotpFactors([]);
     await authService.cancelSecondFactor?.();
   };
 
@@ -413,6 +432,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     await userRepository.saveUser(updatedUser);
+    if (typeof data.name === 'string' && updatedUser.name.trim() && !isDemoAccount(updatedUser)) {
+      const localProvider = getLocalVaultProvider();
+      if (localProvider?.getStatus().mode === 'server') {
+        await localProvider.renameActiveProfile(updatedUser.name.trim());
+      }
+    }
     userRef.current = updatedUser;
     setUser(updatedUser);
     if (preferences && updatedUser.preferences) {
@@ -447,7 +472,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cancelSignup,
       completeSignup,
       unlockLocalVault,
+      selectLocalVaultProfile,
       pendingSecondFactor,
+      pendingTotpFactors,
       completeSecondFactor,
       handleGoogleCallback,
       completeSecondFactorWithPasskey,

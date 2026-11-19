@@ -63,6 +63,7 @@ export interface SupabaseMfaFactor {
     factor_type: SupabaseMfaFactorType;
     status: 'verified' | 'unverified';
     friendly_name?: string;
+    created_at?: string;
 }
 
 export interface SupabaseMfaChallenge { id: string; }

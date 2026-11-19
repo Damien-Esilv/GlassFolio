@@ -11,14 +11,21 @@
  *                                   applied in the order clear, remove, set with ONE disk write.
  */
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 export const LOCAL_VAULT_PATH = '/api/local-vault';
 export const LOCAL_VAULT_BATCH_PATH = '/api/local-vault/batch';
+export const LOCAL_VAULT_PROFILES_PATH = '/api/local-vault/profiles';
 /** Launch options the page reads at startup (e.g. `npm run dev:demo` opens the demo account) */
 export const LOCAL_VAULT_CONFIG_PATH = '/api/local-vault/config';
 export const STORE_SCHEMA = 1;
+export const DEFAULT_VAULT_ID = 'default';
+export const DEMO_VAULT_ID = 'demo';
+export const DEFAULT_VAULT_NAME = 'Local Vault';
+export const MAX_VAULT_NAME_LENGTH = 64;
+export const VAULT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,47}$/;
 /**
  * Every call must carry this header (the app client always does). A cross-site page cannot add a
  * custom header without a CORS preflight, which this API never grants: a second CSRF barrier next to
@@ -32,6 +39,8 @@ export const MAX_VALUE_BYTES = 5 * 1024 * 1024;
 export const KEY_PATTERN = /^(glassfolio_[a-z0-9_]+|gf_vault_header|gf_totp_enrolled|gf_manual_price_history)$/;
 
 const STORE_FILE = 'vault-store.json';
+const DEMO_STORE_FILE = 'vault-store-demo.json';
+const PROFILES_FILE = 'vault-profiles.json';
 
 const emptyState = () => ({ schema: STORE_SCHEMA, revision: 0, updatedAt: null, records: {} });
 
@@ -48,44 +57,58 @@ const readState = (file) => {
   };
 };
 
+const sanitizeVaultName = (name) => {
+  if (typeof name !== 'string') return '';
+  return name.trim().slice(0, MAX_VAULT_NAME_LENGTH);
+};
+
 /**
  * @param {{ dataDir: string, logger?: Pick<Console, 'warn' | 'error' | 'log'> }} options
  */
 export function createLocalVaultStore({ dataDir, logger = console } = {}) {
   if (!dataDir) throw new Error('createLocalVaultStore requires a dataDir');
-  const file = path.join(dataDir, STORE_FILE);
-  const backup = `${file}.bak`;
-  const tmp = `${file}.tmp`;
+  const resolvedDataDir = path.resolve(dataDir);
+  const profilesFile = path.join(resolvedDataDir, PROFILES_FILE);
+  const profilesTmp = `${profilesFile}.tmp`;
 
   let writable = true;
   try {
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.accessSync(dataDir, fs.constants.W_OK);
+    fs.mkdirSync(resolvedDataDir, { recursive: true });
+    fs.accessSync(resolvedDataDir, fs.constants.W_OK);
   } catch (err) {
     writable = false;
     logger.error(`[local-vault] Data directory ${dataDir} is not writable:`, err.message);
   }
 
-  const load = () => {
-    for (const candidate of [file, backup]) {
+  /** Resolves the store file for a known server-side vault id. */
+  const storeFileFor = (vaultId) => {
+    if (vaultId === DEFAULT_VAULT_ID) return path.join(resolvedDataDir, STORE_FILE);
+    if (vaultId === DEMO_VAULT_ID) return path.join(resolvedDataDir, DEMO_STORE_FILE);
+    if (!VAULT_ID_PATTERN.test(vaultId)) throw new Error('Invalid vault profile ID');
+    return path.join(resolvedDataDir, `vault-store-${vaultId}.json`);
+  };
+
+  const loadStoreFile = (targetFile) => {
+    const backup = `${targetFile}.bak`;
+    for (const candidate of [targetFile, backup]) {
       if (!fs.existsSync(candidate)) continue;
       try {
-        const state = readState(candidate);
+        const loaded = readState(candidate);
         if (candidate === backup) logger.warn('[local-vault] Recovered the vault store from its backup.');
-        return state;
+        return loaded;
       } catch (err) {
         logger.error(`[local-vault] ${candidate} is unreadable (${err.message}); quarantining it.`);
         try {
-          fs.renameSync(candidate, `${file}.corrupt-${Date.now()}`);
+          fs.renameSync(candidate, `${targetFile}.corrupt-${Date.now()}`);
         } catch { /* best effort */ }
       }
     }
     return emptyState();
   };
 
-  let state = load();
-
-  const persist = (next) => {
+  const persistStoreFile = (targetFile, next) => {
+    const backup = `${targetFile}.bak`;
+    const tmp = `${targetFile}.tmp`;
     const fd = fs.openSync(tmp, 'w');
     try {
       fs.writeSync(fd, JSON.stringify(next));
@@ -93,14 +116,111 @@ export function createLocalVaultStore({ dataDir, logger = console } = {}) {
     } finally {
       fs.closeSync(fd);
     }
-    if (fs.existsSync(file)) fs.copyFileSync(file, backup);
-    fs.renameSync(tmp, file);
+    if (fs.existsSync(targetFile)) fs.copyFileSync(targetFile, backup);
+    fs.renameSync(tmp, targetFile);
   };
 
-  return {
-    snapshot: () => ({ ...state, records: { ...state.records } }),
+  const defaultProfileEntry = () => {
+    const now = new Date().toISOString();
+    return { id: DEFAULT_VAULT_ID, name: DEFAULT_VAULT_NAME, createdAt: now, updatedAt: now };
+  };
 
-    stats: () => ({ records: Object.keys(state.records).length, revision: state.revision, writable }),
+  const loadProfilesRegistry = () => {
+    if (fs.existsSync(profilesFile)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(profilesFile, 'utf8'));
+        if (raw && typeof raw === 'object' && Array.isArray(raw.profiles) && raw.profiles.length > 0) {
+          const validProfiles = raw.profiles
+            .filter((p) => p && typeof p === 'object' && typeof p.id === 'string' && VAULT_ID_PATTERN.test(p.id) && p.id !== DEMO_VAULT_ID)
+            .map((p) => ({
+              id: p.id,
+              name: sanitizeVaultName(p.name) || DEFAULT_VAULT_NAME,
+              createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
+              updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
+            }));
+          if (validProfiles.length > 0) {
+            const requestedActive = typeof raw.activeVaultId === 'string' ? raw.activeVaultId : validProfiles[0].id;
+            const activeExists = requestedActive === DEMO_VAULT_ID || validProfiles.some((p) => p.id === requestedActive);
+            const activeId = activeExists ? requestedActive : validProfiles[0].id;
+            const lastPersonal = typeof raw.lastPersonalVaultId === 'string' && validProfiles.some((p) => p.id === raw.lastPersonalVaultId)
+              ? raw.lastPersonalVaultId
+              : validProfiles[0].id;
+            return {
+              activeVaultId: activeId,
+              lastPersonalVaultId: activeId !== DEMO_VAULT_ID ? activeId : lastPersonal,
+              profiles: validProfiles,
+            };
+          }
+        }
+      } catch (err) {
+        logger.error(`[local-vault] ${profilesFile} is unreadable (${err.message}); using default profile.`);
+      }
+    }
+    const def = defaultProfileEntry();
+    return {
+      activeVaultId: DEFAULT_VAULT_ID,
+      lastPersonalVaultId: DEFAULT_VAULT_ID,
+      profiles: [def],
+    };
+  };
+
+  const persistProfilesRegistry = () => {
+    const payload = {
+      schema: STORE_SCHEMA,
+      activeVaultId,
+      lastPersonalVaultId,
+      profiles,
+    };
+    const fd = fs.openSync(profilesTmp, 'w');
+    try {
+      fs.writeSync(fd, JSON.stringify(payload));
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(profilesTmp, profilesFile);
+  };
+
+  const registry = loadProfilesRegistry();
+  let activeVaultId = registry.activeVaultId;
+  let lastPersonalVaultId = registry.lastPersonalVaultId;
+  let profiles = registry.profiles;
+  let state = loadStoreFile(storeFileFor(activeVaultId));
+
+  const isProfileInitialized = (profileId) => {
+    if (profileId === activeVaultId) {
+      return Boolean(state.records && typeof state.records.gf_vault_header === 'string');
+    }
+    const targetFile = storeFileFor(profileId);
+    if (!fs.existsSync(targetFile)) return false;
+    try {
+      const loaded = readState(targetFile);
+      return Boolean(loaded.records && typeof loaded.records.gf_vault_header === 'string');
+    } catch {
+      return false;
+    }
+  };
+
+  const listProfiles = () =>
+    profiles.map((p) => ({
+      id: p.id,
+      name: p.name,
+      initialized: isProfileInitialized(p.id),
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }));
+
+  const buildSnapshot = () => ({
+    ...state,
+    activeVaultId,
+    profiles: listProfiles(),
+    records: { ...state.records },
+  });
+
+  return {
+    snapshot: buildSnapshot,
+
+    stats: () => ({ records: Object.keys(state.records).length, revision: state.revision, writable, activeVaultId, profilesCount: profiles.length }),
 
     /** Applies a validated batch atomically; throws (leaving state untouched) if the disk write fails. */
     apply({ set = {}, remove = [], clear = false }) {
@@ -108,9 +228,138 @@ export function createLocalVaultStore({ dataDir, logger = console } = {}) {
       for (const key of remove) delete records[key];
       for (const [key, value] of Object.entries(set)) records[key] = value;
       const next = { schema: STORE_SCHEMA, revision: state.revision + 1, updatedAt: new Date().toISOString(), records };
-      persist(next);
+      persistStoreFile(storeFileFor(activeVaultId), next);
       state = next;
       return { revision: next.revision };
+    },
+
+    /** Switches the active vault profile ('demo', 'personal', or a profile id in `profiles`). */
+    selectProfile(requestedId) {
+      if (typeof requestedId !== 'string' || !requestedId) {
+        throw Object.assign(new Error('vaultId is required'), { status: 400 });
+      }
+      let targetId;
+      if (requestedId === DEMO_VAULT_ID) {
+        targetId = DEMO_VAULT_ID;
+      } else if (requestedId === 'personal') {
+        const fallback = profiles.find((p) => p.id === lastPersonalVaultId) ?? profiles[0];
+        targetId = fallback.id;
+      } else {
+        const matched = profiles.find((p) => p.id === requestedId);
+        if (!matched) {
+          throw Object.assign(new Error(`Unknown vault profile: ${requestedId}`), { status: 404 });
+        }
+        targetId = matched.id;
+      }
+
+      if (targetId !== activeVaultId) {
+        activeVaultId = targetId;
+        if (targetId !== DEMO_VAULT_ID) {
+          lastPersonalVaultId = targetId;
+        }
+        state = loadStoreFile(storeFileFor(activeVaultId));
+        persistProfilesRegistry();
+      }
+      return buildSnapshot();
+    },
+
+    /**
+     * Creates a new personal vault profile and makes it active.
+     * If an existing personal profile is still uninitialized (no gf_vault_header), reuses and renames it.
+     */
+    createProfile(rawName) {
+      const cleanName = sanitizeVaultName(rawName);
+      if (!cleanName) {
+        throw Object.assign(new Error('Vault name is required'), { status: 400 });
+      }
+      const now = new Date().toISOString();
+      const uninitialized = profiles.find((p) => !isProfileInitialized(p.id));
+      if (uninitialized) {
+        uninitialized.name = cleanName;
+        uninitialized.updatedAt = now;
+        activeVaultId = uninitialized.id;
+        lastPersonalVaultId = uninitialized.id;
+        state = emptyState();
+        persistStoreFile(storeFileFor(activeVaultId), state);
+        persistProfilesRegistry();
+        return buildSnapshot();
+      }
+
+      const newId = `vault-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+      const entry = { id: newId, name: cleanName, createdAt: now, updatedAt: now };
+      profiles = [...profiles, entry];
+      activeVaultId = entry.id;
+      lastPersonalVaultId = entry.id;
+      state = emptyState();
+      persistStoreFile(storeFileFor(activeVaultId), state);
+      persistProfilesRegistry();
+      return buildSnapshot();
+    },
+
+    /** Renames an existing personal vault profile (defaults to the active personal profile). */
+    renameProfile(requestedId, rawName) {
+      const cleanName = sanitizeVaultName(rawName);
+      if (!cleanName) {
+        throw Object.assign(new Error('Vault name is required'), { status: 400 });
+      }
+      const lookupId = typeof requestedId === 'string' && requestedId && requestedId !== 'active'
+        ? requestedId
+        : (activeVaultId === DEMO_VAULT_ID ? lastPersonalVaultId : activeVaultId);
+      const target = profiles.find((p) => p.id === lookupId);
+      if (!target) {
+        throw Object.assign(new Error('Vault profile not found'), { status: 404 });
+      }
+      target.name = cleanName;
+      target.updatedAt = new Date().toISOString();
+      persistProfilesRegistry();
+      return buildSnapshot();
+    },
+
+    /** Permanently deletes a vault profile and its store file on disk, switching to another profile. */
+    deleteProfile(requestedId) {
+      const lookupId = typeof requestedId === 'string' && requestedId && requestedId !== 'active'
+        ? requestedId
+        : activeVaultId;
+
+      const removeStoreFiles = (file) => {
+        for (const candidate of [file, `${file}.bak`, `${file}.tmp`]) {
+          try {
+            if (fs.existsSync(candidate)) fs.unlinkSync(candidate);
+          } catch { /* best effort */ }
+        }
+      };
+
+      if (lookupId === DEMO_VAULT_ID) {
+        removeStoreFiles(storeFileFor(DEMO_VAULT_ID));
+        const fallback = profiles.find((p) => p.id === lastPersonalVaultId) ?? profiles[0];
+        activeVaultId = fallback.id;
+        lastPersonalVaultId = fallback.id;
+        state = loadStoreFile(storeFileFor(activeVaultId));
+        persistProfilesRegistry();
+        return buildSnapshot();
+      }
+
+      const target = profiles.find((p) => p.id === lookupId);
+      if (!target) {
+        throw Object.assign(new Error('Vault profile not found'), { status: 404 });
+      }
+
+      removeStoreFiles(storeFileFor(target.id));
+      const remaining = profiles.filter((p) => p.id !== target.id);
+      if (remaining.length === 0) {
+        const freshDefault = defaultProfileEntry();
+        removeStoreFiles(storeFileFor(freshDefault.id));
+        profiles = [freshDefault];
+      } else {
+        profiles = remaining;
+      }
+
+      const nextProfile = profiles[0];
+      activeVaultId = nextProfile.id;
+      lastPersonalVaultId = nextProfile.id;
+      state = loadStoreFile(storeFileFor(activeVaultId));
+      persistProfilesRegistry();
+      return buildSnapshot();
     },
   };
 }
@@ -268,6 +517,47 @@ export function createLocalVaultHandler(store, { securityHeaders = {}, allowedHo
         } else {
           logger.error('[local-vault] Failed to persist batch:', err.message);
           send(res, 500, { error: 'Could not persist the vault store' });
+        }
+      }
+      return true;
+    }
+
+    if (url.pathname === LOCAL_VAULT_PROFILES_PATH) {
+      if (req.method !== 'POST') {
+        send(res, 405, { error: 'Method not allowed' }, { Allow: 'POST' });
+        return true;
+      }
+      if (!String(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
+        send(res, 415, { error: 'Content-Type must be application/json' });
+        return true;
+      }
+      try {
+        const body = await readJsonBody(req, 64 * 1024);
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+          send(res, 400, { error: 'Body must be an object' });
+          return true;
+        }
+        const { action, vaultId, name } = body;
+        let nextSnapshot;
+        if (action === 'select') {
+          nextSnapshot = store.selectProfile(vaultId);
+        } else if (action === 'create') {
+          nextSnapshot = store.createProfile(name);
+        } else if (action === 'rename') {
+          nextSnapshot = store.renameProfile(vaultId, name);
+        } else if (action === 'delete') {
+          nextSnapshot = store.deleteProfile(vaultId);
+        } else {
+          send(res, 400, { error: `Unknown profile action: ${String(action)}` });
+          return true;
+        }
+        send(res, 200, nextSnapshot);
+      } catch (err) {
+        if (err.status) {
+          send(res, err.status, { error: err.message });
+        } else {
+          logger.error('[local-vault] Failed to update profile:', err.message);
+          send(res, 500, { error: 'Could not update vault profile' });
         }
       }
       return true;

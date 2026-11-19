@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldAlert, X, AlertCircle, Fingerprint, Lock, KeyRound, Loader2 } from 'lucide-react';
+import { ShieldAlert, AlertCircle, Fingerprint, Lock, KeyRound, Loader2, Smartphone, ChevronDown } from 'lucide-react';
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { stepUpService, StepUpRequirements } from '../../services/security/stepUpService';
 import { mapAuthErrorMessage } from '../../services/security/authErrorMapper';
 import { getAuthCapabilities } from '../../services/security/authCapabilities';
+import { getAccountIdentifier } from '../../services/security/accountIdentity';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { PasswordManagerUsernameField } from './PasswordManagerUsernameField';
 
 export interface StepUpAuthModalProps {
   isOpen: boolean;
@@ -41,6 +43,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
   const [requirements, setRequirements] = useState<StepUpRequirements | null>(null);
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
+  const [selectedFactorId, setSelectedFactorId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   useEscapeKey(() => { if (!isLoading) onClose(); }, isOpen);
   const [error, setError] = useState('');
@@ -50,6 +53,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
       setRequirements(null);
       setPassword('');
       setTotpCode('');
+      setSelectedFactorId('');
       setError('');
       setIsLoading(false);
       return;
@@ -57,7 +61,10 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
     let cancelled = false;
     stepUpService.getRequirements(user, { googleRoundTrip })
       .then((next) => {
-        if (!cancelled) setRequirements(next);
+        if (!cancelled) {
+          setRequirements(next);
+          setSelectedFactorId(next.totpFactors[0]?.id ?? '');
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(mapAuthErrorMessage(err, t, 'security:stepUp.invalidPassword'));
@@ -71,6 +78,8 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
 
   const hasTotp = Boolean(requirements?.secondFactor.includes('totp'));
   const hasPasskey = Boolean(requirements?.secondFactor.includes('passkey'));
+  const totpFactors = requirements?.totpFactors ?? [];
+  const showFactorSelector = hasTotp && getAuthCapabilities().serverMfa && totpFactors.length > 1;
 
   const confirm = async (usePasskey: boolean) => {
     if (!requirements) return;
@@ -87,7 +96,16 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
     setIsLoading(true);
     try {
       try {
-        await stepUpService.verify(user, { password, totpCode: totpCode.trim() || undefined, usePasskey }, { googleRoundTrip });
+        await stepUpService.verify(
+          user,
+          {
+            password,
+            totpCode: totpCode.trim() || undefined,
+            factorId: showFactorSelector ? selectedFactorId || undefined : undefined,
+            usePasskey,
+          },
+          { googleRoundTrip }
+        );
       } catch (err: unknown) {
         setError(err instanceof Error && err.name === 'RecentSignInRequiredError'
           ? t('security:stepUp.recentSignInRequired')
@@ -127,15 +145,6 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
       <div className="relative w-full max-w-md bg-card border border-subtle rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t('common:buttons.cancel')}
-          className="absolute top-4 right-4 p-2 text-tertiary hover:text-primary rounded-lg transition-colors"
-        >
-          <X size={18} />
-        </button>
-
         <div className="flex items-center gap-3">
           <div
             className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
@@ -168,7 +177,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
             <Loader2 size={20} className="animate-spin" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} method="post" action="/settings" className="space-y-4">
             {requirements.recentSignInRequired && (
               <p className="text-xs text-secondary">
                 {requirements.recentSignInSatisfied
@@ -182,16 +191,7 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
               </Button>
             )}
 
-            {/* Hidden username to anchor password manager identification */}
-            <input
-              type="text"
-              name="username"
-              autoComplete="username"
-              defaultValue={user?.email || 'user'}
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden="true"
-            />
+            <PasswordManagerUsernameField username={getAccountIdentifier(user)} />
 
             {requirements.password && (
               <div>
@@ -214,6 +214,32 @@ export const StepUpAuthModal: React.FC<StepUpAuthModalProps> = ({
                     className="w-full pl-9 bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5 placeholder-tertiary"
                     placeholder={t('security:stepUp.passwordPlaceholder')}
                   />
+                </div>
+              </div>
+            )}
+
+            {showFactorSelector && (
+              <div>
+                <label htmlFor="step-up-totp-factor" className="block text-xs font-medium text-secondary mb-1">
+                  {t('security:totp.selectFactorLabel')}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tertiary">
+                    <Smartphone size={16} />
+                  </div>
+                  <select
+                    id="step-up-totp-factor"
+                    value={selectedFactorId}
+                    onChange={(e) => setSelectedFactorId(e.target.value)}
+                    className="w-full appearance-none pl-9 pr-9 bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5"
+                  >
+                    {totpFactors.map(factor => (
+                      <option key={factor.id} value={factor.id}>
+                        {factor.friendlyName}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary pointer-events-none" />
                 </div>
               </div>
             )}

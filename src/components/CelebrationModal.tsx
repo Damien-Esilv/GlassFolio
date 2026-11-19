@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Star, Sparkles, X, ChevronRight } from 'lucide-react';
+import { Trophy, Star, Sparkles, ChevronRight } from 'lucide-react';
 import Button from './Button';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
@@ -131,15 +131,6 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({ isOpen, onClose, da
                 className="relative z-20 w-full max-w-md bg-card border border-subtle rounded-3xl p-8 shadow-2xl text-center transform animate-scale-up"
                 onClick={e => e.stopPropagation()}
             >
-                {/* Close button */}
-                <button 
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-secondary hover:text-primary rounded-full hover:bg-subtle transition-colors"
-                    aria-label={t('common:buttons.close')}
-                >
-                    <X size={18} />
-                </button>
-
                 {/* Animated Glowing Icon */}
                 <div className="relative mx-auto mb-6 flex items-center justify-center w-24 h-24">
                     <div className="absolute inset-0 rounded-full bg-brand/20 blur-xl animate-pulse" />

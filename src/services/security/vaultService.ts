@@ -72,13 +72,12 @@ export class VaultService {
      * Re-synchronizes internal status based on storage and provider state.
      */
     public syncStatus(): VaultStatus {
-        if (!appStorage.isVaultInitialized()) {
-            this.currentStatus = 'uninitialized';
-        } else if (appStorage.getEncrypted()?.isOpen()) {
-            this.currentStatus = 'unlocked';
-        } else {
-            this.currentStatus = 'locked';
-        }
+        const nextStatus: VaultStatus = !appStorage.isVaultInitialized()
+            ? 'uninitialized'
+            : appStorage.getEncrypted()?.isOpen()
+                ? 'unlocked'
+                : 'locked';
+        this.setStatus(nextStatus);
         return this.currentStatus;
     }
 
@@ -434,7 +433,7 @@ export class VaultService {
      * Records the relying party / transports of a slot created before they were stored.
      * Header metadata only (no key material), so it works while the vault is locked.
      */
-    public updatePasskeySlotMeta(credentialId: string, meta: { rpId?: string; transports?: string[] }): void {
+    public updatePasskeySlotMeta(credentialId: string, meta: { rpId?: string; transports?: string[]; label?: string }): void {
         const header = this.getVaultHeader();
         if (!header?.wrappedKeys?.passkeys?.some(p => p.credentialId === credentialId)) return;
         const passkeys = header.wrappedKeys.passkeys.map(p => p.credentialId === credentialId
@@ -442,6 +441,7 @@ export class VaultService {
                 ...p,
                 ...(meta.rpId ? { rpId: meta.rpId } : {}),
                 ...(meta.transports?.length ? { transports: meta.transports } : {}),
+                ...(meta.label ? { label: meta.label } : {}),
             }
             : p);
         appStorage.getBacking().setItem(VAULT_HEADER_KEY, JSON.stringify({

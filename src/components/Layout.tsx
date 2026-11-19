@@ -21,6 +21,7 @@ import { CloudSyncNotice } from './security/CloudSyncNotice';
 import { VaultIntegrityNotice } from './security/VaultIntegrityNotice';
 import { PullToRefresh } from './ui/PullToRefresh';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { isLocalVaultUser } from '../services/security/accountIdentity';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -587,7 +588,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="absolute right-0 mt-2 w-56 bg-card rounded-xl border border-subtle shadow-xl py-2 animate-in fade-in slide-in-from-top-2 z-50">
                   <div className="px-4 py-3 border-b border-subtle mb-1">
                     <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-secondary truncate">{user.email}</p>
+                    <p className="text-xs text-secondary truncate">
+                      {isLocalVaultUser(user) ? t('navigation:header.localVaultBadge') : user.email}
+                    </p>
                   </div>
 
                   <Link

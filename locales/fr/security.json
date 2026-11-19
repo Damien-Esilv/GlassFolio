@@ -29,7 +29,9 @@
         "vaultStatusLocked": "Coffre verrouillé",
         "resetFailed": "Le coffre n’a pas pu être réinitialisé. Réessayez.",
         "signOutPrompt": "Ce n'est pas vous, ou vous préférez vous reconnecter ? Vous êtes connecté en tant que {{email}}.",
-        "signOutButton": "Se déconnecter"
+        "signOutButton": "Se déconnecter",
+        "switchVaultPrompt": "Vous souhaitez ouvrir un autre coffre ? Coffre actif : {{name}}.",
+        "switchVaultButton": "Changer de coffre"
     },
     "header": {
         "lockVaultTooltip": "Verrouiller le coffre-fort immédiatement"
@@ -91,6 +93,24 @@
         "downloadBackupCodes": "Télécharger .txt",
         "confirmBackupCheckbox": "J'ai sauvegardé ces codes de secours dans un endroit sûr",
         "finishEnrollment": "Finaliser la configuration 2FA",
+        "addFactorTitle": "Ajouter une application d'authentification",
+        "addFactorButton": "Ajouter un Authenticator",
+        "nameStepTitle": "Nommez votre application d'authentification",
+        "nameStepSubtitle": "Donnez-lui un nom facile à reconnaître (ex. votre téléphone ou gestionnaire de mots de passe).",
+        "namePlaceholder": "ex. Apple Passwords, iPhone...",
+        "nameRequired": "Veuillez saisir un nom pour cette application.",
+        "quickPresetsLabel": "Suggestions rapides",
+        "continueToQrButton": "Continuer vers le QR code",
+        "selectFactorLabel": "Application d'authentification",
+        "renameTooltip": "Renommer cet Authenticator",
+        "renameInputLabel": "Nom de l'Authenticator",
+        "removeFactorTooltip": "Supprimer cet Authenticator",
+        "removeFactorConfirmTitle": "Supprimer {{name}} ?",
+        "removeFactorConfirmMessage": "Les codes générés par cette application ne seront plus acceptés. Vos autres Authenticators restent actifs.",
+        "backupCodesRemaining": "{{count}} codes de secours restants",
+        "regenerateBackupTitle": "Régénérer les codes de secours",
+        "regenerateBackupDescription": "La génération de 10 nouveaux codes de secours invalide immédiatement tous les anciens codes.",
+        "regenerateBackupButton": "Régénérer les codes",
         "disableConfirmTitle": "Désactiver l'authentification à deux facteurs ?",
         "disableConfirmMessage": "Êtes-vous certain de vouloir désactiver la 2FA ? Votre compte ne sera plus protégé que par votre mot de passe maître.",
         "confirmDisable": "Oui, désactiver la 2FA",
@@ -108,6 +128,8 @@
         "noPasskeys": "Aucune passkey enregistrée pour le moment",
         "createdOn": "Créée le {{date}}",
         "deleteTooltip": "Supprimer cette passkey",
+        "renameTooltip": "Renommer cette passkey",
+        "renameInputLabel": "Nom de la passkey",
         "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette passkey ?",
         "promptLabel": "Nom de la passkey (ex: MacBook Touch ID)",
         "registerError": "Échec de l'enregistrement de la passkey",
@@ -214,7 +236,9 @@
             "neverSaved": "Rien d'enregistré pour l'instant dans cette session",
             "pending": "Modifications en attente d'enregistrement",
             "serverHelp": "Vos données chiffrées sont stockées sur la machine qui exécute GlassFolio. Vider ou changer de navigateur n'a aucun effet dessus.",
-            "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine."
+            "browserHelp": "Vos données sont stockées dans ce navigateur. Lancez GlassFolio avec Docker pour les conserver sur votre machine.",
+            "activeVault": "Coffre actif",
+            "demoVault": "Coffre Démo (Isolé)"
         }
     },
     "vaultIntegrity": {

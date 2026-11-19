@@ -20,11 +20,15 @@ import {
     commitBatch,
     fetchSnapshot,
     KEEPALIVE_CHUNK_BYTES,
+    LocalVaultProfileSummary,
     MAX_REQUEST_BYTES,
     MAX_SERVER_VALUE_BYTES,
+    mutateVaultProfile,
     SnapshotOutcome,
     splitBatchForKeepalive,
     VaultBatch,
+    VaultProfileAction,
+    VaultSnapshot,
 } from './localVaultClient';
 import { isServerPersistedKey, VAULT_HEADER_KEY } from './storageKeys';
 
@@ -40,6 +44,10 @@ export interface LocalPersistenceStatus {
     lastError: string | null;
     /** A vault found in this browser could not be merged because it differs from the server's. */
     legacyBrowserVaultIgnored: boolean;
+    /** Active vault profile ID on the local server ('default', 'demo', or custom ID). */
+    activeVaultId: string;
+    /** Personal vault profiles registered on the local server. */
+    profiles: LocalVaultProfileSummary[];
 }
 
 export type ConnectResult =
@@ -49,11 +57,13 @@ export type ConnectResult =
 export interface LocalVaultClient {
     fetchSnapshot(): Promise<SnapshotOutcome>;
     commitBatch(batch: VaultBatch, options?: { keepalive?: boolean }): Promise<boolean>;
+    mutateProfile?(action: VaultProfileAction): Promise<SnapshotOutcome>;
 }
 
 type ChannelMessage =
     | { type: 'update'; set: Record<string, string>; remove: string[] }
-    | { type: 'clear' };
+    | { type: 'clear' }
+    | { type: 'profile_switch'; snapshot: VaultSnapshot };
 
 export const FLUSH_DELAY_MS = 100;
 export const RETRY_BASE_MS = 1000;
@@ -63,6 +73,7 @@ export const CHANNEL_NAME = 'glassfolio_local_vault';
 const defaultClient: LocalVaultClient = {
     fetchSnapshot: () => fetchSnapshot(),
     commitBatch: (batch, options) => commitBatch(batch, options),
+    mutateProfile: (action) => mutateVaultProfile(action),
 };
 
 export class LocalVaultStorageProvider implements IStorageProvider {
@@ -84,6 +95,8 @@ export class LocalVaultStorageProvider implements IStorageProvider {
         lastSavedAt: null,
         lastError: null,
         legacyBrowserVaultIgnored: false,
+        activeVaultId: 'default',
+        profiles: [],
     };
 
     constructor(
@@ -114,7 +127,38 @@ export class LocalVaultStorageProvider implements IStorageProvider {
         if (pending !== this.status.pending) this.patchStatus({ pending });
     }
 
-    // ── Connection ───────────────────────────────────────────────────────────────
+    private syncActiveProfileInitialized(): void {
+        const activeId = this.status.activeVaultId;
+        if (!activeId || activeId === 'demo' || this.status.profiles.length === 0) return;
+        const isInit = this.memory.has(VAULT_HEADER_KEY);
+        const current = this.status.profiles.find(p => p.id === activeId);
+        if (current && current.initialized !== isInit) {
+            this.patchStatus({
+                profiles: this.status.profiles.map(p => p.id === activeId ? { ...p, initialized: isInit } : p),
+            });
+        }
+    }
+
+    private applySnapshot(snapshot: VaultSnapshot, notifyExternal = false): void {
+        this.memory.clear();
+        for (const [key, value] of Object.entries(snapshot.records)) {
+            if (isServerPersistedKey(key)) this.memory.set(key, value);
+        }
+        const activeVaultId = snapshot.activeVaultId ?? this.status.activeVaultId ?? 'default';
+        const profiles = snapshot.profiles ?? this.status.profiles;
+        this.patchStatus({
+            mode: 'server',
+            lastError: null,
+            activeVaultId,
+            profiles,
+        });
+        this.syncActiveProfileInitialized();
+        if (notifyExternal) {
+            this.externalListeners.forEach(listener => listener(null));
+        }
+    }
+
+    // ── Connection & Profile Management ──────────────────────────────────────────
 
     async connect(): Promise<ConnectResult> {
         const outcome = await this.client.fetchSnapshot();
@@ -129,17 +173,82 @@ export class LocalVaultStorageProvider implements IStorageProvider {
             return { mode: 'error', message: outcome.message };
         }
 
-        this.memory.clear();
-        for (const [key, value] of Object.entries(outcome.snapshot.records)) {
-            if (isServerPersistedKey(key)) this.memory.set(key, value);
-        }
         this.mode = 'server';
-        this.patchStatus({ mode: 'server', lastError: null });
+        this.applySnapshot(outcome.snapshot, false);
 
         this.openChannel();
         this.registerPageLifecycle();
         await this.migrateBrowserCopy();
+        this.syncActiveProfileInitialized();
         return { mode: 'server' };
+    }
+
+    /** Switches the active vault profile ('demo', 'personal', or a profile ID). */
+    async selectProfile(vaultId: string): Promise<boolean> {
+        if (this.mode !== 'server' || !this.client.mutateProfile) return false;
+        if (vaultId !== 'personal' && this.status.activeVaultId === vaultId) return true;
+        await this.flush();
+        const outcome = await this.client.mutateProfile({ action: 'select', vaultId });
+        if (outcome.status !== 'ok') {
+            if (outcome.status === 'error') this.patchStatus({ lastError: outcome.message });
+            return false;
+        }
+        this.applySnapshot(outcome.snapshot, true);
+        this.broadcast({ type: 'profile_switch', snapshot: outcome.snapshot });
+        return true;
+    }
+
+    /** Creates a new personal vault profile (or reuses an uninitialized default profile) and makes it active. */
+    async createProfile(name: string): Promise<LocalVaultProfileSummary | null> {
+        if (this.mode !== 'server' || !this.client.mutateProfile) return null;
+        await this.flush();
+        const outcome = await this.client.mutateProfile({ action: 'create', name });
+        if (outcome.status !== 'ok') {
+            if (outcome.status === 'error') this.patchStatus({ lastError: outcome.message });
+            return null;
+        }
+        this.applySnapshot(outcome.snapshot, true);
+        this.broadcast({ type: 'profile_switch', snapshot: outcome.snapshot });
+        return this.status.profiles.find(p => p.id === this.status.activeVaultId) ?? null;
+    }
+
+    /** Renames the currently active personal vault profile on the local server. */
+    async renameActiveProfile(name: string): Promise<boolean> {
+        if (this.mode !== 'server' || !this.client.mutateProfile) return false;
+        const outcome = await this.client.mutateProfile({ action: 'rename', name });
+        if (outcome.status !== 'ok') return false;
+        if (outcome.snapshot.profiles) {
+            this.patchStatus({
+                profiles: outcome.snapshot.profiles,
+                ...(outcome.snapshot.activeVaultId ? { activeVaultId: outcome.snapshot.activeVaultId } : {}),
+            });
+            this.broadcast({ type: 'profile_switch', snapshot: outcome.snapshot });
+        }
+        return true;
+    }
+
+    /** Deletes the active vault profile and its store file on disk, switching to another profile. */
+    async deleteActiveProfile(): Promise<boolean> {
+        if (this.mode !== 'server' || !this.client.mutateProfile) return false;
+        if (this.flushTimer !== null) {
+            clearTimeout(this.flushTimer);
+            this.flushTimer = null;
+        }
+        if (this.retryTimer !== null) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+        }
+        this.pendingWrites.clear();
+        this.pendingClear = false;
+        this.refreshPending();
+        const outcome = await this.client.mutateProfile({ action: 'delete' });
+        if (outcome.status !== 'ok') {
+            if (outcome.status === 'error') this.patchStatus({ lastError: outcome.message });
+            return false;
+        }
+        this.applySnapshot(outcome.snapshot, true);
+        this.broadcast({ type: 'profile_switch', snapshot: outcome.snapshot });
+        return true;
     }
 
     /**
@@ -193,6 +302,7 @@ export class LocalVaultStorageProvider implements IStorageProvider {
             throw new Error(`"${key}" is too large for the local data server.`);
         }
         this.memory.set(key, value);
+        if (key === VAULT_HEADER_KEY) this.syncActiveProfileInitialized();
         this.enqueue(key, value);
         this.broadcast({ type: 'update', set: { [key]: value }, remove: [] });
     }
@@ -203,6 +313,7 @@ export class LocalVaultStorageProvider implements IStorageProvider {
             return;
         }
         this.memory.delete(key);
+        if (key === VAULT_HEADER_KEY) this.syncActiveProfileInitialized();
         this.enqueue(key, null);
         this.broadcast({ type: 'update', set: {}, remove: [key] });
     }
@@ -210,6 +321,7 @@ export class LocalVaultStorageProvider implements IStorageProvider {
     clear(): void {
         if (this.mode === 'server') {
             this.memory.clear();
+            this.syncActiveProfileInitialized();
             this.pendingWrites.clear();
             this.pendingClear = true;
             this.refreshPending();
@@ -363,8 +475,13 @@ export class LocalVaultStorageProvider implements IStorageProvider {
 
     /** Mirrors a change made in another tab of this browser (already persisted by that tab). */
     private applyRemoteMessage(message: ChannelMessage): void {
+        if (message.type === 'profile_switch') {
+            this.applySnapshot(message.snapshot, true);
+            return;
+        }
         if (message.type === 'clear') {
             this.memory.clear();
+            this.syncActiveProfileInitialized();
             this.externalListeners.forEach(listener => listener(null));
             return;
         }
@@ -372,6 +489,7 @@ export class LocalVaultStorageProvider implements IStorageProvider {
         for (const [key, value] of Object.entries(message.set)) {
             if (isServerPersistedKey(key)) this.memory.set(key, value);
         }
+        this.syncActiveProfileInitialized();
         const changed = [...message.remove, ...Object.keys(message.set)];
         // Layers above (the decrypted cache) must re-read, or this tab would write its stale copy back.
         if (changed.length > 0) this.externalListeners.forEach(listener => listener(changed));

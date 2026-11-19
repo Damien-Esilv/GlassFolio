@@ -120,6 +120,12 @@ npm run docker:smoke   # build a throw-away container and verify it end to end
 
 Set these variables in `docker/docker.env` (non-secret defaults) or in your shell. Secrets such as the access token belong in your shell, never in a file.
 
+To change the local port (for example if `3780` is already in use), edit `GLASSFOLIO_PORT` in `docker/docker.env` or pass it inline:
+
+```bash
+GLASSFOLIO_PORT=8080 npm run docker:up
+```
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `GLASSFOLIO_PORT` | `3780` | Host port the app is published on. |

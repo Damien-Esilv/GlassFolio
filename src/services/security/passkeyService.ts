@@ -15,6 +15,8 @@ import { appStorage } from '../storage/appStorage';
 import { vaultService } from './vaultService';
 import type { PasskeySlotInfo } from './vaultTypes';
 import { PASSKEY_RP_ID_STORAGE_KEY } from '../storage/storageKeys';
+import { getAccountIdentifier } from './accountIdentity';
+import { extractAaguid } from './passkeyAaguid';
 
 const PASSKEYS_STORAGE_KEY = 'glassfolio_security_passkeys';
 const PRF_INPUT_LABEL = 'glassfolio:vault-prf:v1';
@@ -41,11 +43,13 @@ const toPasskeyError = (error: unknown): PasskeyError => {
 
 export interface PasskeyRecord {
     id: string; // base64 credential ID
-    name: string; // user-friendly label (e.g. "MacBook Touch ID")
+    name: string; // user-friendly label (e.g. "Apple Passwords")
     createdAt: string;
     algorithm: number; // COSE algorithm, e.g. -7 (ES256)
     transports?: string[];
     prfEnabled?: boolean;
+    /** Lowercase canonical AAGUID when exposed by the authenticator. */
+    aaguid?: string;
     /** Supabase passkey id (cloud mode). */
     serverId?: string;
 }
@@ -56,6 +60,8 @@ export interface PasskeyAttestation {
     rpId: string;
     algorithm: number;
     transports?: string[];
+    /** Lowercase canonical AAGUID when exposed by the authenticator. */
+    aaguid?: string;
     prfEnabled: boolean;
     prfSecret?: Uint8Array;
     /** Serialized credential for server verification (no extension results). */
@@ -253,7 +259,11 @@ export const passkeyService = {
             : {
                 challenge: randomChallenge(),
                 rp: { name: 'GlassFolio', id: getRpId() },
-                user: { id: utf8Encode(params.user.id), name: params.user.email, displayName: params.user.name },
+                user: {
+                    id: utf8Encode(params.user.id),
+                    name: getAccountIdentifier(params.user),
+                    displayName: params.user.name,
+                },
                 pubKeyCredParams: [
                     { alg: -7, type: 'public-key' },  // ES256
                     { alg: -257, type: 'public-key' }, // RS256
@@ -273,11 +283,13 @@ export const passkeyService = {
 
         const attestation = credential.response as AuthenticatorAttestationResponse;
         const prf = readPrf(credential);
+        const aaguid = extractAaguid(attestation.getAuthenticatorData?.());
         return {
             credentialId: toBase64(new Uint8Array(credential.rawId)),
             rpId: publicKey.rp?.id || getRpId(),
             algorithm: attestation.getPublicKeyAlgorithm?.() ?? -7,
             transports: attestation.getTransports?.(),
+            aaguid,
             prfEnabled: prf.enabled,
             prfSecret: prf.secret,
             credentialJson: serializeCredential(credential),

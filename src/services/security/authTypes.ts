@@ -36,6 +36,11 @@ export interface AuthSession {
 
 export type SecondFactorMethod = 'totp' | 'passkey';
 
+export interface TotpChallengeFactor {
+    id: string;
+    friendlyName: string;
+}
+
 export interface AuthResult {
     user: User;
     recoveryKey?: string;
@@ -43,6 +48,8 @@ export interface AuthResult {
     /** The sign-in is pending until one of `secondFactorMethods` is verified. */
     requiresTwoFactor?: boolean;
     secondFactorMethods?: SecondFactorMethod[];
+    /** Enrolled TOTP factors available for the second-factor challenge (used by Cloud selector when > 1). */
+    totpFactors?: TotpChallengeFactor[];
     /** Cloud: the email is verified but the account's vault was never finalized. */
     requiresSignupCompletion?: boolean;
     tempUserId?: string;
@@ -51,6 +58,8 @@ export interface AuthResult {
 export interface StepUpProof {
     password?: string;
     totpCode?: string;
+    /** Target TOTP factor id (required in Cloud when multiple TOTP factors are enrolled). */
+    factorId?: string;
     usePasskey?: boolean;
 }
 
@@ -81,12 +90,13 @@ export interface IAuthProvider {
     /** Page load: reopens the vault with this device's key (Google accounts); true when it is open. */
     resumeDeviceSession?(): Promise<boolean>;
     setupLocalVault?(name: string, masterPassword: string, options?: { overwriteExisting?: boolean }): Promise<AuthResult>;
-    unlockLocalVault?(masterPassword: string): Promise<AuthResult>;
-    verifySecondFactor?(tokenOrCode: string): Promise<AuthResult>;
+    unlockLocalVault?(masterPassword: string, vaultId?: string): Promise<AuthResult>;
+    selectLocalVaultProfile?(vaultId: string): Promise<void>;
+    verifySecondFactor?(tokenOrCode: string, factorId?: string): Promise<AuthResult>;
     /** Abandons a sign-in waiting for its second factor (locks the vault / ends the AAL1 session). */
     cancelSecondFactor?(): Promise<void>;
     changeEmail?(currentPassword: string, newEmail: string): Promise<void>;
-    changePassword?(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string }): Promise<void>;
+    changePassword?(oldPassword: string, newPassword: string, options?: { nonce?: string; totpCode?: string; factorId?: string }): Promise<void>;
     requestPasswordReset?(email: string, redirectTo?: string, options?: { captchaToken?: string }): Promise<void>;
     recoverPassword?(recoveryKey: string, newPassword: string): Promise<{ newRecoveryKey: string }>;
     resendEmailVerification?(email?: string, options?: { captchaToken?: string }): Promise<void>;
@@ -105,15 +115,15 @@ export interface IAuthProvider {
     /** Cloud: the current access token, refreshed first if it is about to expire. */
     getActiveAccessToken?(): Promise<string | undefined>;
     /** Local: unlocks the vault through a PRF passkey. Cloud: Supabase passkey sign-in (+ PRF unlock). */
-    signInWithPasskey?(): Promise<AuthResult>;
+    signInWithPasskey?(vaultId?: string): Promise<AuthResult>;
     /** Completes a pending sign-in with a passkey as second factor. */
     verifySecondFactorWithPasskey?(): Promise<AuthResult>;
     enrollMfaTotp?(friendlyName?: string): Promise<{ id: string; secret: string; uri?: string } | null>;
     verifyMfaEnrollment?(factorId: string, code: string): Promise<void>;
     /** Cloud: verifies a TOTP code against the Supabase factor and upgrades the session to AAL2. */
-    verifyTotpCode?(code: string): Promise<void>;
+    verifyTotpCode?(code: string, factorId?: string): Promise<void>;
     unenrollMfa?(factorId: string): Promise<void>;
-    listMfaFactors?(): Promise<Array<{ id: string; factor_type: string; friendly_name?: string }>>;
+    listMfaFactors?(): Promise<Array<{ id: string; factor_type: string; friendly_name?: string; created_at?: string }>>;
     deleteAccountPermanently?(options: { password?: string; confirmationText?: string }): Promise<void>;
     /**
      * Step-up before a sensitive action. Local: vault password + local factor. Cloud: a fresh

@@ -23,7 +23,8 @@
     "header": {
         "proPlan": "Pro Plan",
         "profileAndAccount": "Profile & Account",
-        "preferences": "Settings"
+        "preferences": "Settings",
+        "localVaultBadge": "Local Encrypted Vault"
     },
     "brandName": "Glassfolio",
     "collapseSidebar": "Collapse sidebar",

@@ -2,26 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert, ArrowLeft, KeyRound, Fingerprint, Key } from 'lucide-react';
+import { Hexagon, Mail, Lock, AlertCircle, Sparkles, ShieldAlert, ArrowLeft, KeyRound, Fingerprint, Key, HardDrive, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/security/authService';
 import { isPasskeySupported } from '../services/security/passkeyService';
 import { getDeploymentMode, isShowcaseAvailable, buildShowcaseDestinationUrl, getShowcaseUrl } from '../config/deployment';
 import { useDemoAccess } from '../hooks/useDemoAccess';
 import { useDemoOffered } from '../hooks/useDemoOffered';
+import { useLocalPersistenceStatus } from '../hooks/useLocalPersistenceStatus';
 import { demoAvailability } from '../services/demoAvailability';
 import { usePublicThemeLang } from '../hooks/usePublicThemeLang';
 import { ThemeLangDropdowns } from '../components/ui/ThemeLangDropdowns';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { TwoFactorChallengeModal } from '../components/security/TwoFactorChallengeModal';
 import { GoogleDrivePrivacyTooltip } from '../components/security/GoogleDrivePrivacyTooltip';
+import { PasswordManagerUsernameField } from '../components/security/PasswordManagerUsernameField';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 import { isDemoAccount } from '../services/security/demoAccount';
 import { LegalLink } from '../components/ui/LegalLink';
 
 const Login: React.FC = () => {
    const { t } = useTranslation();
-   const { login, logout, unlockLocalVault, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
+   const { login, logout, unlockLocalVault, selectLocalVaultProfile, signInWithPasskey, user, pendingSecondFactor, cancelSecondFactor, pendingSignupCompletion } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -36,8 +38,32 @@ const Login: React.FC = () => {
    const antiBotRef = useRef<AntiBotShieldHandle | null>(null);
    const deploymentMode = getDeploymentMode();
    const isLocal = deploymentMode === 'local';
+   const localStatus = useLocalPersistenceStatus();
+   const localProfiles = localStatus.profiles;
+   const initializedLocalProfiles = localProfiles.filter(p => p.initialized);
+   const [selectedVaultId, setSelectedVaultId] = useState<string>(() =>
+      localStatus.activeVaultId !== 'demo' ? localStatus.activeVaultId : (localProfiles[0]?.id ?? 'default')
+   );
+   const selectedProfile = localProfiles.find(p => p.id === selectedVaultId) ?? localProfiles[0];
+   const selectedProfileName = selectedProfile?.name || 'Local Vault';
    const { launchDemo, isLaunchingDemo, demoError } = useDemoAccess();
    const demoOffered = useDemoOffered();
+
+   useEffect(() => {
+      if (!isLocal || localProfiles.length === 0) return;
+      if (localStatus.activeVaultId !== 'demo' && localProfiles.some(p => p.id === localStatus.activeVaultId)) {
+         setSelectedVaultId(localStatus.activeVaultId);
+      } else if (!localProfiles.some(p => p.id === selectedVaultId)) {
+         setSelectedVaultId(localProfiles[0].id);
+      }
+   }, [isLocal, localStatus.activeVaultId, localProfiles, selectedVaultId]);
+
+   const handleSelectVaultProfile = (nextVaultId: string) => {
+      setSelectedVaultId(nextVaultId);
+      setError('');
+      setPassword('');
+      void selectLocalVaultProfile(nextVaultId);
+   };
 
    // Started for a demo (npm run dev:demo, GLASSFOLIO_DEMO=1): open it without a click
    const launchDemoRef = useRef(launchDemo);
@@ -115,7 +141,7 @@ const Login: React.FC = () => {
       try {
          // Navigation happens once AuthContext sets the user, i.e. after any pending second factor.
          if (isLocal) {
-            await unlockLocalVault(password);
+            await unlockLocalVault(password, selectedProfile?.id);
          } else {
             // Anti-bot check in cloud mode
             if (antiBotRef.current) {
@@ -153,7 +179,7 @@ const Login: React.FC = () => {
       setError('');
       setIsLoading(true);
       try {
-         await signInWithPasskey();
+         await signInWithPasskey(isLocal ? selectedProfile?.id : undefined);
       } catch (err: unknown) {
          setError(mapAuthErrorMessage(err, t, 'common:errors.passkey.FAILED'));
       } finally {
@@ -279,187 +305,216 @@ const Login: React.FC = () => {
                </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-               {isLocal ? (
-                     <div>
-                        {/* Hidden username to anchor password autofill in local mode */}
-                        <input
-                           type="text"
-                           name="username"
-                           id="local-username"
-                           autoComplete="username"
-                           defaultValue="local-user"
-                           className="sr-only"
-                           tabIndex={-1}
-                           aria-hidden="true"
-                        />
-                        <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.masterPasswordLabel')}</label>
-                        <div className="relative">
-                           <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
-                           <input
-                              id="login-password"
-                              name="password"
-                              type="password"
-                              required
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              autoComplete="current-password"
-                              className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
-                              placeholder={t('auth:login.masterPasswordPlaceholder')}
-                           />
+            {pendingSecondFactor ? (
+               <TwoFactorChallengeModal
+                  isOpen
+                  methods={pendingSecondFactor}
+                  accountIdentifier={isLocal ? selectedProfileName : email}
+                  onCancel={() => {
+                     void cancelSecondFactor();
+                  }}
+               />
+            ) : (
+               <>
+                  <form onSubmit={handleSubmit} method="post" action="/login" className="space-y-4">
+                     {isLocal ? (
+                        <div className="space-y-4">
+                           <PasswordManagerUsernameField id="local-username" username={selectedProfileName} />
+                           {localProfiles.length > 1 && (
+                              <div>
+                                 <label htmlFor="local-vault-select" className="block text-xs font-medium text-secondary mb-1.5">
+                                    {t('auth:login.selectLocalVaultLabel')}
+                                 </label>
+                                 <div className="relative">
+                                    <HardDrive className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary pointer-events-none" size={18} />
+                                    <select
+                                       id="local-vault-select"
+                                       value={selectedProfile?.id ?? 'default'}
+                                       onChange={(e) => handleSelectVaultProfile(e.target.value)}
+                                       className="w-full appearance-none bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 pr-9 py-2.5 cursor-pointer"
+                                    >
+                                       {localProfiles.map((profile) => (
+                                          <option key={profile.id} value={profile.id}>
+                                             {profile.name}
+                                          </option>
+                                       ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-tertiary pointer-events-none" size={16} />
+                                 </div>
+                              </div>
+                           )}
+                           <div>
+                              <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.masterPasswordLabel')}</label>
+                              <div className="relative">
+                                 <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
+                                 <input
+                                    id="login-password"
+                                    name="password"
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
+                                    placeholder={t('auth:login.masterPasswordPlaceholder')}
+                                 />
+                              </div>
+                           </div>
                         </div>
+                     ) : (
+                        <>
+                           <div>
+                              <label htmlFor="login-email" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.emailLabel')}</label>
+                              <div className="relative">
+                                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
+                                 <input
+                                    id="login-email"
+                                    name="email"
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    autoComplete="username webauthn"
+                                    spellCheck={false}
+                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
+                                    placeholder={t('auth:login.emailPlaceholder')}
+                                 />
+                              </div>
+                           </div>
+                           <div>
+                              <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.passwordLabel')}</label>
+                              <div className="relative">
+                                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
+                                 <input
+                                    id="login-password"
+                                    name="password"
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                    className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
+                                    placeholder={t('auth:login.passwordPlaceholder')}
+                                 />
+                              </div>
+                           </div>
+                           <div className="flex justify-end">
+                              <Link to="/forgot-password" className="text-xs text-brand hover:text-brand/80">{t('auth:login.forgotPassword')}</Link>
+                           </div>
+                        </>
+                     )}
+
+                     <Button type="submit" className="w-full" isLoading={isLoading} disabled={lockoutSeconds > 0}>
+                        {isLocal ? t('auth:login.unlockVaultButton') : t('auth:login.signInButton')}
+                     </Button>
+                  </form>
+
+                  {!isLocal && <AntiBotShield ref={antiBotRef} />}
+
+                  {isLocal && (
+                     <div className="mt-3 text-center">
+                        {/* The recovery key resets the master password and is rotated at the same time. */}
+                        <Link
+                           to="/reset-password?mode=recover"
+                           className="text-xs text-brand hover:text-brand/80 transition-colors inline-flex items-center gap-1.5"
+                        >
+                           <KeyRound size={13} />
+                           {t('auth:login.useRecoveryKey')}
+                        </Link>
                      </div>
-               ) : (
-                  <>
-                     <div>
-                        <label htmlFor="login-email" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.emailLabel')}</label>
-                        <div className="relative">
-                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
-                           <input
-                              id="login-email"
-                              name="email"
-                              type="email"
-                              required
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              autoComplete="username webauthn"
-                              spellCheck={false}
-                              className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
-                              placeholder={t('auth:login.emailPlaceholder')}
-                           />
+                  )}
+
+                  <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
+                     {/* Local: always offered; without a passkey on this device the click explains how to add one */}
+                     {(isLocal || passkeySupported) && (
+                        <button
+                           type="button"
+                           onClick={handlePasskeySignIn}
+                           disabled={isLoading}
+                           className="w-full flex items-center justify-center gap-2.5 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium shadow-sm"
+                        >
+                           <Fingerprint size={18} className="text-brand" />
+                           {isLocal ? t('auth:login.unlockWithPasskey') : t('auth:login.signInWithPasskey')}
+                        </button>
+                     )}
+
+                     {!isLocal && (
+                        <div className="space-y-1.5">
+                           <button
+                              type="button"
+                              onClick={handleGoogleLogin}
+                              className="w-full flex items-center justify-center gap-3 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium"
+                           >
+                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                 <path className="text-brand" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
+                                 <path className="text-success" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor" />
+                                 <path className="text-warning" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="currentColor" />
+                                 <path className="text-error" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor" />
+                              </svg>
+                              {t('auth:login.signInWithGoogle')}
+                           </button>
+                           <GoogleDrivePrivacyTooltip />
                         </div>
-                     </div>
-                     <div>
-                        <label htmlFor="login-password" className="block text-xs font-medium text-secondary mb-1.5">{t('auth:login.passwordLabel')}</label>
-                        <div className="relative">
-                           <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary" size={18} />
-                           <input
-                              id="login-password"
-                              name="password"
-                              type="password"
-                              required
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              autoComplete="current-password"
-                              className="w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 placeholder-tertiary"
-                              placeholder={t('auth:login.passwordPlaceholder')}
-                           />
-                        </div>
-                     </div>
-                     <div className="flex justify-end">
-                        <Link to="/forgot-password" className="text-xs text-brand hover:text-brand/80">{t('auth:login.forgotPassword')}</Link>
-                     </div>
-                  </>
-               )}
+                     )}
 
-               <Button type="submit" className="w-full" isLoading={isLoading} disabled={lockoutSeconds > 0}>
-                  {isLocal ? t('auth:login.unlockVaultButton') : t('auth:login.signInButton')}
-               </Button>
-            </form>
+                     {isLocal && demoOffered && (
+                        <button
+                           type="button"
+                           onClick={() => launchDemo(from)}
+                           disabled={isLoading || isLaunchingDemo}
+                           className="w-full flex items-center justify-center gap-2 bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
+                        >
+                           <Sparkles size={16} />
+                           {t('auth:login.exploreDemoAccount')}
+                        </button>
+                     )}
+                  </div>
 
-            {!isLocal && <AntiBotShield ref={antiBotRef} />}
-
-            {isLocal && (
-               <div className="mt-3 text-center">
-                  {/* The recovery key resets the master password and is rotated at the same time. */}
-                  <Link
-                     to="/reset-password?mode=recover"
-                     className="text-xs text-brand hover:text-brand/80 transition-colors inline-flex items-center gap-1.5"
-                  >
-                     <KeyRound size={13} />
-                     {t('auth:login.useRecoveryKey')}
-                  </Link>
-               </div>
+                  <p className="text-center text-secondary text-sm mt-6">
+                     {isLocal ? (
+                        initializedLocalProfiles.length > 0 ? (
+                           <>
+                              {t('auth:login.createAnotherLocalVault')}{' '}
+                              <Link to="/signup" className="text-brand hover:text-brand/80 font-medium">
+                                 {t('auth:login.createNewLocalVaultLink')}
+                              </Link>
+                           </>
+                        ) : (
+                           <>
+                              {t('auth:login.noLocalVault')}{' '}
+                              <Link to="/signup" className="text-brand hover:text-brand/80 font-medium">
+                                 {t('auth:login.initLocalVaultLink')}
+                              </Link>
+                           </>
+                        )
+                     ) : (
+                        <>
+                           {t('auth:login.noAccount')}{' '}
+                           <Link to="/signup" className="text-brand hover:text-brand/80 font-medium">
+                              {t('auth:login.signUpLink')}
+                           </Link>
+                        </>
+                     )}
+                  </p>
+               </>
             )}
 
-            <div className="mt-6 pt-6 border-t border-subtle space-y-2.5">
-               {/* Local: always offered; without a passkey on this device the click explains how to add one */}
-               {(isLocal || passkeySupported) && (
-                  <button
-                     type="button"
-                     onClick={handlePasskeySignIn}
-                     disabled={isLoading}
-                     className="w-full flex items-center justify-center gap-2.5 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium shadow-sm"
-                  >
-                     <Fingerprint size={18} className="text-brand" />
-                     {isLocal ? t('auth:login.unlockWithPasskey') : t('auth:login.signInWithPasskey')}
-                  </button>
-               )}
-
-               {!isLocal && (
-                  <div className="space-y-1.5">
-                     <button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        className="w-full flex items-center justify-center gap-3 bg-subtle hover:bg-card-hover text-primary px-4 py-2.5 rounded-lg border border-subtle transition-colors text-sm font-medium"
-                     >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                           <path className="text-brand" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
-                           <path className="text-success" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor" />
-                           <path className="text-warning" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="currentColor" />
-                           <path className="text-error" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor" />
-                        </svg>
-                        {t('auth:login.signInWithGoogle')}
-                     </button>
-                     <GoogleDrivePrivacyTooltip />
-                  </div>
-               )}
-
-                {isLocal && demoOffered && (
-                   <button
-                      type="button"
-                      onClick={() => launchDemo(from)}
-                      disabled={isLoading || isLaunchingDemo}
-                      className="w-full flex items-center justify-center gap-2 bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm disabled:opacity-60"
-                   >
-                      <Sparkles size={16} />
-                      {t('auth:login.exploreDemoAccount')}
-                   </button>
-                )}
-            </div>
-
-            <p className="text-center text-secondary text-sm mt-6">
-               {isLocal ? (
-                  <>
-                     {t('auth:login.noLocalVault')}{' '}
-                     <Link to="/signup" className="text-brand hover:text-brand/80 font-medium">
-                        {t('auth:login.initLocalVaultLink')}
-                     </Link>
-                  </>
-               ) : (
-                  <>
-                     {t('auth:login.noAccount')}{' '}
-                     <Link to="/signup" className="text-brand hover:text-brand/80 font-medium">
-                        {t('auth:login.signUpLink')}
-                     </Link>
-                  </>
-               )}
-            </p>
-
-            <div className="flex items-center justify-center gap-3 text-xs text-tertiary mt-4 pt-4 border-t border-subtle">
-               <LegalLink path="/" className="hover:text-primary transition-colors">
-                  {t('landing:header.brandName')}
-               </LegalLink>
-               <span>&bull;</span>
-               <LegalLink path="/privacy" className="hover:text-primary transition-colors">
-                  {t('legal:center.tabs.privacy')}
-               </LegalLink>
-               <span>&bull;</span>
-               <LegalLink path="/terms" className="hover:text-primary transition-colors">
-                  {t('legal:center.tabs.terms')}
-               </LegalLink>
-            </div>
+            {isShowcaseAvailable() && (
+               <div className="flex items-center justify-center gap-3 text-xs text-tertiary mt-4 pt-4 border-t border-subtle">
+                  <LegalLink path="/" className="hover:text-primary transition-colors">
+                     {t('landing:header.brandName')}
+                  </LegalLink>
+                  <span>&bull;</span>
+                  <LegalLink path="/privacy" className="hover:text-primary transition-colors">
+                     {t('legal:center.tabs.privacy')}
+                  </LegalLink>
+                  <span>&bull;</span>
+                  <LegalLink path="/terms" className="hover:text-primary transition-colors">
+                     {t('legal:center.tabs.terms')}
+                  </LegalLink>
+               </div>
+            )}
          </div>
-
-         {pendingSecondFactor && (
-            <TwoFactorChallengeModal
-               isOpen
-               methods={pendingSecondFactor}
-               onCancel={() => {
-                  void cancelSecondFactor();
-               }}
-            />
-         )}
       </div>
    );
 };

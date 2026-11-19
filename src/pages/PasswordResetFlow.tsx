@@ -1,14 +1,18 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { KeyRound, Mail, ArrowLeft, AlertCircle, CheckCircle2, ShieldAlert, Lock, Loader2 } from 'lucide-react';
+import { KeyRound, Mail, ArrowLeft, AlertCircle, CheckCircle2, ShieldAlert, Lock, Loader2, HardDrive, ChevronDown } from 'lucide-react';
 import Button from '../components/Button';
 import { authService } from '../services/security/authService';
 import { evaluatePassword } from '../services/security/passwordValidator';
 import { AntiBotShield, AntiBotShieldHandle } from '../components/security/AntiBotShield';
 import { RecoveryKeyDialog } from '../components/security/RecoveryKeyDialog';
+import { PasswordManagerUsernameField } from '../components/security/PasswordManagerUsernameField';
 import { mapAuthErrorMessage } from '../services/security/authErrorMapper';
 import { getAuthCapabilities } from '../services/security/authCapabilities';
+import { persistPasswordCredential } from '../services/security/accountIdentity';
+import { useAuth } from '../context/AuthContext';
+import { useLocalPersistenceStatus } from '../hooks/useLocalPersistenceStatus';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface PasswordResetFlowProps {
@@ -19,10 +23,16 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
     const { t } = useTranslation(['auth', 'common', 'security']);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { selectLocalVaultProfile } = useAuth();
+    const localStatus = useLocalPersistenceStatus();
 
     // Determine mode from prop or query parameter (?mode=recover or default). Local mode sends no email
     // at all: the only way back in is the recovery key, never a "reset email sent" that never comes.
     const emailAvailable = getAuthCapabilities().emailVerification;
+    const isLocal = !emailAvailable;
+    const localProfiles = localStatus.profiles;
+    const activePersonalProfile = localProfiles.find(p => p.id === localStatus.activeVaultId) ?? localProfiles[0];
+    const selectedProfileName = activePersonalProfile?.name || 'Local Vault';
     const modeFromQuery = !emailAvailable || searchParams.get('mode') === 'recover' ? 'recover' : initialMode;
     const [mode, setMode] = useState<'request' | 'recover'>(modeFromQuery);
 
@@ -112,6 +122,10 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
                 throw new Error('Vault recovery is not supported.');
             }
             const res = await authService.recoverPassword(cleanKey, newPassword);
+            const credId = isLocal ? selectedProfileName : email.trim();
+            if (credId) {
+                persistPasswordCredential({ id: credId, name: credId, password: newPassword });
+            }
             // Mandatory Rotation: open dialog with the newly generated recovery key
             setNewRotatedRecoveryKey(res.newRecoveryKey);
         } catch (err: unknown) {
@@ -240,17 +254,36 @@ export const PasswordResetFlow: React.FC<PasswordResetFlowProps> = ({ initialMod
 
                 {/* Mode 2: Emergency Recovery Key Unlock + New Password */}
                 {mode === 'recover' && (
-                    <form onSubmit={handleRecoverVault} className="space-y-4">
-                        {/* Hidden username to anchor password manager identification */}
-                        <input
-                            type="text"
-                            name="username"
-                            autoComplete="username"
-                            defaultValue={email || 'user'}
-                            className="sr-only"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                        />
+                    <form onSubmit={handleRecoverVault} method="post" action="/reset-password" className="space-y-4">
+                        {(isLocal || email.trim().length > 0) && (
+                            <PasswordManagerUsernameField username={isLocal ? selectedProfileName : email.trim()} />
+                        )}
+                        {isLocal && localProfiles.length > 1 && (
+                            <div>
+                                <label htmlFor="recovery-local-vault-select" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
+                                    {t('auth:login.selectLocalVaultLabel')}
+                                </label>
+                                <div className="relative">
+                                    <HardDrive className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle pointer-events-none" size={18} />
+                                    <select
+                                        id="recovery-local-vault-select"
+                                        value={activePersonalProfile?.id ?? 'default'}
+                                        onChange={(e) => {
+                                            setError(null);
+                                            void selectLocalVaultProfile(e.target.value);
+                                        }}
+                                        className="w-full appearance-none pl-10 pr-9 py-2.5 rounded-xl bg-subtle text-primary border border-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm cursor-pointer"
+                                    >
+                                        {localProfiles.map((profile) => (
+                                            <option key={profile.id} value={profile.id}>
+                                                {profile.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle pointer-events-none" size={16} />
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label htmlFor="recovery-key" className="block text-xs font-semibold text-subtle uppercase tracking-wider mb-1">
                                 {t('auth:recovery.keyInputLabel', 'Emergency Recovery Key')}
