@@ -13,7 +13,7 @@ services:
     init: true
     ports:
       # Localhost only by default. Set GLASSFOLIO_BIND=0.0.0.0 to expose it on your network.
-      - "${GLASSFOLIO_BIND:-127.0.0.1}:${GLASSFOLIO_PORT:-3000}:8080"
+      - "${GLASSFOLIO_BIND:-127.0.0.1}:${GLASSFOLIO_PORT:-3780}:8080"
     volumes:
       - ${GLASSFOLIO_DATA:-glassfolio-data}:/data
     environment:

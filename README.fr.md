@@ -106,7 +106,7 @@ L'image sert l'application, relaie les données de marché sur la même origine 
 git clone https://github.com/Damien-Esilv/GlassFolio.git && cd GlassFolio && npm run docker:up
 ```
 
-Ouvrez <http://localhost:3000>, créez votre mot de passe maître, et c'est prêt.
+Ouvrez <http://localhost:3780>, créez votre mot de passe maître, et c'est prêt.
 
 Pour explorer le compte de démonstration à la place, démarrez avec `GLASSFOLIO_DEMO=1 npm run docker:up` : l'application s'ouvre directement sur la démo (`npm run docker:up` seul ne la propose jamais).
 
@@ -122,7 +122,7 @@ Définissez ces variables dans `docker/docker.env` (valeurs par défaut non secr
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `GLASSFOLIO_PORT` | `3000` | Port de l'hôte sur lequel l'application est publiée. |
+| `GLASSFOLIO_PORT` | `3780` | Port de l'hôte sur lequel l'application est publiée. |
 | `GLASSFOLIO_BIND` | `127.0.0.1` | Adresse d'écoute de l'hôte. Toute valeur autre que loopback expose GlassFolio à votre réseau et exige un jeton. |
 | `GLASSFOLIO_DATA` | volume nommé `glassfolio-data` | Dossier de l'hôte où stocker les données à la place du volume (accessible en écriture par l'uid 1000). |
 | `GLASSFOLIO_ALLOWED_HOSTS` | vide | Noms de domaine, séparés par des virgules, autorisés à joindre l'API du coffre derrière un reverse proxy. `localhost` et les adresses IP fonctionnent toujours. |
@@ -171,7 +171,7 @@ L'image est reconstruite et le conteneur remplacé ; le volume de données n'est
 
 ### IA locale avec Ollama
 
-Dans les réglages, choisissez le fournisseur Ollama et saisissez son adresse (`http://localhost:11434` par défaut). L'appel est fait par votre navigateur : Ollama doit donc autoriser l'origine de l'application (définissez `OLLAMA_ORIGINS`, par exemple `OLLAMA_ORIGINS=http://localhost:3000`). Si Ollama tourne sur une autre machine, ajoutez son origine avec `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`. La commande `npm run ollama:proxy` lance un petit proxy CORS local sur le port 11435 si vous en avez besoin.
+Dans les réglages, choisissez le fournisseur Ollama et saisissez son adresse (`http://localhost:11434` par défaut). L'appel est fait par votre navigateur : Ollama doit donc autoriser l'origine de l'application (définissez `OLLAMA_ORIGINS`, par exemple `OLLAMA_ORIGINS=http://localhost:3780`). Si Ollama tourne sur une autre machine, ajoutez son origine avec `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`. La commande `npm run ollama:proxy` lance un petit proxy CORS local sur le port 11435 si vous en avez besoin.
 
 ### Durcissement du conteneur
 
@@ -203,7 +203,7 @@ Prérequis : **Node 22.x** et npm.
 git clone https://github.com/Damien-Esilv/GlassFolio.git
 cd GlassFolio
 npm install
-npm run dev        # http://localhost:3000 (mode local)
+npm run dev        # http://localhost:3780 (mode local)
 ```
 
 Pour essayer sans saisir de données, démarrez avec `npm run dev:demo` (ou `GLASSFOLIO_DEMO=1 npm run docker:up`) : l'application s'ouvre sur le compte de démonstration. Un lancement normal ne propose pas de démo. Des exemples de CSV de courtiers se trouvent dans [`test-data/`](test-data).

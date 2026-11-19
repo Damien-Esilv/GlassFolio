@@ -7,7 +7,7 @@
  *
  *   npm run screenshots           (English: public/screenshots/en/)
  *   npm run screenshots -- --lang fr (French: public/screenshots/fr/)
- *   CHROME_PATH=/usr/bin/chromium npm run screenshots -- --base http://localhost:3000
+ *   CHROME_PATH=/usr/bin/chromium npm run screenshots -- --base http://localhost:3780
  *
  * It signs in with the demo account (`/?demo=1`), so no personal data ends up in the images.
  */
@@ -25,7 +25,8 @@ const args = Object.fromEntries(
   }, [])
 );
 
-const BASE_URL = args.base ?? 'http://localhost:3000';
+const DEFAULT_PORT = process.env.GLASSFOLIO_PORT || '3780';
+const BASE_URL = args.base ?? `http://localhost:${DEFAULT_PORT}`;
 const LANG = args.lang ?? 'en';
 /** Localized screenshots live in public/screenshots/<lang>/ (en, fr). */
 const OUT_DIR = path.resolve(args.out ?? `public/screenshots/${LANG}`);

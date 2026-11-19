@@ -132,7 +132,7 @@
       "failure": "Impossible de joindre Ollama. Vérifiez que l'application est bien lancée.",
       "availableModels": "Modèles disponibles",
       "onlineNoticeTitle": "Note pour la version en ligne (HTTPS)",
-      "onlineNoticeBody": "Vous utilisez actuellement GlassFolio sur le Web (HTTPS). Les navigateurs bloquent les requêtes directes vers http://localhost (Mixed Content). Pour utiliser votre modèle Ollama local sans restriction, lancez GlassFolio en local avec Docker (http://localhost:3000), ou utilisez un modèle Cloud (Groq, Gemini, OpenAI)."
+      "onlineNoticeBody": "Vous utilisez actuellement GlassFolio sur le Web (HTTPS). Les navigateurs bloquent les requêtes directes vers http://localhost (Mixed Content). Pour utiliser votre modèle Ollama local sans restriction, lancez GlassFolio en local avec Docker (http://localhost:3780), ou utilisez un modèle Cloud (Groq, Gemini, OpenAI)."
     },
     "cloud": {
       "serviceLabel": "Fournisseur d'IA Cloud",

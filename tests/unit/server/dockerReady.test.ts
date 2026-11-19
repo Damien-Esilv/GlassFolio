@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildReadyMessage, waitUntilHealthy } from '../../../scripts/lib/dockerReady.mjs';
+import { buildReadyMessage, DEFAULT_GLASSFOLIO_PORT, waitUntilHealthy } from '../../../scripts/lib/dockerReady.mjs';
 
 describe('docker:up ready message', () => {
   it('points to localhost on the configured port, never to 127.0.0.1', () => {
@@ -9,8 +9,8 @@ describe('docker:up ready message', () => {
     expect(message).toContain('up and healthy');
   });
 
-  it('defaults to port 3000', () => {
-    expect(buildReadyMessage()).toContain('http://localhost:3000');
+  it(`defaults to port ${DEFAULT_GLASSFOLIO_PORT}`, () => {
+    expect(buildReadyMessage()).toContain(`http://localhost:${DEFAULT_GLASSFOLIO_PORT}`);
   });
 
   it('reminds about the access token when exposed on the network', () => {
