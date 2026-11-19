@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface BrowserFrameProps {
-  /** Text shown in the fake address bar (e.g. "localhost:3000"). */
+  /** Text shown in the fake address bar (e.g. "localhost:3780"). */
   address: string;
   children: React.ReactNode;
   className?: string;

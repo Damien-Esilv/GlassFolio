@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { readFileSync } from 'node:fs';
-import { DEFAULT_APP_ORIGINS, DEFAULT_PORT, MCP_PATH, TOKEN_HEADER, createMcpBridge, loadOrCreateToken } from './bridge.mjs';
+import { DEFAULT_APP_PORT, DEFAULT_APP_ORIGINS, DEFAULT_PORT, MCP_PATH, TOKEN_HEADER, createMcpBridge, loadOrCreateToken } from './bridge.mjs';
 
 const readJson = (name) => JSON.parse(readFileSync(new URL(name, import.meta.url), 'utf8'));
 const { version } = readJson('./package.json');
@@ -41,7 +41,7 @@ Options:
 Environment:
   GLASSFOLIO_MCP_TOKEN   use this token instead of the one stored in ~/.glassfolio/mcp-token
   GLASSFOLIO_MCP_URL     stdio only: forward to a bridge that already runs (for example the one of a local
-                         GlassFolio server, http://127.0.0.1:3000/mcp) instead of starting one
+                         GlassFolio server, http://127.0.0.1:${DEFAULT_APP_PORT}${MCP_PATH}) instead of starting one
 
 Documentation: https://glassfolio.dev/en/docs`;
 

@@ -132,7 +132,7 @@
       "failure": "Unable to connect to Ollama. Make sure Ollama is running.",
       "availableModels": "Available Models",
       "onlineNoticeTitle": "Note for the online version (HTTPS)",
-      "onlineNoticeBody": "You are currently using GlassFolio on the Web (HTTPS). Modern browsers block direct requests to http://localhost for security reasons (Mixed Content). To use your local Ollama model without restrictions, run GlassFolio locally with Docker (http://localhost:3000), or use a Cloud provider (Groq, Gemini, OpenAI)."
+      "onlineNoticeBody": "You are currently using GlassFolio on the Web (HTTPS). Modern browsers block direct requests to http://localhost for security reasons (Mixed Content). To use your local Ollama model without restrictions, run GlassFolio locally with Docker (http://localhost:3780), or use a Cloud provider (Groq, Gemini, OpenAI)."
     },
     "cloud": {
       "serviceLabel": "Cloud AI Provider",

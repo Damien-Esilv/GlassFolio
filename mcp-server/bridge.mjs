@@ -19,6 +19,7 @@ import { clearInterval, clearTimeout, setInterval, setTimeout } from 'node:timer
 
 export const MCP_PATH = '/mcp';
 export const BRIDGE_PREFIX = '/mcp/bridge';
+export const DEFAULT_APP_PORT = 3780;
 export const DEFAULT_PORT = 47831;
 export const TOKEN_HEADER = 'x-glassfolio-token';
 /** The app origins allowed to open the tab connection of a standalone bridge. */

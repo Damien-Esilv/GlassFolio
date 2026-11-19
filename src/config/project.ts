@@ -17,8 +17,17 @@ export const GITHUB_README_DOCKER_URL = `${GITHUB_REPO_URL}#-self-hosting-with-d
 
 export const GITHUB_LICENSE_URL = `${GITHUB_REPO_URL}/blob/main/LICENSE`;
 
+/** Default host port in local / Docker self-hosted mode (`GLASSFOLIO_PORT`). */
+export const SELF_HOST_DEFAULT_PORT = '3780';
+
 /** Address the container answers on with the default `docker/docker.env`. */
-export const SELF_HOST_DEFAULT_URL = 'http://localhost:3000';
+export const SELF_HOST_DEFAULT_URL = `http://localhost:${SELF_HOST_DEFAULT_PORT}`;
+
+/** Default port of the standalone MCP bridge (`glassfolio-mcp serve` / `GLASSFOLIO_MCP_PORT`). */
+export const MCP_BRIDGE_DEFAULT_PORT = '47831';
+
+/** Address the standalone MCP bridge listens on by default. */
+export const STANDALONE_BRIDGE_DEFAULT_URL = `http://127.0.0.1:${MCP_BRIDGE_DEFAULT_PORT}`;
 
 /** Commands, in order, that bring up the self-hosted app (`docker:up` runs the network guard). */
 export const DOCKER_QUICKSTART_COMMANDS: readonly string[] = [

@@ -1,5 +1,7 @@
 /** Final message of `npm run docker:up`, once the container reports healthy. */
 
+export const DEFAULT_GLASSFOLIO_PORT = '3780';
+
 const LOOPBACK_BINDS = new Set(['', '127.0.0.1', 'localhost', '::1']);
 
 /**
@@ -8,8 +10,8 @@ const LOOPBACK_BINDS = new Set(['', '127.0.0.1', 'localhost', '::1']);
  * @param {{ port?: string, bind?: string, hasToken?: boolean }} options
  * @returns {string}
  */
-export function buildReadyMessage({ port = '3000', bind = '127.0.0.1', hasToken = false } = {}) {
-  const url = `http://localhost:${port || '3000'}`;
+export function buildReadyMessage({ port = DEFAULT_GLASSFOLIO_PORT, bind = '127.0.0.1', hasToken = false } = {}) {
+  const url = `http://localhost:${port || DEFAULT_GLASSFOLIO_PORT}`;
   const lines = [
     '',
     '✅ GlassFolio is up and healthy.',

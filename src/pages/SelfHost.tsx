@@ -11,6 +11,7 @@ import { useDemoAccess } from '../hooks/useDemoAccess';
 import {
   DOCKER_QUICKSTART_COMMANDS,
   GITHUB_REPO_URL,
+  SELF_HOST_DEFAULT_PORT,
   SELF_HOST_DEFAULT_URL,
   buildPublicPagePath,
 } from '../config/project';
@@ -33,11 +34,11 @@ const COMMANDS = {
     'docker start glassfolio-app',
   ],
   update: ['git pull', 'npm run docker:up'],
-  ollama: ['OLLAMA_ORIGINS=http://localhost:3000 ollama serve'],
+  ollama: [`OLLAMA_ORIGINS=${SELF_HOST_DEFAULT_URL} ollama serve`],
 } as const;
 
 const ENV_VARIABLES = [
-  { name: 'GLASSFOLIO_PORT', fallback: '3000' },
+  { name: 'GLASSFOLIO_PORT', fallback: SELF_HOST_DEFAULT_PORT },
   { name: 'GLASSFOLIO_BIND', fallback: '127.0.0.1' },
   { name: 'GLASSFOLIO_DATA', fallback: 'glassfolio-data' },
   { name: 'GLASSFOLIO_ACCESS_TOKEN', fallback: '' },

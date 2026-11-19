@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SelfHostSection } from '../../../../src/components/landing/SelfHostSection';
 import { LandingMotionProvider } from '../../../../src/components/landing/motion/LandingMotionProvider';
 import * as deploymentModule from '../../../../src/config/deployment';
-import { DOCKER_QUICKSTART_COMMANDS, GITHUB_REPO_URL } from '../../../../src/config/project';
+import { DOCKER_QUICKSTART_COMMANDS, GITHUB_REPO_URL, SELF_HOST_DEFAULT_URL } from '../../../../src/config/project';
 import i18n from '../../../../src/i18n';
 
 const renderSection = (): void => {
@@ -54,7 +54,7 @@ describe('<SelfHostSection />', () => {
     for (const command of DOCKER_QUICKSTART_COMMANDS) {
       expect(screen.getByText(command)).toBeTruthy();
     }
-    expect(screen.getByText(/GlassFolio is running on http:\/\/localhost:3000/)).toBeTruthy();
+    expect(screen.getByText(new RegExp(`GlassFolio is running on ${SELF_HOST_DEFAULT_URL}`))).toBeTruthy();
   });
 
   it('copies the install commands to the clipboard and confirms it', async () => {
