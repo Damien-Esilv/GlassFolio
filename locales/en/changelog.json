@@ -9,9 +9,12 @@
   "roadmapLink": "See what's coming next",
   "entries": {
     "v1-0-1": {
-      "title": "GlassFolio 1.0.1 — Fixes and Polish",
+      "title": "GlassFolio 1.0.1 — Multi-Vault, Multi-2FA & Polish",
       "highlights": {
-        "smallRefinements": "Small refinements across the app and the public site.",
+        "localMultiVault": "Multi-vault local mode: create, rename and switch between multiple independent local accounts, with a fully isolated demo account and a unified local port (3780).",
+        "multiTotpPasskeys": "Multi-authenticator management: enroll multiple named 2FA apps (up to 5) and enjoy automatic provider detection and inline renaming for your Passkeys.",
+        "passwordManagerAutofill": "Improved account recognition by password managers (Apple Passwords, Google Password Manager…) during sign-up and sign-in.",
+        "smallRefinements": "Small UI refinements across the app (streamlined dialogs, inline 2FA step) and localized EN/FR screenshots on the public site.",
         "bugFixes": "A few bugs fixed for smoother everyday use."
       }
     },

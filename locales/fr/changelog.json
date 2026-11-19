@@ -9,9 +9,12 @@
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
     "v1-0-1": {
-      "title": "GlassFolio 1.0.1 — Corrections et Finitions",
+      "title": "GlassFolio 1.0.1 — Multi-coffres, Multi-2FA & Finitions",
       "highlights": {
-        "smallRefinements": "Petits ajustements dans l'application et sur le site public.",
+        "localMultiVault": "Mode local multi-coffres : créez, renommez et basculez entre plusieurs comptes locaux indépendants, avec un compte démo entièrement isolé et un port local unifié (3780).",
+        "multiTotpPasskeys": "Gestion multi-authentificateurs : enregistrez plusieurs applications 2FA nommées (jusqu'à 5) et profitez de la détection automatique du gestionnaire et du renommage pour vos Passkeys.",
+        "passwordManagerAutofill": "Meilleure reconnaissance de vos comptes par les gestionnaires de mots de passe (Apple Passwords, Google Password Manager…) lors de la création et de la connexion.",
+        "smallRefinements": "Micro-ajustements d'interface dans l'application (fenêtres contextuelles épurées, 2FA intégrée sur place) et captures d'écran localisées FR/EN sur le site public.",
         "bugFixes": "Quelques bugs corrigés pour un usage plus fluide au quotidien."
       }
     },
