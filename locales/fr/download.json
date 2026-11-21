@@ -1,17 +1,30 @@
 {
   "title": "Téléchargez GlassFolio pour votre ordinateur",
   "intro": "Une vraie application de bureau pour Mac, Windows et Linux : installez-la, ouvrez-la, et votre portefeuille vit dans sa propre fenêtre. Sans Docker, sans terminal, et vos données restent sur votre machine, chiffrées.",
-  "actions": {
-    "detected": "Télécharger pour {{os}}",
+  "hero": {
+    "eyebrow": "Application de bureau",
+    "recommended": "Recommandé pour votre ordinateur",
+    "heading": "GlassFolio pour {{os}}",
+    "headingAny": "GlassFolio pour Mac, Windows et Linux",
+    "anySpec": "Choisissez votre système pour obtenir l’installateur.",
+    "mobileNote": "GlassFolio s’installe sur un ordinateur. Ouvrez cette page sur votre Mac, votre PC Windows ou votre machine Linux, ou choisissez un système ci-dessous.",
+    "download": "Télécharger pour {{os}}",
     "choose": "Choisir votre système",
-    "pending": "Voir les options d’installation"
+    "showAll": "Autres systèmes et versions",
+    "switchToIntel": "Mac avec une puce Intel ? Téléchargez la version Intel.",
+    "switchToSilicon": "Mac avec une puce Apple (M1 ou plus récent) ? Téléchargez cette version.",
+    "windowTitle": "GlassFolio"
   },
   "comingSoon": {
-    "badge": "Première version bientôt disponible",
-    "title": "Les installateurs ne sont pas encore publiés",
     "body": "L’application de bureau est construite et testée ; les premiers installateurs vont être publiés sur GitHub. D’ici là, vous pouvez lancer GlassFolio avec Docker ou essayer la version cloud.",
     "docker": "Installer avec Docker",
     "cloud": "Essayer la version cloud"
+  },
+  "all": {
+    "title": "Tous les systèmes et toutes les versions",
+    "subtitle": "macOS, Windows et Linux, avec les étapes du premier lancement",
+    "tabsLabel": "Système d’exploitation",
+    "yours": "Votre système"
   },
   "platforms": {
     "mac": {
@@ -42,8 +55,7 @@
     }
   },
   "card": {
-    "recommended": "Recommandé pour votre ordinateur",
-    "download": "Télécharger le .{{format}}",
+    "get": "Télécharger",
     "soon": "Bientôt disponible"
   },
   "benefits": {
@@ -67,7 +79,7 @@
   },
   "firstLaunch": {
     "title": "La première ouverture",
-    "intro": "GlassFolio est gratuit et open source, et n’est pas encore signé avec un certificat développeur payant. Votre système vous demande donc de confirmer la première ouverture. C’est normal ; voici comment faire, une seule fois.",
+    "intro": "GlassFolio est gratuit et à code source disponible, et n’est pas encore signé avec un certificat développeur payant. Votre système vous demande donc de confirmer la première ouverture. C’est normal ; voici comment faire, une seule fois.",
     "mac": {
       "title": "Sur Mac",
       "steps": {
@@ -92,6 +104,35 @@
       }
     }
   },
+  "ways": {
+    "title": "Trois façons d’utiliser GlassFolio",
+    "intro": "La même application, le même chiffrement et les mêmes fonctionnalités. Choisissez où elle tourne, et changez quand vous voulez.",
+    "recommended": "Recommandé",
+    "goodToKnow": "Bon à savoir",
+    "desktop": {
+      "title": "Application de bureau",
+      "body": "La façon la plus simple de garder tout sur votre ordinateur : on l’installe comme n’importe quelle application.",
+      "points": {
+        "p1": "Sa propre fenêtre, sans Docker ni terminal",
+        "p2": "Vos données restent sur votre ordinateur, chiffrées",
+        "p3": "Les nouvelles versions vous sont proposées dans l’application"
+      },
+      "note": "Sur Mac, l’application se déverrouille avec votre mot de passe maître. Touch ID, les passkeys et le remplissage automatique de votre gestionnaire de mots de passe fonctionnent dans les versions navigateur (Docker et cloud).",
+      "cta": "Choisir votre téléchargement"
+    },
+    "docker": {
+      "title": "Docker",
+      "body": "Lancez GlassFolio en conteneur sur votre ordinateur ou un serveur à la maison, et ouvrez-le dans votre navigateur. Le même coffre local et chiffré.",
+      "note": "Il s’ouvre dans votre navigateur : Touch ID, les passkeys et votre gestionnaire de mots de passe fonctionnent comme sur n’importe quel site.",
+      "cta": "Lire le guide Docker"
+    },
+    "cloud": {
+      "title": "Version cloud",
+      "body": "Rien à installer : créez un compte gratuit et utilisez GlassFolio depuis n’importe quel navigateur, avec vos données chiffrées de bout en bout.",
+      "note": "Elle fonctionne aussi dans votre navigateur, et vous suit sur tous vos appareils.",
+      "cta": "Créer un compte gratuit"
+    }
+  },
   "updates": {
     "title": "Comment fonctionnent les mises à jour",
     "body": "Au démarrage de GlassFolio, puis toutes les quelques heures, l’application demande à GitHub la dernière version publiée. GitHub voit donc votre adresse IP, comme pour toute requête web ; rien sur vous ni sur vos données n’est envoyé. Les informations de mise à jour sont signées, et chaque téléchargement est comparé à son empreinte avant toute installation. Si une nouvelle version existe, vous choisissez : mettre à jour maintenant, ou plus tard. Vous pouvez désactiver la vérification dans les Réglages."
@@ -101,18 +142,5 @@
     "body": "Chaque version liste l’empreinte SHA-256 de chaque installateur. Comparez-la à celle de votre téléchargement si vous voulez en être sûr.",
     "checksums": "Empreintes SHA-256",
     "releases": "Toutes les versions sur GitHub"
-  },
-  "alternatives": {
-    "title": "D’autres façons d’utiliser GlassFolio",
-    "docker": {
-      "title": "Docker",
-      "body": "Lancez GlassFolio en conteneur sur votre ordinateur ou un serveur à la maison. Le même coffre local et chiffré, ouvert dans votre navigateur.",
-      "cta": "Lire le guide Docker"
-    },
-    "cloud": {
-      "title": "Version cloud",
-      "body": "Rien à installer : créez un compte gratuit et utilisez GlassFolio depuis n’importe quel navigateur, avec vos données chiffrées de bout en bout.",
-      "cta": "Créer un compte gratuit"
-    }
   }
 }

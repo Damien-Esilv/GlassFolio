@@ -43,10 +43,14 @@ describe('<SelfHostSection />', () => {
     expect(screen.getByRole('link', { name: /installation guide/i }).getAttribute('href')).toBe('/self-host');
   });
 
-  it('puts the desktop app first in the self-hosted card, next to the Docker guide', () => {
+  it('puts the desktop app first, ahead of Docker and the cloud, each on its own full-width row', () => {
     vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('showcase');
     renderSection();
     expect(screen.getByRole('link', { name: /Get the desktop app/i }).getAttribute('href')).toBe('/download');
+    const titles = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent);
+    const order = ['Desktop app', 'Docker', 'Cloud'].map((title) => titles.findIndex((text) => text?.startsWith(title)));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
   it('prefixes the guide with /welcome in the unified build', () => {
@@ -72,9 +76,10 @@ describe('<SelfHostSection />', () => {
     await waitFor(() => expect(screen.getByText('Copied')).toBeTruthy());
   });
 
-  it('gives the self-hosted and cloud editions the same weight, with their own calls to action', () => {
+  it('gives the three ways the same width, with their own calls to action', () => {
     renderSection();
-    expect(screen.getByRole('heading', { level: 3, name: 'Self-hosted' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: /Desktop app/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Docker' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 3, name: 'Cloud' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Create a free account' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Log in' }).length).toBeGreaterThan(0);

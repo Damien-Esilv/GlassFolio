@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HelpCircle, ChevronDown } from 'lucide-react';
+import { HelpCircle, ChevronDown, Sparkles, ArrowRight } from 'lucide-react';
+import { useDemoAccess } from '../../hooks/useDemoAccess';
+import { useDemoOffered } from '../../hooks/useDemoOffered';
 
-const FAQ_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8'] as const;
+/** From "can I try it?" to "how do I install it?" to "is it safe?" to the details of the features. */
+const FAQ_KEYS = ['q6', 'q5', 'q8', 'q9', 'q10', 'q7', 'q1', 'q4', 'q3', 'q2'] as const;
 
 export const FaqAccordion: React.FC = () => {
   const { t } = useTranslation();
+  const { launchDemo, isLaunchingDemo, demoError } = useDemoAccess();
+  const demoOffered = useDemoOffered();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggle = (idx: number) => {
@@ -67,6 +72,22 @@ export const FaqAccordion: React.FC = () => {
                   className="px-5 pb-5 pt-1 text-xs sm:text-sm text-secondary leading-relaxed"
                 >
                   {t(`landing:faq.items.${key}.answer`)}
+                  {/* The answer to "how can I try it" is one click away */}
+                  {key === 'q6' && demoOffered && (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => launchDemo('/')}
+                        disabled={isLaunchingDemo}
+                        className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-brand/30 bg-brand/10 hover:bg-brand/15 text-brand text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60 cursor-pointer"
+                      >
+                        <Sparkles size={15} className="shrink-0 transition-transform duration-300 group-hover:rotate-12" />
+                        <span>{isLaunchingDemo ? t('landing:hero.demoCard.ctaLoading') : t('landing:hero.demoCard.cta')}</span>
+                        <ArrowRight size={15} className="shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
+                      </button>
+                      {demoError && <p role="alert" className="text-xs text-negative mt-2">{demoError}</p>}
+                    </div>
+                  )}
                 </div>
               </div>
             );

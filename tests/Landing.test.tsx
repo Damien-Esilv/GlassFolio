@@ -59,21 +59,22 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(screen.getByRole('heading', { name: 'The app, screen by screen' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Security and privacy by design' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Choose where your AI runs' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Two ways to use GlassFolio' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Three ways to use GlassFolio' })).toBeTruthy();
   });
 
-  it('offers the desktop app, Docker and the cloud version in the hero, the app first', () => {
+  it('offers two ways in the hero, at home (the desktop app first, then Docker) and online', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
-    const modes = screen.getByRole('list', { name: 'Three ways to use GlassFolio' });
+    const modes = screen.getByRole('list', { name: 'Two ways to use GlassFolio' });
     const cards = within(modes).getAllByRole('listitem').filter((item) => item.parentElement === modes);
-    expect(cards).toHaveLength(3);
-    expect(within(cards[0]).getByRole('link', { name: /Download the app/i }).getAttribute('href')).toBe('/welcome/download');
-    expect(within(modes).getByRole('link', { name: /Install with Docker/i })).toBeTruthy();
-    expect(within(modes).getByRole('link', { name: /Create a free account/i })).toBeTruthy();
+    expect(cards).toHaveLength(2);
+    const [home, online] = cards;
+    expect(within(home).getByRole('link', { name: /Download the desktop app/i }).getAttribute('href')).toBe('/welcome/download');
+    expect(within(home).getByRole('link', { name: /Install it with Docker/i }).getAttribute('href')).toBe('/welcome/self-host');
+    expect(within(online).getByRole('link', { name: /Create a free account/i })).toBeTruthy();
   });
 
   it('never advertises unsupported real estate or uses "zero-knowledge" wording', () => {
@@ -177,14 +178,36 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
       </MemoryRouter>
     );
 
-    // Headline is displayed
-    expect(await screen.findByRole('heading', { level: 3, name: /Explore the full GlassFolio experience live/i })).toBeTruthy();
+    // The demo stays a discreet button under the two choices, with one line saying what it is
+    expect((await screen.findAllByRole('button', { name: /Try the 1-Click Interactive Demo/i })).length).toBeGreaterThan(0);
+    expect(screen.getByText(/No sign-up, with a sample portfolio/i)).toBeTruthy();
+  });
 
-    // Feature highlights are rendered
-    expect(screen.getByText(/anonymous/i)).toBeTruthy();
+  it('answers the questions people have about downloading the desktop app', () => {
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: /without Docker or a browser tab/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /warn me the first time I open the desktop app/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Apple Silicon or Intel/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /Touch ID, a passkey or my password manager/i })).toBeTruthy();
+    // closed answers stay in the page for crawlers
+    expect(screen.getByText(/Open Anyway/)).toBeTruthy();
+  });
 
-    // Centered demo CTA button is rendered
-    expect(screen.getByRole('button', { name: /Try the 1-Click Interactive Demo/i })).toBeTruthy();
+  it('starts the FAQ with how to try GlassFolio, with the demo one click away in the answer', async () => {
+    render(
+      <MemoryRouter initialEntries={['/welcome']}>
+        <Landing />
+      </MemoryRouter>
+    );
+    const questions = screen.getAllByRole('button', { name: /\?$/ }).filter((button) => button.id.startsWith('faq-btn-'));
+    expect(questions[0].textContent).toMatch(/try GlassFolio without creating an account/i);
+    expect(questions[0].getAttribute('aria-expanded')).toBe('true');
+    const answer = document.getElementById('faq-content-q6') as HTMLElement;
+    expect(await within(answer).findByRole('button', { name: /Try the 1-Click Interactive Demo/i })).toBeTruthy();
   });
 
   it('toggles FAQ accordion questions and answers', () => {

@@ -55,23 +55,9 @@
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Synthèse Patrimoniale Multi-Enveloppes",
     "demoCard": {
-      "badge": "Accès Instantané • Sans inscription",
-      "title": "Explorez l'expérience GlassFolio en direct",
-      "subtitle": "Testez l'application complète sans renseigner d'email ni créer de compte : PEA, CTO, Crypto, aide fiscale Cerfa et assistant IA avec un portefeuille préchargé.",
       "cta": "Tester la démo interactive en 1 clic",
       "ctaLoading": "Ouverture du coffre démo...",
-      "perks": {
-        "noAccount": "100% anonyme & sans compte",
-        "realAssets": "Portefeuille complet prérempli",
-        "aiAssistant": "Assistant IA & serveur MCP actifs",
-        "taxEngine": "Simulateur fiscal Cerfa débloqué"
-      },
-      "stats": {
-        "portfolioValue": "148 450 €",
-        "portfolioLabel": "Patrimoine de démo",
-        "unrealizedGain": "+18 420 € (+14,17%)",
-        "envelopes": "6 enveloppes actives"
-      }
+      "hint": "Sans inscription, avec un portefeuille d’exemple"
     },
     "envelopeFilterLabel": "Filtrer par Enveloppe",
     "currencySwitchLabel": "Devise de Référence",
@@ -95,25 +81,16 @@
       "cashYield": "Liquidités, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Trois façons d'utiliser GlassFolio",
-      "desktop": {
-        "badge": "Nouveau",
-        "title": "Installer l'application",
-        "tagline": "Application de bureau pour Mac, Windows et Linux",
-        "points": {
-          "p1": "Sa propre fenêtre : sans Docker ni terminal",
-          "p2": "Vos données restent sur votre ordinateur, chiffrées"
-        },
-        "cta": "Télécharger l'application"
-      },
+      "ariaLabel": "Deux façons d'utiliser GlassFolio",
       "local": {
-        "title": "Avec Docker",
-        "tagline": "Auto-hébergé, pour serveurs maison",
+        "title": "Chez vous",
+        "tagline": "Application de bureau ou Docker",
         "points": {
           "p1": "Vos données restent sur votre machine",
           "p2": "Code source-available, contrôle total"
         },
-        "cta": "Installer avec Docker"
+        "cta": "Télécharger l'application de bureau",
+        "ctaDocker": "Vous préférez Docker ? L’installer avec Docker"
       },
       "cloud": {
         "title": "En ligne",
@@ -304,19 +281,30 @@
     }
   },
   "localCloud": {
-    "title": "Deux façons d'utiliser GlassFolio",
+    "title": "Trois façons d'utiliser GlassFolio",
     "subtitle": "La même application, le même chiffrement et les mêmes fonctionnalités. Choisissez où elle tourne, et changez quand vous voulez.",
-    "local": {
-      "title": "Auto-hébergé",
-      "tagline": "Application de bureau ou Docker, sur votre ordinateur ou serveur",
+    "desktop": {
+      "badge": "Recommandé",
+      "title": "Application de bureau",
+      "tagline": "Installez-la comme n’importe quelle application, sur Mac, Windows ou Linux",
+      "points": {
+        "p1": "Sa propre fenêtre : sans Docker ni terminal",
+        "p2": "Vos données restent sur votre ordinateur, chiffrées",
+        "p3": "Les nouvelles versions vous sont proposées dans l’application"
+      },
+      "windowTitle": "GlassFolio",
+      "cta": "Obtenir l'application de bureau"
+    },
+    "docker": {
+      "title": "Docker",
+      "tagline": "Sur votre ordinateur ou un serveur à la maison, ouvert dans votre navigateur",
       "points": {
         "p1": "Contrôle total : vos données ne quittent jamais votre disque",
         "p2": "Code source-available que vous pouvez auditer",
         "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
       },
       "ctaGithub": "Voir le code sur GitHub",
-      "ctaGuide": "Lire le guide d'installation",
-      "ctaDesktop": "Obtenir l'application de bureau"
+      "ctaGuide": "Lire le guide d'installation"
     },
     "cloud": {
       "title": "Cloud",
@@ -429,7 +417,7 @@
       },
       "q6": {
         "question": "Comment essayer GlassFolio sans créer de compte ?",
-        "answer": "Utilisez le bouton de démonstration en haut de cette page. Il ouvre un portefeuille de démonstration déjà rempli (PEA, CTO, crypto, scénarios fiscaux et objectifs) dans votre navigateur. Vous pouvez ensuite vous connecter ou créer votre propre compte."
+        "answer": "Utilisez le bouton de démonstration ci-dessous. Il ouvre un portefeuille de démonstration déjà rempli (PEA, CTO, crypto, scénarios fiscaux et objectifs) dans votre navigateur. Vous pouvez ensuite vous connecter ou créer votre propre compte."
       },
       "q7": {
         "question": "Comment installer l'édition Docker ?",
@@ -437,7 +425,15 @@
       },
       "q8": {
         "question": "Puis-je utiliser GlassFolio sans Docker ni onglet de navigateur ?",
-        "answer": "Oui. L'application de bureau pour Mac, Windows et Linux ouvre GlassFolio dans sa propre fenêtre : téléchargez-la depuis la page de téléchargement, ouvrez-la et créez votre coffre. Elle garde vos données sur votre ordinateur, vérifie les nouvelles versions et les installe quand vous cliquez. Votre système peut vous demander de confirmer la première ouverture, car l'application n'est pas encore signée avec un certificat développeur payant ; la page de téléchargement explique comment."
+        "answer": "Oui. L’application de bureau pour Mac, Windows et Linux ouvre GlassFolio dans sa propre fenêtre. Sur la page de téléchargement, un bouton choisit l’installateur adapté à votre ordinateur (un .dmg pour un Mac, un .exe pour Windows, un AppImage ou un .deb pour Linux), et les autres versions sont à un clic. Ouvrez-la et créez votre coffre : vos données restent sur votre ordinateur, chiffrées. L’application vérifie les nouvelles versions et les installe quand vous cliquez."
+      },
+      "q9": {
+        "question": "Pourquoi mon système m’avertit-il à la première ouverture de l’application de bureau ?",
+        "answer": "GlassFolio est gratuit et à code source disponible, et n’est pas encore signé avec un certificat de développeur payant : macOS et Windows vous demandent donc de confirmer le premier lancement. Sur Mac, ouvrez Réglages Système > Confidentialité et sécurité et cliquez sur Ouvrir quand même. Sur Windows, cliquez sur Informations complémentaires, puis Exécuter quand même. La page de téléchargement montre les étapes pour chaque système, et chaque version liste l’empreinte SHA-256 de chaque installateur pour vérifier votre téléchargement."
+      },
+      "q10": {
+        "question": "Puis-je déverrouiller avec Touch ID, une passkey ou mon gestionnaire de mots de passe dans l’application de bureau ?",
+        "answer": "Sur Mac, l’application de bureau se déverrouille avec votre mot de passe maître : Touch ID, les passkeys et le remplissage automatique de votre gestionnaire de mots de passe n’y sont pas encore disponibles. Ils fonctionnent dans les éditions navigateur (Docker et cloud). Sur Windows et Linux, la prise en charge dépend de votre système."
       }
     }
   },

@@ -1,10 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
-import { Sparkles, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useDemoAccess } from '../../hooks/useDemoAccess';
-import { useDemoOffered } from '../../hooks/useDemoOffered';
-import { TiltCard } from './motion/TiltCard';
+import { ShieldCheck } from 'lucide-react';
+import { DemoButton } from './DemoButton';
 import { HeroModeChoice } from './HeroModeChoice';
 
 /** One orchestrated page-load sequence: badge, headline words, copy, actions, then the live card. */
@@ -17,8 +15,6 @@ const rise = (delay: number) => ({
 
 export const LandingHero: React.FC = () => {
   const { t } = useTranslation();
-  const { launchDemo, isLaunchingDemo, demoError } = useDemoAccess();
-  const demoOffered = useDemoOffered();
 
   const titleWords = t('landing:hero.title').split(' ');
   const wordsDoneAt = 0.15 + titleWords.length * 0.045;
@@ -63,70 +59,12 @@ export const LandingHero: React.FC = () => {
           <m.div {...rise(wordsDoneAt + 0.1)} className="mb-2">
             <HeroModeChoice />
           </m.div>
+
+          {/* The demo, framed and visible under the two choices (nothing on a local install not started for a demo) */}
+          <m.div {...rise(wordsDoneAt + 0.2)}>
+            <DemoButton className="mt-6" />
+          </m.div>
         </div>
-
-        {/* Prominent Animated 1-Click Demo Card (a local install offers it only when started for a demo) */}
-        {demoOffered && (
-        <m.div {...rise(wordsDoneAt + 0.25)} className="max-w-3xl mx-auto">
-          <TiltCard maxTilt={3} className="bg-card border border-brand/30 rounded-2xl p-6 sm:p-7 shadow-xl relative overflow-hidden group">
-            {/* Ambient Background Glow Layer */}
-            <div className="absolute -top-24 -right-24 w-72 h-72 bg-brand/10 rounded-full blur-3xl pointer-events-none group-hover:bg-brand/15 transition-all duration-700" />
-            <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-positive/10 rounded-full blur-3xl pointer-events-none group-hover:bg-positive/15 transition-all duration-700" />
-
-            <div className="relative z-10">
-              {/* Top Row: Badge + Status */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand/10 border border-brand/25 text-brand text-xs font-semibold">
-                  <Sparkles size={14} className="animate-pulse" />
-                  <span>{t('landing:hero.demoCard.badge')}</span>
-                </span>
-                <span className="text-xs text-secondary font-medium">
-                  {t('landing:hero.demoCard.stats.envelopes')}
-                </span>
-              </div>
-
-              {/* Headline & Description */}
-              <div className="mb-5 sm:mb-6 text-left">
-                <h3 className="text-xl sm:text-2xl font-extrabold text-primary tracking-tight mb-2">
-                  {t('landing:hero.demoCard.title')}
-                </h3>
-                <p className="text-sm text-secondary leading-relaxed">
-                  {t('landing:hero.demoCard.subtitle')}
-                </p>
-              </div>
-
-              {/* 4 Feature Pills Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
-                {(['noAccount', 'realAssets', 'aiAssistant', 'taxEngine'] as const).map((perkKey) => (
-                  <div
-                    key={perkKey}
-                    className="flex items-center gap-2 p-2.5 rounded-xl bg-subtle border border-subtle text-xs sm:text-sm font-semibold text-primary"
-                  >
-                    <CheckCircle2 size={15} className="text-positive shrink-0" />
-                    <span>{t(`landing:hero.demoCard.perks.${perkKey}`)}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Centered CTA Button */}
-              <div className="flex items-center justify-center pt-5 border-t border-subtle">
-                <button
-                  type="button"
-                  onClick={() => launchDemo('/')}
-                  disabled={isLaunchingDemo}
-                  className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 hover:-translate-y-0.5 active:translate-y-0 transition-all focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60 cursor-pointer"
-                >
-                  <Sparkles size={16} className="animate-spin-slow shrink-0" />
-                  <span>{isLaunchingDemo ? t('landing:hero.demoCard.ctaLoading') : t('landing:hero.demoCard.cta')}</span>
-                  <ArrowRight size={16} className="shrink-0 transition-transform group-hover:translate-x-1" />
-                </button>
-                {/* e.g. this device already holds a real vault: say why nothing happened */}
-                {demoError && <p role="alert" className="text-xs text-negative mt-2">{demoError}</p>}
-              </div>
-            </div>
-          </TiltCard>
-        </m.div>
-        )}
       </div>
     </section>
   );
