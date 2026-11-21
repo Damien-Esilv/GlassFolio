@@ -33,6 +33,8 @@ import {
   proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
+  previewTransactionImportTool,
+  importTransactionsTool,
   getCostBasisMethodTool,
   setCostBasisMethodTool,
 } from './importTools';
@@ -76,6 +78,8 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(proposeCsvMappingTool);
   aiToolRegistry.registerTool(previewSnapshotImportTool);
   aiToolRegistry.registerTool(importSnapshotTool);
+  aiToolRegistry.registerTool(previewTransactionImportTool);
+  aiToolRegistry.registerTool(importTransactionsTool);
   aiToolRegistry.registerTool(getCostBasisMethodTool);
   aiToolRegistry.registerTool(setCostBasisMethodTool);
   aiToolRegistry.registerTool(listConnectionsTool);
@@ -120,6 +124,8 @@ export {
   proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
+  previewTransactionImportTool,
+  importTransactionsTool,
   getCostBasisMethodTool,
   setCostBasisMethodTool,
   listConnectionsTool,

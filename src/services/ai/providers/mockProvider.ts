@@ -1,4 +1,5 @@
 import i18n from '../../../i18n';
+import { db } from '../../db';
 import { AIProvider } from './types';
 import { AILanguage, ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 
@@ -43,7 +44,35 @@ export class MockProvider implements AIProvider {
       return res;
     }
 
-    // 2. Analyze user intent to trigger relevant tools (French and English keywords)
+    // 2. Analyze attached files (deterministic CSV/XLSX preview in demo mode)
+    if (lastMessage.role === 'user' && lastMessage.attachments && lastMessage.attachments.length > 0) {
+      const textAttachment = lastMessage.attachments.find((a) => Boolean(a.text));
+      if (textAttachment?.text) {
+        const accounts = db.getAccounts();
+        const activeAccounts = accounts.filter((a) => a.isActive !== false);
+        const defaultAccount =
+          activeAccounts.find((a) => a.type === 'investment' || a.type === 'crypto_spot') ??
+          activeAccounts[0] ??
+          accounts[0];
+        return {
+          content: '',
+          toolCalls: [
+            {
+              id: `call_${Date.now()}`,
+              name: 'preview_transaction_import',
+              arguments: {
+                csvText: textAttachment.text,
+                fileName: textAttachment.name,
+                ...(defaultAccount ? { accountId: defaultAccount.id } : {}),
+              },
+            },
+          ],
+        };
+      }
+      return { content: t('ai:attachments.errors.demoUnsupported') };
+    }
+
+    // 3. Analyze user intent to trigger relevant tools (French and English keywords)
     const text = lastMessage.content.toLowerCase();
 
     // Check for transaction recording request
@@ -279,6 +308,25 @@ export class MockProvider implements AIProvider {
 
         return {
           content: `### ${t('ai:mock.transactions.title')}\n\n${rows || t('ai:mock.transactions.empty')}`,
+        };
+      }
+
+      if (toolMsg.toolName === 'preview_transaction_import') {
+        if (data?.error) {
+          return {
+            content: `${t('ai:mock.importPreview.failed')}: ${String(data.error)}`,
+          };
+        }
+        const stats = data?.stats ?? {};
+        return {
+          content:
+            `### ${t('ai:mock.importPreview.title')}\n\n` +
+            `- **${t('ai:mock.importPreview.account')}:** ${data.accountName || '-'}\n` +
+            `- **${t('ai:mock.importPreview.preset')}:** ${data.detectedPreset || t('ai:mock.importPreview.genericCsv')}\n` +
+            `- **${t('ai:mock.importPreview.valid')}:** ${stats.valid ?? 0}\n` +
+            `- **${t('ai:mock.importPreview.duplicates')}:** ${stats.duplicates ?? 0}\n` +
+            `- **${t('ai:mock.importPreview.errors')}:** ${stats.errors ?? 0}\n\n` +
+            t('ai:mock.importPreview.hint'),
         };
       }
 

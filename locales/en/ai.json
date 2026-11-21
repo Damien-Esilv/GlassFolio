@@ -15,7 +15,45 @@
     "emptyConversation": "Ask any question about your assets, allocations, taxes, or performance.",
     "openButton": "AI Assistant"
   },
+  "panel": {
+    "resizeHandle": "Resize assistant panel",
+    "expand": "Widen panel",
+    "compact": "Narrow panel"
+  },
+  "attachments": {
+    "attachButton": "Attach a statement (CSV, Excel, PDF, screenshot)",
+    "dropHere": "Drop your statement here",
+    "dropHint": "CSV, Excel (.xlsx), PDF or screenshot (max 10 MB)",
+    "remove": "Remove {{name}}",
+    "supportedFormats": "CSV · XLSX · PDF · Images",
+    "preparing": "Preparing file…",
+    "defaultPrompt": "Analyze this attached file and preview the transactions to import.",
+    "cloudNotice": {
+      "title": "Sending file to cloud provider",
+      "body": "This attachment will be sent to {{provider}} for analysis. With local Ollama, nothing leaves your machine.",
+      "confirm": "I understand, allow upload"
+    },
+    "preprocess": {
+      "infoLabel": "Local preprocessing details",
+      "badge": "Preprocessed locally in your browser",
+      "xlsx_to_csv": "Converted locally to CSV from sheet \"{{sheet}}\" ({{rows}} rows) before sending.",
+      "pdf_text": "Text extracted locally on your machine ({{pages}} page(s)) because this model cannot read native PDFs.",
+      "pdf_pages_to_images": "Scanned PDF without selectable text: {{renderedPages}} of {{pages}} page(s) rendered locally as images for the vision model.",
+      "image_resized": "Image resized locally ({{width}}×{{height}} px) to stay within the provider's payload limit."
+    },
+    "errors": {
+      "tooLarge": "This file exceeds the maximum size allowed by the active provider.",
+      "unsupportedType": "Unsupported file type. Use CSV, Excel (.xlsx), PDF, or an image (PNG, JPEG, WebP).",
+      "xlsLegacy": "Legacy Excel (.xls) files are not supported: please re-save as .xlsx or .csv.",
+      "corruptFile": "Unable to read this file: it appears empty, corrupted, or password-protected.",
+      "noVision": "The active model ({{model}}) does not support images. Pick a vision model (e.g. qwen2.5vl, llama3.2-vision, gpt-4o, Claude, Gemini).",
+      "scannedPdfNoVision": "This PDF is a scanned document with no selectable text, and the active model does not support vision.",
+      "demoUnsupported": "Demo Mode only analyzes CSV and Excel (.xlsx) files. Configure local Ollama or a cloud provider in Settings > AI & MCP to read PDFs or screenshots.",
+      "modelRejected": "The active model rejected this attachment: {{error}}"
+    }
+  },
   "chips": {
+    "importStatement": "📄 Import a statement",
     "portfolioSummary": "📊 Portfolio Summary",
     "portfolioSummaryPrompt": "Give me a summary of my net wealth, total gain/loss and top holdings.",
     "assetAllocation": "🥧 Asset Allocation",
@@ -53,7 +91,21 @@
     "executing": "Executing action...",
     "types": {
       "record_transaction": "Record Financial Transaction",
-      "create_goal": "Create Financial Goal"
+      "create_goal": "Create Financial Goal",
+      "import_transactions": "Import Transaction History",
+      "import_snapshot": "Import Holdings Snapshot"
+    },
+    "importPreview": {
+      "account": "Target account",
+      "file": "File",
+      "period": "Date range",
+      "valid": "{{count}} valid",
+      "duplicates": "{{count}} duplicate(s) skipped",
+      "errors": "{{count}} error(s)",
+      "date": "Date",
+      "type": "Type",
+      "asset": "Asset",
+      "amount": "Amount"
     },
     "fields": {
       "instrument": "Asset",
@@ -229,7 +281,7 @@
     "generalError": "An error occurred while communicating with the assistant: {{error}}"
   },
   "prompt": {
-    "system": "You are GlassFolio's personal and private financial assistant.\nAlways answer in English, clearly, precisely and concisely, to the user's financial questions.\nYou have tools to look up the portfolio, asset allocation, positions, transactions and taxes.\nGOLDEN RULE: for any operation that changes the portfolio (recording a transaction, creating a goal), call the matching tool. The user must approve the operation through an interactive card.\nNever give speculative investment advice without reminding the user that your answers are for information only."
+    "system": "You are GlassFolio's personal and private financial assistant.\nAlways answer in English, clearly, precisely and concisely, to the user's financial questions.\nYou have tools to look up the portfolio, asset allocation, positions, transactions, taxes and import statements.\nIMPORT RULE: when the user attaches a statement (CSV, converted Excel, PDF or screenshot), extract the transactions if needed then call `preview_transaction_import` first (passing `csvText` or `rows[]`) to validate and detect duplicates, summarize the result, then call `import_transactions` so the user can approve the import.\nGOLDEN RULE: for any operation that changes the portfolio (recording a transaction, importing transactions, creating a goal), call the matching tool. The user must approve the operation through an interactive card.\nNever give speculative investment advice without reminding the user that your answers are for information only."
   },
   "service": {
     "readOnlyBlocked": "Strict read-only mode is on. The **{{tool}}** action was blocked according to your security settings.",
@@ -313,6 +365,17 @@
     "transactions": {
       "title": "📝 Latest transactions",
       "empty": "No recent transactions."
+    },
+    "importPreview": {
+      "title": "📄 Detected Import Preview",
+      "account": "Target account",
+      "preset": "Detected format",
+      "genericCsv": "Generic CSV",
+      "valid": "Ready to import",
+      "duplicates": "Duplicates skipped",
+      "errors": "Rows with errors",
+      "hint": "In Demo Mode, the preview is computed locally. Connect local Ollama or a cloud model in Settings > AI & MCP for full guided importing.",
+      "failed": "Unable to analyze this statement"
     },
     "rawData": "Data retrieved successfully:",
     "rawResult": "Result received from the {{tool}} tool: {{content}}"

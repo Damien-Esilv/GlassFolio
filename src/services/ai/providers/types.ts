@@ -6,6 +6,16 @@ export interface LLMToolSchema {
   parameters: AIToolParametersSchema;
 }
 
+export class ModelRejectedAttachmentError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly providerMessage: string
+  ) {
+    super(`MODEL_REJECTED_ATTACHMENT:${status}:${providerMessage}`);
+    this.name = 'ModelRejectedAttachmentError';
+  }
+}
+
 export interface AIProvider {
   sendMessage: (
     messages: ChatMessage[],

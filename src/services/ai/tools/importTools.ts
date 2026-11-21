@@ -12,12 +12,21 @@ import {
   ColumnStatus,
 } from '../../import/columnMatcher';
 import {
+  parseFile,
+  revalidateStagedRow,
+  commitBatch,
+  type FieldMappings,
+  type ParseResult,
+} from '../../import/importManager';
+import { clearStagedInstruments } from '../../import/instrumentDrafts';
+import {
   parseSnapshotFile,
   getExistingPositions,
   calculateReconciliation,
   commitSnapshotImport,
   SnapshotFieldMappings,
 } from '../../import/snapshotService';
+import { db } from '../../db';
 import { accountService } from '../../instituteService';
 import type { CostBasisMethod } from '../../../types/types.backend';
 
@@ -294,5 +303,490 @@ export const setCostBasisMethodTool: AIToolDefinition<
     return updated
       ? { success: true, message: `Account '${updated.name}' now uses ${method}.` }
       : { success: false, message: `Account ${accountId} not found.` };
+  },
+};
+
+// ============================================================================
+// E37 — AI-DRIVEN TRANSACTION HISTORY PREVIEW & IMPORT
+// ============================================================================
+
+export interface ExtractedTransactionRow {
+  date: string;
+  type: string;
+  symbol?: string;
+  isin?: string;
+  name?: string;
+  quantity?: string | number;
+  price?: string | number;
+  amount: string | number;
+  fee?: string | number;
+  feeAsset?: string;
+  tax?: string | number;
+  currency?: string;
+  label?: string;
+}
+
+export interface TransactionImportInput {
+  accountId?: string;
+  csvText?: string;
+  mapping?: Record<string, string>;
+  rows?: ExtractedTransactionRow[];
+  fileName?: string;
+}
+
+export interface TransactionSampleRow {
+  date: string;
+  type: string;
+  asset: string;
+  quantity?: string;
+  amount: string;
+  currency?: string;
+  status: string;
+}
+
+export interface TransactionImportPreviewResult {
+  accountId: string;
+  accountName: string;
+  fileName: string;
+  detectedPreset: string | null;
+  stats: {
+    total: number;
+    valid: number;
+    warnings: number;
+    duplicates: number;
+    errors: number;
+    importable: number;
+  };
+  dateRange: { start: string; end: string } | null;
+  newInstruments: string[];
+  sampleRows: TransactionSampleRow[];
+  errorSamples: Array<{ rowIndex: number; message: string }>;
+}
+
+const CANONICAL_ROW_HEADERS = [
+  'date',
+  'type',
+  'symbol',
+  'isin',
+  'name',
+  'quantity',
+  'price',
+  'amount',
+  'fee',
+  'feeAsset',
+  'tax',
+  'currency',
+  'label',
+] as const;
+
+const CANONICAL_ROW_MAPPINGS: FieldMappings = {
+  transactionDate: 'date',
+  type: 'type',
+  assetSymbol: 'symbol',
+  assetIsin: 'isin',
+  assetName: 'name',
+  quantity: 'quantity',
+  priceUnit: 'price',
+  amountPrimary: 'amount',
+  feeAmount: 'fee',
+  feeAsset: 'feeAsset',
+  taxAmount: 'tax',
+  currency: 'currency',
+  rawLabel: 'label',
+};
+
+const escapeCsvField = (value: unknown): string => {
+  if (value === undefined || value === null) return '';
+  const str = String(value);
+  return /[",\r\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+};
+
+function rowsToCanonicalCsv(rows: ExtractedTransactionRow[]): string {
+  const headerLine = CANONICAL_ROW_HEADERS.join(',');
+  const bodyLines = rows.map((row) =>
+    CANONICAL_ROW_HEADERS.map((key) => escapeCsvField(row[key])).join(',')
+  );
+  return [headerLine, ...bodyLines].join('\n');
+}
+
+function resolveTargetAccount(accountId?: string) {
+  const accounts = db.getAccounts();
+  if (accountId && accountId.trim()) {
+    const found = db.getAccountById(accountId.trim());
+    if (!found) {
+      const choices = accounts.map((a) => `${a.name} (${a.id})`).join(', ');
+      throw new Error(
+        `Account '${accountId}' not found.${choices ? ` Available accounts: ${choices}` : ''}`
+      );
+    }
+    return found;
+  }
+
+  const active = accounts.filter((a) => a.isActive !== false);
+  if (active.length === 1) return active[0];
+  if (accounts.length === 1) return accounts[0];
+  if (accounts.length === 0) {
+    throw new Error('No account available. Create an account before importing transactions.');
+  }
+  const list = (active.length > 0 ? active : accounts).map((a) => `${a.name} [${a.id}]`).join(', ');
+  throw new Error(`Multiple accounts exist (${list}). Specify accountId.`);
+}
+
+function resolveCsvCustomMappings(
+  csvText: string,
+  explicitMapping?: Record<string, string>
+): { mappings: FieldMappings; detectedPreset: string | null } {
+  const { headers, rows } = parseCSVText(csvText);
+  if (explicitMapping && Object.keys(explicitMapping).length > 0) {
+    return {
+      mappings: {
+        transactionDate: explicitMapping.transactionDate ?? '',
+        amountPrimary: explicitMapping.amountPrimary ?? '',
+        ...explicitMapping,
+      } as FieldMappings,
+      detectedPreset: null,
+    };
+  }
+
+  const preset = detectPreset(headers);
+  if (preset) {
+    return { mappings: preset.mappings, detectedPreset: preset.presetName };
+  }
+
+  const proposals = proposeColumnMapping(headers, rows, HISTORY_COLUMN_SPECS);
+  const proposed = proposalsToMappings(proposals);
+  const heuristic = matchHistoryColumns(headers);
+  return {
+    mappings: {
+      ...heuristic,
+      ...proposed,
+      transactionDate: proposed.transactionDate ?? heuristic.transactionDate ?? '',
+      amountPrimary: proposed.amountPrimary ?? heuristic.amountPrimary ?? '',
+    } as FieldMappings,
+    detectedPreset: null,
+  };
+}
+
+async function stageTransactionsInput(input: TransactionImportInput): Promise<{
+  account: ReturnType<typeof resolveTargetAccount>;
+  parsed: ParseResult;
+  detectedPreset: string | null;
+  fileName: string;
+}> {
+  const hasCsv = typeof input.csvText === 'string' && input.csvText.trim().length > 0;
+  const hasRows = Array.isArray(input.rows) && input.rows.length > 0;
+  if (!hasCsv && !hasRows) {
+    throw new Error('Provide either csvText or a non-empty rows array.');
+  }
+
+  const account = resolveTargetAccount(input.accountId);
+  let effectiveCsv: string;
+  let customMappings: FieldMappings;
+  let detectedPreset: string | null = null;
+  const fromRows = !hasCsv && hasRows;
+
+  if (hasCsv) {
+    effectiveCsv = input.csvText as string;
+    const resolved = resolveCsvCustomMappings(effectiveCsv, input.mapping);
+    customMappings = resolved.mappings;
+    detectedPreset = resolved.detectedPreset;
+  } else {
+    effectiveCsv = rowsToCanonicalCsv(input.rows as ExtractedTransactionRow[]);
+    customMappings = CANONICAL_ROW_MAPPINGS;
+  }
+
+  const parsed = await parseFile(effectiveCsv, {
+    accountId: account.id,
+    mode: 'history',
+    customMappings,
+  });
+
+  if (fromRows) {
+    parsed.candidates = parsed.candidates.map((c) => revalidateStagedRow(c, 'history'));
+    parsed.stats = {
+      total: parsed.candidates.length,
+      valid: parsed.candidates.filter((c) => c.status === 'valid').length,
+      errors: parsed.candidates.filter((c) => c.status === 'error').length,
+      duplicates: parsed.candidates.filter((c) => c.status === 'duplicate').length,
+      warnings: parsed.candidates.filter((c) => c.status === 'warning').length,
+    };
+  }
+
+  return {
+    account,
+    parsed,
+    detectedPreset: parsed.detectedPreset ?? detectedPreset,
+    fileName: input.fileName?.trim() || (fromRows ? 'assistant_extracted.csv' : 'assistant_import.csv'),
+  };
+}
+
+function summarizeStagedImport(
+  account: ReturnType<typeof resolveTargetAccount>,
+  parsed: ParseResult,
+  detectedPreset: string | null,
+  fileName: string
+): TransactionImportPreviewResult {
+  const importable = parsed.candidates.filter(
+    (c) =>
+      c.status !== 'error' &&
+      (c.resolution === 'import' ||
+        (c.status === 'valid' && c.resolution === 'pending') ||
+        (c.status === 'warning' && c.resolution === 'pending'))
+  );
+
+  const dates = parsed.candidates
+    .map((c) => c.parsed.transactionDate)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+
+  const dateRange =
+    dates.length > 0
+      ? { start: dates[0].slice(0, 10), end: dates[dates.length - 1].slice(0, 10) }
+      : null;
+
+  const sampleRows: TransactionSampleRow[] = parsed.candidates.slice(0, 10).map((c) => ({
+    date: (c.parsed.transactionDate ?? '').slice(0, 10),
+    type: String(c.parsed.type ?? 'BUY'),
+    asset: c.parsed.assetSymbol || c.parsed.assetIsin || '-',
+    ...(c.parsed.quantity ? { quantity: c.parsed.quantity } : {}),
+    amount: c.parsed.amountPrimary ?? '0',
+    ...(c.parsed.originalCurrency ? { currency: c.parsed.originalCurrency } : {}),
+    status: c.status,
+  }));
+
+  const errorSamples = parsed.candidates
+    .filter((c) => c.status === 'error')
+    .slice(0, 5)
+    .map((c) => ({
+      rowIndex: c.rowIndex + 1,
+      message: c.errors.find((e) => e.severity === 'error')?.message ?? 'Invalid row',
+    }));
+
+  const newInstruments = parsed.instruments
+    .filter((inst) => inst.isNew)
+    .map((inst) => inst.instrument.marketIdentifier.symbol);
+
+  return {
+    accountId: account.id,
+    accountName: account.name,
+    fileName,
+    detectedPreset,
+    stats: {
+      total: parsed.stats.total,
+      valid: parsed.stats.valid,
+      warnings: parsed.stats.warnings,
+      duplicates: parsed.stats.duplicates,
+      errors: parsed.stats.errors,
+      importable: importable.length,
+    },
+    dateRange,
+    newInstruments,
+    sampleRows,
+    errorSamples,
+  };
+}
+
+/**
+ * Compute lightweight preview metadata for the Human-in-the-loop approval card without
+ * persisting staged instrument drafts.
+ */
+export async function buildTransactionImportPreview(
+  rawArgs: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  try {
+    const input: TransactionImportInput = {
+      accountId: typeof rawArgs.accountId === 'string' ? rawArgs.accountId : undefined,
+      csvText: typeof rawArgs.csvText === 'string' ? rawArgs.csvText : undefined,
+      mapping:
+        rawArgs.mapping && typeof rawArgs.mapping === 'object' && !Array.isArray(rawArgs.mapping)
+          ? (rawArgs.mapping as Record<string, string>)
+          : undefined,
+      rows: Array.isArray(rawArgs.rows) ? (rawArgs.rows as ExtractedTransactionRow[]) : undefined,
+      fileName: typeof rawArgs.fileName === 'string' ? rawArgs.fileName : undefined,
+    };
+    const staged = await stageTransactionsInput(input);
+    const summary = summarizeStagedImport(
+      staged.account,
+      staged.parsed,
+      staged.detectedPreset,
+      staged.fileName
+    );
+    return {
+      accountName: summary.accountName,
+      fileName: summary.fileName,
+      validCount: summary.stats.valid + summary.stats.warnings,
+      duplicateCount: summary.stats.duplicates,
+      errorCount: summary.stats.errors,
+      totalCount: summary.stats.total,
+      importableCount: summary.stats.importable,
+      dateRange: summary.dateRange,
+      sampleRows: summary.sampleRows.slice(0, 5),
+    };
+  } catch (err) {
+    return {
+      fileName: typeof rawArgs.fileName === 'string' ? rawArgs.fileName : 'assistant_import.csv',
+      error: err instanceof Error ? err.message : String(err),
+    };
+  } finally {
+    clearStagedInstruments();
+  }
+}
+
+const EXTRACTED_ROW_SCHEMA = {
+  type: 'object',
+  description: 'One transaction row extracted from a PDF or screenshot',
+  properties: {
+    date: { type: 'string', description: 'Transaction date in ISO YYYY-MM-DD format' },
+    type: {
+      type: 'string',
+      description: 'Transaction type (BUY, SELL, DEPOSIT, WITHDRAW, INCOME, EXPENSE, TRANSFER, SWAP)',
+    },
+    symbol: { type: 'string', description: 'Asset ticker symbol (e.g. AAPL, BTC, EUR)' },
+    isin: { type: 'string', description: 'Optional 12-character ISIN code' },
+    name: { type: 'string', description: 'Optional instrument name' },
+    quantity: { type: 'string', description: 'Optional unit quantity' },
+    price: { type: 'string', description: 'Optional unit price' },
+    amount: { type: 'string', description: 'Cash amount of the transaction' },
+    fee: { type: 'string', description: 'Optional fee amount' },
+    feeAsset: { type: 'string', description: 'Optional fee asset/currency code' },
+    tax: { type: 'string', description: 'Optional withholding tax amount' },
+    currency: { type: 'string', description: 'Optional ISO 4217 currency code (EUR, USD, ...)' },
+    label: { type: 'string', description: 'Optional raw description label' },
+  },
+  required: ['date', 'type', 'amount'],
+};
+
+export const previewTransactionImportTool: AIToolDefinition<
+  TransactionImportInput,
+  TransactionImportPreviewResult
+> = {
+  name: 'preview_transaction_import',
+  description:
+    'Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved.',
+  parameters: {
+    type: 'object',
+    properties: {
+      accountId: {
+        type: 'string',
+        description: 'Target account ID (optional when only one account exists)',
+      },
+      csvText: {
+        type: 'string',
+        description: 'Raw CSV content (use this or rows)',
+      },
+      mapping: {
+        type: 'object',
+        description: 'Optional explicit field->header overrides (transactionDate, amountPrimary, assetSymbol, ...)',
+        additionalProperties: { type: 'string', description: 'CSV column header name' },
+      },
+      rows: {
+        type: 'array',
+        description: 'Structured transaction rows extracted from an image or PDF statement',
+        items: EXTRACTED_ROW_SCHEMA,
+      },
+      fileName: {
+        type: 'string',
+        description: 'Original statement filename',
+      },
+    },
+  },
+  execute: async (input) => {
+    try {
+      const staged = await stageTransactionsInput(input);
+      return summarizeStagedImport(
+        staged.account,
+        staged.parsed,
+        staged.detectedPreset,
+        staged.fileName
+      );
+    } finally {
+      clearStagedInstruments();
+    }
+  },
+};
+
+export const importTransactionsTool: AIToolDefinition<
+  TransactionImportInput,
+  {
+    success: boolean;
+    transactionCount: number;
+    skippedCount: number;
+    batchId: string | null;
+    accountId?: string;
+    message: string;
+  }
+> = {
+  name: 'import_transactions',
+  description:
+    'Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. Requires explicit human confirmation before execution. Always call preview_transaction_import first.',
+  requiresConfirmation: true,
+  parameters: {
+    type: 'object',
+    properties: {
+      accountId: {
+        type: 'string',
+        description: 'Target account ID (optional when only one account exists)',
+      },
+      csvText: {
+        type: 'string',
+        description: 'Raw CSV content (use this or rows)',
+      },
+      mapping: {
+        type: 'object',
+        description: 'Optional explicit field->header overrides',
+        additionalProperties: { type: 'string', description: 'CSV column header name' },
+      },
+      rows: {
+        type: 'array',
+        description: 'Structured transaction rows extracted from an image or PDF statement',
+        items: EXTRACTED_ROW_SCHEMA,
+      },
+      fileName: {
+        type: 'string',
+        description: 'Original filename recorded on the import batch',
+      },
+    },
+  },
+  execute: async (input, context) => {
+    const staged = await stageTransactionsInput(input);
+    const { account, parsed, fileName } = staged;
+    const summary = summarizeStagedImport(account, parsed, staged.detectedPreset, fileName);
+
+    if (summary.stats.importable === 0) {
+      clearStagedInstruments();
+      return {
+        success: false,
+        transactionCount: 0,
+        skippedCount: parsed.stats.total,
+        batchId: null,
+        accountId: account.id,
+        message:
+          parsed.stats.duplicates > 0 && parsed.stats.errors === 0
+            ? 'All rows in this statement were already imported (duplicates skipped).'
+            : 'No valid transactions to import.',
+      };
+    }
+
+    const commit = await commitBatch(
+      parsed.candidates,
+      account.id,
+      'history',
+      fileName,
+      parsed.fileHash,
+      context?.userId || 'default-user',
+      undefined,
+      parsed.detectedDelimiter
+    );
+
+    return {
+      success: commit.success,
+      transactionCount: commit.transactionCount,
+      skippedCount: commit.batch?.skippedCount ?? parsed.stats.total - commit.transactionCount,
+      batchId: commit.batchId,
+      accountId: account.id,
+      message: commit.success
+        ? `Imported ${commit.transactionCount} transaction(s) into '${account.name}' (batch ${commit.batchId}).`
+        : `Transaction import failed: ${commit.error ?? 'unknown error'}`,
+    };
   },
 };

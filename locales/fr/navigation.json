@@ -29,5 +29,6 @@
     "brandName": "Glassfolio",
     "collapseSidebar": "Réduire le menu latéral",
     "expandSidebar": "Développer le menu latéral",
+    "resizeSidebar": "Redimensionner la barre latérale",
     "toggleMenu": "Ouvrir ou fermer le menu {{menu}}"
 }
