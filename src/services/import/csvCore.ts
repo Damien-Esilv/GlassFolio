@@ -115,11 +115,14 @@ function tokenize(text: string, delimiter: string): string[][] {
 /**
  * Locate the header row: the first record that has the most common column
  * count. Skips preamble lines such as "Export du 15/01/2024" or account titles.
+ * Single-field lines never vote while the file has wider records: a short export
+ * (Bitpanda puts 6 one-line notes above its header) must not elect its disclaimer.
  */
 function findHeaderIndex(records: string[][]): number {
     const sample = records.slice(0, HEADER_SEARCH_RECORDS);
+    const voters = sample.some(r => r.length > 1) ? sample.filter(r => r.length > 1) : sample;
     const frequency = new Map<number, number>();
-    sample.forEach(r => frequency.set(r.length, (frequency.get(r.length) || 0) + 1));
+    voters.forEach(r => frequency.set(r.length, (frequency.get(r.length) || 0) + 1));
 
     let modalColumns = 0;
     let modalCount = 0;

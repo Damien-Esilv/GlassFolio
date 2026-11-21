@@ -36,7 +36,8 @@ function classifyLabel(rawType: string): TransactionType | null {
     }
 
     // Buy patterns
-    if (has('buy', 'achat', 'purchase', 'kauf', 'souscription', 'transaction revenue', 'compra', 'acquisto', 'acquisition')) {
+    if (has('buy', 'achat', 'purchase', 'kauf', 'souscription', 'transaction revenue', 'compra', 'acquisto', 'acquisition',
+        'savings_plan', 'savings plan', 'sparplan')) {
         return 'BUY';
     }
 
@@ -47,17 +48,21 @@ function classifyLabel(rawType: string): TransactionType | null {
 
     // Income credited to the account ("Dividende crédité", "Intérêts crédités") is income, not a
     // deposit; debited interest (an overdraft charge) is not income.
-    if (has('dividend', 'dividende', 'interest', 'intérêt', 'coupon', 'zinsen') && !has('debit', 'débit')) {
+    if (has('dividend', 'dividende', 'interest', 'intérêt', 'coupon', 'zinsen', 'tax_refund', 'tax refund') && !has('debit', 'débit')) {
         return 'INCOME';
     }
 
     // Deposit patterns
-    if (has('deposit', 'dépôt', 'virement reçu', 'credit', 'crédit', 'versement', 'apport', 'einzahlung')) {
+    // "CASH TOP-UP" is how Revolut's stock statement labels money added to the account
+    // "CUSTOMER_INBOUND" is how Trade Republic's native CSV labels cash deposits
+    if (has('deposit', 'dépôt', 'virement reçu', 'credit', 'crédit', 'versement', 'apport', 'einzahlung',
+        'top-up', 'top up', 'customer_inbound', 'inbound')) {
         return 'DEPOSIT';
     }
 
     // Withdraw patterns
-    if (has('withdraw', 'retrait', 'virement émis', 'debit', 'débit', 'auszahlung')) {
+    if (has('withdraw', 'retrait', 'virement émis', 'debit', 'débit', 'auszahlung',
+        'customer_outbound', 'outbound', 'card_payment', 'card payment')) {
         return 'WITHDRAW';
     }
 

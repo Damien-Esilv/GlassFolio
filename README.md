@@ -57,7 +57,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 > GlassFolio gives estimates and educational guidance. It is not certified tax or investment advice.
 
 ### Import and backup
-- Presets that auto-detect Binance, Bitget, BoursoBank, Trade Republic, Coinbase, Kraken and GlassFolio exports, and a column-first mapping step for anything else.
+- Presets that auto-detect Binance, Bitget, Bitpanda, BoursoBank, Trade Republic, Coinbase, Kraken, Revolut and GlassFolio exports, and a column-first mapping step for anything else.
 - History mode and snapshot mode, a dedicated cash import, duplicate detection and per-batch rollback.
 - Full JSON backup, and a merge wizard that previews changes before touching your data.
 

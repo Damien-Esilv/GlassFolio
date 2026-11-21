@@ -23,6 +23,8 @@ export const SUPPORTED_BROKERS: readonly SupportedBroker[] = [
   { name: 'Kraken', presetPrefix: 'kraken' },
   { name: 'Bitget', presetPrefix: 'bitget' },
   { name: 'Coinbase', presetPrefix: 'coinbase' },
+  { name: 'Revolut', presetPrefix: 'revolut' },
+  { name: 'Bitpanda', presetPrefix: 'bitpanda' },
 ];
 
 /** Themes offered to every visitor; the others are unlocked through progression. */

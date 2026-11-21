@@ -7,7 +7,7 @@
  * in importManager.parseFile, which is also what the wizard preview can call.
  */
 
-import { VALID_FIAT_CURRENCIES } from '../../types/types.backend';
+import { ISIN_REGEX, VALID_FIAT_CURRENCIES } from '../../types/types.backend';
 import type { ImportMode, TransactionType, UnifiedTransaction } from '../../types/types.backend';
 import type { FieldMappings } from './importManager';
 import type { FieldError } from './types';
@@ -21,6 +21,7 @@ import {
     inferTransactionSubType
 } from './typeNormalizer';
 import type { DecimalSeparator } from './typeNormalizer';
+import { extractTrailingAssetUnit, isPairHeader, normalizeTradingPair } from './assetPairNormalizer';
 
 /** Rows read to infer file-wide conventions (decimal separator, amount signs) */
 const SAMPLE_ROW_LIMIT = 1000;
@@ -174,12 +175,43 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
     let amountValue = cashAmount || derivedAmount;
 
     // Identity
-    const assetIsin = get(mappings.assetIsin)?.trim() || undefined;
+    let assetIsin = get(mappings.assetIsin)?.trim().toUpperCase() || undefined;
     const currencyRaw = get(mappings.currency)?.trim().toUpperCase();
-    const currencyCode = currencyRaw && /^[A-Z]{3}$/.test(currencyRaw) ? currencyRaw : undefined;
+    let currencyCode = currencyRaw && /^[A-Z]{3}$/.test(currencyRaw) ? currencyRaw : undefined;
     let assetSymbol = rawSymbol.toUpperCase().trim() || undefined;
+
+    if (assetSymbol && isPairHeader(mappings.assetSymbol)) {
+        const pair = normalizeTradingPair(assetSymbol);
+        assetSymbol = pair.base || undefined;
+        if (!currencyCode && pair.quote && isFiat(pair.quote)) currencyCode = pair.quote;
+    }
+
+    // Trade Republic 2025 export puts the ISIN in the `symbol` column
+    if (!assetIsin && assetSymbol && ISIN_REGEX.test(assetSymbol)) {
+        assetIsin = assetSymbol;
+        assetSymbol = undefined;
+    }
+
+    // Trailing fiat unit embedded in numeric cells (e.g. "9,94 CHF" in Revolut-Crypto)
+    if (!currencyCode) {
+        const amountUnit = extractTrailingAssetUnit(rawAmount);
+        if (amountUnit && isFiat(amountUnit)) currencyCode = amountUnit;
+    }
+
     // No symbol and no ISIN: the currency column is the only identity (a bank statement line)
     if (!assetSymbol && !assetIsin && currencyCode) assetSymbol = currencyCode;
+    // Real bank statements (e.g. BoursoBank) often omit a currency column: inherit account currency
+    if (
+        !assetSymbol
+        && !assetIsin
+        && !currencyCode
+        && ctx.accountCurrency
+        && get(mappings.rawLabel)
+        && !get(mappings.quantity)
+        && !get(mappings.priceUnit)
+    ) {
+        assetSymbol = ctx.accountCurrency;
+    }
     const isCashAsset = !assetIsin && isFiat(assetSymbol);
 
     const resolution = resolveTransactionType({
@@ -266,8 +298,8 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
     }
     if (amountValue) parsed.amountPrimary = amountValue;
 
-    const feeAsset = get(mappings.feeAsset);
-    if (feeAsset) parsed.feeAsset = feeAsset.toUpperCase().trim();
+    const feeAssetRaw = get(mappings.feeAsset)?.trim() || extractTrailingAssetUnit(rawFees);
+    if (feeAssetRaw) parsed.feeAsset = feeAssetRaw.toUpperCase();
 
     const taxAmount = get(mappings.taxAmount);
     if (taxAmount) parsed.taxAmount = parseDecimal(taxAmount, decimalHint) || undefined;

@@ -1,0 +1,3 @@
+dateOp;dateVal;label;category;categoryParent;supplierFound;amount;comment;accountNum;accountLabel;accountbalance
+2025-01-05;2025-01-05;VIR SEPA RECU EMPLOYEUR;Salaires;Revenus;ACME;"2500,00";Salaire;00040000001;BoursoBank;"2500,00"
+2025-01-12;2025-01-13;CARTE 11/01 SUPERMARCHE;Alimentation;Vie quotidienne;SUPERMARCHE;"-84,50";Courses;00040000001;BoursoBank;"2415,50"

@@ -57,7 +57,7 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 > GlassFolio fournit des estimations et un accompagnement pédagogique. Ce n'est pas un conseil fiscal ou en investissement certifié.
 
 ### Import et sauvegarde
-- Préréglages qui détectent automatiquement les exports Binance, Bitget, BoursoBank, Trade Republic, Coinbase, Kraken et GlassFolio, et une étape de mappage par colonne pour tout le reste.
+- Préréglages qui détectent automatiquement les exports Binance, Bitget, Bitpanda, BoursoBank, Trade Republic, Coinbase, Kraken, Revolut et GlassFolio, et une étape de mappage par colonne pour tout le reste.
 - Mode historique et mode instantané (snapshot), import de liquidités dédié, détection des doublons et annulation par lot.
 - Sauvegarde JSON complète, et assistant de fusion qui prévisualise les changements avant de toucher à vos données.
 
