@@ -183,7 +183,7 @@
         "title": "Importez depuis votre courtier en quelques clics",
         "body": "Déposez l'export CSV de votre courtier ou de votre plateforme : le format est reconnu et les colonnes sont associées pour vous.",
         "points": {
-          "p1": "BoursoBank, Trade Republic, Binance, Kraken, Bitget, Coinbase",
+          "p1": "BoursoBank, Trade Republic, Binance, Kraken, Bitget, Coinbase, Revolut, Bitpanda",
           "p2": "Doublons ignorés automatiquement",
           "p3": "Chaque import peut être annulé"
         },
@@ -417,7 +417,7 @@
       },
       "q3": {
         "question": "Quels courtiers, enveloppes et formats CSV sont pris en charge ?",
-        "answer": "GlassFolio reconnaît les exports CSV de BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase, en mode historique ou instantané, et suit PEA, CTO, assurance-vie, livrets et portefeuilles crypto."
+        "answer": "GlassFolio reconnaît les exports CSV de BoursoBank, Trade Republic, Binance, Kraken, Bitget, Coinbase, Revolut et Bitpanda, en mode historique ou instantané, et suit PEA, CTO, assurance-vie, livrets et portefeuilles crypto."
       },
       "q4": {
         "question": "Comment l'assistant IA protège-t-il ma vie privée ?",
@@ -455,7 +455,7 @@
     "accessibility": "Accessibilité (RGAA)",
     "cookiePreferencesBtn": "Préférences Cookies",
     "regulatoryDisclaimer": "Avertissement AMF / DGFiP : GlassFolio est un projet logiciel à code source disponible, à vocation informative. Les simulations et analyses sont fournies à titre purement pédagogique et ne constituent jamais un conseil en investissement financier, juridique ou fiscal personnalisé.",
-    "trademarkNotice": "Usage Nominatif des Marques : L'ensemble des noms de banques, courtiers, plateformes d'échange et marques tiers cités sur GlassFolio (notamment BoursoBank, Trade Republic, Binance, Kraken, Bitget et Coinbase) sont la propriété exclusive de leurs titulaires respectifs. Ils sont mentionnés uniquement à des fins d'interopérabilité technique et de référence descriptive (Art. L.713-6 du Code de la Propriété Intellectuelle / Règlement sur la marque de l'UE Art. 14).",
+    "trademarkNotice": "Usage Nominatif des Marques : L'ensemble des noms de banques, courtiers, plateformes d'échange et marques tiers cités sur GlassFolio (notamment BoursoBank, Trade Republic, Binance, Kraken, Bitget, Coinbase, Revolut et Bitpanda) sont la propriété exclusive de leurs titulaires respectifs. Ils sont mentionnés uniquement à des fins d'interopérabilité technique et de référence descriptive (Art. L.713-6 du Code de la Propriété Intellectuelle / Règlement sur la marque de l'UE Art. 14).",
     "copyright": "© {{year}} GlassFolio — Architecture FinTech E2EE à code source disponible.",
     "sourceHeading": "Code source",
     "githubRepo": "Dépôt GitHub",

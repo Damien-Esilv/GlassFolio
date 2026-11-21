@@ -1,0 +1,6 @@
+Transactions
+User,Example User,00000000-0000-4000-8000-000000000001
+ID,Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Spot Price,Subtotal,Total (inclusive of fees and/or spread),Fees and/or Spread,Notes
+67800001,2025-01-12T11:20:00Z,Buy,BTC,0.005,EUR,€90000.00,€450.00,€456.70,€6.70,Bought 0.005 BTC
+67800002,2025-02-01T08:00:00Z,Staking Income,ETH,0.002,EUR,€2800.00,€5.60,€5.60,€0.00,Staking reward
+67800003,2025-03-05T18:10:00Z,Sell,BTC,0.002,EUR,€88000.00,€176.00,€173.50,€2.50,Sold 0.002 BTC

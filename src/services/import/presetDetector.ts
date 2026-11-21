@@ -2,7 +2,10 @@
  * Preset Detector for CSV Imports
  * 
  * Auto-detects well-known broker & exchange export formats:
- * Binance, BoursoBank, Trade Republic, Kraken, Coinbase, Bitget.
+ * Binance, BoursoBank, Trade Republic, Bitpanda, Kraken, Coinbase, Bitget, Revolut.
+ *
+ * The first preset in `PRESET_PATTERNS` order that matches wins, so a format whose headers
+ * contain another preset's patterns must come before it (Bitpanda before Coinbase).
  */
 
 import { FieldMappings } from './types';
@@ -12,13 +15,36 @@ export const PRESET_PATTERNS: Record<string, string[]> = {
     'Binance': ['UTC_Time', 'Account', 'Operation', 'Coin', 'Change', 'Remark'],
     'Binance-Spot': ['Date(UTC)', 'Pair', 'Side', 'Price', 'Executed', 'Amount', 'Fee'],
     'Bitget': ['Time', 'Symbol', 'Side', 'Price', 'Filled', 'Total', 'Fee'],
+    // Bitget UI Spot Order History export (2024-2025)
+    'Bitget-Spot': ['Date', 'Order ID', 'Trading pair', 'Direction', 'Executed quantity', 'Average price', 'Trading volume', 'Fee'],
     'Bourso': ['dateOp', 'dateVal', 'label', 'amount', 'accountBalance'],
+    // Legacy French BoursoBank export headers
     'BoursoBank-Alt': ['Date opération', 'Date valeur', 'Libellé', 'Montant', 'Solde'],
     'TradeRepublic': ['Date', 'Type', 'ISIN', 'Name', 'Shares', 'Price', 'Amount'],
+    // Bitpanda transaction history (crypto, stocks, ETFs, metals). Its Timestamp / Transaction Type /
+    // Asset columns also satisfy the Coinbase patterns: it must stay before Coinbase.
+    'Bitpanda': ['Transaction ID', 'Timestamp', 'Transaction Type', 'In/Out', 'Amount Fiat', 'Amount Asset',
+        'Asset market price', 'Asset class', 'Fee asset', 'Spread Currency'],
     'Coinbase': ['Timestamp', 'Transaction Type', 'Asset', 'Quantity Transacted'],
     'Kraken': ['txid', 'time', 'type', 'pair', 'price', 'vol', 'fee'],
+    // Revolut stocks & ETF account statement
+    'Revolut': ['Date', 'Ticker', 'Type', 'Quantity', 'Price per share', 'Total Amount', 'Currency', 'FX Rate'],
+    // Revolut crypto account statement: amounts carry their currency ("9,94 CHF"), no currency column
+    'Revolut-Crypto': ['Symbol', 'Type', 'Quantity', 'Price', 'Value', 'Fees', 'Date'],
     // GlassFolio's own transactions CSV export (kept last so broker formats win).
     'GlassFolio': ['instrument', 'symbol', 'amount', 'price', 'total', 'fees', 'status', 'currency', 'source']
+};
+
+/**
+ * Exact headers (case-insensitive) a preset cannot be detected without. The 60 % rule alone would
+ * let short, generic layouts — Revolut's crypto statement is just Symbol/Type/Quantity/Price/Value/
+ * Fees/Date — claim any hand-made CSV with similar columns.
+ */
+const PRESET_REQUIRED_HEADERS: Record<string, string[]> = {
+    'Bitget-Spot': ['trading pair', 'direction'],
+    'Bitpanda': ['in/out', 'amount fiat', 'amount asset'],
+    'Revolut': ['ticker', 'price per share', 'total amount'],
+    'Revolut-Crypto': ['symbol', 'value', 'fees']
 };
 
 const GLASSFOLIO_EXPORT_MARKERS = ['operation', 'instrument', 'symbol', 'total', 'fees'];
@@ -42,27 +68,41 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
     'Binance-Spot': {
         transactionDate: ['Date(UTC)'],
         type: ['Side'],
-        assetSymbol: ['Pair'],
+        assetSymbol: ['Pair', 'Market'],
         priceUnit: ['Price'],
-        quantity: ['Executed'],
-        amountPrimary: ['Amount'],
+        quantity: ['Executed', 'Filled', 'Quantity'],
+        amountPrimary: ['Amount', 'Total'],
         feeAmount: ['Fee']
     },
     'Bitget': {
+        externalId: ['Order ID', 'Trade ID'],
         transactionDate: ['Time'],
         type: ['Side'],
         assetSymbol: ['Symbol'],
         priceUnit: ['Price'],
         quantity: ['Filled', 'Qty'],
-        amountPrimary: ['Total'],
-        feeAmount: ['Fee']
+        amountPrimary: ['Total', 'Total_USDT', 'Trading Volume'],
+        feeAmount: ['Fee'],
+        feeAsset: ['Fee_Ccy', 'Fee Coin', 'Fee Currency']
+    },
+    'Bitget-Spot': {
+        externalId: ['Order ID'],
+        transactionDate: ['Date'],
+        type: ['Direction'],
+        assetSymbol: ['Trading pair'],
+        priceUnit: ['Average price', 'Price'],
+        quantity: ['Executed quantity', 'Amount'],
+        amountPrimary: ['Trading volume', 'Total'],
+        feeAmount: ['Fee'],
+        feeAsset: ['Fee Coin', 'Fee Currency']
     },
     'Bourso': {
         transactionDate: ['dateOp'],
         valueDate: ['dateVal'],
         rawLabel: ['label'],
+        label: ['comment'],
         amountPrimary: ['amount'],
-        balanceAfter: ['accountBalance'],
+        balanceAfter: ['accountBalance', 'accountbalance'],
         assetSymbol: ['devise', 'currency']
     },
     'BoursoBank-Alt': {
@@ -73,26 +113,47 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         balanceAfter: ['Solde'],
         assetSymbol: ['Devise']
     },
+    // Supports both legacy CSV exports (Date, ISIN, Shares) and 2025 native snake_case exports (datetime, symbol, shares)
     'TradeRepublic': {
-        transactionDate: ['Date'],
-        type: ['Type'],
-        assetIsin: ['ISIN'],
-        assetName: ['Name'],
-        quantity: ['Shares'],
-        priceUnit: ['Price'],
-        amountPrimary: ['Amount'],
+        externalId: ['transaction_id', 'Transaction ID'],
+        transactionDate: ['datetime', 'Date', 'date'],
+        type: ['Type', 'type'],
+        assetIsin: ['ISIN', 'isin'],
+        assetSymbol: ['Symbol', 'symbol'],
+        assetName: ['Name', 'name'],
+        quantity: ['Shares', 'shares', 'Quantity', 'quantity'],
+        priceUnit: ['Price', 'price'],
+        amountPrimary: ['Amount', 'amount'],
+        feeAmount: ['Fee', 'fee'],
+        taxAmount: ['Tax', 'tax'],
+        currency: ['Currency', 'currency']
+    },
+    // Bitpanda: "Amount Fiat" is the cash value, "Amount Asset" the units; missing values are "-".
+    // The fee may be paid in BEST or in the asset itself, hence "Fee asset".
+    'Bitpanda': {
+        externalId: ['Transaction ID'],
+        transactionDate: ['Timestamp'],
+        type: ['Transaction Type'],
+        assetSymbol: ['Asset'],
+        quantity: ['Amount Asset'],
+        priceUnit: ['Asset market price'],
+        amountPrimary: ['Amount Fiat'],
         feeAmount: ['Fee'],
-        taxAmount: ['Tax'],
-        currency: ['Currency']
+        feeAsset: ['Fee asset'],
+        taxAmount: ['Tax Fiat'],
+        currency: ['Fiat']
     },
     'Coinbase': {
+        externalId: ['ID'],
         transactionDate: ['Timestamp'],
         type: ['Transaction Type'],
         assetSymbol: ['Asset'],
         quantity: ['Quantity Transacted'],
-        priceUnit: ['Spot Price at Transaction', 'Price at Transaction'],
-        amountPrimary: ['Subtotal'],
-        feeAmount: ['Fees and/or Spread', 'Fees']
+        priceUnit: ['Spot Price at Transaction', 'Price at Transaction', 'Spot Price'],
+        amountPrimary: ['Subtotal', 'Total (inclusive of fees and/or spread)'],
+        feeAmount: ['Fees and/or Spread', 'Fees'],
+        currency: ['Price Currency', 'Spot Price Currency'],
+        rawLabel: ['Notes']
     },
     'Kraken': {
         externalId: ['txid'],
@@ -103,6 +164,25 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         quantity: ['vol'],
         amountPrimary: ['cost'],
         feeAmount: ['fee']
+    },
+    // Revolut stocks: "Total Amount" includes fees; values may carry a currency code ("USD 125.07")
+    'Revolut': {
+        transactionDate: ['Date'],
+        type: ['Type'],
+        assetSymbol: ['Ticker'],
+        quantity: ['Quantity'],
+        priceUnit: ['Price per share'],
+        amountPrimary: ['Total Amount'],
+        currency: ['Currency']
+    },
+    'Revolut-Crypto': {
+        transactionDate: ['Date'],
+        type: ['Type'],
+        assetSymbol: ['Symbol'],
+        quantity: ['Quantity'],
+        priceUnit: ['Price'],
+        amountPrimary: ['Value'],
+        feeAmount: ['Fees']
     },
     'GlassFolio': {
         externalId: ['id'],
@@ -163,6 +243,9 @@ export function detectPreset(headers: string[]): { presetName: string; mappings:
     }
 
     for (const [presetName, patterns] of Object.entries(PRESET_PATTERNS)) {
+        const required = PRESET_REQUIRED_HEADERS[presetName] || [];
+        if (!required.every(header => lowerHeaders.includes(header))) continue;
+
         const matches = patterns.filter(p =>
             lowerHeaders.some(h => h.includes(p.toLowerCase()))
         );

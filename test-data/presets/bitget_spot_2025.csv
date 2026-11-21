@@ -1,0 +1,3 @@
+Date,Order ID,Trading pair,Direction,Type,Executed quantity,Average price,Trading volume,Status,Fee,Fee Coin
+2025-01-18 10:00:00,BG-1001,BTCUSDT,Buy,Limit,0.01,94000,940.00,Filled,0.94,USDT
+2025-02-22 15:20:00,BG-1002,ETHUSDT,Sell,Market,0.2,2900,580.00,Filled,0.58,USDT
