@@ -18,6 +18,7 @@ import { totpService } from './security/totpService';
 import { passkeyService } from './security/passkeyService';
 import { vaultService } from './security/vaultService';
 import { VaultLockedError } from './security/vaultTypes';
+import { connectionService } from './connectors/connectionService';
 
 /** Thrown when an export is requested for a demo / not-yet-created account (no personal data to export). */
 export class ExportNotAllowedError extends Error {
@@ -379,12 +380,18 @@ export async function buildRGPDArchiveFiles(): Promise<Record<string, string>> {
     files['profile.json'] = JSON.stringify(profile, null, 2);
     files['consent.json'] = JSON.stringify(getConsent(), null, 2);
     files['security-summary.json'] = JSON.stringify(await readSecuritySummary(), null, 2);
+    // Sync connections: sources, mapped accounts and watch-only addresses; never the credentials
+    const connections = connectionService.exportMetadata();
+    if (connections.length > 0) {
+        collections.connections = connections.length;
+        files['connections.json'] = JSON.stringify(connections, null, 2);
+    }
     files['manifest.json'] = JSON.stringify({
         schema: GDPR_EXPORT_SCHEMA,
         version: GDPR_EXPORT_VERSION,
         exportedAt,
         collections,
-        excludedByDesign: ['masterPasswordHash', 'authSalt', 'apiKey', 'customApiKey', 'totpSecret', 'passkeyMaterial'],
+        excludedByDesign: ['masterPasswordHash', 'authSalt', 'apiKey', 'customApiKey', 'totpSecret', 'passkeyMaterial', 'connectionCredentials'],
         files: Object.keys(files).concat(['manifest.json', 'README.txt']).sort(),
     }, null, 2);
     files['README.txt'] = i18n.t('settings:dataAndBackup.gdprReadme', { date: today });

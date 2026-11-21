@@ -393,7 +393,7 @@ export async function parseFile(
  * Two identical trades in one file are both real; a file overlapping an earlier import only
  * loses the rows that are really already there.
  */
-function flagDuplicates(candidates: StagedTransaction[], storedCounts: Map<string, number>): void {
+export function flagDuplicates(candidates: StagedTransaction[], storedCounts: Map<string, number>): void {
     const seenInFile = new Map<string, number>();
     for (const candidate of candidates) {
         if (candidate.status === 'error') continue;
@@ -535,6 +535,14 @@ export function revalidateStagedRow(staged: StagedTransaction, mode: ImportMode)
     };
 }
 
+/** Where committed rows come from, for batches not produced by a file (TGLA-221). */
+export interface CommitBatchOptions {
+    /** Defaults to 'FILE'. The sync engine passes 'API'. */
+    sourceOrigin?: SourceOrigin;
+    /** Extra batch metadata, e.g. the sync source and connection that produced the rows. */
+    batchMetadata?: { sourceId?: string; connectionId?: string };
+}
+
 /**
  * Commit staged transactions atomically
  */
@@ -546,7 +554,8 @@ export async function commitBatch(
     fileHash: string,
     userId: string = 'default-user',
     referenceDate?: string,
-    delimiter: string = ','
+    delimiter: string = ',',
+    options: CommitBatchOptions = {}
 ): Promise<CommitResult & { batch?: ImportBatch }> {
     await delay(300);
 
@@ -614,7 +623,7 @@ export async function commitBatch(
             instrumentId: resolveInstrumentId(staged.parsed.instrumentId || ''),
             rowHash: staged.rowHash,
             externalId: staged.parsed.externalId,
-            sourceOrigin: 'FILE' as SourceOrigin,
+            sourceOrigin: options.sourceOrigin ?? ('FILE' as SourceOrigin),
             isSynthetic: false,
             isFiscal: true,
             sourceMode: mode,
@@ -634,6 +643,7 @@ export async function commitBatch(
             feeAsset: staged.parsed.feeAsset,
             taxAmount: staged.parsed.taxAmount,
             originalCurrency: staged.parsed.originalCurrency,
+            fxRate: staged.parsed.fxRate,
             balanceAfter: staged.parsed.balanceAfter,
             createdAt: now,
             updatedAt: now,
@@ -658,7 +668,8 @@ export async function commitBatch(
             metadata: {
                 totalRows: transactions.length,
                 delimiter,
-                referenceDate
+                referenceDate,
+                ...options.batchMetadata
             }
         };
 

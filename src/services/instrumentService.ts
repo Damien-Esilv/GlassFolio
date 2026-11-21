@@ -57,6 +57,8 @@ export interface AssetHint {
     accountType?: AccountType;
     /** Kind of the institution holding that account (an exchange or wallet implies crypto). */
     instituteType?: string;
+    /** CoinGecko coin id, when the source knows it (wallet tokens) */
+    coingeckoId?: string;
 }
 
 /**
@@ -449,6 +451,10 @@ export const instrumentService = {
                 enriched.marketIdentifier.contractAddress = hint.contractAddress;
                 updated = true;
             }
+            if (hint.coingeckoId && !enriched.marketIdentifier.coingeckoId) {
+                enriched.marketIdentifier.coingeckoId = hint.coingeckoId;
+                updated = true;
+            }
             if (hint.name && !enriched.name) {
                 enriched.name = hint.name;
                 updated = true;
@@ -489,7 +495,8 @@ export const instrumentService = {
             exchange: hint.exchange ?? classification?.exchange,
             network: hint.network,
             contractAddress: hint.contractAddress,
-            currencyCode: type === 'cash' ? (hint.currencyCode || upperSymbol) : hint.currencyCode
+            currencyCode: type === 'cash' ? (hint.currencyCode || upperSymbol) : hint.currencyCode,
+            ...(hint.coingeckoId ? { coingeckoId: hint.coingeckoId } : {})
         };
 
         const validation = validateMarketReadiness(type, marketIdentifier);

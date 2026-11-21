@@ -16,6 +16,8 @@ export const MCP_BRIDGE_STORAGE_KEY = 'gf_mcp_bridge';
 /** Manually entered prices (encrypted sensitive user data). */
 export const MANUAL_PRICE_HISTORY_KEY = 'glassfolio_manual_price_history';
 export const LEGACY_MANUAL_PRICE_HISTORY_KEY = 'gf_manual_price_history';
+/** Automatic sync connections, credentials included (encrypted sensitive user data, never exported). */
+export const CONNECTIONS_STORAGE_KEY = 'glassfolio_connections';
 /** RP ID of the server passkeys (cloud mode). Public deployment metadata, read while locked. */
 export const PASSKEY_RP_ID_STORAGE_KEY = 'gf_passkey_rp_id';
 

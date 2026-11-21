@@ -36,6 +36,7 @@ import {
   getCostBasisMethodTool,
   setCostBasisMethodTool,
 } from './importTools';
+import { listConnectionsTool, syncConnectionTool, addWatchOnlyWalletTool } from './connectionTools';
 
 /**
  * Initializes and registers all standard GlassFolio AI / MCP tools.
@@ -77,6 +78,9 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(importSnapshotTool);
   aiToolRegistry.registerTool(getCostBasisMethodTool);
   aiToolRegistry.registerTool(setCostBasisMethodTool);
+  aiToolRegistry.registerTool(listConnectionsTool);
+  aiToolRegistry.registerTool(syncConnectionTool);
+  aiToolRegistry.registerTool(addWatchOnlyWalletTool);
 }
 
 // Auto-register on import
@@ -118,4 +122,7 @@ export {
   importSnapshotTool,
   getCostBasisMethodTool,
   setCostBasisMethodTool,
+  listConnectionsTool,
+  syncConnectionTool,
+  addWatchOnlyWalletTool,
 };

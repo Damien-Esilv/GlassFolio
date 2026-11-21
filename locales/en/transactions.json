@@ -403,7 +403,8 @@
         "rollbackSuccess": "Import batch successfully rolled back. {{count}} transactions removed.",
         "rollbackError": "Failed to rollback import batch. Please try again.",
         "viewAll": "View all history",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "syncBadge": "Auto sync"
     },
     "snapshotWizard": {
         "title": "Snapshot Import",

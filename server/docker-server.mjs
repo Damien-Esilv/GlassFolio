@@ -15,7 +15,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createLocalVaultHandler, createLocalVaultStore, isLocalVaultPath } from './localVault.mjs';
+import { CLIENT_HEADER, createLocalVaultHandler, createLocalVaultStore, isAllowedHost, isLocalVaultPath, isSameOrigin } from './localVault.mjs';
+import { createLocalConnectorRelayHandler, isConnectorRelayPath } from './connectorRelay.mjs';
 import { createAccessControl } from './accessControl.mjs';
 import { buildSecurityHeaders } from './securityHeaders.mjs';
 import { handleYahooProxy, isYahooProxyPath } from './yahooProxy.mjs';
@@ -69,6 +70,13 @@ const SECURITY_HEADERS = buildSecurityHeaders('local', { extraConnectSrc: EXTRA_
 const DEMO = process.env.GLASSFOLIO_DEMO === '1';
 const mcpBridge = createLocalMcpBridge({ dataDir: DATA_DIR, headers: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS });
 const handleLocalVault = createLocalVaultHandler(vaultStore, { securityHeaders: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS, demo: DEMO });
+const handleConnectorRelay = createLocalConnectorRelayHandler({
+  securityHeaders: SECURITY_HEADERS,
+  allowedHosts: ALLOWED_HOSTS,
+  isAllowedHost,
+  isSameOrigin,
+  clientHeader: CLIENT_HEADER,
+});
 
 /** Hashed build output (Vite `assets/`): its name changes with its content, so it can be cached for good. */
 const isFingerprintedAsset = (pathname) => pathname.startsWith('/assets/');
@@ -119,6 +127,12 @@ async function handleRequest(req, res) {
   // 2. Market data proxy (same-origin /yf/*)
   if (isYahooProxyPath(pathname)) {
     await handleYahooProxy(req, res, parsedUrl, { securityHeaders: SECURITY_HEADERS });
+    return;
+  }
+
+  // 2b. Connector relay: allowlisted, signed sync requests to providers that refuse browser calls (TGLA-221)
+  if (isConnectorRelayPath(pathname)) {
+    await handleConnectorRelay(req, res);
     return;
   }
 

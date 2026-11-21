@@ -114,6 +114,9 @@ export interface MarketIdentifier {
 
     /** ISO 4217 currency code for cash instruments (e.g. EUR, USD) */
     currencyCode?: string;
+
+    /** CoinGecko coin id (e.g. bitcoin, ethereum) — lets crypto prices skip the symbol guess */
+    coingeckoId?: string;
 }
 
 /**
@@ -337,6 +340,10 @@ export interface ImportBatch {
         errors?: string[];
         /** Reference date for snapshot imports */
         referenceDate?: string;
+        /** Automatic sync source that produced this batch (TGLA-221) */
+        sourceId?: string;
+        /** Connection that produced this batch (TGLA-221) */
+        connectionId?: string;
     };
 }
 

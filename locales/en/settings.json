@@ -4,7 +4,8 @@
     "tabs": {
         "profile": "Profile",
         "preferences": "Preferences",
-        "security": "Security & Access"
+        "security": "Security & Access",
+        "connections": "Connections"
     },
     "profile": {
         "publicProfile": "Public Profile",
@@ -130,5 +131,125 @@
         "subtitle": "Documents in force (version {{version}}): legal notice, privacy, terms of use, cookies and accessibility.",
         "cookiePreferences": "Cookie preferences",
         "rightsHint": "To exercise your rights (rectification, objection, restriction), use the export and account deletion options on this page, or write to {{email}}."
+    },
+    "connections": {
+        "title": "Connections",
+        "subtitle": "Sources that keep your positions up to date on their own, read-only.",
+        "privacyNote": "Syncs run in this tab only, while your vault is unlocked: keys and addresses stay encrypted in your vault and are never stored on a server. Requests that a provider refuses from a browser go through a relay that stores and logs nothing.",
+        "empty": "No source connected yet. Add one below.",
+        "accountMissing": "Account to choose again",
+        "lastSync": "Last sync: {{date}}",
+        "syncNow": "Sync now",
+        "delete": "Remove this source",
+        "confirmDelete": "Confirm removal",
+        "result_one": "{{count}} change recorded.",
+        "result_other": "{{count}} changes recorded.",
+        "drift": "The provider shows other quantities than your journal for: {{assets}}. Check your imports.",
+        "comingSoon": "Coming next: French banks (BoursoBank, Fortuneo…) through a local Woob companion, after the manual test of the study.",
+        "sources": {
+            "snaptrade": "SnapTrade Personal",
+            "wallet_btc": "Bitcoin wallet (watch-only)",
+            "wallet_evm": "Ethereum wallet (watch-only)",
+            "wallet_sol": "Solana wallet (watch-only)",
+            "woob": "French banks (local companion)"
+        },
+        "status": {
+            "never_synced": "Never synced",
+            "ok": "Up to date",
+            "error": "Failed",
+            "auth_failed": "Access refused",
+            "rate_limited": "Paused (limit)",
+            "needs_mapping": "Account to choose"
+        },
+        "errors": {
+            "auth_failed": "the provider refused the credentials",
+            "rate_limited": "too many requests, retry later",
+            "network": "provider unreachable",
+            "invalid_response": "unexpected answer from the provider",
+            "relay_unavailable": "relay unavailable",
+            "account_missing": "a linked account no longer exists",
+            "busy": "an import was in progress, retry in a moment",
+            "unknown": "unexpected error"
+        },
+        "form": {
+            "title": "Add a watch-only wallet",
+            "description": "Paste the public addresses of a wallet (Ledger, Trezor, MetaMask, Phantom…). A public address or extended public key only lets GlassFolio read balances; it can never move funds. No account or key is needed.",
+            "label": "Name",
+            "labelPlaceholder": "Ledger cold wallet",
+            "addresses": "Public addresses",
+            "addressesPlaceholder": {
+                "bitcoin": "bc1q… or zpub… (one per line)",
+                "evm": "0x… (one per line)",
+                "solana": "Solana address (one per line)"
+            },
+            "addressesHelp": {
+                "bitcoin": "Addresses starting with 1, 3 or bc1, or an extended public key (xpub, ypub, zpub): every used address of the wallet is found.",
+                "evm": "ETH and the main tokens (USDC, USDT, DAI, WBTC, LINK, UNI, stETH, ARB, OP, POL) are read on Ethereum, Arbitrum, Base, Optimism and Polygon. Other tokens are left out, unsolicited airdrops included.",
+                "solana": "SOL and the main tokens (USDC, USDT, JUP, mSOL, JitoSOL, BONK) are read. Other tokens are left out, unsolicited airdrops included."
+            },
+            "account": "Record in",
+            "newAccount": "A new account with this name",
+            "submit": "Add and sync",
+            "errors": {
+                "label": "Give this wallet a name.",
+                "addresses": {
+                    "bitcoin": "Enter at least one valid Bitcoin address or extended public key.",
+                    "evm": "Enter at least one valid address (0x followed by 40 hexadecimal characters).",
+                    "solana": "Enter at least one valid Solana address."
+                },
+                "generic": "The wallet could not be added. Try again."
+            },
+            "chain": "Network",
+            "chains": {
+                "bitcoin": "Bitcoin",
+                "evm": "Ethereum & EVM (Arbitrum, Base, Optimism, Polygon)",
+                "solana": "Solana"
+            }
+        },
+        "notifications": {
+            "action": "Open connections",
+            "error": {
+                "title": "Sync failed: {{label}}",
+                "message": "The last sync of {{label}} did not complete. It will be tried again later."
+            },
+            "auth_failed": {
+                "title": "Access refused: {{label}}",
+                "message": "The provider refused the credentials of {{label}}. Check them in the connections."
+            },
+            "needs_mapping": {
+                "title": "Account to choose: {{label}}",
+                "message": "An account linked to {{label}} no longer exists. Choose where to record it."
+            },
+            "drift": {
+                "title": "Quantities differ: {{label}}",
+                "message": "{{label}} shows other quantities than your journal for {{count}} asset(s)."
+            }
+        },
+        "fields": {
+            "clientId": "Client ID",
+            "consumerKey": "Consumer key"
+        },
+        "snaptrade": {
+            "title": "Connect your brokers with SnapTrade Personal",
+            "description": "One free SnapTrade account links Interactive Brokers (PEA included), Trading 212, DEGIRO, eToro, Bux, XTB, Robinhood, Binance, Kraken, Coinbase and about 40 other brokers. Positions, trades and dividends are then synced every day.",
+            "steps": {
+                "account": "Create a free SnapTrade Personal account on",
+                "link": "In the SnapTrade dashboard, link your brokers. For Binance, Kraken or Coinbase, give it an API key with read-only rights.",
+                "keys": "Copy your Client ID and Consumer key here, then test them."
+            },
+            "keyNote": "Your consumer key stays encrypted in your vault and never leaves this browser: each request is signed here, only the one-time signature goes through the relay.",
+            "test": "Test and list my accounts",
+            "found_one": "{{count}} account found. Choose where to record it and from which date.",
+            "found_other": "{{count}} accounts found. Choose where to record each one and from which date.",
+            "skip": "Do not sync this account",
+            "startDate": "Import operations from",
+            "startHelp": "Empty date: the whole history the broker gives. For an account that already holds imported rows, the day after the last one is proposed, so nothing is imported twice.",
+            "save": "Save and sync",
+            "errors": {
+                "keys": "Enter your Client ID and Consumer key.",
+                "noAccounts": "No account found: link a broker in the SnapTrade dashboard first.",
+                "noneChosen": "Choose at least one account to sync."
+            }
+        }
     }
 }

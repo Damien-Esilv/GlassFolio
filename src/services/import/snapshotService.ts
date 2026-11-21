@@ -835,6 +835,8 @@ export interface CommitSnapshotParams extends Omit<SnapshotCommitParams, 'batchI
     fileName: string;
     totalRows: number;
     date?: string;
+    /** Sync source and connection that produced the snapshot (TGLA-221) */
+    batchMetadata?: { sourceId?: string; connectionId?: string };
 }
 
 /**
@@ -866,7 +868,7 @@ export async function commitSnapshotImport(params: CommitSnapshotParams): Promis
         importedBy: params.userId,
         status: 'completed',
         engineVersion: ENGINE_VERSION,
-        metadata: { totalRows: params.totalRows }
+        metadata: { totalRows: params.totalRows, ...params.batchMetadata }
     };
 
     try {

@@ -44,7 +44,7 @@ import {
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
 import { getDeploymentMode } from '../config/deployment';
-import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY, VAULT_HEADER_KEY } from './storage/storageKeys';
+import { CONNECTIONS_STORAGE_KEY, LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY, VAULT_HEADER_KEY } from './storage/storageKeys';
 
 const STORAGE_KEYS = {
     // Legacy keys (existing functionality)
@@ -608,6 +608,8 @@ class MockDB {
             STORAGE_KEYS.ASSET_POSITIONS,
         ];
         zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
+        // Sync connections point to the accounts just wiped
+        appStorage.removeItem(CONNECTIONS_STORAGE_KEY);
         appStorage.removeItem('glassfolio_price_cache');
         appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
         appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);

@@ -38,4 +38,14 @@ describe('vercel.json edge rules', () => {
       expect(sourceToRegExp(rule.source.replace(':page(', '(')).test('/assets/old-chunk.js'), rule.source).toBe(false);
     });
   });
+
+  it('never rewrites the connector relay to the app shell (TGLA-221)', () => {
+    config.rewrites.forEach((rule) => {
+      expect(sourceToRegExp(rule.source.replace(':page(', '(')).test('/api/connector-relay'), rule.source).toBe(false);
+    });
+  });
+
+  it('runs the functions in Paris: Binance refuses US addresses, the default region', () => {
+    expect((config as VercelConfig & { regions?: string[] }).regions).toEqual(['cdg1']);
+  });
 });

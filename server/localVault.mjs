@@ -386,7 +386,7 @@ export const isAllowedHost = (hostHeader, allowedHosts = []) => {
   return allowedHosts.includes(hostname);
 };
 
-const isSameOrigin = (req) => {
+export const isSameOrigin = (req) => {
   const site = req.headers['sec-fetch-site'];
   if (site !== undefined && site !== 'same-origin' && site !== 'none') return false;
   const origin = req.headers.origin;

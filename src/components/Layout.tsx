@@ -13,6 +13,7 @@ import { appStorage } from '../services/storage/appStorage';
 import { AIChatDrawer } from './ai/AIChatDrawer';
 import { McpBridgeHost } from './mcp/McpBridgeHost';
 import { DesktopUpdatePrompt } from './desktop/DesktopUpdatePrompt';
+import { ConnectionSyncHost } from './connections/ConnectionSyncHost';
 import { ConsentBanner } from './ConsentBanner';
 import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
@@ -662,6 +663,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Desktop app only: offers a new version when the shell finds one */}
       <DesktopUpdatePrompt />
+
+      {/* Automatic syncs of the connected sources, while this tab holds the unlocked vault (TGLA-221) */}
+      <ConnectionSyncHost />
 
       {/* Real-time Floating Notification Toasts */}
       <NotificationToastContainer />

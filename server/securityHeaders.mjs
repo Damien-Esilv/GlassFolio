@@ -22,6 +22,20 @@ export const AI_AND_MARKET_ORIGINS = Object.freeze([
 ]);
 
 /**
+ * Sync sources the browser calls directly (TGLA-221): public blockchain data that allows CORS.
+ * Providers without CORS go through the same-origin connector relay instead (server/connectorRelaySpec.mjs).
+ */
+export const CONNECTOR_DIRECT_ORIGINS = Object.freeze([
+  'https://blockstream.info',
+  'https://ethereum-rpc.publicnode.com',
+  'https://arbitrum-one-rpc.publicnode.com',
+  'https://base-rpc.publicnode.com',
+  'https://optimism-rpc.publicnode.com',
+  'https://polygon-bor-rpc.publicnode.com',
+  'https://solana-rpc.publicnode.com',
+]);
+
+/**
  * Trusted Types policies the client registers (src/services/security/trustedTypes.ts). Any other
  * policy name, and any raw string reaching an HTML/script sink, is refused by the browser.
  * A test keeps this list and the client code in sync.
@@ -38,7 +52,7 @@ export const CSP_PROFILES = Object.freeze({
   /** Self-hosted Docker image / `npm run dev`: market data goes through the same-origin /yf proxy. */
   local: Object.freeze({
     scriptSrc: Object.freeze(["'self'"]),
-    connectSrc: Object.freeze(["'self'", ...AI_AND_MARKET_ORIGINS, ...LOCAL_AI_ORIGINS]),
+    connectSrc: Object.freeze(["'self'", ...AI_AND_MARKET_ORIGINS, ...CONNECTOR_DIRECT_ORIGINS, ...LOCAL_AI_ORIGINS]),
     imgSrc: Object.freeze(["'self'", 'data:', 'blob:']),
     frameSrc: Object.freeze(["'none'"]),
   }),
@@ -52,6 +66,7 @@ export const CSP_PROFILES = Object.freeze({
       'https://challenges.cloudflare.com',
       'https://www.googleapis.com',
       ...AI_AND_MARKET_ORIGINS,
+      ...CONNECTOR_DIRECT_ORIGINS,
       ...LOCAL_AI_ORIGINS,
     ]),
     // Google OAuth profile pictures
