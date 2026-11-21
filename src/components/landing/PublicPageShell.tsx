@@ -12,12 +12,15 @@ interface PublicPageShellProps {
   intro: string;
   /** Optional actions under the intro (buttons, links). */
   actions?: React.ReactNode;
+  /** A wider column (72rem instead of 56rem) for pages made of large blocks, like the download page. */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
 /** Common frame of the public pages (about, roadmap, changelog): header, animated title, footer. */
-export const PublicPageShell: React.FC<PublicPageShellProps> = ({ title, intro, actions, children }) => {
+export const PublicPageShell: React.FC<PublicPageShellProps> = ({ title, intro, actions, wide = false, children }) => {
   const { t } = useTranslation();
+  const column = wide ? 'max-w-6xl' : 'max-w-4xl';
 
   return (
     <LandingMotionProvider>
@@ -30,7 +33,7 @@ export const PublicPageShell: React.FC<PublicPageShellProps> = ({ title, intro, 
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-12 lg:pt-20"
+              className={`relative ${column} mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-12 lg:pt-20`}
             >
               <Link to={buildPublicPagePath('') || '/'} className="text-sm font-semibold text-brand hover:underline">
                 {t('selfhost:backToHome')}
@@ -40,7 +43,7 @@ export const PublicPageShell: React.FC<PublicPageShellProps> = ({ title, intro, 
               {actions && <div className="mt-8 flex flex-col sm:flex-row gap-3">{actions}</div>}
             </m.div>
           </div>
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">{children}</div>
+          <div className={`${column} mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16`}>{children}</div>
         </main>
         <LandingFooter />
       </div>

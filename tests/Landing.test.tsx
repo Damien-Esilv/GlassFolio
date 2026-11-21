@@ -62,18 +62,19 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(screen.getByRole('heading', { name: 'Two ways to use GlassFolio' })).toBeTruthy();
   });
 
-  it('offers the desktop app, Docker and the cloud version in the hero, the app first', () => {
+  it('offers two ways in the hero, at home (the desktop app first, then Docker) and online', () => {
     render(
       <MemoryRouter initialEntries={['/welcome']}>
         <Landing />
       </MemoryRouter>
     );
-    const modes = screen.getByRole('list', { name: 'Three ways to use GlassFolio' });
+    const modes = screen.getByRole('list', { name: 'Two ways to use GlassFolio' });
     const cards = within(modes).getAllByRole('listitem').filter((item) => item.parentElement === modes);
-    expect(cards).toHaveLength(3);
-    expect(within(cards[0]).getByRole('link', { name: /Download the app/i }).getAttribute('href')).toBe('/welcome/download');
-    expect(within(modes).getByRole('link', { name: /Install with Docker/i })).toBeTruthy();
-    expect(within(modes).getByRole('link', { name: /Create a free account/i })).toBeTruthy();
+    expect(cards).toHaveLength(2);
+    const [home, online] = cards;
+    expect(within(home).getByRole('link', { name: /Download the desktop app/i }).getAttribute('href')).toBe('/welcome/download');
+    expect(within(home).getByRole('link', { name: /Install it with Docker/i }).getAttribute('href')).toBe('/welcome/self-host');
+    expect(within(online).getByRole('link', { name: /Create a free account/i })).toBeTruthy();
   });
 
   it('never advertises unsupported real estate or uses "zero-knowledge" wording', () => {

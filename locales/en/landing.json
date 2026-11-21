@@ -95,25 +95,16 @@
       "cashYield": "Cash, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Three ways to use GlassFolio",
-      "desktop": {
-        "badge": "New",
-        "title": "Install the app",
-        "tagline": "Desktop app for Mac, Windows and Linux",
-        "points": {
-          "p1": "Its own window: no Docker, no terminal",
-          "p2": "Your data stays on your computer, encrypted"
-        },
-        "cta": "Download the app"
-      },
+      "ariaLabel": "Two ways to use GlassFolio",
       "local": {
-        "title": "Run it with Docker",
-        "tagline": "Self-hosted, for home servers",
+        "title": "Run it at home",
+        "tagline": "Desktop app or Docker",
         "points": {
           "p1": "Your data stays on your machine",
           "p2": "Source-available code, full control"
         },
-        "cta": "Install with Docker"
+        "cta": "Download the desktop app",
+        "ctaDocker": "Prefer Docker? Install it with Docker"
       },
       "cloud": {
         "title": "Use it online",

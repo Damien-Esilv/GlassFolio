@@ -95,25 +95,16 @@
       "cashYield": "Liquidités, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Trois façons d'utiliser GlassFolio",
-      "desktop": {
-        "badge": "Nouveau",
-        "title": "Installer l'application",
-        "tagline": "Application de bureau pour Mac, Windows et Linux",
-        "points": {
-          "p1": "Sa propre fenêtre : sans Docker ni terminal",
-          "p2": "Vos données restent sur votre ordinateur, chiffrées"
-        },
-        "cta": "Télécharger l'application"
-      },
+      "ariaLabel": "Deux façons d'utiliser GlassFolio",
       "local": {
-        "title": "Avec Docker",
-        "tagline": "Auto-hébergé, pour serveurs maison",
+        "title": "Chez vous",
+        "tagline": "Application de bureau ou Docker",
         "points": {
           "p1": "Vos données restent sur votre machine",
           "p2": "Code source-available, contrôle total"
         },
-        "cta": "Installer avec Docker"
+        "cta": "Télécharger l'application de bureau",
+        "ctaDocker": "Vous préférez Docker ? L’installer avec Docker"
       },
       "cloud": {
         "title": "En ligne",

@@ -1,17 +1,30 @@
 {
   "title": "Download GlassFolio for your computer",
   "intro": "A real desktop app for Mac, Windows and Linux: install it, open it, and your portfolio lives in its own window. No Docker, no terminal, and your data stays on your machine, encrypted.",
-  "actions": {
-    "detected": "Download for {{os}}",
+  "hero": {
+    "eyebrow": "Desktop app",
+    "recommended": "Recommended for your computer",
+    "heading": "GlassFolio for {{os}}",
+    "headingAny": "GlassFolio for Mac, Windows and Linux",
+    "anySpec": "Pick your system to get the installer.",
+    "mobileNote": "GlassFolio installs on a computer. Open this page on your Mac, Windows PC or Linux machine, or pick a system below.",
+    "download": "Download for {{os}}",
     "choose": "Choose your system",
-    "pending": "See the install options"
+    "showAll": "Other systems and versions",
+    "switchToIntel": "Mac with an Intel chip? Download the Intel version.",
+    "switchToSilicon": "Mac with an Apple chip (M1 or later)? Download that version.",
+    "windowTitle": "GlassFolio"
   },
   "comingSoon": {
-    "badge": "First release coming soon",
-    "title": "The installers are not published yet",
     "body": "The desktop app is built and tested; the first installers are about to be published on GitHub. Until then you can run GlassFolio with Docker, or try the cloud version.",
     "docker": "Install with Docker",
     "cloud": "Try the cloud version"
+  },
+  "all": {
+    "title": "All systems and versions",
+    "subtitle": "macOS, Windows and Linux, with the steps for the first launch",
+    "tabsLabel": "Operating system",
+    "yours": "Your system"
   },
   "platforms": {
     "mac": {
@@ -42,7 +55,6 @@
     }
   },
   "card": {
-    "recommended": "Recommended for your computer",
     "download": "Download .{{format}}",
     "soon": "Coming soon"
   },
@@ -92,6 +104,35 @@
       }
     }
   },
+  "ways": {
+    "title": "Three ways to use GlassFolio",
+    "intro": "The same app, the same encryption and the same features. Choose where it runs, and switch whenever you like.",
+    "recommended": "Recommended",
+    "goodToKnow": "Good to know",
+    "desktop": {
+      "title": "Desktop app",
+      "body": "The simplest way to keep everything on your computer: install it like any other app.",
+      "points": {
+        "p1": "Its own window, with no Docker and no terminal",
+        "p2": "Your data stays on your computer, encrypted",
+        "p3": "New versions offered inside the app"
+      },
+      "note": "On a Mac, the app unlocks with your master password. Touch ID, passkeys and the autofill of your password manager work in the browser versions (Docker and cloud).",
+      "cta": "Choose your download"
+    },
+    "docker": {
+      "title": "Docker",
+      "body": "Run GlassFolio as a container on your computer or on a home server, and open it in your browser. The same local, encrypted vault.",
+      "note": "It opens in your browser, so Touch ID, passkeys and your password manager work like on any website.",
+      "cta": "Read the Docker guide"
+    },
+    "cloud": {
+      "title": "Cloud version",
+      "body": "Nothing to install: create a free account and use GlassFolio from any browser, with your data end-to-end encrypted.",
+      "note": "It runs in your browser too, and follows you on all your devices.",
+      "cta": "Create a free account"
+    }
+  },
   "updates": {
     "title": "How updates work",
     "body": "When GlassFolio starts, and every few hours after, it asks GitHub for the latest release. GitHub therefore sees your IP address, like for any web request; nothing about you or your data is sent. The update information is signed, and every download is checked against its fingerprint before anything is installed. If a new version exists, you choose: update now, or later. You can turn the check off in Settings."
@@ -101,18 +142,5 @@
     "body": "Each release lists the SHA-256 fingerprint of every installer. Compare it with the one of your download if you want to be sure.",
     "checksums": "SHA-256 fingerprints",
     "releases": "All releases on GitHub"
-  },
-  "alternatives": {
-    "title": "Other ways to use GlassFolio",
-    "docker": {
-      "title": "Docker",
-      "body": "Run GlassFolio as a container on your computer or a home server. The same local, encrypted vault, opened in your browser.",
-      "cta": "Read the Docker guide"
-    },
-    "cloud": {
-      "title": "Cloud version",
-      "body": "Nothing to install: create a free account and use GlassFolio from any browser, with your data end-to-end encrypted.",
-      "cta": "Create a free account"
-    }
   }
 }
