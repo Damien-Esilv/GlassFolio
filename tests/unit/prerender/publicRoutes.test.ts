@@ -112,7 +112,7 @@ describe('public routes manifest', () => {
 
   it('keeps the product schema off the legal pages', () => {
     const withSchema = PUBLIC_ROUTES.filter((route) => route.softwareSchema).map((route) => route.path);
-    expect(withSchema).toEqual(['/', '/self-host']);
+    expect(withSchema).toEqual(['/', '/self-host', '/download']);
   });
 });
 

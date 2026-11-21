@@ -1,0 +1,63 @@
+# GlassFolio desktop installers. Version-less file names on purpose: the website links to
+# https://github.com/Damien-Esilv/GlassFolio/releases/latest/download/<name>, which stays valid across releases.
+# The same names are listed in desktop/lib/constants.mjs (INSTALLER_FILES) and desktop/scripts/make-update-manifest.mjs.
+appId: dev.glassfolio.desktop
+productName: GlassFolio
+copyright: Copyright (c) 2026 Damien
+directories:
+  output: release
+  buildResources: build
+files:
+  - main.mjs
+  - preload.cjs
+  - update-public-key.mjs
+  - lib/**
+  - package.json
+asar: true
+# The web build and the local server run from real files next to the app (not inside the asar archive)
+extraResources:
+  - from: ../dist
+    to: dist
+  - from: ../server
+    to: server
+    filter: ['*.mjs']
+  - from: ../mcp-server
+    to: mcp-server
+    filter: ['*.mjs', '*.json']
+  - from: ../LICENSE
+    to: LICENSE
+publish:
+  provider: github
+  owner: Damien-Esilv
+  repo: GlassFolio
+  releaseType: draft
+mac:
+  category: public.app-category.finance
+  target:
+    - { target: dmg, arch: [arm64, x64] }
+    - { target: zip, arch: [arm64, x64] }
+  artifactName: GlassFolio-mac-${arch}.${ext}
+  # No Apple Developer ID: "-" signs ad hoc (needed to launch on Apple Silicon) but does not notarize, so macOS asks for a
+  # one-time "Open Anyway" at first launch.
+  # Updates go through the guided updater (desktop/lib/macUpdater.mjs), not Squirrel.Mac.
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+dmg:
+  artifactName: GlassFolio-mac-${arch}.${ext}
+win:
+  target:
+    - { target: nsis, arch: [x64] }
+  artifactName: GlassFolio-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: GlassFolio-win-${arch}.${ext}
+linux:
+  target:
+    - { target: AppImage, arch: [x64] }
+    - { target: deb, arch: [x64] }
+  category: Finance
+  maintainer: GlassFolio <noreply@glassfolio.dev>
+  artifactName: GlassFolio-linux-x64.${ext}

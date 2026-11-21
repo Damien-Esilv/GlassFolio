@@ -1,0 +1,148 @@
+name: Desktop app
+
+# Builds the desktop installers (macOS, Windows, Linux) and publishes them to a DRAFT GitHub release.
+#
+# - Push to a branch touching desktop/ or server/: only the smoke test runs (real Electron window on Linux).
+# - Tag `vX.Y.Z` or manual run: builds the three platforms. Only a tag also signs the update manifest and
+#   uploads everything to the draft release; the maintainer reviews it and publishes it by hand.
+#
+# The repository is public: no step prints a secret, and nothing here uses `set -x`.
+
+on:
+  push:
+    tags: ['v*']
+    branches: ['feat/**', 'fix/**', 'chore/**']
+    paths:
+      - 'desktop/**'
+      - 'server/**'
+      - '.github/workflows/desktop-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Desktop smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Build the local web app
+        run: npm run build:local
+
+      - name: Install the desktop app dependencies
+        run: npm --prefix desktop ci
+
+      - name: Run the app in a virtual display and check it
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1
+          xvfb-run -a node desktop/scripts/smoke.mjs
+
+  build:
+    name: Build ${{ matrix.label }}
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: smoke
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, label: macOS, flag: --mac }
+          - { os: windows-latest, label: Windows, flag: --win }
+          - { os: ubuntu-latest, label: Linux, flag: --linux }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node & install
+        uses: ./.github/actions/setup
+
+      - name: Check the tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          version="$(node -p "require('./desktop/package.json').version")"
+          root="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ] || [ "${version}" != "${root}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match desktop (${version}) and root (${root}) versions."
+            exit 1
+          fi
+
+      - name: Check the update key is set (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          if grep -q "UPDATE_PUBLIC_KEY_BASE64 = ''" desktop/update-public-key.mjs; then
+            echo "desktop/update-public-key.mjs is empty: run 'npm --prefix desktop run generate-update-key' first."
+            exit 1
+          fi
+
+      - name: Build the local web app
+        run: npm run build:local
+
+      - name: Install the desktop app dependencies
+        run: npm --prefix desktop ci
+
+      - name: Package the installers
+        run: npm --prefix desktop run dist -- ${{ matrix.flag }}
+
+      - name: Keep the installers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-${{ matrix.label }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/release/GlassFolio-*
+            desktop/release/latest*.yml
+
+  release:
+    name: Sign and publish the draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: Download the installers
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: installers
+
+      - name: Sign the update manifest
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: node desktop/scripts/make-update-manifest.mjs installers "${GITHUB_REF_NAME#v}" release-files
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Installers (and their blockmaps), update metadata, the signed manifest and the checksums
+          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release create "${GITHUB_REF_NAME}" --draft --title "${GITHUB_REF_NAME}" --notes "Desktop installers for ${GITHUB_REF_NAME}. Verify a download with SHA256SUMS.txt."
+          fi
+          gh release upload "${GITHUB_REF_NAME}" installers/GlassFolio-* installers/latest*.yml release-files/* --clobber

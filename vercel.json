@@ -27,7 +27,7 @@
       "destination": "/_p/:lang/index.html"
     },
     {
-      "source": "/:lang(en|fr)/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:lang(en|fr)/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/_p/:lang/:page.html"
     },
     {
@@ -35,7 +35,7 @@
       "destination": "/_p/en/index.html"
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/_p/en/:page.html"
     },
     {
@@ -65,7 +65,7 @@
       "statusCode": 301
     },
     {
-      "source": "/welcome/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/welcome/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "destination": "/:page",
       "statusCode": 301
     },
@@ -161,7 +161,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -177,7 +177,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -193,7 +193,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -209,7 +209,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -311,7 +311,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -327,7 +327,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -343,7 +343,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",
@@ -359,7 +359,7 @@
       "statusCode": 307
     },
     {
-      "source": "/:page(self-host|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
+      "source": "/:page(self-host|download|docs|about|roadmap|changelog|legal|privacy|terms|cookies|accessibility|contact)",
       "has": [
         {
           "type": "host",

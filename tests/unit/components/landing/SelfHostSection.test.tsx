@@ -43,6 +43,12 @@ describe('<SelfHostSection />', () => {
     expect(screen.getByRole('link', { name: /installation guide/i }).getAttribute('href')).toBe('/self-host');
   });
 
+  it('puts the desktop app first in the self-hosted card, next to the Docker guide', () => {
+    vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('showcase');
+    renderSection();
+    expect(screen.getByRole('link', { name: /Get the desktop app/i }).getAttribute('href')).toBe('/download');
+  });
+
   it('prefixes the guide with /welcome in the unified build', () => {
     vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('unified');
     renderSection();
@@ -76,9 +82,9 @@ describe('<SelfHostSection />', () => {
 
   it('compares the local and cloud editions row by row', () => {
     renderSection();
-    expect(screen.getByRole('columnheader', { name: /Self-hosted \(Docker\)/ })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: /Self-hosted \(desktop or Docker\)/ })).toBeTruthy();
     expect(screen.getByRole('columnheader', { name: /Cloud \(app\.glassfolio\.dev\)/ })).toBeTruthy();
     expect(screen.getByRole('rowheader', { name: 'Where your data lives' })).toBeTruthy();
-    expect(screen.getByText('Encrypted vault in a volume on your own disk')).toBeTruthy();
+    expect(screen.getByText('Encrypted vault on your own disk')).toBeTruthy();
   });
 });

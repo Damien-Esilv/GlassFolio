@@ -6,6 +6,7 @@ import {
   getMcpClient,
   pickSnippet,
   renderSnippet,
+  formatEntryPath,
   type McpClient,
 } from '../../../src/config/mcpClients';
 
@@ -91,5 +92,25 @@ describe('the AI client catalog (mcpClients.json)', () => {
       snippets: [{ transport: 'http', format: 'json', template: '{ "servers": { "glassfolio": { "url": "{{endpoint}}", "token": "{{token}}" } } }' }],
     };
     expect(JSON.parse(renderSnippet(added.snippets[0], values)).servers.glassfolio).toEqual({ url: values.endpoint, token: values.token });
+  });
+});
+
+describe('the MCP server path inside the desktop app', () => {
+  it('replaces the placeholder with the real bundled path', () => {
+    const claudeCode = getMcpClient('claude-code');
+    const text = renderSnippet(pickSnippet(claudeCode, 'stdio'), { ...values, entryPath: '/Applications/GlassFolio.app/Contents/Resources/mcp-server/index.mjs' });
+    expect(text).toContain('/Applications/GlassFolio.app/Contents/Resources/mcp-server/index.mjs');
+    expect(text).not.toContain(MCP_ENTRY_PLACEHOLDER);
+  });
+
+  it('escapes Windows paths in JSON and TOML and quotes paths with spaces in a command', () => {
+    const windows = 'C:\\Users\\Ana\\AppData\\Local\\Programs\\GlassFolio\\resources\\mcp-server\\index.mjs';
+    expect(formatEntryPath(windows, 'json')).toBe('C:\\\\Users\\\\Ana\\\\AppData\\\\Local\\\\Programs\\\\GlassFolio\\\\resources\\\\mcp-server\\\\index.mjs');
+    expect(formatEntryPath('/My Apps/GlassFolio/index.mjs', 'command')).toBe('"/My Apps/GlassFolio/index.mjs"');
+    expect(formatEntryPath('/opt/GlassFolio/index.mjs', 'command')).toBe('/opt/GlassFolio/index.mjs');
+  });
+
+  it('keeps the placeholder when the path is unknown (browser, Docker)', () => {
+    expect(renderSnippet(pickSnippet(getMcpClient('claude-desktop'), 'stdio'), values)).toContain(MCP_ENTRY_PLACEHOLDER);
   });
 });

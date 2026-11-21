@@ -1,11 +1,15 @@
 {
   "home": {
     "title": "GlassFolio : suivi de patrimoine chiffré, auto-hébergé ou cloud",
-    "description": "Suivez PEA, CTO, crypto et assurance-vie dans un coffre chiffré AES-256-GCM, avec la fiscalité française intégrée. Auto-hébergez avec Docker ou utilisez le cloud."
+    "description": "Suivez PEA, CTO, crypto et assurance-vie dans un coffre chiffré, avec la fiscalité française intégrée. Application de bureau, Docker ou cloud : à vous de choisir."
   },
   "selfHost": {
     "title": "Auto-héberger GlassFolio avec Docker : guide d'installation",
     "description": "Faites tourner GlassFolio sur votre machine ou votre serveur avec Docker. Votre coffre chiffré reste sur un volume que vous contrôlez."
+  },
+  "download": {
+    "title": "Télécharger GlassFolio : application pour Mac, Windows et Linux",
+    "description": "Installez GlassFolio comme application de bureau sur Mac, Windows ou Linux, sans Docker. Votre coffre chiffré reste chez vous, avec des mises à jour que vous maîtrisez."
   },
   "about": {
     "title": "À propos de GlassFolio : le projet et son auteur",

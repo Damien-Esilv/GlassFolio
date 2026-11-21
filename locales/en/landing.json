@@ -95,15 +95,25 @@
       "cashYield": "Cash, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Two ways to use GlassFolio",
+      "ariaLabel": "Three ways to use GlassFolio",
+      "desktop": {
+        "badge": "New",
+        "title": "Install the app",
+        "tagline": "Desktop app for Mac, Windows and Linux",
+        "points": {
+          "p1": "Its own window: no Docker, no terminal",
+          "p2": "Your data stays on your computer, encrypted"
+        },
+        "cta": "Download the app"
+      },
       "local": {
-        "title": "Run it at home",
-        "tagline": "Self-hosted with Docker",
+        "title": "Run it with Docker",
+        "tagline": "Self-hosted, for home servers",
         "points": {
           "p1": "Your data stays on your machine",
           "p2": "Source-available code, full control"
         },
-        "cta": "Install it locally"
+        "cta": "Install with Docker"
       },
       "cloud": {
         "title": "Use it online",
@@ -298,14 +308,15 @@
     "subtitle": "The same app, the same encryption and the same features. Choose where it runs, and switch whenever you like.",
     "local": {
       "title": "Self-hosted",
-      "tagline": "Docker on your computer or server",
+      "tagline": "Desktop app or Docker, on your computer or server",
       "points": {
         "p1": "Full control: your data never leaves your disk",
         "p2": "Source-available code you can audit",
         "p3": "Works offline, except for market prices"
       },
       "ctaGithub": "View the code on GitHub",
-      "ctaGuide": "Read the installation guide"
+      "ctaGuide": "Read the installation guide",
+      "ctaDesktop": "Get the desktop app"
     },
     "cloud": {
       "title": "Cloud",
@@ -328,12 +339,12 @@
     "compare": {
       "title": "Side by side",
       "criterion": "Criterion",
-      "local": "Self-hosted (Docker)",
+      "local": "Self-hosted (desktop or Docker)",
       "cloud": "Cloud (app.glassfolio.dev)",
       "rows": {
         "data": {
           "label": "Where your data lives",
-          "local": "Encrypted vault in a volume on your own disk",
+          "local": "Encrypted vault on your own disk",
           "cloud": "Encrypted vault in Supabase, isolated per account"
         },
         "account": {
@@ -398,7 +409,7 @@
     "items": {
       "q1": {
         "question": "Where is my financial data stored and can anyone read it?",
-        "answer": "Your portfolio (positions, transactions, goals, AI keys) is encrypted in your browser with AES-256-GCM before it is saved, using a key derived from your password with PBKDF2-SHA256 (600,000 iterations) and HKDF. In the cloud edition only that ciphertext reaches Supabase, where row-level security keeps each account isolated; in the Docker edition it is written to a volume on your own disk. Nobody else holds your password, so nobody else can read your records."
+        "answer": "Your portfolio (positions, transactions, goals, AI keys) is encrypted in your browser with AES-256-GCM before it is saved, using a key derived from your password with PBKDF2-SHA256 (600,000 iterations) and HKDF. In the cloud edition only that ciphertext reaches Supabase, where row-level security keeps each account isolated; in the desktop and Docker editions it is written to your own disk. Nobody else holds your password, so nobody else can read your records."
       },
       "q2": {
         "question": "Does the tax engine replace an official tax return?",
@@ -413,8 +424,8 @@
         "answer": "You choose where it runs: a local Ollama model so nothing leaves your machine, or your own API key with the provider of your choice. Secrets are removed before any prompt leaves the app, and every change to your data waits for your approval. Your AI tools (Claude Code, Codex, Cursor) can also call GlassFolio's tools through a bridge on your computer, while your tab is open and unlocked: the results then go to the model of that tool."
       },
       "q5": {
-        "question": "What is the difference between the cloud edition and the Docker edition?",
-        "answer": "The cloud edition (app.glassfolio.dev) uses Supabase for sign-in, email verification and storage of your encrypted vault. The Docker edition runs the whole app on your machine: no account, no email, and the encrypted vault lives in the glassfolio-data volume, so clearing your browser loses nothing. Both share the same features, encryption and two-factor options."
+        "question": "What is the difference between the cloud, desktop and Docker editions?",
+        "answer": "The cloud edition (app.glassfolio.dev) uses Supabase for sign-in, email verification and storage of your encrypted vault. The desktop app and the Docker edition run the whole app on your machine: no account, no email, and the encrypted vault lives in a folder on your own disk, so clearing a browser loses nothing. All three share the same features, encryption and two-factor options."
       },
       "q6": {
         "question": "How can I try GlassFolio without creating an account?",
@@ -423,6 +434,10 @@
       "q7": {
         "question": "How do I install the Docker edition?",
         "answer": "Install Docker and Node.js 22, then run three commands: git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio and npm run docker:up. Open http://localhost:3780 and create your vault. The self-hosting guide covers configuration, network access, backups and updates."
+      },
+      "q8": {
+        "question": "Can I use GlassFolio without Docker or a browser tab?",
+        "answer": "Yes. The desktop app for Mac, Windows and Linux opens GlassFolio in its own window: download it from the download page, open it and create your vault. It keeps your data on your computer, checks for new versions and installs them when you click. Your system may ask you to confirm the first launch, because the app is not signed with a paid developer certificate yet; the download page shows how."
       }
     }
   },
@@ -450,6 +465,7 @@
       "local": "Local",
       "cloud": "Cloud"
     },
-    "projectHeading": "The project"
+    "projectHeading": "The project",
+    "downloadApp": "Download the desktop app"
   }
 }

@@ -62,5 +62,6 @@
       "settings": "Dans GlassFolio, ouvrez les Paramètres, choisissez Ollama comme fournisseur d'IA et gardez l'adresse par défaut http://localhost:11434.",
       "remote": "Si Ollama tourne sur une autre machine, ajoutez son adresse à GLASSFOLIO_CSP_CONNECT_SRC pour que la page soit autorisée à l'appeler."
     }
-  }
+  },
+  "ctaDesktop": "Pas de Docker ? Obtenez l'application de bureau"
 }

@@ -89,7 +89,7 @@
         "title": "1. Responsable du Traitement",
         "paragraphs": [
           "En mode cloud (app.glassfolio.dev), le responsable du traitement est l'éditeur de GlassFolio (voir Mentions Légales), joignable à {{email}}. Aucun délégué à la protection des données (DPO) n'est désigné, cette désignation n'étant pas obligatoire pour ce traitement.",
-          "En mode auto-hébergé (conteneur Docker local), aucune donnée n'est envoyée à l'éditeur : vous êtes seul responsable des données stockées sur votre machine."
+          "En mode auto-hébergé (application de bureau ou conteneur Docker local), aucune donnée n'est envoyée à l'éditeur : vous êtes seul responsable des données stockées sur votre machine. Le seul échange est la recherche de mise à jour de l'application de bureau, décrite à l'article 2."
         ]
       },
       {
@@ -114,7 +114,8 @@
           "Données de sécurité : facteurs d'authentification à deux facteurs (TOTP, passkeys) et journaux d'authentification tenus par Supabase (dates de connexion, adresse IP, navigateur).",
           "Coffre chiffré : en-tête de coffre (sel, paramètres de dérivation) et enveloppes chiffrées contenant vos données financières, illisibles côté serveur.",
           "Préférences d'interface (thème, langue) enregistrées localement dans votre navigateur.",
-          "Mode local (Docker) : aucune de ces données ne quitte votre machine."
+          "Mode local (application de bureau ou Docker) : aucune de ces données ne quitte votre machine.",
+          "Recherche de mise à jour de l'application de bureau : au démarrage puis toutes les quelques heures, sauf si vous la désactivez dans les Réglages, l'application demande à GitHub la dernière version publiée. GitHub reçoit la requête et donc votre adresse IP, comme pour toute requête web. Rien sur vous ni sur vos données n'est envoyé, et rien n'est installé sans votre confirmation."
         ]
       },
       {
@@ -166,7 +167,7 @@
           "Journaux techniques d'authentification et d'envoi d'emails : conservés par Supabase et Resend pour la sécurité du service, pour une durée limitée fixée par chacun de ces prestataires.",
           "Sauvegardes : après suppression, des copies chiffrées peuvent subsister chez l'hébergeur jusqu'à la fin de leur cycle de rotation, puis sont effacées définitivement.",
           "Choix de consentement aux cookies : 13 mois maximum, puis redemandé.",
-          "Mode local : jusqu'à ce que vous purgiez le coffre ou supprimiez le volume Docker."
+          "Mode local : jusqu'à ce que vous purgiez le coffre ou supprimiez le volume Docker ou le dossier de données de l'application de bureau."
         ]
       },
       {

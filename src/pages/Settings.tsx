@@ -27,6 +27,7 @@ import { StepUpAuthModal } from '../components/security/StepUpAuthModal';
 import { LocalStorageStatusCard } from '../components/security/LocalStorageStatusCard';
 import { CloudStorageStatusCard } from '../components/security/CloudStorageStatusCard';
 import { AssetLookupToggle } from '../components/settings/AssetLookupToggle';
+import { DesktopAboutCard } from '../components/settings/DesktopAboutCard';
 import { getAuthCapabilities } from '../services/security/authCapabilities';
 import { isShowcaseAvailable } from '../config/deployment';
 import { LegalLink } from '../components/ui/LegalLink';
@@ -959,6 +960,9 @@ const Settings: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Desktop app only: version and update controls */}
+                            <DesktopAboutCard />
 
                             {/* Legal & Privacy (E15) — shown only when showcase legal documents are available */}
                             {isShowcaseAvailable() && (

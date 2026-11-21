@@ -11,6 +11,8 @@ export default [
     ignores: [
       'dist/**',
       'node_modules/**',
+      'desktop/node_modules/**',
+      'desktop/release/**',
       'coverage/**',
       '.claude/**',
       '*.config.js',
@@ -147,7 +149,7 @@ export default [
 
   // ── Node.js scripts ────────────────────────────────────────────────────────
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}', 'server/**/*.{js,mjs,cjs}', 'api/**/*.{js,mjs,cjs}'],
+    files: ['scripts/**/*.{js,mjs,cjs}', 'mcp-server/**/*.{js,mjs,cjs}', 'server/**/*.{js,mjs,cjs}', 'api/**/*.{js,mjs,cjs}', 'desktop/**/*.{js,mjs,cjs}'],
     languageOptions: {
       globals: {
         console: 'readonly',
@@ -159,6 +161,10 @@ export default [
         Buffer: 'readonly',
         AbortSignal: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        require: 'readonly',
       },
     },
     rules: {

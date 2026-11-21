@@ -12,6 +12,7 @@ import { useData } from '../context/DataContext';
 import { appStorage } from '../services/storage/appStorage';
 import { AIChatDrawer } from './ai/AIChatDrawer';
 import { McpBridgeHost } from './mcp/McpBridgeHost';
+import { DesktopUpdatePrompt } from './desktop/DesktopUpdatePrompt';
 import { ConsentBanner } from './ConsentBanner';
 import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
@@ -152,6 +153,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     '/cookies',
     '/accessibility',
     '/self-host',
+    '/download',
     '/about',
     '/roadmap',
     '/changelog',
@@ -657,6 +659,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* AI clients (Claude Code, Codex...) calling the tools of this tab, and the changes they ask for */}
       <McpBridgeHost />
+
+      {/* Desktop app only: offers a new version when the shell finds one */}
+      <DesktopUpdatePrompt />
 
       {/* Real-time Floating Notification Toasts */}
       <NotificationToastContainer />
