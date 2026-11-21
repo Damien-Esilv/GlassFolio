@@ -15,6 +15,8 @@
 import { yahooFinanceUrl } from '../config/marketData';
 import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
+import { db } from './db';
+import { secretsService } from './security/secretsService';
 import { currencyService } from './currencyService';
 import { LEGACY_MANUAL_PRICE_HISTORY_KEY, MANUAL_PRICE_HISTORY_KEY } from './storage/storageKeys';
 import {
@@ -354,16 +356,21 @@ async function fetchYahooTickerPrice(ticker: string): Promise<PriceQuote | null>
 }
 
 /**
- * Fallback fetcher for crypto assets using CoinGecko public API.
+ * Crypto price from the CoinGecko public API: by the instrument's CoinGecko id when known (wallet
+ * tokens, TGLA-221), else by the few symbols mapped above. An optional free Demo key from the
+ * secrets vault raises the rate limit.
  */
-async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
+async function fetchCoinGeckoPrice(symbol: string, knownId?: string, demoKey?: string | null): Promise<number | null> {
     const cleanSymbol = symbol.replace('-USD', '').toUpperCase();
-    const geckoId = COINGECKO_MAP[cleanSymbol];
-    if (!geckoId) return null;
+    const geckoId = knownId || COINGECKO_MAP[cleanSymbol];
+    if (!geckoId || !/^[a-z0-9-]{1,100}$/.test(geckoId)) return null;
 
     try {
         const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(url, {
+            headers: demoKey ? { 'x-cg-demo-api-key': demoKey } : undefined,
+            signal: AbortSignal.timeout(5000),
+        });
         if (!res.ok) return null;
         const validated = CoinGeckoSimplePriceSchema.safeParse(await res.json());
         if (!validated.success) return null;
@@ -371,6 +378,45 @@ async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
     } catch {
         return null;
     }
+}
+
+/** USD prices of several CoinGecko ids in one request (the keyless tier allows only a few calls a minute). */
+async function fetchCoinGeckoBatch(ids: string[], demoKey?: string | null): Promise<Record<string, number>> {
+    const valid = [...new Set(ids)].filter(id => /^[a-z0-9-]{1,100}$/.test(id));
+    if (valid.length === 0) return {};
+    try {
+        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${valid.join(',')}&vs_currencies=usd`;
+        const res = await fetch(url, {
+            headers: demoKey ? { 'x-cg-demo-api-key': demoKey } : undefined,
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) return {};
+        const validated = CoinGeckoSimplePriceSchema.safeParse(await res.json());
+        if (!validated.success) return {};
+        return Object.fromEntries(
+            Object.entries(validated.data)
+                .filter(([, quote]) => typeof quote.usd === 'number')
+                .map(([id, quote]) => [id, quote.usd as number])
+        );
+    } catch {
+        return {};
+    }
+}
+
+/** CoinGecko ids recorded on the instruments of crypto positions, by Yahoo-style ticker. */
+function coingeckoIdsByTicker(tickerToPositions: Map<string, Position[]>): Map<string, string> {
+    const ids = new Map<string, string>();
+    for (const [ticker, positions] of tickerToPositions) {
+        for (const pos of positions) {
+            if (pos.type !== 'Crypto' || !pos.instrumentId) continue;
+            const geckoId = db.getInstrumentById(pos.instrumentId)?.marketIdentifier.coingeckoId;
+            if (geckoId) {
+                ids.set(ticker, geckoId);
+                break;
+            }
+        }
+    }
+    return ids;
 }
 
 // ---------------------------------------------------------------------------
@@ -408,15 +454,31 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
     if (missingTickers.length > 0) {
         const fetchedPrices: Record<string, number> = {};
         const fetchedCurrencies: Record<string, string> = {};
+        const geckoIds = coingeckoIdsByTicker(tickerToPositions);
+        const demoKey = geckoIds.size > 0 || missingTickers.some(t => t.endsWith('-USD'))
+            ? await secretsService.getSecretByProvider('coingecko').catch(() => null)
+            : null;
 
-        // Fetch missing tickers in parallel
+        // Known CoinGecko ids first, all in one request; what it does not price goes through the per-ticker path
+        const batch = await fetchCoinGeckoBatch(missingTickers.map(ticker => geckoIds.get(ticker)).filter((id): id is string => Boolean(id)), demoKey);
+        for (const ticker of missingTickers) {
+            const usd = geckoIds.has(ticker) ? batch[geckoIds.get(ticker) as string] : undefined;
+            if (usd !== undefined) {
+                fetchedPrices[ticker] = usd;
+                fetchedCurrencies[ticker] = 'USD';
+            }
+        }
+
+        // Fetch the remaining tickers in parallel
         const results = await Promise.allSettled(
-            missingTickers.map(async (ticker) => {
+            missingTickers.filter(ticker => !(ticker in fetchedPrices)).map(async (ticker) => {
+                // Tickers with a CoinGecko id were already asked in the batch: Yahoo is their fallback
+                const geckoId = geckoIds.get(ticker);
                 let quote = await fetchYahooTickerPrice(ticker);
 
-                // If Yahoo fails and it's a crypto, attempt CoinGecko fallback (quoted in USD)
-                if (quote === null && ticker.endsWith('-USD')) {
-                    const usd = await fetchCoinGeckoPrice(ticker);
+                // If Yahoo fails and it's a crypto, attempt CoinGecko fallback by symbol (quoted in USD)
+                if (quote === null && !geckoId && ticker.endsWith('-USD')) {
+                    const usd = await fetchCoinGeckoPrice(ticker, undefined, demoKey);
                     quote = usd === null ? null : { price: usd, currency: 'USD' };
                 }
 

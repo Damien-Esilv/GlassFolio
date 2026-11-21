@@ -5,7 +5,8 @@
  */
 
 import path from 'node:path';
-import { createLocalVaultHandler, createLocalVaultStore, isLocalVaultPath } from './localVault.mjs';
+import { CLIENT_HEADER, createLocalVaultHandler, createLocalVaultStore, isAllowedHost, isLocalVaultPath, isSameOrigin } from './localVault.mjs';
+import { createLocalConnectorRelayHandler, isConnectorRelayPath } from './connectorRelay.mjs';
 import { createAccessControl } from './accessControl.mjs';
 import { buildSecurityHeaders } from './securityHeaders.mjs';
 import { evaluateNetworkExposure } from './networkExposure.mjs';
@@ -21,6 +22,7 @@ export function localVaultPlugin({ dataDir } = {}) {
   const access = createAccessControl({ token });
   const securityHeaders = buildSecurityHeaders('local');
   let handler = null;
+  let relayHandler = null;
   let mcpBridge;
 
   // Same rule as `npm run docker:up`: the vault API must not be reachable from the network without a token.
@@ -44,6 +46,18 @@ export function localVaultPlugin({ dataDir } = {}) {
       if (mcpBridge?.isBridgePath(url.pathname)) {
         if (access.enabled && !(await access.authorize(req, res, securityHeaders))) return;
         mcpBridge.handle(req, res, url).catch(next);
+        return;
+      }
+      if (isConnectorRelayPath(url.pathname)) {
+        if (access.enabled && !(await access.authorize(req, res, securityHeaders))) return;
+        relayHandler ??= createLocalConnectorRelayHandler({
+          securityHeaders,
+          allowedHosts: (process.env.ALLOWED_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
+          isAllowedHost,
+          isSameOrigin,
+          clientHeader: CLIENT_HEADER,
+        });
+        relayHandler(req, res).catch(next);
         return;
       }
       if (!isLocalVaultPath(url.pathname)) {

@@ -39,7 +39,9 @@ export type AuditEventType =
     | 'account_conflict_blocked'
     | 'antibot_blocked'
     | 'totp_verified'
-    | 'passkey_authenticated';
+    | 'passkey_authenticated'
+    | 'connection_created'
+    | 'connection_deleted';
 
 export interface AuditLogEntry {
     id: string;

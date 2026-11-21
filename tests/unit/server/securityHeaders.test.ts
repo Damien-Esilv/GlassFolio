@@ -94,6 +94,8 @@ describe('Content-Security-Policy (E31 — TGLA-127)', () => {
       }
     };
     walk(join(root, 'src/services/ai'));
+    walk(join(root, 'src/services/connectors'));
+    walk(join(root, 'src/services/market'));
     files.push(
       join(root, 'src/services/priceService.ts'),
       join(root, 'src/services/assetSearchService.ts'),

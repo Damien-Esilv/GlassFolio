@@ -4,7 +4,8 @@
     "tabs": {
         "profile": "Profil",
         "preferences": "Préférences",
-        "security": "Sécurité & Accès"
+        "security": "Sécurité & Accès",
+        "connections": "Connexions"
     },
     "profile": {
         "publicProfile": "Profil public",
@@ -130,5 +131,125 @@
         "subtitle": "Documents en vigueur (version {{version}}) : mentions légales, confidentialité, conditions d'utilisation, cookies et accessibilité.",
         "cookiePreferences": "Préférences cookies",
         "rightsHint": "Pour exercer vos droits (rectification, opposition, limitation), utilisez l'export et la suppression de compte de cette page, ou écrivez à {{email}}."
+    },
+    "connections": {
+        "title": "Connexions",
+        "subtitle": "Les sources qui tiennent vos positions à jour toutes seules, en lecture seule.",
+        "privacyNote": "Les synchros tournent uniquement dans cet onglet, coffre déverrouillé : clés et adresses restent chiffrées dans votre coffre et ne sont jamais stockées sur un serveur. Les requêtes qu'un fournisseur refuse depuis un navigateur passent par un relais qui ne garde ni ne journalise rien.",
+        "empty": "Aucune source connectée pour l'instant. Ajoutez-en une ci-dessous.",
+        "accountMissing": "Compte à choisir de nouveau",
+        "lastSync": "Dernière synchro : {{date}}",
+        "syncNow": "Synchroniser",
+        "delete": "Retirer cette source",
+        "confirmDelete": "Confirmer le retrait",
+        "result_one": "{{count}} changement enregistré.",
+        "result_other": "{{count}} changements enregistrés.",
+        "drift": "Le fournisseur indique d'autres quantités que votre journal pour : {{assets}}. Vérifiez vos imports.",
+        "comingSoon": "À venir : les banques françaises (BoursoBank, Fortuneo…) via un compagnon Woob local, après le test manuel de l'étude.",
+        "sources": {
+            "snaptrade": "SnapTrade Personal",
+            "wallet_btc": "Wallet Bitcoin (lecture seule)",
+            "wallet_evm": "Wallet Ethereum (lecture seule)",
+            "wallet_sol": "Wallet Solana (lecture seule)",
+            "woob": "Banques françaises (compagnon local)"
+        },
+        "status": {
+            "never_synced": "Jamais synchronisé",
+            "ok": "À jour",
+            "error": "Échec",
+            "auth_failed": "Accès refusé",
+            "rate_limited": "En pause (limite)",
+            "needs_mapping": "Compte à choisir"
+        },
+        "errors": {
+            "auth_failed": "le fournisseur a refusé les identifiants",
+            "rate_limited": "trop de requêtes, réessayez plus tard",
+            "network": "fournisseur injoignable",
+            "invalid_response": "réponse inattendue du fournisseur",
+            "relay_unavailable": "relais indisponible",
+            "account_missing": "un compte associé n'existe plus",
+            "busy": "un import était en cours, réessayez dans un instant",
+            "unknown": "erreur inattendue"
+        },
+        "form": {
+            "title": "Ajouter un wallet en lecture seule",
+            "description": "Collez les adresses publiques d'un wallet (Ledger, Trezor, MetaMask, Phantom…). Une adresse publique ou une clé publique étendue permet seulement de lire les soldes : elle ne peut jamais déplacer de fonds. Aucun compte ni aucune clé ne sont nécessaires.",
+            "label": "Nom",
+            "labelPlaceholder": "Ledger cold wallet",
+            "addresses": "Adresses publiques",
+            "addressesPlaceholder": {
+                "bitcoin": "bc1q… ou zpub… (une par ligne)",
+                "evm": "0x… (une par ligne)",
+                "solana": "Adresse Solana (une par ligne)"
+            },
+            "addressesHelp": {
+                "bitcoin": "Adresses commençant par 1, 3 ou bc1, ou une clé publique étendue (xpub, ypub, zpub) : toutes les adresses utilisées du wallet sont retrouvées.",
+                "evm": "L'ETH et les principaux jetons (USDC, USDT, DAI, WBTC, LINK, UNI, stETH, ARB, OP, POL) sont lus sur Ethereum, Arbitrum, Base, Optimism et Polygon. Les autres jetons sont ignorés, airdrops non sollicités compris.",
+                "solana": "Le SOL et les principaux jetons (USDC, USDT, JUP, mSOL, JitoSOL, BONK) sont lus. Les autres jetons sont ignorés, airdrops non sollicités compris."
+            },
+            "account": "Enregistrer dans",
+            "newAccount": "Un nouveau compte portant ce nom",
+            "submit": "Ajouter et synchroniser",
+            "errors": {
+                "label": "Donnez un nom à ce wallet.",
+                "addresses": {
+                    "bitcoin": "Saisissez au moins une adresse Bitcoin ou une clé publique étendue valide.",
+                    "evm": "Saisissez au moins une adresse valide (0x suivi de 40 caractères hexadécimaux).",
+                    "solana": "Saisissez au moins une adresse Solana valide."
+                },
+                "generic": "Le wallet n'a pas pu être ajouté. Réessayez."
+            },
+            "chain": "Réseau",
+            "chains": {
+                "bitcoin": "Bitcoin",
+                "evm": "Ethereum & EVM (Arbitrum, Base, Optimism, Polygon)",
+                "solana": "Solana"
+            }
+        },
+        "notifications": {
+            "action": "Ouvrir les connexions",
+            "error": {
+                "title": "Échec de synchro : {{label}}",
+                "message": "La dernière synchro de {{label}} n'a pas abouti. Elle sera retentée plus tard."
+            },
+            "auth_failed": {
+                "title": "Accès refusé : {{label}}",
+                "message": "Le fournisseur a refusé les identifiants de {{label}}. Vérifiez-les dans les connexions."
+            },
+            "needs_mapping": {
+                "title": "Compte à choisir : {{label}}",
+                "message": "Un compte associé à {{label}} n'existe plus. Choisissez où l'enregistrer."
+            },
+            "drift": {
+                "title": "Quantités différentes : {{label}}",
+                "message": "{{label}} indique d'autres quantités que votre journal pour {{count}} actif(s)."
+            }
+        },
+        "fields": {
+            "clientId": "Client ID",
+            "consumerKey": "Clé consommateur (Consumer key)"
+        },
+        "snaptrade": {
+            "title": "Connecter vos courtiers avec SnapTrade Personal",
+            "description": "Un seul compte SnapTrade gratuit relie Interactive Brokers (PEA compris), Trading 212, DEGIRO, eToro, Bux, XTB, Robinhood, Binance, Kraken, Coinbase et une quarantaine d'autres courtiers. Les positions, les ordres et les dividendes se synchronisent ensuite chaque jour.",
+            "steps": {
+                "account": "Créez un compte SnapTrade Personal gratuit sur",
+                "link": "Dans le tableau de bord SnapTrade, liez vos courtiers. Pour Binance, Kraken ou Coinbase, donnez-lui une clé d'API en lecture seule.",
+                "keys": "Copiez ici votre Client ID et votre Consumer key, puis testez-les."
+            },
+            "keyNote": "Votre clé consommateur reste chiffrée dans votre coffre et ne quitte jamais ce navigateur : chaque requête est signée ici, seule la signature à usage unique passe par le relais.",
+            "test": "Tester et lister mes comptes",
+            "found_one": "{{count}} compte trouvé. Choisissez où l'enregistrer et à partir de quelle date.",
+            "found_other": "{{count}} comptes trouvés. Choisissez où enregistrer chacun et à partir de quelle date.",
+            "skip": "Ne pas synchroniser ce compte",
+            "startDate": "Importer les opérations à partir du",
+            "startHelp": "Date vide : tout l'historique fourni par le courtier. Pour un compte qui contient déjà des lignes importées, le lendemain de la dernière est proposé, pour ne rien importer deux fois.",
+            "save": "Enregistrer et synchroniser",
+            "errors": {
+                "keys": "Saisissez votre Client ID et votre Consumer key.",
+                "noAccounts": "Aucun compte trouvé : liez d'abord un courtier dans le tableau de bord SnapTrade.",
+                "noneChosen": "Choisissez au moins un compte à synchroniser."
+            }
+        }
     }
 }

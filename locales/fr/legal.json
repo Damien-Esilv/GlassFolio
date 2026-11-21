@@ -407,10 +407,10 @@
         "lifespan": "Supprimées à la fin de la connexion"
       },
       "marketCaches": {
-        "key": "gf_price_cache / gf_fx_rates_cache / gf_historical_price_cache / glassfolio_price_cache",
+        "key": "gf_price_cache / gf_fx_rates_cache / gf_historical_price_cache / glassfolio_price_cache / gf_isin_symbol_cache",
         "category": "Strictement Nécessaire (Cache public)",
-        "purpose": "Mémorise localement les cours et taux de change publics pour limiter les appels réseau. Ne contient aucune donnée personnelle.",
-        "lifespan": "Quelques minutes à quelques heures, puis renouvelé"
+        "purpose": "Mémorise localement les cours et taux de change publics, ainsi que le symbole de cotation de chaque ISIN, pour limiter les appels réseau. Ne contient aucune donnée personnelle.",
+        "lifespan": "Quelques minutes à quelques heures, puis renouvelé (symboles ISIN : 30 jours)"
       },
       "assetLookup": {
         "key": "gf_asset_class_cache / gf_asset_lookup",

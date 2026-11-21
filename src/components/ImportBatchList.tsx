@@ -215,6 +215,11 @@ const ImportBatchList: React.FC<ImportBatchListProps> = ({
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 max-w-[200px] truncate">
+                                            {batch.metadata?.sourceId && (
+                                                <span className="text-xs font-medium px-2 py-0.5 rounded bg-brand/20 text-brand mr-2">
+                                                    {t('importHistory.syncBadge')}
+                                                </span>
+                                            )}
                                             <span className="text-secondary font-mono text-xs">{batch.fileName}</span>
                                         </td>
                                         {!compact && (

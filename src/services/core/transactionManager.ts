@@ -108,6 +108,11 @@ class TransactionManager {
     private activeContext: TransactionContext | null = null;
     private lockTimeout = 30000; // 30 seconds max lock time
 
+    /** True while another commit holds the context (the import wizard, a sync). */
+    isBusy(): boolean {
+        return this.activeContext !== null && !this.isStale();
+    }
+
     /**
      * Begin a new transaction context
      * All operations within this context will be atomic
@@ -343,6 +348,15 @@ export function getExistingRowHashes(accountId: string): Set<string> {
             .filter(tx => tx.accountId === accountId)
             .map(tx => tx.rowHash)
     );
+}
+
+/** Provider ids already committed on an account: a sync skips activities it has already stored. */
+export function getExistingExternalIds(accountId: string): Set<string> {
+    const ids = new Set<string>();
+    for (const tx of db.getUnifiedTransactions()) {
+        if (tx.accountId === accountId && tx.externalId) ids.add(tx.externalId);
+    }
+    return ids;
 }
 
 /**

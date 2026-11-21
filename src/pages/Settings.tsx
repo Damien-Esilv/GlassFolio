@@ -5,7 +5,7 @@ import Button from '../components/Button';
 import {
     User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette,
     TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles,
-    Info, AlertCircle, FileSpreadsheet, UserX, AlertTriangle
+    Info, AlertCircle, FileSpreadsheet, UserX, AlertTriangle, Link2
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ import { FRENCH_DEPARTMENTS, getTaxZoneForDepartment } from '../services/fiscal/
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { AISettingsTab } from '../components/ai/AISettingsTab';
 import { SecuritySettingsTab } from '../components/security/SecuritySettingsTab';
+import { ConnectionsTab } from '../components/connections/ConnectionsTab';
 import { UserAvatar } from '../components/ui/UserAvatar';
 import { openConsentPreferences } from '../services/consentService';
 import { LEGAL_CONTACT_EMAIL, LEGAL_DOCUMENTS_VERSION } from '../config/legal';
@@ -39,8 +40,8 @@ const Settings: React.FC = () => {
     const { resetAccountDataToZero } = useData();
     const [searchParams] = useSearchParams();
     const initialTab = searchParams.get('tab');
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security'>(() => {
-        if (initialTab === 'fiscal' || initialTab === 'ai' || initialTab === 'security' || initialTab === 'preferences') {
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'fiscal' | 'ai' | 'security' | 'connections'>(() => {
+        if (initialTab === 'fiscal' || initialTab === 'ai' || initialTab === 'security' || initialTab === 'preferences' || initialTab === 'connections') {
             return initialTab;
         }
         return 'profile';
@@ -129,6 +130,7 @@ const Settings: React.FC = () => {
         else if (tab === 'fiscal') setActiveTab('fiscal');
         else if (tab === 'ai') setActiveTab('ai');
         else if (tab === 'security') setActiveTab('security');
+        else if (tab === 'connections') setActiveTab('connections');
     }, [searchParams]);
 
     // Profile Form State
@@ -331,6 +333,13 @@ const Settings: React.FC = () => {
                     >
                         <Lock size={18} className="shrink-0" />
                         <span>{t('settings:tabs.security')}</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('connections')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'connections' ? 'bg-primary text-white shadow-lg' : 'text-secondary hover:bg-card-hover'}`}
+                    >
+                        <Link2 size={18} className="shrink-0" />
+                        <span>{t('settings:tabs.connections')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('fiscal')}
@@ -1281,6 +1290,8 @@ const Settings: React.FC = () => {
                             <AISettingsTab />
                         </div>
                     )}
+
+                    {activeTab === 'connections' && <ConnectionsTab />}
                 </div>
             </div>
 

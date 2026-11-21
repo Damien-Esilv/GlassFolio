@@ -295,7 +295,9 @@ jobs:
             # 2560 -> 2592: MCP bridge (settings, tab client, executor) and its texts, TGLA-198
             # 2592 -> 2624: Cloud vault quota UI (TGLA-214) & local multi-vault profiles (TGLA-218)
             # 2624 -> 2656: Named multi-2FA TOTP UI & WebAuthn AAGUID passkey detection (TGLA-220)
-            limit_kb: 2656
+            # 2656 -> 2784: Automatic sync (engine, Connections tab, SnapTrade, wallets) + lazy xpub
+            #               derivation chunk (~40 KB, loaded only for extended keys) (TGLA-221, TGLA-224, TGLA-225)
+            limit_kb: 2784
             landing: absent
             smoke: false
           - label: cloud-app
@@ -303,7 +305,9 @@ jobs:
             # 2560 -> 2592: same MCP bridge code as the local build, TGLA-198
             # 2592 -> 2624: Cloud vault quota UI (TGLA-214) & local multi-vault profiles (TGLA-218)
             # 2624 -> 2656: Named multi-2FA TOTP UI & WebAuthn AAGUID passkey detection (TGLA-220)
-            limit_kb: 2656
+            # 2656 -> 2784: Automatic sync (engine, Connections tab, SnapTrade, wallets) + lazy xpub
+            #               derivation chunk (~40 KB, loaded only for extended keys) (TGLA-221, TGLA-224, TGLA-225)
+            limit_kb: 2784
             landing: absent
             smoke: false
           - label: showcase
@@ -312,7 +316,8 @@ jobs:
             # 1440 -> 1536: contact and MCP documentation pages with the tool catalog, TGLA-197, TGLA-198
             # 1536 -> 1568: Cloud vault quota & local multi-vault i18n/catalog (TGLA-214, TGLA-218)
             # 1568 -> 1600: /download page and desktop app texts, EN and FR (TGLA-229)
-            limit_kb: 1600
+            # 1600 -> 1632: three sync MCP tools in the documentation catalog (TGLA-221)
+            limit_kb: 1632
             landing: present
             smoke: false
           - label: vercel-parity
@@ -321,7 +326,8 @@ jobs:
             # The showcase project's real build (TGLA-193); the app project matches cloud-app
             # 1536 -> 1568: Cloud vault quota & local multi-vault i18n/catalog (TGLA-214, TGLA-218)
             # 1568 -> 1600: /download page and desktop app texts, EN and FR (TGLA-229)
-            limit_kb: 1600
+            # 1600 -> 1632: three sync MCP tools in the documentation catalog (TGLA-221)
+            limit_kb: 1632
             landing: present
             smoke: true
     steps:

@@ -9,6 +9,7 @@ import { Institute, Account, InstituteType, AccountType } from '../types';
 import { WrapperType, CostBasisMethod } from '../types/types.backend';
 import { portfolioService } from './portfolioService';
 import { userRepository } from './repositories';
+import { connectionService } from './connectors/connectionService';
 
 // ============================================================================
 // INSTITUTE OPERATIONS
@@ -103,6 +104,9 @@ export const instituteService = {
 
         db.saveInstitutes(filtered);
         db.saveAccounts(filteredAccounts);
+        for (const removed of accounts.filter(acc => acc.instituteId === id)) {
+            await connectionService.detachAccount(removed.id);
+        }
 
         return true;
     }
@@ -216,6 +220,7 @@ export const accountService = {
         if (filtered.length === accounts.length) return false;
 
         db.saveAccounts(filtered);
+        await connectionService.detachAccount(id);
         return true;
     }
 };

@@ -1,6 +1,7 @@
 import { PendingActionProposal, PendingActionType, AIExecutionContext } from './types';
 import { aiToolRegistry } from './aiToolRegistry';
 import { vaultService } from '../security/vaultService';
+import { connectionService } from '../connectors/connectionService';
 
 /**
  * GuardrailsService - Manages permissions, read-only mode, and Human-in-the-loop action approvals.
@@ -143,6 +144,11 @@ class GuardrailsService {
     );
     sanitized = sanitized.replace(/"wrappedKeys"\s*:\s*\{[\s\S]*?\}/g, '"wrappedKeys":[REDACTED_VAULT_KEYS]');
     sanitized = sanitized.replace(/gf_vault_header["']?\s*[:=]\s*\{[\s\S]*?\}/gi, 'gf_vault_header:[REDACTED_VAULT_HEADER]');
+
+    // 5. Sync connection credentials (SnapTrade keys, …): formats vary, so redact the stored values verbatim
+    for (const secret of connectionService.listCredentialValues()) {
+      sanitized = sanitized.split(secret).join('[REDACTED_API_KEY]');
+    }
 
     return sanitized;
   }

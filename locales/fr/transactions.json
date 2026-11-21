@@ -403,7 +403,8 @@
         "rollbackSuccess": "Import annulé avec succès. {{count}} transactions supprimées.",
         "rollbackError": "Échec de l'annulation de l'import. Veuillez réessayer.",
         "viewAll": "Voir tout l'historique",
-        "unknown": "Inconnu"
+        "unknown": "Inconnu",
+        "syncBadge": "Synchro auto"
     },
     "snapshotWizard": {
         "title": "Import snapshot",

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CoinGeckoSimplePriceSchema,
+  EsploraAddressSchema,
   YahooChartResponseSchema,
   YahooSearchResponseSchema,
 } from '../../../src/services/contracts/externalSchemas';
@@ -58,5 +59,46 @@ describe.skipIf(!isLiveProbe)('Live Upstream API Contract Drift Probe (Tier 3 Ni
     const json: unknown = await res.json();
     const parsed = CoinGeckoSimplePriceSchema.safeParse(json);
     expect(parsed.success).toBe(true);
+  });
+
+  // Watch-only wallets (TGLA-221), on the public addresses used by the demo
+  it('Blockstream Esplora still answers address stats for the Electrum docs address', async () => {
+    const res = await fetch('https://blockstream.info/api/address/bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 429) return;
+    expect(res.ok).toBe(true);
+    expect(EsploraAddressSchema.safeParse(await res.json()).success).toBe(true);
+  });
+
+  it('PublicNode Ethereum RPC still answers balances and token calls in one batch (vitalik.eth)', async () => {
+    const owner = 'd8da6bf26964af9d7eed9e03e53415d37aa96045';
+    const res = await fetch('https://ethereum-rpc.publicnode.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        { jsonrpc: '2.0', id: 0, method: 'eth_getBalance', params: [`0x${owner}`, 'latest'] },
+        { jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', data: `0x70a08231${owner.padStart(64, '0')}` }, 'latest'] },
+      ]),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 429) return;
+    expect(res.ok).toBe(true);
+    const json = await res.json() as Array<{ result?: string }>;
+    expect(json.every(entry => typeof entry.result === 'string' && entry.result.startsWith('0x'))).toBe(true);
+  });
+
+  it('PublicNode Solana RPC still answers getBalance (Solana docs example wallet)', async () => {
+    const res = await fetch('https://solana-rpc.publicnode.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ jsonrpc: '2.0', id: 0, method: 'getBalance', params: ['vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg'] }]),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 429) return;
+    expect(res.ok).toBe(true);
+    const [entry] = await res.json() as Array<{ result?: { value?: number } }>;
+    expect(typeof entry.result?.value).toBe('number');
   });
 });

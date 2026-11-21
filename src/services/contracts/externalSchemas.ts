@@ -131,3 +131,28 @@ export const CreateGoalArgsSchema = z.object({
     })
     .optional(),
 });
+
+/** OpenFIGI `/v3/mapping` answer: one entry per job, with listings or a warning (TGLA-221). */
+export const OpenFigiListingSchema = z.object({
+  ticker: z.string().min(1).optional().nullable(),
+  exchCode: z.string().optional().nullable(),
+  securityType: z.string().optional().nullable(),
+  marketSector: z.string().optional().nullable(),
+});
+
+export const OpenFigiMappingResponseSchema = z.array(
+  z.object({
+    data: z.array(OpenFigiListingSchema).optional(),
+    warning: z.string().optional(),
+    error: z.string().optional(),
+  })
+);
+
+/** Blockstream Esplora `/api/address/:address` (TGLA-221): confirmed totals in satoshis. */
+export const EsploraAddressSchema = z.object({
+  chain_stats: z.object({
+    funded_txo_sum: z.number().int().nonnegative(),
+    spent_txo_sum: z.number().int().nonnegative(),
+    tx_count: z.number().int().nonnegative().optional().default(0),
+  }),
+});
