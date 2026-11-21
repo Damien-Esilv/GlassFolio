@@ -1,0 +1,42 @@
+{
+  "update": {
+    "title": "GlassFolio {{version}} est disponible",
+    "body": "GlassFolio va télécharger la nouvelle version, l’installer puis redémarrer. Vos données restent exactement où elles sont.",
+    "bodyManual": "Cette installation se met à jour depuis la page de téléchargement. Ouvrez-la pour récupérer la nouvelle version.",
+    "now": "Mettre à jour maintenant",
+    "later": "Plus tard",
+    "openReleasePage": "Ouvrir la page de téléchargement",
+    "downloading": "Téléchargement de la mise à jour… {{percent}} %",
+    "restarting": "Redémarrage de GlassFolio…",
+    "progressLabel": "Progression du téléchargement de la mise à jour",
+    "errors": {
+      "verification": "Le fichier téléchargé n’a pas passé son contrôle d’intégrité : rien n’a été installé. Vous pouvez récupérer la nouvelle version depuis la page de téléchargement.",
+      "generic": "La mise à jour n’a pas pu être installée. Vous pouvez récupérer la nouvelle version depuis la page de téléchargement."
+    }
+  },
+  "about": {
+    "title": "Application de bureau",
+    "subtitle": "Version {{version}} · {{platform}} ({{arch}})",
+    "platforms": {
+      "mac": "macOS",
+      "win": "Windows",
+      "linux": "Linux"
+    },
+    "checkNow": "Rechercher une mise à jour",
+    "status": {
+      "idle": "Les mises à jour sont recherchées au démarrage.",
+      "checking": "Recherche d’une nouvelle version…",
+      "upToDate": "Vous utilisez la dernière version.",
+      "available": "La version {{version}} est disponible.",
+      "downloading": "Téléchargement de la mise à jour…",
+      "restarting": "Redémarrage de GlassFolio…",
+      "error": "La recherche a échoué. Vérifiez votre connexion puis réessayez.",
+      "errorSignature": "Les informations de mise à jour n’ont pas pu être vérifiées : elles ont été ignorées.",
+      "disabled": "Les mises à jour ne sont pas disponibles dans cette version."
+    },
+    "autoCheck": {
+      "label": "Rechercher les mises à jour automatiquement",
+      "hint": "Cherche une nouvelle version au démarrage de GlassFolio et toutes les quelques heures. Seule la dernière version publiée est demandée à GitHub, qui voit donc votre adresse IP comme pour toute requête web ; rien sur vous ni sur vos données n’est envoyé. Rien n’est installé sans votre clic."
+    }
+  }
+}

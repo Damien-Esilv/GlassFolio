@@ -11,12 +11,13 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 [![CI](https://img.shields.io/github/actions/workflow/status/Damien-Esilv/GlassFolio/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/Damien-Esilv/GlassFolio/actions/workflows/ci.yml)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Node 22](https://img.shields.io/badge/node-22.x-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![Desktop](https://img.shields.io/badge/desktop-macOS%20%7C%20Windows%20%7C%20Linux-informational?logo=electron&logoColor=white)](#-desktop-app)
 [![Docker](https://img.shields.io/badge/self--host-Docker-2496ED?logo=docker&logoColor=white)](#-self-hosting-with-docker)
 [![i18n: EN | FR](https://img.shields.io/badge/i18n-EN%20%7C%20FR-informational)](locales)
 
 **English** · [Français](README.fr.md)
 
-[**Website**](https://glassfolio.dev) · [**Self-host**](#-self-hosting-with-docker) · [**Roadmap**](https://glassfolio.dev/roadmap) · [**Changelog**](https://glassfolio.dev/changelog)
+[**Website**](https://glassfolio.dev) · [**Desktop app**](#-desktop-app) · [**Self-host**](#-self-hosting-with-docker) · [**Roadmap**](https://glassfolio.dev/roadmap) · [**Changelog**](https://glassfolio.dev/changelog)
 
 <br />
 
@@ -29,7 +30,7 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
 ## Why GlassFolio
 
 1. **Encrypted before it leaves your browser.** Transactions, holdings, goals and secrets live in a client-side vault: AES-256-GCM, with keys derived from your master password through PBKDF2 (600,000 iterations) and HKDF. A server only ever sees ciphertext.
-2. **Self-hosted or cloud, your choice.** One command starts a hardened Docker container on your own machine or NAS, with no account and no telemetry. Or use the managed cloud version: nothing to install, synced across your devices. Same app, same encryption.
+2. **Desktop, self-hosted or cloud, your choice.** Install the desktop app on Mac, Windows or Linux, or start a hardened Docker container on your own machine or NAS with one command: no account and no telemetry either way. Or use the managed cloud version: nothing to install, synced across your devices. Same app, same encryption.
 3. **A modular tax engine.** French rules are built in natively: compare the flat tax (PFU) with the progressive scale on your real numbers and prepare Cerfa 2042, 2074 and 3916. Rules are isolated by jurisdiction so new countries can be added.
 4. **An AI assistant that asks first.** Ask questions about your portfolio in plain language, with a local model (Ollama) or your own API key. 35 tools are exposed to the in-app assistant and to external MCP clients, and every action that changes financial data needs your explicit approval.
 5. **Bring your history.** Import CSV exports from your brokers and banks with column mapping, a live preview, duplicate protection and one-click rollback.
@@ -95,6 +96,16 @@ A wealth dashboard that keeps your data encrypted, prepares your tax return with
     <td width="50%"><img src="public/screenshots/en/progress.webp" alt="Progress" /><br /><sub><b>Progress</b>: savings goals, ranks and quests</sub></td>
   </tr>
 </table>
+
+## 🖥️ Desktop app
+
+GlassFolio also ships as a real desktop app for macOS, Windows and Linux (Electron): its own window, no Docker and no terminal. It runs the same local server as the Docker image, on a fixed loopback port (`3790`, so it can run next to Docker), and keeps your vault in the app's data folder. The web app, its CSP, the vault API, the market-data proxy and the MCP bridge are unchanged.
+
+- **Install**: download the installer of your system from the [latest release](https://github.com/Damien-Esilv/GlassFolio/releases/latest) (or the [download page](https://glassfolio.dev/download)): `GlassFolio-mac-arm64.dmg` / `GlassFolio-mac-x64.dmg`, `GlassFolio-win-x64.exe`, `GlassFolio-linux-x64.AppImage` / `.deb`. Each release lists the SHA-256 of every file in `SHA256SUMS.txt`.
+- **First launch**: the app is not signed with a paid developer certificate yet, so the system asks for a one-time confirmation. macOS: System Settings > Privacy & Security > "Open Anyway" (right-click > Open on macOS 14 and earlier). Windows: "More info" > "Run anyway". Linux AppImage: `chmod +x` it first.
+- **Updates**: at start-up and every few hours (switch it off in Settings > Desktop app) the app asks GitHub for the latest release and offers it; nothing is installed without your click. The update manifest is signed (ed25519) and every download is checked against its SHA-512 before being installed. On macOS, where there is no Apple signature to rely on, the app downloads the new version itself, swaps itself and restarts.
+- **Build it yourself**: `npm run desktop:install`, then `npm run desktop:dev` (run) or `npm run desktop:dist` (installers in `desktop/release/`).
+- **Releasing** (maintainer): run `npm --prefix desktop run generate-update-key` once, commit the printed public key in `desktop/update-public-key.mjs` and store the private key as the GitHub secret `UPDATE_SIGNING_KEY`. Pushing a tag `vX.Y.Z` runs the `Desktop app` workflow, which builds the three platforms and fills a **draft** release for you to review and publish.
 
 ## 🐳 Self-hosting with Docker
 
@@ -192,7 +203,7 @@ In Settings, choose the Ollama provider and enter its address (`http://localhost
 
 GlassFolio is built once and ships in two modes.
 
-| | **Local** (Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
+| | **Local** (desktop app / Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
 |---|---|---|
 | Where data lives | Vault records on your server volume, the source of truth | Encrypted vault stored in Supabase |
 | Accounts | Master password, with TOTP (and backup codes) and passkeys inside the vault | Supabase Auth, email verification, TOTP and passkeys |
@@ -222,6 +233,7 @@ To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLI
 | `npm run mcp` | Start the MCP bridge (stdio; `-- serve` for HTTP) |
 | `npm run mcp:catalog` | Regenerate `mcp-server/tools.json` after changing an AI tool |
 | `npm run docker:up` / `docker:down` / `docker:logs` / `docker:smoke` | Self-hosting helpers |
+| `npm run desktop:install` / `desktop:dev` / `desktop:pack` / `desktop:dist` / `desktop:smoke` | Desktop app: install its dependencies, run it, package a folder, build installers, smoke-test it |
 
 ## ✅ Quality and security
 

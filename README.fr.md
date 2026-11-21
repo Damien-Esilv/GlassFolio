@@ -11,12 +11,13 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 [![CI](https://img.shields.io/github/actions/workflow/status/Damien-Esilv/GlassFolio/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/Damien-Esilv/GlassFolio/actions/workflows/ci.yml)
 [![Licence : PolyForm Noncommercial](https://img.shields.io/badge/licence-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Node 22](https://img.shields.io/badge/node-22.x-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![Bureau](https://img.shields.io/badge/bureau-macOS%20%7C%20Windows%20%7C%20Linux-informational?logo=electron&logoColor=white)](#-application-de-bureau)
 [![Docker](https://img.shields.io/badge/auto--h%C3%A9bergement-Docker-2496ED?logo=docker&logoColor=white)](#-auto-hébergement-avec-docker)
 [![i18n : EN | FR](https://img.shields.io/badge/i18n-EN%20%7C%20FR-informational)](locales)
 
 [English](README.md) · **Français**
 
-[**Site**](https://glassfolio.dev) · [**Auto-héberger**](#-auto-hébergement-avec-docker) · [**Feuille de route**](https://glassfolio.dev/roadmap) · [**Nouveautés**](https://glassfolio.dev/changelog)
+[**Site**](https://glassfolio.dev) · [**Application de bureau**](#-application-de-bureau) · [**Auto-héberger**](#-auto-hébergement-avec-docker) · [**Feuille de route**](https://glassfolio.dev/roadmap) · [**Nouveautés**](https://glassfolio.dev/changelog)
 
 <br />
 
@@ -29,7 +30,7 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
 ## Pourquoi GlassFolio
 
 1. **Chiffré avant de quitter votre navigateur.** Transactions, positions, objectifs et secrets vivent dans un coffre côté client : AES-256-GCM, avec des clés dérivées de votre mot de passe maître par PBKDF2 (600 000 itérations) et HKDF. Un serveur ne voit jamais que du texte chiffré.
-2. **Auto-hébergé ou cloud, à vous de choisir.** Une commande démarre un conteneur Docker durci sur votre machine ou votre NAS, sans compte ni télémétrie. Ou utilisez la version cloud gérée : rien à installer, synchronisée sur vos appareils. Même application, même chiffrement.
+2. **Bureau, auto-hébergé ou cloud, à vous de choisir.** Installez l'application de bureau sur Mac, Windows ou Linux, ou démarrez un conteneur Docker durci sur votre machine ou votre NAS en une commande : sans compte ni télémétrie dans les deux cas. Ou utilisez la version cloud gérée : rien à installer, synchronisée sur vos appareils. Même application, même chiffrement.
 3. **Un moteur fiscal modulaire.** Les règles françaises sont intégrées nativement : comparez le PFU et le barème progressif sur vos chiffres réels et préparez les Cerfa 2042, 2074 et 3916. Les règles sont isolées par juridiction pour accueillir de nouveaux pays.
 4. **Un assistant IA qui demande d'abord.** Interrogez votre portefeuille en langage naturel, avec un modèle local (Ollama) ou votre propre clé d'API. 35 outils sont exposés à l'assistant intégré et aux clients MCP externes, et toute action qui modifie des données financières exige votre approbation explicite.
 5. **Importez votre historique.** Importez les exports CSV de vos courtiers et banques avec mappage des colonnes, aperçu en direct, protection contre les doublons et annulation en un clic.
@@ -95,6 +96,16 @@ Un tableau de bord patrimonial qui garde vos données chiffrées, prépare votre
     <td width="50%"><img src="public/screenshots/fr/progress.webp" alt="Progression" /><br /><sub><b>Progression</b> : objectifs d'épargne, rangs et quêtes</sub></td>
   </tr>
 </table>
+
+## 🖥️ Application de bureau
+
+GlassFolio existe aussi en vraie application de bureau pour macOS, Windows et Linux (Electron) : sa propre fenêtre, sans Docker ni terminal. Elle lance le même serveur local que l'image Docker, sur un port de boucle locale fixe (`3790`, pour pouvoir tourner à côté de Docker), et garde votre coffre dans le dossier de données de l'application. L'application web, sa CSP, l'API du coffre, le proxy de cours et le pont MCP restent inchangés.
+
+- **Installer** : téléchargez l'installateur de votre système depuis la [dernière version](https://github.com/Damien-Esilv/GlassFolio/releases/latest) (ou la [page de téléchargement](https://glassfolio.dev/fr/download)) : `GlassFolio-mac-arm64.dmg` / `GlassFolio-mac-x64.dmg`, `GlassFolio-win-x64.exe`, `GlassFolio-linux-x64.AppImage` / `.deb`. Chaque version liste le SHA-256 de chaque fichier dans `SHA256SUMS.txt`.
+- **Première ouverture** : l'application n'est pas encore signée avec un certificat développeur payant, le système demande donc une confirmation unique. macOS : Réglages Système > Confidentialité et sécurité > « Ouvrir quand même » (clic droit > Ouvrir sur macOS 14 et antérieur). Windows : « Informations complémentaires » > « Exécuter quand même ». AppImage Linux : faites d'abord un `chmod +x`.
+- **Mises à jour** : au démarrage puis toutes les quelques heures (désactivable dans Réglages > Application de bureau), l'application demande à GitHub la dernière version et vous la propose ; rien n'est installé sans votre clic. Le manifeste de mise à jour est signé (ed25519) et chaque téléchargement est comparé à son SHA-512 avant installation. Sur macOS, où aucune signature Apple n'est disponible, l'application télécharge elle-même la nouvelle version, se remplace et redémarre.
+- **La construire vous-même** : `npm run desktop:install`, puis `npm run desktop:dev` (lancer) ou `npm run desktop:dist` (installateurs dans `desktop/release/`).
+- **Publier** (mainteneur) : lancez une fois `npm --prefix desktop run generate-update-key`, commitez la clé publique affichée dans `desktop/update-public-key.mjs` et stockez la clé privée dans le secret GitHub `UPDATE_SIGNING_KEY`. Pousser un tag `vX.Y.Z` lance le workflow `Desktop app`, qui construit les trois plateformes et remplit une version **brouillon** à relire puis publier.
 
 ## 🐳 Auto-hébergement avec Docker
 
@@ -192,7 +203,7 @@ Dans les réglages, choisissez le fournisseur Ollama et saisissez son adresse (`
 
 GlassFolio est construit une seule fois et existe en deux modes.
 
-| | **Local** (Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
+| | **Local** (application de bureau / Docker / `npm run dev`) | **Cloud** ([glassfolio.dev](https://glassfolio.dev)) |
 |---|---|---|
 | Où vivent les données | Enregistrements du coffre sur le volume de votre serveur, source de vérité | Coffre chiffré stocké dans Supabase |
 | Comptes | Mot de passe maître, avec TOTP (et codes de secours) et passkeys dans le coffre | Supabase Auth, vérification d'e-mail, TOTP et passkeys |
@@ -222,6 +233,7 @@ Pour essayer sans saisir de données, démarrez avec `npm run dev:demo` (ou `GLA
 | `npm run mcp` | Démarrer le pont MCP (stdio ; `-- serve` pour HTTP) |
 | `npm run mcp:catalog` | Régénérer `mcp-server/tools.json` après modification d'un outil IA |
 | `npm run docker:up` / `docker:down` / `docker:logs` / `docker:smoke` | Commandes d'auto-hébergement |
+| `npm run desktop:install` / `desktop:dev` / `desktop:pack` / `desktop:dist` / `desktop:smoke` | Application de bureau : installer ses dépendances, la lancer, empaqueter un dossier, construire les installateurs, la tester |
 
 ## ✅ Qualité et sécurité
 

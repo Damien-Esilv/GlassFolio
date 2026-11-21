@@ -95,15 +95,25 @@
       "cashYield": "Liquidités, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Deux façons d'utiliser GlassFolio",
+      "ariaLabel": "Trois façons d'utiliser GlassFolio",
+      "desktop": {
+        "badge": "Nouveau",
+        "title": "Installer l'application",
+        "tagline": "Application de bureau pour Mac, Windows et Linux",
+        "points": {
+          "p1": "Sa propre fenêtre : sans Docker ni terminal",
+          "p2": "Vos données restent sur votre ordinateur, chiffrées"
+        },
+        "cta": "Télécharger l'application"
+      },
       "local": {
-        "title": "Chez vous",
-        "tagline": "Auto-hébergé avec Docker",
+        "title": "Avec Docker",
+        "tagline": "Auto-hébergé, pour serveurs maison",
         "points": {
           "p1": "Vos données restent sur votre machine",
           "p2": "Code source-available, contrôle total"
         },
-        "cta": "L'installer en local"
+        "cta": "Installer avec Docker"
       },
       "cloud": {
         "title": "En ligne",
@@ -298,14 +308,15 @@
     "subtitle": "La même application, le même chiffrement et les mêmes fonctionnalités. Choisissez où elle tourne, et changez quand vous voulez.",
     "local": {
       "title": "Auto-hébergé",
-      "tagline": "Docker sur votre ordinateur ou serveur",
+      "tagline": "Application de bureau ou Docker, sur votre ordinateur ou serveur",
       "points": {
         "p1": "Contrôle total : vos données ne quittent jamais votre disque",
         "p2": "Code source-available que vous pouvez auditer",
         "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
       },
       "ctaGithub": "Voir le code sur GitHub",
-      "ctaGuide": "Lire le guide d'installation"
+      "ctaGuide": "Lire le guide d'installation",
+      "ctaDesktop": "Obtenir l'application de bureau"
     },
     "cloud": {
       "title": "Cloud",
@@ -328,12 +339,12 @@
     "compare": {
       "title": "Côte à côte",
       "criterion": "Critère",
-      "local": "Auto-hébergé (Docker)",
+      "local": "Auto-hébergé (bureau ou Docker)",
       "cloud": "Cloud (app.glassfolio.dev)",
       "rows": {
         "data": {
           "label": "Où vivent vos données",
-          "local": "Coffre chiffré dans un volume sur votre disque",
+          "local": "Coffre chiffré sur votre propre disque",
           "cloud": "Coffre chiffré dans Supabase, isolé par compte"
         },
         "account": {
@@ -398,7 +409,7 @@
     "items": {
       "q1": {
         "question": "Où sont stockées mes données financières et qui peut y accéder ?",
-        "answer": "Votre portefeuille (positions, transactions, objectifs, clés d'IA) est chiffré dans votre navigateur en AES-256-GCM avant d'être enregistré, avec une clé dérivée de votre mot de passe par PBKDF2-SHA256 (600 000 itérations) et HKDF. Dans l'édition cloud, seul ce texte chiffré arrive chez Supabase, où la sécurité au niveau des lignes isole chaque compte ; dans l'édition Docker, il est écrit dans un volume sur votre propre disque. Personne d'autre ne détient votre mot de passe, donc personne d'autre ne peut lire vos données."
+        "answer": "Votre portefeuille (positions, transactions, objectifs, clés d'IA) est chiffré dans votre navigateur avec AES-256-GCM avant d'être enregistré, avec une clé dérivée de votre mot de passe par PBKDF2-SHA256 (600 000 itérations) et HKDF. Dans l'édition cloud, seul ce texte chiffré parvient à Supabase, où la sécurité au niveau des lignes isole chaque compte ; dans l'application de bureau et l'édition Docker, il est écrit sur votre propre disque. Personne d'autre ne détient votre mot de passe, donc personne d'autre ne peut lire vos données."
       },
       "q2": {
         "question": "Le moteur fiscal remplace-t-il une déclaration officielle ?",
@@ -413,8 +424,8 @@
         "answer": "Vous choisissez où il tourne : un modèle Ollama local pour que rien ne quitte votre machine, ou votre propre clé d'API chez le fournisseur de votre choix. Les secrets sont retirés avant qu'une requête ne quitte l'application, et chaque modification de vos données attend votre validation. Vos outils IA (Claude Code, Codex, Cursor) peuvent aussi appeler les outils de GlassFolio via un pont sur votre ordinateur, tant que votre onglet est ouvert et déverrouillé : les résultats vont alors au modèle de cet outil."
       },
       "q5": {
-        "question": "Quelle différence entre l'édition cloud et l'édition Docker ?",
-        "answer": "L'édition cloud (app.glassfolio.dev) s'appuie sur Supabase pour la connexion, la vérification de l'e-mail et le stockage de votre coffre chiffré. L'édition Docker fait tourner toute l'application sur votre machine : pas de compte, pas d'e-mail, et le coffre chiffré vit dans le volume glassfolio-data, si bien que vider le navigateur ne fait rien perdre. Les deux offrent les mêmes fonctionnalités, le même chiffrement et les mêmes options de double authentification."
+        "question": "Quelle différence entre les éditions cloud, bureau et Docker ?",
+        "answer": "L'édition cloud (app.glassfolio.dev) utilise Supabase pour la connexion, la vérification de l'e-mail et le stockage de votre coffre chiffré. L'application de bureau et l'édition Docker font tourner toute l'application sur votre machine : pas de compte, pas d'e-mail, et le coffre chiffré vit dans un dossier de votre propre disque, donc vider un navigateur ne fait rien perdre. Les trois partagent les mêmes fonctionnalités, le même chiffrement et les mêmes options de double authentification."
       },
       "q6": {
         "question": "Comment essayer GlassFolio sans créer de compte ?",
@@ -423,6 +434,10 @@
       "q7": {
         "question": "Comment installer l'édition Docker ?",
         "answer": "Installez Docker et Node.js 22, puis lancez trois commandes : git clone https://github.com/Damien-Esilv/GlassFolio.git, cd GlassFolio et npm run docker:up. Ouvrez http://localhost:3780 et créez votre coffre. Le guide d'auto-hébergement détaille la configuration, l'accès réseau, les sauvegardes et les mises à jour."
+      },
+      "q8": {
+        "question": "Puis-je utiliser GlassFolio sans Docker ni onglet de navigateur ?",
+        "answer": "Oui. L'application de bureau pour Mac, Windows et Linux ouvre GlassFolio dans sa propre fenêtre : téléchargez-la depuis la page de téléchargement, ouvrez-la et créez votre coffre. Elle garde vos données sur votre ordinateur, vérifie les nouvelles versions et les installe quand vous cliquez. Votre système peut vous demander de confirmer la première ouverture, car l'application n'est pas encore signée avec un certificat développeur payant ; la page de téléchargement explique comment."
       }
     }
   },
@@ -450,6 +465,7 @@
       "local": "Local",
       "cloud": "Cloud"
     },
-    "projectHeading": "Le projet"
+    "projectHeading": "Le projet",
+    "downloadApp": "Télécharger l'application de bureau"
   }
 }

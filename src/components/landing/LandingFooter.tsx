@@ -147,6 +147,11 @@ export const LandingFooter: React.FC = () => {
                 </a>
               </li>
               <li>
+                <Link to={buildPublicPagePath('/download')} className="inline-block py-1 hover:text-primary transition-colors">
+                  {t('landing:footer.downloadApp')}
+                </Link>
+              </li>
+              <li>
                 <Link to={buildPublicPagePath('/self-host')} className="inline-block py-1 hover:text-primary transition-colors">
                   {t('landing:footer.selfHostGuide')}
                 </Link>

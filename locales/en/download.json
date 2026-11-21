@@ -1,0 +1,118 @@
+{
+  "title": "Download GlassFolio for your computer",
+  "intro": "A real desktop app for Mac, Windows and Linux: install it, open it, and your portfolio lives in its own window. No Docker, no terminal, and your data stays on your machine, encrypted.",
+  "actions": {
+    "detected": "Download for {{os}}",
+    "choose": "Choose your system",
+    "pending": "See the install options"
+  },
+  "comingSoon": {
+    "badge": "First release coming soon",
+    "title": "The installers are not published yet",
+    "body": "The desktop app is built and tested; the first installers are about to be published on GitHub. Until then you can run GlassFolio with Docker, or try the cloud version.",
+    "docker": "Install with Docker",
+    "cloud": "Try the cloud version"
+  },
+  "platforms": {
+    "mac": {
+      "name": "macOS",
+      "requirements": "Apple Silicon and Intel Macs",
+      "hint": "Not sure which one? Apple menu > About This Mac: if the chip starts with “Apple M”, pick Apple Silicon; otherwise pick Intel.",
+      "variants": {
+        "mac-arm64": "Apple Silicon (M1 and later)",
+        "mac-x64": "Intel"
+      }
+    },
+    "win": {
+      "name": "Windows",
+      "requirements": "Windows 10 or later, 64-bit",
+      "hint": "The installer sets GlassFolio up for your account only: no administrator rights needed.",
+      "variants": {
+        "win-x64": "Installer (64-bit)"
+      }
+    },
+    "linux": {
+      "name": "Linux",
+      "requirements": "64-bit distributions",
+      "hint": "The AppImage runs on most distributions and updates itself. The .deb package is for Debian and Ubuntu and is updated from the download page.",
+      "variants": {
+        "linux-appimage": "AppImage",
+        "linux-deb": "Debian / Ubuntu package"
+      }
+    }
+  },
+  "card": {
+    "recommended": "Recommended for your computer",
+    "download": "Download .{{format}}",
+    "soon": "Coming soon"
+  },
+  "benefits": {
+    "title": "Why the desktop app",
+    "window": {
+      "title": "Its own window",
+      "body": "GlassFolio opens like any other app, with no browser tab and no address to remember."
+    },
+    "local": {
+      "title": "Your data stays here",
+      "body": "Your portfolio is encrypted with your master password and saved on your computer. Nothing leaves it unless you connect a service yourself."
+    },
+    "updates": {
+      "title": "Updates, with your say",
+      "body": "GlassFolio tells you when a new version is out and installs it when you click, then restarts. You can turn the check off."
+    },
+    "ai": {
+      "title": "Ready for your AI tools",
+      "body": "The MCP bridge works as in the Docker edition, so Claude, Cursor and others can read your portfolio once you allow it."
+    }
+  },
+  "firstLaunch": {
+    "title": "The first time you open it",
+    "intro": "GlassFolio is free and open source, and it is not signed with a paid developer certificate yet. Your system therefore asks you to confirm the first launch. This is expected; here is how, once.",
+    "mac": {
+      "title": "On a Mac",
+      "steps": {
+        "s1": "Open the .dmg and drag GlassFolio into Applications.",
+        "s2": "Open GlassFolio from Applications. macOS says it cannot verify the app: close that message.",
+        "s3": "Open System Settings > Privacy & Security, scroll to Security, click “Open Anyway” next to GlassFolio and confirm. On macOS 14 and earlier, right-click the app and choose Open instead."
+      },
+      "after": "Later launches, and updates installed from inside the app, open normally."
+    },
+    "win": {
+      "title": "On Windows",
+      "steps": {
+        "s1": "Run the installer. If “Windows protected your PC” appears, click “More info”.",
+        "s2": "Click “Run anyway”, then follow the installer."
+      }
+    },
+    "linux": {
+      "title": "On Linux",
+      "steps": {
+        "s1": "AppImage: make it executable (chmod +x GlassFolio-linux-x64.AppImage), then run it.",
+        "s2": "Debian or Ubuntu: sudo apt install ./GlassFolio-linux-x64.deb"
+      }
+    }
+  },
+  "updates": {
+    "title": "How updates work",
+    "body": "When GlassFolio starts, and every few hours after, it asks GitHub for the latest release. GitHub therefore sees your IP address, like for any web request; nothing about you or your data is sent. The update information is signed, and every download is checked against its fingerprint before anything is installed. If a new version exists, you choose: update now, or later. You can turn the check off in Settings."
+  },
+  "verify": {
+    "title": "Check what you download",
+    "body": "Each release lists the SHA-256 fingerprint of every installer. Compare it with the one of your download if you want to be sure.",
+    "checksums": "SHA-256 fingerprints",
+    "releases": "All releases on GitHub"
+  },
+  "alternatives": {
+    "title": "Other ways to use GlassFolio",
+    "docker": {
+      "title": "Docker",
+      "body": "Run GlassFolio as a container on your computer or a home server. The same local, encrypted vault, opened in your browser.",
+      "cta": "Read the Docker guide"
+    },
+    "cloud": {
+      "title": "Cloud version",
+      "body": "Nothing to install: create a free account and use GlassFolio from any browser, with your data end-to-end encrypted.",
+      "cta": "Create a free account"
+    }
+  }
+}

@@ -35,6 +35,7 @@ const lazyPage = (load: () => Promise<PageModule>): React.FC & { preload: () => 
 const Landing = lazyPage(() => import('./pages/Landing'));
 const LegalCenter = lazyPage(() => import('./pages/LegalCenter'));
 const SelfHost = lazyPage(() => import('./pages/SelfHost'));
+const Download = lazyPage(() => import('./pages/Download'));
 const About = lazyPage(() => import('./pages/About'));
 const Roadmap = lazyPage(() => import('./pages/Roadmap'));
 const Changelog = lazyPage(() => import('./pages/Changelog'));
@@ -45,6 +46,7 @@ const NotFound = lazyPage(() => import('./pages/NotFound'));
 const PAGES_BY_SEO_KEY: Record<PublicSeoKey, { preload: () => Promise<void> }> = {
   home: Landing,
   selfHost: SelfHost,
+  download: Download,
   about: About,
   roadmap: Roadmap,
   changelog: Changelog,
@@ -131,6 +133,8 @@ export const ShowcaseRoutes: React.FC<ShowcaseRoutesProps> = ({ onPageReady }) =
             <Route path="/welcome" element={<Landing />} />
             <Route path="/self-host" element={<SelfHost />} />
             <Route path="/welcome/self-host" element={<SelfHost />} />
+            <Route path="/download" element={<Download />} />
+            <Route path="/welcome/download" element={<Download />} />
             <Route path="/about" element={<About />} />
             <Route path="/welcome/about" element={<About />} />
             <Route path="/roadmap" element={<Roadmap />} />

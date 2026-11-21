@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
-import { Github, Sparkles, ShieldAlert } from 'lucide-react';
+import { Github, Laptop, Sparkles, ShieldAlert } from 'lucide-react';
 import { LandingHeader } from '../components/landing/LandingHeader';
 import { LandingFooter } from '../components/landing/LandingFooter';
 import { LandingMotionProvider } from '../components/landing/motion/LandingMotionProvider';
@@ -129,6 +129,13 @@ const SelfHost: React.FC = () => {
                   <Github size={17} />
                   <span>{t('selfhost:ctaGithub')}</span>
                 </a>
+                <Link
+                  to={buildPublicPagePath('/download')}
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap bg-subtle hover:bg-card-hover border border-subtle text-primary text-sm font-bold px-5 py-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <Laptop size={16} className="text-secondary" />
+                  <span>{t('selfhost:ctaDesktop')}</span>
+                </Link>
                 {demoOffered && <button
                   type="button"
                   onClick={() => launchDemo('/')}

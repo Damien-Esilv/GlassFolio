@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Copy, Check, Cpu, Eye, EyeOff, Sparkles, TriangleAlert } from 'lucide-react';
 import { MCP_SETUP_PROMPT } from '../../config/mcpSetupPrompt';
 import { MCP_SERVE_COMMANDS } from '../../config/mcpClients';
+import { useDesktopApp } from '../../hooks/useDesktopApp';
 import { aiSettingsService } from '../../services/ai/aiSettingsService';
 import {
   STANDALONE_BRIDGE_URL,
@@ -60,11 +61,14 @@ export const McpBridgeSettings: React.FC = () => {
   const [promptCopied, setPromptCopied] = useState(false);
   const [addressDraft, setAddressDraft] = useState(settings.url);
   const [addressInvalid, setAddressInvalid] = useState(false);
+  const { info: desktopInfo } = useDesktopApp();
 
   const baseUrl = resolveBridgeBaseUrl(settings);
   const ownServer = baseUrl === '';
   const origin = ownServer ? window.location.origin : baseUrl;
   const endpoint = `${origin}/mcp`;
+  // In the desktop app the MCP server file is bundled: show its real path instead of the placeholder
+  const desktopEntryPath = ownServer ? desktopInfo?.mcpEntryPath : undefined;
   const token = settings.token || '<token>';
   const autonomous = aiSettingsService.getSettings().executionMode === 'autonomous';
   // The token stays hidden on screen until revealed; every copy button copies the real text
@@ -208,7 +212,7 @@ export const McpBridgeSettings: React.FC = () => {
             <McpClientPicker
               clientId={settings.client}
               onClientChange={(client) => saveMcpBridgeSettings({ client })}
-              values={{ endpoint, token, ownServer }}
+              values={{ endpoint, token, ownServer, entryPath: desktopEntryPath }}
               mask={mask}
             />
             <p className="text-[11px] text-tertiary">{t('ai:mcpBridge.manual.note')}</p>

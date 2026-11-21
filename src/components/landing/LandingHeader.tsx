@@ -114,7 +114,7 @@ export const LandingHeader: React.FC = () => {
         {/* Right Actions: Install guide (a page, not an anchor) + Lang/Theme + GitHub + account */}
         <div className="flex items-center gap-2 shrink-0 ml-auto">
           <Link
-            to={buildPublicPagePath('/self-host')}
+            to={buildPublicPagePath('/download')}
             className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-brand text-xs font-bold hover:bg-brand/15 transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <Download size={13} />
@@ -180,7 +180,7 @@ export const LandingHeader: React.FC = () => {
           </nav>
           <nav className="pt-3 border-t border-subtle flex flex-col space-y-1" aria-label={t('landing:header.pagesNavAria')}>
             <Link
-              to={buildPublicPagePath('/self-host')}
+              to={buildPublicPagePath('/download')}
               onClick={closeMenu}
               className="px-3 py-2 rounded-lg text-sm font-semibold text-brand hover:bg-subtle transition-colors inline-flex items-center gap-2"
             >

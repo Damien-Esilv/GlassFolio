@@ -1,0 +1,25 @@
+{
+  "name": "glassfolio-desktop",
+  "productName": "GlassFolio",
+  "private": true,
+  "version": "1.0.1",
+  "description": "GlassFolio desktop app: an Electron window around the local GlassFolio server.",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "GlassFolio",
+  "homepage": "https://glassfolio.dev",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir --publish never",
+    "dist": "electron-builder --publish never",
+    "generate-update-key": "node scripts/generate-update-key.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  }
+}

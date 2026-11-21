@@ -157,13 +157,13 @@ describe('<LandingHeader /> self-hosting entry points', () => {
     expect(hrefs).toEqual(LANDING_SECTION_ANCHORS.map((id) => `#${id}`));
   });
 
-  it('links the Install button to the guide page, not to an anchor', () => {
+  it('links the Install button to the download page, not to an anchor', () => {
     vi.spyOn(deploymentModule, 'getAppTarget').mockReturnValue('showcase');
     render(
       <MemoryRouter initialEntries={['/']}>
         <LandingHeader />
       </MemoryRouter>
     );
-    expect(screen.getAllByRole('link', { name: 'Install' })[0].getAttribute('href')).toBe('/self-host');
+    expect(screen.getAllByRole('link', { name: 'Install' })[0].getAttribute('href')).toBe('/download');
   });
 });

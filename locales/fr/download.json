@@ -1,0 +1,118 @@
+{
+  "title": "Téléchargez GlassFolio pour votre ordinateur",
+  "intro": "Une vraie application de bureau pour Mac, Windows et Linux : installez-la, ouvrez-la, et votre portefeuille vit dans sa propre fenêtre. Sans Docker, sans terminal, et vos données restent sur votre machine, chiffrées.",
+  "actions": {
+    "detected": "Télécharger pour {{os}}",
+    "choose": "Choisir votre système",
+    "pending": "Voir les options d’installation"
+  },
+  "comingSoon": {
+    "badge": "Première version bientôt disponible",
+    "title": "Les installateurs ne sont pas encore publiés",
+    "body": "L’application de bureau est construite et testée ; les premiers installateurs vont être publiés sur GitHub. D’ici là, vous pouvez lancer GlassFolio avec Docker ou essayer la version cloud.",
+    "docker": "Installer avec Docker",
+    "cloud": "Essayer la version cloud"
+  },
+  "platforms": {
+    "mac": {
+      "name": "macOS",
+      "requirements": "Macs Apple Silicon et Intel",
+      "hint": "Vous hésitez ? Menu Pomme > À propos de ce Mac : si la puce commence par « Apple M », choisissez Apple Silicon ; sinon choisissez Intel.",
+      "variants": {
+        "mac-arm64": "Apple Silicon (M1 et suivants)",
+        "mac-x64": "Intel"
+      }
+    },
+    "win": {
+      "name": "Windows",
+      "requirements": "Windows 10 ou plus récent, 64 bits",
+      "hint": "L’installateur installe GlassFolio pour votre compte uniquement : aucun droit administrateur n’est nécessaire.",
+      "variants": {
+        "win-x64": "Installateur (64 bits)"
+      }
+    },
+    "linux": {
+      "name": "Linux",
+      "requirements": "Distributions 64 bits",
+      "hint": "L’AppImage fonctionne sur la plupart des distributions et se met à jour toute seule. Le paquet .deb est pour Debian et Ubuntu et se met à jour depuis la page de téléchargement.",
+      "variants": {
+        "linux-appimage": "AppImage",
+        "linux-deb": "Paquet Debian / Ubuntu"
+      }
+    }
+  },
+  "card": {
+    "recommended": "Recommandé pour votre ordinateur",
+    "download": "Télécharger le .{{format}}",
+    "soon": "Bientôt disponible"
+  },
+  "benefits": {
+    "title": "Pourquoi l’application de bureau",
+    "window": {
+      "title": "Sa propre fenêtre",
+      "body": "GlassFolio s’ouvre comme n’importe quelle application, sans onglet de navigateur ni adresse à retenir."
+    },
+    "local": {
+      "title": "Vos données restent chez vous",
+      "body": "Votre portefeuille est chiffré par votre mot de passe maître et enregistré sur votre ordinateur. Rien n’en sort sauf si vous connectez vous-même un service."
+    },
+    "updates": {
+      "title": "Des mises à jour, à votre rythme",
+      "body": "GlassFolio vous prévient quand une nouvelle version existe et l’installe quand vous cliquez, puis redémarre. Vous pouvez désactiver la vérification."
+    },
+    "ai": {
+      "title": "Prête pour vos outils d’IA",
+      "body": "Le pont MCP fonctionne comme dans l’édition Docker : Claude, Cursor et d’autres peuvent lire votre portefeuille une fois que vous l’avez autorisé."
+    }
+  },
+  "firstLaunch": {
+    "title": "La première ouverture",
+    "intro": "GlassFolio est gratuit et open source, et n’est pas encore signé avec un certificat développeur payant. Votre système vous demande donc de confirmer la première ouverture. C’est normal ; voici comment faire, une seule fois.",
+    "mac": {
+      "title": "Sur Mac",
+      "steps": {
+        "s1": "Ouvrez le .dmg et glissez GlassFolio dans Applications.",
+        "s2": "Ouvrez GlassFolio depuis Applications. macOS indique qu’il ne peut pas vérifier l’application : fermez ce message.",
+        "s3": "Ouvrez Réglages Système > Confidentialité et sécurité, descendez jusqu’à Sécurité, cliquez sur « Ouvrir quand même » à côté de GlassFolio et confirmez. Sur macOS 14 et antérieur, faites plutôt un clic droit sur l’application puis Ouvrir."
+      },
+      "after": "Les ouvertures suivantes, et les mises à jour installées depuis l’application, se font normalement."
+    },
+    "win": {
+      "title": "Sur Windows",
+      "steps": {
+        "s1": "Lancez l’installateur. Si « Windows a protégé votre ordinateur » s’affiche, cliquez sur « Informations complémentaires ».",
+        "s2": "Cliquez sur « Exécuter quand même », puis suivez l’installateur."
+      }
+    },
+    "linux": {
+      "title": "Sur Linux",
+      "steps": {
+        "s1": "AppImage : rendez-le exécutable (chmod +x GlassFolio-linux-x64.AppImage), puis lancez-le.",
+        "s2": "Debian ou Ubuntu : sudo apt install ./GlassFolio-linux-x64.deb"
+      }
+    }
+  },
+  "updates": {
+    "title": "Comment fonctionnent les mises à jour",
+    "body": "Au démarrage de GlassFolio, puis toutes les quelques heures, l’application demande à GitHub la dernière version publiée. GitHub voit donc votre adresse IP, comme pour toute requête web ; rien sur vous ni sur vos données n’est envoyé. Les informations de mise à jour sont signées, et chaque téléchargement est comparé à son empreinte avant toute installation. Si une nouvelle version existe, vous choisissez : mettre à jour maintenant, ou plus tard. Vous pouvez désactiver la vérification dans les Réglages."
+  },
+  "verify": {
+    "title": "Vérifiez ce que vous téléchargez",
+    "body": "Chaque version liste l’empreinte SHA-256 de chaque installateur. Comparez-la à celle de votre téléchargement si vous voulez en être sûr.",
+    "checksums": "Empreintes SHA-256",
+    "releases": "Toutes les versions sur GitHub"
+  },
+  "alternatives": {
+    "title": "D’autres façons d’utiliser GlassFolio",
+    "docker": {
+      "title": "Docker",
+      "body": "Lancez GlassFolio en conteneur sur votre ordinateur ou un serveur à la maison. Le même coffre local et chiffré, ouvert dans votre navigateur.",
+      "cta": "Lire le guide Docker"
+    },
+    "cloud": {
+      "title": "Version cloud",
+      "body": "Rien à installer : créez un compte gratuit et utilisez GlassFolio depuis n’importe quel navigateur, avec vos données chiffrées de bout en bout.",
+      "cta": "Créer un compte gratuit"
+    }
+  }
+}

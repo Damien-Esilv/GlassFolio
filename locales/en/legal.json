@@ -89,7 +89,7 @@
         "title": "1. Data Controller",
         "paragraphs": [
           "In cloud mode (app.glassfolio.dev), the data controller is the GlassFolio publisher (see Legal Notice), reachable at {{email}}. No Data Protection Officer (DPO) is appointed, as appointment is not mandatory for this processing.",
-          "In self-hosted mode (local Docker container), no data is sent to the publisher: you alone are responsible for the data stored on your machine."
+          "In self-hosted mode (desktop app or local Docker container), no data is sent to the publisher: you alone are responsible for the data stored on your machine. The only exchange is the desktop app's update check, described in section 2."
         ]
       },
       {
@@ -114,7 +114,8 @@
           "Security data: two-factor authentication factors (TOTP, passkeys) and authentication logs kept by Supabase (sign-in dates, IP address, browser).",
           "Encrypted vault: vault header (salt, derivation parameters) and encrypted envelopes holding your financial data, unreadable on the server side.",
           "Interface preferences (theme, language) stored locally in your browser.",
-          "Local mode (Docker): none of this data leaves your machine."
+          "Local mode (desktop app or Docker): none of this data leaves your machine.",
+          "Desktop app update check: at start-up and every few hours, unless you turn it off in Settings, the app asks GitHub for the latest release. GitHub receives the request and therefore your IP address, like for any web request. Nothing about you or your data is sent, and nothing is installed without your confirmation."
         ]
       },
       {
@@ -166,7 +167,7 @@
           "Technical authentication and email-delivery logs: kept by Supabase and Resend for service security, for a limited period set by each provider.",
           "Backups: after deletion, encrypted copies may remain with the host until the end of their rotation cycle, then are permanently erased.",
           "Cookie consent choice: 13 months maximum, then asked again.",
-          "Local mode: until you purge the vault or delete the Docker volume."
+          "Local mode: until you purge the vault or delete the Docker volume or the data folder of the desktop app."
         ]
       },
       {

@@ -69,7 +69,7 @@ const primaryButton =
 const secondaryButton =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap bg-subtle hover:bg-card-hover border border-subtle text-primary text-sm font-bold px-5 py-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary';
 
-/** Local (Docker) and cloud side by side, with the same weight, then what each one implies. */
+/** Local (desktop app or Docker) and cloud side by side, with the same weight, then what each one implies. */
 export const SelfHostSection: React.FC = () => {
   const { t } = useTranslation();
 
@@ -111,7 +111,11 @@ export const SelfHostSection: React.FC = () => {
             <HardDrive size={21} />,
             <InstallTerminal />,
             <>
-              <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className={primaryButton}>
+              <Link to={buildPublicPagePath('/download')} className={primaryButton}>
+                <Laptop size={17} />
+                <span>{t('landing:localCloud.local.ctaDesktop')}</span>
+              </Link>
+              <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
                 <Github size={17} />
                 <span>{t('landing:localCloud.local.ctaGithub')}</span>
               </a>

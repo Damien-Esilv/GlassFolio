@@ -5,7 +5,7 @@
 export const SITE_ORIGIN = 'https://glassfolio.dev';
 
 export type PublicSeoKey =
-  | 'home' | 'selfHost' | 'about' | 'roadmap' | 'changelog'
+  | 'home' | 'selfHost' | 'download' | 'about' | 'roadmap' | 'changelog'
   | 'docs' | 'legal' | 'privacy' | 'terms' | 'cookies' | 'accessibility' | 'contact';
 
 export interface PublicRoute {
@@ -22,6 +22,7 @@ export interface PublicRoute {
 export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/', file: 'index', seoKey: 'home', softwareSchema: true, datedByChangelog: true },
   { path: '/self-host', file: 'self-host', seoKey: 'selfHost', softwareSchema: true, datedByChangelog: false },
+  { path: '/download', file: 'download', seoKey: 'download', softwareSchema: true, datedByChangelog: false },
   { path: '/docs', file: 'docs', seoKey: 'docs', softwareSchema: false, datedByChangelog: false },
   { path: '/about', file: 'about', seoKey: 'about', softwareSchema: false, datedByChangelog: false },
   { path: '/roadmap', file: 'roadmap', seoKey: 'roadmap', softwareSchema: false, datedByChangelog: true },

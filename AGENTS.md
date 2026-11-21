@@ -39,6 +39,7 @@ GlassFolio/
 │   ├── services/    # Couche data (db.ts + services)
 │   └── types/       # Interfaces TypeScript (barrel : src/types/index.ts)
 ├── server/          # Runtime Node sans dépendance (serveur Docker, proxy Yahoo, coffre local)
+├── desktop/         # Application de bureau (Electron) : lance server/ sur localhost:3790, mises à jour signées, installateurs
 ├── docker/          # Dockerfile de l'image auto-hébergée (+ docker-compose.yml à la racine)
 ├── locales/         # Traductions i18n (en/, fr/)
 ├── test-data/       # CSV d'exemples (imports)
@@ -66,6 +67,7 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
 - **CSP & en-têtes de sécurité** : source unique `server/securityHeaders.mjs` (Docker + `vercel.json` généré par `npm run security:headers`, vérifié par `check:standards` et par le smoke post-déploiement). `script-src 'self'` : aucun script tiers, aucun `unsafe-eval`. Tout nouvel hôte appelé par l'app (API, images) doit être ajouté à la liste de ce fichier (un test scanne `src/` et échoue sinon).
 - **Trusted Types** : la CSP exige `require-trusted-types-for 'script'`. Jamais de `innerHTML`/`dangerouslySetInnerHTML` avec une chaîne brute : passer par une politique nommée de `src/services/security/trustedTypes.ts` (liste des noms dans `TRUSTED_TYPES_POLICIES`, vérifiée par test). Le SVG du QR TOTP est toujours dessiné localement, jamais pris tel quel d'un serveur.
 - **Exposition réseau Docker** : `GLASSFOLIO_BIND` hors loopback exige `GLASSFOLIO_ACCESS_TOKEN` (≥ 16 car., HTTP Basic, utilisateur `glassfolio`) ; `docker:up` refuse sinon.
+- **Application de bureau** (`desktop/`) : Electron enveloppe le **même serveur local** (`server/docker-server.mjs`) et charge `http://localhost:<port>` (port fixe 3790, hôte `localhost`, jamais `file://` ni un schéma personnalisé : la CSP, les gardes d'origine du coffre et du pont MCP en dépendent). Aucune logique métier dans `desktop/` ; l'interface passe par `window.glassfolioDesktop` (`src/services/desktop/`). Les mises à jour sont détectées par un manifeste signé ed25519 (`update-manifest.json`, clé publique dans `desktop/update-public-key.mjs`, clé privée = secret `UPDATE_SIGNING_KEY`). Pas de compte Apple Developer : sur macOS la mise à jour est guidée (`desktop/lib/macUpdater.mjs`). Les boutons de téléchargement du site sont pilotés par `DESKTOP_INSTALLERS_PUBLISHED` dans `src/config/downloads.ts` : ne le passer à `true` qu'une fois les installateurs publiés sur la release. Aucun tag ni release GitHub sans demande explicite de l'utilisateur.
 - **Chaîne d'approvisionnement** : image Docker épinglée par digest, GitHub Actions épinglées par SHA de commit, paquets npm par intégrité du lockfile ; `npm run check:supply-chain` doit rester vert.
 - **Dates** : stocker/transporter en **ISO 8601 string** ; ne pas persister de `Date` brute dans le mock DB.
 - **Typage strict** : pas de `any` ; types explicites, retours explicites sur les services.
@@ -260,6 +262,7 @@ Cycle de vie de développement logiciel (SDLC) du projet, pour garantir la traç
 - `npm run check:standards` : valider l'ensemble des standards visuels, d'architecture, de sécurité et zéro fuite de chemin
 - `npm run check:types` : validation TypeScript stricte (tsc)
 - `npm run check:i18n` : contrôle d'exhaustivité des clés i18n FR/EN
+- `npm run desktop:dev` / `desktop:dist` / `desktop:smoke` : application de bureau (`desktop/`, dépendances propres : `npm run desktop:install`)
 - `npm run precommit:check` : bouclier de sécurité local exécuté avant chaque git commit
 - `npm run test:security` : exécuter les tests de sécurité (Vault E2EE, guardrails AI, RBAC)
 - `npm test` : exécuter la suite de tests unitaires (Vitest)

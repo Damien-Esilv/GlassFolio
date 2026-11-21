@@ -26,6 +26,8 @@ import notificationsEN from '../locales/en/notifications.json';
 import seoEN from '../locales/en/seo.json';
 import docsEN from '../locales/en/docs.json';
 import contactEN from '../locales/en/contact.json';
+import desktopEN from '../locales/en/desktop.json';
+import downloadEN from '../locales/en/download.json';
 
 import commonFR from '../locales/fr/common.json';
 import navigationFR from '../locales/fr/navigation.json';
@@ -50,6 +52,8 @@ import notificationsFR from '../locales/fr/notifications.json';
 import seoFR from '../locales/fr/seo.json';
 import docsFR from '../locales/fr/docs.json';
 import contactFR from '../locales/fr/contact.json';
+import desktopFR from '../locales/fr/desktop.json';
+import downloadFR from '../locales/fr/download.json';
 
 const resources = {
     en: {
@@ -76,6 +80,8 @@ const resources = {
         seo: seoEN,
         docs: docsEN,
         contact: contactEN,
+        desktop: desktopEN,
+        download: downloadEN,
     },
     fr: {
         common: commonFR,
@@ -101,6 +107,8 @@ const resources = {
         seo: seoFR,
         docs: docsFR,
         contact: contactFR,
+        desktop: desktopFR,
+        download: downloadFR,
     },
 };
 

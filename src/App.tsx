@@ -47,6 +47,7 @@ const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
 const Landing = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Landing'));
 const LegalCenter = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/LegalCenter'));
 const SelfHost = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/SelfHost'));
+const Download = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Download'));
 const About = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/About'));
 const Roadmap = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Roadmap'));
 const Changelog = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Changelog'));
@@ -133,6 +134,7 @@ const lazyPublicPage = (Page: React.ComponentType): React.FC => {
 };
 
 const LazySelfHost = lazyPublicPage(SelfHost);
+const LazyDownload = lazyPublicPage(Download);
 const LazyAbout = lazyPublicPage(About);
 const LazyRoadmap = lazyPublicPage(Roadmap);
 const LazyChangelog = lazyPublicPage(Changelog);
@@ -162,6 +164,8 @@ const App: React.FC = () => {
               <Route path="/accessibility" element={<LazyLegalCenter />} />
               <Route path="/self-host" element={<LazySelfHost />} />
               <Route path="/welcome/self-host" element={<LazySelfHost />} />
+              <Route path="/download" element={<LazyDownload />} />
+              <Route path="/welcome/download" element={<LazyDownload />} />
               <Route path="/about" element={<LazyAbout />} />
               <Route path="/welcome/about" element={<LazyAbout />} />
               <Route path="/roadmap" element={<LazyRoadmap />} />

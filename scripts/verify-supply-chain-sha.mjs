@@ -15,38 +15,41 @@ import { findUnpinnedActions, findUnpinnedDockerBases } from './lib/supplyChainP
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const lockfilePath = resolve(__dirname, '../package-lock.json');
+const lockfilePaths = [resolve(__dirname, '../package-lock.json'), resolve(__dirname, '../desktop/package-lock.json')];
 
 try {
-  const content = readFileSync(lockfilePath, 'utf-8');
-  const lockfile = JSON.parse(content);
-
-  const packages = lockfile.packages || {};
   let totalAudited = 0;
-  let missingIntegrity = [];
-  let weakHashes = [];
+  const missingIntegrity = [];
+  const weakHashes = [];
 
-  for (const [pkgPath, meta] of Object.entries(packages)) {
-    // Skip root package entry
-    if (!pkgPath || pkgPath === '') continue;
+  // The web app and the desktop shell (desktop/) have their own lockfile: both must carry integrity hashes
+  for (const lockfilePath of lockfilePaths) {
+    if (!existsSync(lockfilePath)) continue;
+    const lockfile = JSON.parse(readFileSync(lockfilePath, 'utf-8'));
+    const label = lockfilePath.slice(resolve(__dirname, '..').length + 1);
 
-    // Skip local link / workspace dependencies if any
-    if (meta.link) continue;
+    for (const [pkgPath, meta] of Object.entries(lockfile.packages || {})) {
+      // Skip root package entry
+      if (!pkgPath || pkgPath === '') continue;
 
-    totalAudited++;
-    const integrity = meta.integrity;
+      // Skip local link / workspace dependencies if any
+      if (meta.link) continue;
 
-    if (!integrity) {
-      missingIntegrity.push(pkgPath);
-      continue;
-    }
+      totalAudited++;
+      const integrity = meta.integrity;
 
-    if (!integrity.startsWith('sha512-') && !integrity.startsWith('sha384-')) {
-      weakHashes.push({ pkgPath, integrity });
+      if (!integrity) {
+        missingIntegrity.push(`${label}: ${pkgPath}`);
+        continue;
+      }
+
+      if (!integrity.startsWith('sha512-') && !integrity.startsWith('sha384-')) {
+        weakHashes.push({ pkgPath: `${label}: ${pkgPath}`, integrity });
+      }
     }
   }
 
-  console.log(`[Supply Chain Guard] Audited ${totalAudited} packages from package-lock.json`);
+  console.log(`[Supply Chain Guard] Audited ${totalAudited} packages from ${lockfilePaths.filter(existsSync).length} lockfile(s)`);
 
   if (missingIntegrity.length > 0) {
     console.error(`[FAIL] Found ${missingIntegrity.length} dependencies missing cryptographic integrity:`);

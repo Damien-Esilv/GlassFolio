@@ -1,0 +1,42 @@
+{
+  "update": {
+    "title": "GlassFolio {{version}} is available",
+    "body": "GlassFolio will download the new version, install it and restart. Your data stays exactly where it is.",
+    "bodyManual": "This installation updates from the download page. Open it to get the new version.",
+    "now": "Update now",
+    "later": "Later",
+    "openReleasePage": "Open the download page",
+    "downloading": "Downloading the update… {{percent}}%",
+    "restarting": "Restarting GlassFolio…",
+    "progressLabel": "Update download progress",
+    "errors": {
+      "verification": "The downloaded file did not pass its integrity check, so nothing was installed. You can get the new version from the download page.",
+      "generic": "The update could not be installed. You can get the new version from the download page."
+    }
+  },
+  "about": {
+    "title": "Desktop app",
+    "subtitle": "Version {{version}} · {{platform}} ({{arch}})",
+    "platforms": {
+      "mac": "macOS",
+      "win": "Windows",
+      "linux": "Linux"
+    },
+    "checkNow": "Check for updates",
+    "status": {
+      "idle": "Updates are checked at start-up.",
+      "checking": "Checking for a new version…",
+      "upToDate": "You are on the latest version.",
+      "available": "Version {{version}} is available.",
+      "downloading": "Downloading the update…",
+      "restarting": "Restarting GlassFolio…",
+      "error": "The check failed. Make sure you are online and try again.",
+      "errorSignature": "The update information could not be verified, so it was ignored.",
+      "disabled": "Updates are not available in this build."
+    },
+    "autoCheck": {
+      "label": "Check for updates automatically",
+      "hint": "Looks for a new version when GlassFolio starts and every few hours. It only asks GitHub for the latest release, so GitHub sees your IP address like for any web request; nothing about you or your data is sent. Nothing is installed without your click."
+    }
+  }
+}

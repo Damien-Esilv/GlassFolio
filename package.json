@@ -59,7 +59,12 @@
     "screenshots": "node scripts/capture-screenshots.mjs",
     "ollama:proxy": "node scripts/ollama-proxy.mjs",
     "ollama:tunnel": "cloudflared tunnel --url http://localhost:11434",
-    "mcp:catalog": "UPDATE_MCP_CATALOG=1 vitest run tests/unit/mcp/catalog.test.ts"
+    "mcp:catalog": "UPDATE_MCP_CATALOG=1 vitest run tests/unit/mcp/catalog.test.ts",
+    "desktop:install": "npm --prefix desktop ci",
+    "desktop:dev": "npm run build:local && npm --prefix desktop start",
+    "desktop:pack": "npm run build:local && npm --prefix desktop run pack",
+    "desktop:dist": "npm run build:local && npm --prefix desktop run dist",
+    "desktop:smoke": "node desktop/scripts/smoke.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

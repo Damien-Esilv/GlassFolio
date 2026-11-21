@@ -38,11 +38,20 @@ export interface SnippetValues {
   token: string;
   /** The bridge belongs to the server that serves the app, not to a program started by the client. */
   ownServer: boolean;
+  /** Where the MCP server file really is (the desktop app bundles it); the placeholder is shown when unknown. */
+  entryPath?: string;
 }
 
-export function renderSnippet(snippet: McpClientSnippet, { endpoint, token, ownServer }: SnippetValues): string {
+/** A real file path in a snippet: backslashes (Windows) are escaped in JSON and TOML, spaces are quoted in a shell command. */
+export function formatEntryPath(entryPath: string, format: McpSnippetFormat): string {
+  if (format === 'command') return /\s/.test(entryPath) ? `"${entryPath}"` : entryPath;
+  return entryPath.split('\\').join('\\\\').split('"').join('\\"');
+}
+
+export function renderSnippet(snippet: McpClientSnippet, { endpoint, token, ownServer, entryPath }: SnippetValues): string {
   const template = ownServer && snippet.templateOwnServer ? snippet.templateOwnServer : snippet.template;
-  return template.split('{{endpoint}}').join(endpoint).split('{{token}}').join(token).split('{{entry}}').join(MCP_ENTRY_PLACEHOLDER);
+  const entry = entryPath ? formatEntryPath(entryPath, snippet.format) : MCP_ENTRY_PLACEHOLDER;
+  return template.split('{{endpoint}}').join(endpoint).split('{{token}}').join(token).split('{{entry}}').join(entry);
 }
 
 /** The first snippet of a transport, or the first one the client has. */

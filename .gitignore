@@ -73,6 +73,9 @@ poc-*.html
 # Docker Local Persistent Volume
 glassfolio-data/
 
+# Desktop app build output (installers are published as GitHub release assets, never committed)
+desktop/release/
+
 # graph-memory MCP local index
 .graph-memory/
 
