@@ -1,4 +1,5 @@
-import { AIProvider, LLMToolSchema } from './types';
+import { AIProvider, LLMToolSchema, ModelRejectedAttachmentError } from './types';
+import { formatTextAttachments, isAttachmentRejectionError } from './attachmentFormatting';
 import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 
 export class AnthropicProvider implements AIProvider {
@@ -33,12 +34,53 @@ export class AnthropicProvider implements AIProvider {
         }
       } else if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
         const blocks: Block[] = Array.isArray(m.providerContent)
-          ? m.providerContent as Block[]
+          ? (m.providerContent as Block[])
           : [
             ...(m.content.trim() ? [{ type: 'text', text: m.content }] : []),
             ...m.toolCalls.map((tc) => ({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.arguments ?? {} })),
           ];
         formattedMessages.push({ role: 'assistant', content: blocks });
+      } else if (m.role === 'user' && m.attachments && m.attachments.length > 0) {
+        const blocks: Block[] = [];
+        for (const att of m.attachments) {
+          if (att.kind === 'image' && att.base64) {
+            blocks.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: att.mimeType,
+                data: att.base64,
+              },
+            });
+          } else if (att.kind === 'pdf' && att.base64) {
+            blocks.push({
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: att.base64,
+              },
+            });
+          } else if (att.pageImages && att.pageImages.length > 0) {
+            for (const pageImg of att.pageImages) {
+              blocks.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: pageImg.mimeType,
+                  data: pageImg.base64,
+                },
+              });
+            }
+          }
+        }
+        const combinedText = `${m.content || ''}${formatTextAttachments(m.attachments)}`.trim();
+        if (combinedText) {
+          blocks.push({ type: 'text', text: combinedText });
+        }
+        if (blocks.length > 0) {
+          formattedMessages.push({ role: 'user', content: blocks });
+        }
       } else if ((m.role === 'user' || m.role === 'assistant') && m.content.trim()) {
         // The API refuses empty text blocks (e.g. an invocation record shown as a card only)
         formattedMessages.push({ role: m.role, content: m.content });
@@ -76,6 +118,9 @@ export class AnthropicProvider implements AIProvider {
 
     if (!response.ok) {
       const errText = await response.text();
+      if (isAttachmentRejectionError(response.status, errText)) {
+        throw new ModelRejectedAttachmentError(response.status, errText || response.statusText);
+      }
       throw new Error(`Anthropic error HTTP ${response.status}: ${errText}`);
     }
 

@@ -7,6 +7,10 @@ export interface AIToolParameterProperty {
   type: string;
   description: string;
   enum?: string[];
+  items?: AIToolParameterProperty;
+  properties?: Record<string, AIToolParameterProperty>;
+  required?: string[];
+  additionalProperties?: boolean | AIToolParameterProperty;
 }
 
 export interface AIToolParametersSchema {
@@ -52,6 +56,37 @@ export interface PendingActionProposal {
 
 export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
 
+export type AttachmentKind = 'csv' | 'xlsx' | 'pdf' | 'image';
+
+export type AttachmentPreprocessMethod =
+  | 'xlsx_to_csv'
+  | 'pdf_text'
+  | 'pdf_pages_to_images'
+  | 'image_resized';
+
+export interface AttachmentPreprocessingInfo {
+  method: AttachmentPreprocessMethod;
+  details?: Record<string, string | number>;
+}
+
+export interface ChatAttachment {
+  id: string;
+  kind: AttachmentKind;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** Locally extracted text (CSV, XLSX->CSV, PDF->text) */
+  text?: string;
+  /** Raw base64 without data: prefix for images or native PDFs; kept in memory only and purged after the turn */
+  base64?: string;
+  /** Rendered page images when a scanned PDF was converted locally for a vision model */
+  pageImages?: Array<{ base64: string; mimeType: 'image/jpeg' }>;
+  /** Present whenever GlassFolio locally pre-processed the file before sending (powers the UI (i) badge) */
+  preprocessing?: AttachmentPreprocessingInfo;
+  /** True once binary payload has been purged from conversation history after sending */
+  purged?: boolean;
+}
+
 export interface ToolCallRequest {
   id: string;
   name: string;
@@ -63,6 +98,7 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   timestamp: string;
+  attachments?: ChatAttachment[];
   toolCalls?: ToolCallRequest[];
   toolCallId?: string;
   toolName?: string;

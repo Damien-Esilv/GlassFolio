@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { appStorage } from '../services/storage/appStorage';
-import { AIChatDrawer } from './ai/AIChatDrawer';
+import { AIChatPanel } from './ai/AIChatPanel';
+import { useResizablePane } from '../hooks/useResizablePane';
 import { McpBridgeHost } from './mcp/McpBridgeHost';
 import { DesktopUpdatePrompt } from './desktop/DesktopUpdatePrompt';
 import { ConnectionSyncHost } from './connections/ConnectionSyncHost';
@@ -62,6 +63,34 @@ const NavItem: React.FC<{
   );
 };
 
+const SIDEBAR_WIDTH_KEY = 'gf_sidebar_width';
+const AI_PANEL_OPEN_KEY = 'gf_ai_panel_open';
+const AI_PANEL_WIDTH_KEY = 'gf_ai_panel_width';
+
+const SIDEBAR_DEFAULT_WIDTH = 240;
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 360;
+const SIDEBAR_COLLAPSED_WIDTH = 80;
+const SIDEBAR_COLLAPSE_THRESHOLD = 128;
+
+const AI_PANEL_DEFAULT_WIDTH = 420;
+const AI_PANEL_WIDE_WIDTH = 640;
+const AI_PANEL_MIN_WIDTH = 320;
+const AI_PANEL_MAX_WIDTH = 760;
+const MIN_MAIN_CONTENT_WIDTH = 360;
+
+const readStoredWidth = (key: string, fallback: number, min: number, max: number): number => {
+  try {
+    const raw = appStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  } catch {
+    return fallback;
+  }
+};
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -75,7 +104,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useEscapeKey(() => setIsMobileMenuOpen(false), isMobileMenuOpen);
   const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState<boolean>(() => {
+    try {
+      return appStorage.getItem(AI_PANEL_OPEN_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     try {
       return appStorage.getItem('gf_sidebar_collapsed') === 'true';
@@ -83,10 +118,38 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       return false;
     }
   });
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() =>
+    readStoredWidth(SIDEBAR_WIDTH_KEY, SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
+  );
+  const [aiPanelWidth, setAiPanelWidth] = useState<number>(() =>
+    readStoredWidth(AI_PANEL_WIDTH_KEY, AI_PANEL_DEFAULT_WIDTH, AI_PANEL_MIN_WIDTH, AI_PANEL_MAX_WIDTH)
+  );
+  const [viewportWidth, setViewportWidth] = useState<number>(() =>
+    typeof window !== 'undefined' && window.innerWidth > 0 ? window.innerWidth : 1440
+  );
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleViewportResize = () => {
+      if (window.innerWidth > 0) {
+        setViewportWidth(window.innerWidth);
+      }
+    };
+    window.addEventListener('resize', handleViewportResize);
+    return () => window.removeEventListener('resize', handleViewportResize);
+  }, []);
+
+  const setSidebarCollapsedPersisted = useCallback((next: boolean) => {
+    setIsSidebarCollapsed(next);
+    try {
+      appStorage.setItem('gf_sidebar_collapsed', String(next));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
   const toggleSidebarCollapsed = useCallback(() => {
-    setIsSidebarCollapsed(prev => {
+    setIsSidebarCollapsed((prev) => {
       const next = !prev;
       try {
         appStorage.setItem('gf_sidebar_collapsed', String(next));
@@ -96,6 +159,86 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       return next;
     });
   }, []);
+
+  const setAIChatOpenPersisted = useCallback((nextOrUpdater: boolean | ((prev: boolean) => boolean)) => {
+    setIsAIChatOpen((prev) => {
+      const next = typeof nextOrUpdater === 'function' ? nextOrUpdater(prev) : nextOrUpdater;
+      try {
+        appStorage.setItem(AI_PANEL_OPEN_KEY, String(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }, []);
+
+  // Recharts measures container widths via window resize; trigger after panel slide transition
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('resize'));
+      }
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [isAIChatOpen, isSidebarCollapsed]);
+
+  const effectiveLeftWidth = isSidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth;
+  const maxAllowedAiWidth = Math.min(
+    AI_PANEL_MAX_WIDTH,
+    Math.max(AI_PANEL_MIN_WIDTH, viewportWidth - effectiveLeftWidth - MIN_MAIN_CONTENT_WIDTH)
+  );
+  const effectiveAiWidth = Math.min(aiPanelWidth, maxAllowedAiWidth);
+
+  const leftResize = useResizablePane({
+    edge: 'left',
+    width: sidebarWidth,
+    minWidth: SIDEBAR_MIN_WIDTH,
+    maxWidth: SIDEBAR_MAX_WIDTH,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    onWidthChange: setSidebarWidth,
+    onResizeEnd: (finalWidth) => {
+      try {
+        appStorage.setItem(SIDEBAR_WIDTH_KEY, String(finalWidth));
+      } catch {
+        // ignore storage errors
+      }
+    },
+    collapsed: isSidebarCollapsed,
+    collapsedWidth: SIDEBAR_COLLAPSED_WIDTH,
+    collapseThreshold: SIDEBAR_COLLAPSE_THRESHOLD,
+    onCollapsedChange: setSidebarCollapsedPersisted,
+  });
+
+  const rightResize = useResizablePane({
+    edge: 'right',
+    width: effectiveAiWidth,
+    minWidth: AI_PANEL_MIN_WIDTH,
+    maxWidth: maxAllowedAiWidth,
+    defaultWidth: AI_PANEL_DEFAULT_WIDTH,
+    onWidthChange: setAiPanelWidth,
+    onResizeEnd: (finalWidth) => {
+      try {
+        appStorage.setItem(AI_PANEL_WIDTH_KEY, String(finalWidth));
+      } catch {
+        // ignore storage errors
+      }
+    },
+  });
+
+  const isAnyResizing = leftResize.isResizing || rightResize.isResizing;
+  const isAiExpandedPreset = effectiveAiWidth >= AI_PANEL_WIDE_WIDTH - 24;
+  const toggleAiWidthPreset = useCallback(() => {
+    const target = isAiExpandedPreset ? AI_PANEL_DEFAULT_WIDTH : Math.min(AI_PANEL_WIDE_WIDTH, maxAllowedAiWidth);
+    setAiPanelWidth(target);
+    try {
+      appStorage.setItem(AI_PANEL_WIDTH_KEY, String(target));
+    } catch {
+      // ignore storage errors
+    }
+    setTimeout(() => {
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('resize'));
+    }, 220);
+  }, [isAiExpandedPreset, maxAllowedAiWidth]);
 
 
   /** Human-readable freshness label */
@@ -416,7 +559,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="min-h-screen bg-canvas text-primary font-display">
+    <div
+      className="min-h-screen bg-canvas text-primary font-display"
+      style={
+        {
+          '--gf-sidebar-w': `${effectiveLeftWidth}px`,
+          '--gf-ai-panel-w': `${isAIChatOpen ? effectiveAiWidth : 0}px`,
+        } as React.CSSProperties
+      }
+    >
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
@@ -425,12 +576,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* Sidebar - Desktop (Fixed) */}
+      {/* Sidebar - Desktop (Fixed, continuously resizable with Spotify-style snap-to-collapse) */}
       <aside
         data-testid="desktop-sidebar"
-        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 ${
-          isSidebarCollapsed ? 'md:w-20' : 'md:w-60'
-        } transition-all duration-200 bg-card border-r border-subtle z-30`}
+        data-collapsed={String(isSidebarCollapsed)}
+        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-[var(--gf-sidebar-w)] ${
+          leftResize.isResizing ? 'transition-none' : 'transition-[width] duration-200'
+        } bg-card border-r border-subtle z-30`}
       >
         {/* Logo & Toggle */}
         <div
@@ -467,6 +619,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {renderSidebarContent(isSidebarCollapsed)}
+
+        {/* Right-edge continuous resize divider (Spotify macOS style) */}
+        <div
+          {...leftResize.separatorProps}
+          data-testid="sidebar-resize-handle"
+          aria-label={t('navigation:resizeSidebar')}
+          title={t('navigation:resizeSidebar')}
+          className="hidden md:flex items-center justify-center absolute inset-y-0 -right-1.5 w-3 cursor-col-resize z-40 group focus:outline-none"
+        >
+          <span
+            className={`h-full w-0.5 transition-colors ${
+              leftResize.isResizing
+                ? 'bg-primary'
+                : 'bg-transparent group-hover:bg-primary/60 group-focus:bg-primary'
+            }`}
+          />
+        </div>
       </aside>
 
       {/* Sidebar - Mobile (Slide in) */}
@@ -498,7 +667,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content Area */}
-      <div className={`${isSidebarCollapsed ? 'md:pl-20' : 'md:pl-60'} transition-all duration-200`}>
+      <div
+        className={`md:pl-[var(--gf-sidebar-w)] ${
+          leftResize.isResizing ? 'transition-none' : 'transition-[padding] duration-200'
+        }`}
+      >
         {/* Top Header */}
         <header className="sticky top-0 z-40 h-16 bg-card border-b border-subtle flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
@@ -552,12 +725,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Right Actions (AI Assistant + Notifications + Profile) */}
           <div className="flex items-center gap-3 ml-auto">
             <button
-              onClick={() => setIsAIChatOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors text-xs font-semibold"
+              onClick={() => setAIChatOpenPersisted((prev) => !prev)}
+              aria-pressed={isAIChatOpen}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors text-xs font-semibold ${
+                isAIChatOpen
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-primary/10 border-primary/25 text-primary hover:bg-primary/20'
+              }`}
               aria-label={t('ai:drawer.openButton')}
               title={t('ai:drawer.title')}
             >
-              <Sparkles size={14} className="text-primary" />
+              <Sparkles size={14} className={isAIChatOpen ? 'text-white' : 'text-primary'} />
               <span className="hidden sm:inline">{t('ai:drawer.openButton')}</span>
             </button>
 
@@ -643,20 +821,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="p-4 md:p-6 lg:p-8">
-          <LocalPersistenceNotice />
-          <CloudSyncNotice />
-          <VaultIntegrityNotice />
-          {/* Reloads the data in place: a page reload would lock the vault and drop unsaved input */}
-          <PullToRefresh onRefresh={handleForceRefresh}>
-            {children}
-          </PullToRefresh>
-        </main>
+        {/* Main Content (shifts smoothly left when the right AI side panel is open) */}
+        <div
+          data-testid="main-content-shell"
+          className={`${isAIChatOpen ? 'lg:pr-[var(--gf-ai-panel-w)]' : ''} ${
+            isAnyResizing ? 'transition-none' : 'transition-[padding] duration-200'
+          }`}
+        >
+          <main className="p-4 md:p-6 lg:p-8">
+            <LocalPersistenceNotice />
+            <CloudSyncNotice />
+            <VaultIntegrityNotice />
+            {/* Reloads the data in place: a page reload would lock the vault and drop unsaved input */}
+            <PullToRefresh onRefresh={handleForceRefresh}>
+              {children}
+            </PullToRefresh>
+          </main>
+        </div>
       </div>
 
-      {/* In-App AI Assistant Drawer */}
-      <AIChatDrawer isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
+      {/* Non-Modal Resizable Right AI Assistant Panel */}
+      <AIChatPanel
+        isOpen={isAIChatOpen}
+        onClose={() => setAIChatOpenPersisted(false)}
+        width={effectiveAiWidth}
+        isResizing={rightResize.isResizing}
+        isExpandedPreset={isAiExpandedPreset}
+        onToggleWidthPreset={toggleAiWidthPreset}
+        resizeHandleProps={rightResize.separatorProps}
+      />
 
       {/* AI clients (Claude Code, Codex...) calling the tools of this tab, and the changes they ask for */}
       <McpBridgeHost />

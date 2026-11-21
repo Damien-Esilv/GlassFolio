@@ -419,9 +419,9 @@
         "lifespan": "Jusqu’à 30 jours, puis renouvelé ; le choix reste jusqu’à ce que vous le changiez"
       },
       "uiState": {
-        "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
+        "key": "gf_sidebar_collapsed / gf_sidebar_width / gf_ai_panel_open / gf_ai_panel_width / glassfolio_manual_price_history / gf_manual_price_history",
         "category": "Strictement Nécessaire (Préférences & Données)",
-        "purpose": "État du menu latéral (local) et historique des cours saisis manuellement (chiffré de bout en bout dans votre coffre).",
+        "purpose": "État et largeur du menu latéral et du panneau de l'assistant IA (local), ainsi que l'historique des cours saisis manuellement (chiffré de bout en bout dans votre coffre).",
         "lifespan": "Persistant jusqu'à la suppression du compte ou l'effacement du cache"
       },
       "passkeyRpId": {
@@ -441,6 +441,12 @@
         "category": "Strictement nécessaire (Préférences)",
         "purpose": "Mémorise sur cet appareil si vous avez autorisé les clients IA, l’adresse du pont MCP sur cet ordinateur et son jeton. Il reste dans ce navigateur.",
         "lifespan": "Persistant jusqu’à la désactivation ou l’effacement des données du site"
+      },
+      "aiModelsCache": {
+        "key": "gf_ai_openrouter_models_cache",
+        "category": "Strictement nécessaire (Cache public)",
+        "purpose": "Mémorise temporairement la liste publique des capacités multimodales des modèles OpenRouter (images, PDF) pour éviter des requêtes répétées.",
+        "lifespan": "24 heures, puis renouvelé"
       }
     },
     "managerTitle": "Gestionnaire Interactif du Consentement",

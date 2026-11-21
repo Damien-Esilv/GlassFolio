@@ -419,9 +419,9 @@
         "lifespan": "Up to 30 days, then refreshed; the choice stays until you change it"
       },
       "uiState": {
-        "key": "gf_sidebar_collapsed / glassfolio_manual_price_history / gf_manual_price_history",
+        "key": "gf_sidebar_collapsed / gf_sidebar_width / gf_ai_panel_open / gf_ai_panel_width / glassfolio_manual_price_history / gf_manual_price_history",
         "category": "Strictly Necessary (Preferences & Data)",
-        "purpose": "Sidebar state (local) and manual price history (end-to-end encrypted inside your vault).",
+        "purpose": "Sidebar and AI assistant panel state and widths (local), plus manual price history (end-to-end encrypted inside your vault).",
         "lifespan": "Persistent until account deletion or cache clearing"
       },
       "passkeyRpId": {
@@ -441,6 +441,12 @@
         "category": "Strictly Necessary (Preferences)",
         "purpose": "Remembers on this device whether you allowed AI clients, the address of the MCP bridge on this computer and its token. It stays in this browser.",
         "lifespan": "Persistent until you turn it off or clear site data"
+      },
+      "aiModelsCache": {
+        "key": "gf_ai_openrouter_models_cache",
+        "category": "Strictly Necessary (Public cache)",
+        "purpose": "Temporarily caches the public list of OpenRouter model multimodal capabilities (images, PDFs) to avoid repeated network requests.",
+        "lifespan": "24 hours, then refreshed"
       }
     },
     "managerTitle": "Interactive Analytics Consent Manager",

@@ -76,6 +76,7 @@
     "i18next": "^26.7.2",
     "lucide-react": "^0.554.0",
     "motion": "14.1.0",
+    "pdfjs-dist": "^6.5.438",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

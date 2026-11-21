@@ -1,4 +1,5 @@
-import { AIProvider, LLMToolSchema } from './types';
+import { AIProvider, LLMToolSchema, ModelRejectedAttachmentError } from './types';
+import { formatTextAttachments, isAttachmentRejectionError } from './attachmentFormatting';
 import { ChatMessage, LLMResponse, ToolCallRequest } from '../types';
 
 export class OllamaConnectionError extends Error {
@@ -38,22 +39,41 @@ export class OllamaProvider implements AIProvider {
 
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages.map((m) => ({
-        role: m.role === 'tool' ? 'tool' : m.role,
-        content: m.content || '',
-        ...(m.toolCalls && m.toolCalls.length > 0
-          ? {
-              tool_calls: m.toolCalls.map((tc) => ({
-                id: tc.id,
-                type: 'function',
-                function: {
-                  name: tc.name,
-                  arguments: tc.arguments,
-                },
-              })),
+      ...messages.map((m) => {
+        const textWithAttachments =
+          m.role === 'user' && m.attachments && m.attachments.length > 0
+            ? `${m.content || ''}${formatTextAttachments(m.attachments)}`.trim()
+            : m.content || '';
+        const images: string[] = [];
+        if (m.role === 'user' && m.attachments) {
+          for (const att of m.attachments) {
+            if (att.kind === 'image' && att.base64) {
+              images.push(att.base64);
+            } else if (att.pageImages && att.pageImages.length > 0) {
+              for (const pageImg of att.pageImages) {
+                images.push(pageImg.base64);
+              }
             }
-          : {}),
-      })),
+          }
+        }
+        return {
+          role: m.role === 'tool' ? 'tool' : m.role,
+          content: textWithAttachments,
+          ...(images.length > 0 ? { images } : {}),
+          ...(m.toolCalls && m.toolCalls.length > 0
+            ? {
+                tool_calls: m.toolCalls.map((tc) => ({
+                  id: tc.id,
+                  type: 'function',
+                  function: {
+                    name: tc.name,
+                    arguments: tc.arguments,
+                  },
+                })),
+              }
+            : {}),
+        };
+      }),
     ];
 
     const formattedTools = tools.map((t) => ({
@@ -144,6 +164,8 @@ export class OllamaProvider implements AIProvider {
           // Ignore network failure when fetching model tags list
         }
         throw new OllamaModelNotFoundError(this.model, this.endpoint, availableModels);
+      } else if (isAttachmentRejectionError(response.status, errMsg)) {
+        throw new ModelRejectedAttachmentError(response.status, errMsg);
       } else {
         throw new OllamaGeneralError(response.status, errMsg);
       }

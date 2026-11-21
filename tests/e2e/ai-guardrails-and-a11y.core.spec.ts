@@ -1,9 +1,10 @@
 import { test, expect, expectAccessible, navigateSpa } from './fixtures';
 
-test.describe('Critical Journey 3 — AI Chat Drawer Dialog Semantics, Focus Trap & Multi-Theme A11y', () => {
-  test('traps keyboard Tab focus inside AIChatDrawer, closes on Escape, and passes WCAG audit in Cyber & Dark themes', async ({
+test.describe('Critical Journey 3 — Non-Modal AI Side Panel, Simultaneous Navigation & Multi-Theme A11y', () => {
+  test('opens non-modal AI complementary panel without backdrop, keeps page interactive across navigation, closes on Escape inside panel, and passes WCAG audit', async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/signup');
     await page.locator('#signup-name').fill('A11y Auditor');
     await page.locator('#signup-password').fill('A11y-Strong-Vault-Pass-2026!');
@@ -22,26 +23,26 @@ test.describe('Critical Journey 3 — AI Chat Drawer Dialog Semantics, Focus Tra
     const openAiBtn = page.locator('header button svg.lucide-sparkles').locator('..');
     await expect(openAiBtn).toBeVisible({ timeout: 15_000 });
 
-    // Open AI Chat Drawer
+    // Open AI Side Panel
     await openAiBtn.click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    const panel = page.getByTestId('ai-chat-panel');
+    await expect(panel).toBeVisible();
+    await expect(panel).toHaveAttribute('role', 'complementary');
+    // Must not have aria-modal or dim backdrop
+    expect(await panel.getAttribute('aria-modal')).toBeNull();
     await expectAccessible(page);
 
-    // Tab 12 times and ensure focus never escapes the modal dialog
-    for (let i = 0; i < 12; i++) {
-      await page.keyboard.press('Tab');
-      const focusInsideDialog = await page.evaluate(() => {
-        const dlg = document.querySelector('[role="dialog"]');
-        return Boolean(dlg && document.activeElement && dlg.contains(document.activeElement));
-      });
-      expect(focusInsideDialog).toBe(true);
-    }
+    // Main content stays interactive and clickable while panel is open
+    const transactionsLink = page.getByTestId('desktop-sidebar').locator('a[href="/transactions"]');
+    await transactionsLink.click();
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 10_000 });
+    // Panel stays open across SPA navigation (E50)
+    await expect(panel).toBeVisible();
 
-    // Close drawer via Escape key
+    // Escape closes panel only when focus is inside the panel
+    await panel.locator('textarea').focus();
     await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
+    await expect(panel).toBeHidden();
 
     // Switch to Cyber Neon theme and run full axe-core WCAG 2.1 AA audit
     await page.evaluate(() => {

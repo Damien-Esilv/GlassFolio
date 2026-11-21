@@ -4,9 +4,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Layout from '../../../src/components/Layout';
 
-// Mock AIChatDrawer to keep tests lightweight
-vi.mock('../../../src/components/ai/AIChatDrawer', () => ({
-  AIChatDrawer: () => <div data-testid="ai-chat-drawer" />,
+// Mock AIChatPanel to keep tests lightweight
+vi.mock('../../../src/components/ai/AIChatPanel', () => ({
+  AIChatPanel: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="ai-chat-panel" /> : null,
 }));
 
 // Mock react-i18next
@@ -17,6 +18,7 @@ vi.mock('react-i18next', () => ({
         'navigation:brandName': 'Glassfolio',
         'navigation:collapseSidebar': 'Réduire le menu latéral',
         'navigation:expandSidebar': 'Développer le menu latéral',
+        'navigation:resizeSidebar': 'Redimensionner la barre latérale',
         'navigation:menu.dashboard': 'Tableau de bord',
         'navigation:menu.portfolio': 'Portefeuille',
         'navigation:menu.analytics': 'Analyses',
@@ -84,40 +86,65 @@ const renderLayout = (initialCollapsed = false) => {
   );
 };
 
-describe('Layout Sidebar Collapse', () => {
+describe('Layout Sidebar Collapse & Resizing', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
   });
 
-  it('renders expanded sidebar by default with w-60 class', () => {
-    renderLayout(false);
+  it('renders expanded sidebar by default at 240px CSS variable width', () => {
+    const { container } = renderLayout(false);
     const sidebar = screen.getByTestId('desktop-sidebar');
+    const root = container.firstElementChild as HTMLElement;
     expect(Boolean(sidebar)).toBe(true);
-    expect(sidebar.className).toContain('md:w-60');
+    expect(sidebar.getAttribute('data-collapsed')).toBe('false');
+    expect(sidebar.className).toContain('md:w-[var(--gf-sidebar-w)]');
+    expect(root.style.getPropertyValue('--gf-sidebar-w')).toBe('240px');
     expect(sidebar.textContent).toContain('Glassfolio');
   });
 
-  it('toggles to collapsed rail mode with w-20 class on button click', () => {
-    renderLayout(false);
+  it('toggles to collapsed rail mode at 80px on button click', () => {
+    const { container } = renderLayout(false);
     const collapseButton = screen.getByTitle('Réduire le menu latéral');
     expect(Boolean(collapseButton)).toBe(true);
 
     fireEvent.click(collapseButton);
 
     const sidebar = screen.getByTestId('desktop-sidebar');
-    expect(sidebar.className).toContain('md:w-20');
+    const root = container.firstElementChild as HTMLElement;
+    expect(sidebar.getAttribute('data-collapsed')).toBe('true');
+    expect(root.style.getPropertyValue('--gf-sidebar-w')).toBe('80px');
     expect(localStorage.getItem('gf_sidebar_collapsed')).toBe('true');
   });
 
   it('restores collapsed state from localStorage on initial render without redundant bottom toggle', () => {
-    renderLayout(true);
+    const { container } = renderLayout(true);
     const sidebar = screen.getByTestId('desktop-sidebar');
-    expect(sidebar.className).toContain('md:w-20');
+    const root = container.firstElementChild as HTMLElement;
+    expect(sidebar.getAttribute('data-collapsed')).toBe('true');
+    expect(root.style.getPropertyValue('--gf-sidebar-w')).toBe('80px');
 
-    // Expand button is only in header, not duplicated in bottom settings area
     const expandButtons = screen.getAllByTitle('Développer le menu latéral');
     expect(expandButtons.length).toBe(1);
   });
-});
 
+  it('supports Spotify-style continuous drag resize and snap-to-collapse persistence', () => {
+    const { container } = renderLayout(false);
+    const handle = screen.getByTestId('sidebar-resize-handle');
+    const root = container.firstElementChild as HTMLElement;
+
+    // Drag right by +60px -> 300px
+    fireEvent.pointerDown(handle, { button: 0, clientX: 240 });
+    fireEvent.pointerMove(window, { clientX: 300 });
+    fireEvent.pointerUp(window, { clientX: 300 });
+    expect(root.style.getPropertyValue('--gf-sidebar-w')).toBe('300px');
+    expect(localStorage.getItem('gf_sidebar_width')).toBe('300');
+
+    // Drag left below 128px threshold -> snaps collapsed to 80px
+    fireEvent.pointerDown(handle, { button: 0, clientX: 300 });
+    fireEvent.pointerMove(window, { clientX: 100 });
+    fireEvent.pointerUp(window, { clientX: 100 });
+    expect(screen.getByTestId('desktop-sidebar').getAttribute('data-collapsed')).toBe('true');
+    expect(root.style.getPropertyValue('--gf-sidebar-w')).toBe('80px');
+  });
+});

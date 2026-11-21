@@ -15,7 +15,45 @@
     "emptyConversation": "Posez une question sur votre patrimoine, vos allocations, votre fiscalité ou vos performances.",
     "openButton": "Assistant IA"
   },
+  "panel": {
+    "resizeHandle": "Redimensionner le panneau assistant",
+    "expand": "Agrandir le panneau",
+    "compact": "Réduire la largeur du panneau"
+  },
+  "attachments": {
+    "attachButton": "Joindre un relevé (CSV, Excel, PDF, capture)",
+    "dropHere": "Déposez votre relevé ici",
+    "dropHint": "CSV, Excel (.xlsx), PDF ou capture d'écran (max 10 Mo)",
+    "remove": "Retirer {{name}}",
+    "supportedFormats": "CSV · XLSX · PDF · Images",
+    "preparing": "Préparation du fichier…",
+    "defaultPrompt": "Analyse ce fichier joint et prépare l'aperçu de l'import des transactions.",
+    "cloudNotice": {
+      "title": "Envoi vers un service cloud",
+      "body": "Cette pièce jointe sera envoyée à {{provider}} pour analyse. En mode Ollama local, rien ne quitte votre machine.",
+      "confirm": "J'ai compris, autoriser l'envoi"
+    },
+    "preprocess": {
+      "infoLabel": "Détails du prétraitement local",
+      "badge": "Prétraitement local dans le navigateur",
+      "xlsx_to_csv": "Converti localement en CSV depuis l'onglet « {{sheet}} » ({{rows}} lignes) avant envoi.",
+      "pdf_text": "Texte extrait localement sur votre machine ({{pages}} page(s)) car ce modèle ne lit pas les PDF nativement.",
+      "pdf_pages_to_images": "PDF scanné sans texte : {{renderedPages}} page(s) sur {{pages}} convertie(s) localement en images pour le modèle vision.",
+      "image_resized": "Image redimensionnée localement ({{width}}×{{height}} px) pour respecter la limite du fournisseur."
+    },
+    "errors": {
+      "tooLarge": "Le fichier dépasse la taille maximale autorisée pour ce fournisseur.",
+      "unsupportedType": "Format non pris en charge. Utilisez CSV, Excel (.xlsx), PDF ou une image (PNG, JPEG, WebP).",
+      "xlsLegacy": "L'ancien format Excel (.xls) n'est pas pris en charge : réenregistrez-le en .xlsx ou .csv.",
+      "corruptFile": "Impossible de lire ce fichier : il semble vide, corrompu ou chiffré.",
+      "noVision": "Le modèle actif ({{model}}) ne prend pas en charge les images. Choisissez un modèle vision (ex. qwen2.5vl, llama3.2-vision, gpt-4o, Claude, Gemini).",
+      "scannedPdfNoVision": "Ce PDF est un scan sans texte sélectionnable et le modèle actif ne prend pas en charge la vision.",
+      "demoUnsupported": "Le mode Démo analyse uniquement les fichiers CSV et Excel (.xlsx). Configurez Ollama local ou un fournisseur cloud dans Réglages > IA & MCP pour lire des PDF ou des images.",
+      "modelRejected": "Le modèle actif a refusé cette pièce jointe : {{error}}"
+    }
+  },
   "chips": {
+    "importStatement": "📄 Importer un relevé",
     "portfolioSummary": "📊 Bilan du portefeuille",
     "portfolioSummaryPrompt": "Fais-moi un résumé de mon patrimoine net, mes gains totaux et mes principales positions.",
     "assetAllocation": "🥧 Allocation d'actifs",
@@ -53,7 +91,21 @@
     "executing": "Exécution en cours...",
     "types": {
       "record_transaction": "Enregistrer une Transaction",
-      "create_goal": "Créer un Objectif Financier"
+      "create_goal": "Créer un Objectif Financier",
+      "import_transactions": "Importer un historique de transactions",
+      "import_snapshot": "Importer une photo de positions"
+    },
+    "importPreview": {
+      "account": "Compte cible",
+      "file": "Fichier",
+      "period": "Période",
+      "valid": "{{count}} valide(s)",
+      "duplicates": "{{count}} doublon(s) ignoré(s)",
+      "errors": "{{count}} erreur(s)",
+      "date": "Date",
+      "type": "Type",
+      "asset": "Actif",
+      "amount": "Montant"
     },
     "fields": {
       "instrument": "Actif",
@@ -229,7 +281,7 @@
     "generalError": "Une erreur est survenue lors de l'échange avec l'assistant : {{error}}"
   },
   "prompt": {
-    "system": "Tu es l'assistant financier personnel et privé de GlassFolio.\nTu réponds toujours en français, de façon claire, précise et synthétique, aux questions financières de l'utilisateur.\nTu disposes d'outils pour consulter le portefeuille, l'allocation d'actifs, les positions, les transactions et la fiscalité.\nRÈGLE D'OR : pour toute opération modifiant le portefeuille (enregistrement d'une transaction, création d'un objectif), appelle l'outil correspondant. L'utilisateur devra obligatoirement valider l'opération via une carte interactive.\nNe donne jamais de conseil d'investissement spéculatif sans rappeler le caractère informatif de tes réponses."
+    "system": "Tu es l'assistant financier personnel et privé de GlassFolio.\nTu réponds toujours en français, de façon claire, précise et synthétique, aux questions financières de l'utilisateur.\nTu disposes d'outils pour consulter le portefeuille, l'allocation d'actifs, les positions, les transactions, la fiscalité et importer des relevés.\nRÈGLE D'IMPORT : lorsqu'un utilisateur joint un relevé (CSV, Excel converti, PDF ou capture d'écran), extrais les transactions si nécessaire puis appelle d'abord `preview_transaction_import` (en passant `csvText` ou `rows[]`) pour valider et détecter les doublons, présente un résumé clair, puis appelle `import_transactions` pour soumettre l'import à validation humaine.\nRÈGLE D'OR : pour toute opération modifiant le portefeuille (enregistrement d'une transaction, import de transactions, création d'un objectif), appelle l'outil correspondant. L'utilisateur devra obligatoirement valider l'opération via une carte interactive.\nNe donne jamais de conseil d'investissement spéculatif sans rappeler le caractère informatif de tes réponses."
   },
   "service": {
     "readOnlyBlocked": "Le mode \"Lecture Seule Stricte\" est activé. L'action **{{tool}}** a été bloquée conformément à vos réglages de sécurité.",
@@ -313,6 +365,17 @@
     "transactions": {
       "title": "📝 Dernières Transactions",
       "empty": "Aucune transaction récente."
+    },
+    "importPreview": {
+      "title": "📄 Aperçu de l'import détecté",
+      "account": "Compte cible",
+      "preset": "Format détecté",
+      "genericCsv": "CSV générique",
+      "valid": "Lignes prêtes à importer",
+      "duplicates": "Doublons ignorés",
+      "errors": "Lignes en erreur",
+      "hint": "En mode Démo, l'aperçu est calculé localement. Connectez Ollama ou un modèle cloud dans Réglages > IA & MCP pour lancer l'import guidé complet.",
+      "failed": "Impossible d'analyser ce relevé"
     },
     "rawData": "Données obtenues avec succès :",
     "rawResult": "Résultat reçu de l'outil {{tool}} : {{content}}"

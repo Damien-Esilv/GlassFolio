@@ -22,9 +22,13 @@ import {
   proposeCsvMappingTool,
   previewSnapshotImportTool,
   importSnapshotTool,
+  previewTransactionImportTool,
+  importTransactionsTool,
   getCostBasisMethodTool,
   setCostBasisMethodTool,
+  buildTransactionImportPreview,
 } from '../../../../../src/services/ai/tools/importTools';
+import { rollbackBatch } from '../../../../../src/services/import/importManager';
 import type { Account } from '../../../../../src/types/types.backend';
 
 const SNAPSHOT = 'Symbol;Quantité;PRU\nAAPL;10;150,5\nMSFT;2;400';
@@ -38,14 +42,25 @@ describe('import AI tools', () => {
   });
 
   it('are registered, and every write tool requires human confirmation', () => {
-    for (const name of ['preview_csv_import', 'propose_csv_mapping', 'preview_snapshot_import', 'import_snapshot', 'get_cost_basis_method', 'set_cost_basis_method']) {
+    for (const name of [
+      'preview_csv_import',
+      'propose_csv_mapping',
+      'preview_snapshot_import',
+      'import_snapshot',
+      'preview_transaction_import',
+      'import_transactions',
+      'get_cost_basis_method',
+      'set_cost_basis_method',
+    ]) {
       expect(aiToolRegistry.getTool(name)).toBeDefined();
     }
     expect(importSnapshotTool.requiresConfirmation).toBe(true);
+    expect(importTransactionsTool.requiresConfirmation).toBe(true);
     expect(setCostBasisMethodTool.requiresConfirmation).toBe(true);
     expect(previewCsvImportTool.requiresConfirmation).toBeFalsy();
     expect(proposeCsvMappingTool.requiresConfirmation).toBeFalsy();
     expect(previewSnapshotImportTool.requiresConfirmation).toBeFalsy();
+    expect(previewTransactionImportTool.requiresConfirmation).toBeFalsy();
   });
 
   it('preview_csv_import detects delimiter, preamble and mapping without saving anything', async () => {
@@ -110,5 +125,56 @@ describe('import AI tools', () => {
     const res = await setCostBasisMethodTool.execute({ accountId: 'acc-ai', method: 'FIFO' });
     expect(res.success).toBe(true);
     expect(db.getAccountById('acc-ai')?.costBasisMethod).toBe('FIFO');
+  });
+
+  it('preview_transaction_import & import_transactions handle CSV text, duplicates, and rollback cleanly', async () => {
+    const csvText = 'Date,Type,ISIN,Name,Shares,Price,Amount\n2025-01-10,BUY,US0378331005,Apple Inc.,2,200,400\n2025-01-15,BUY,IE00B4L5Y983,MSCI World,5,100,500';
+    const preview = await previewTransactionImportTool.execute({
+      accountId: 'acc-ai',
+      csvText,
+      fileName: 'broker.csv',
+    });
+
+    expect(preview.accountName).toBe('PEA');
+    expect(preview.stats.valid).toBe(2);
+    expect(preview.stats.errors).toBe(0);
+    expect(preview.stats.duplicates).toBe(0);
+    expect(preview.dateRange).toEqual({ start: '2025-01-10', end: '2025-01-15' });
+    expect(db.getUnifiedTransactions()).toHaveLength(0);
+
+    const cardPreview = await buildTransactionImportPreview({ accountId: 'acc-ai', csvText, fileName: 'broker.csv' });
+    expect(cardPreview.validCount).toBe(2);
+
+    const committed = await importTransactionsTool.execute(
+      { accountId: 'acc-ai', csvText, fileName: 'broker.csv' },
+      { userId: 'user-ai' }
+    );
+    expect(committed.success).toBe(true);
+    expect(committed.transactionCount).toBe(2);
+    expect(committed.batchId).toBeTruthy();
+    expect(db.getUnifiedTransactions()).toHaveLength(2);
+
+    // Re-preview flags both rows as duplicates
+    const secondPreview = await previewTransactionImportTool.execute({ accountId: 'acc-ai', csvText });
+    expect(secondPreview.stats.duplicates).toBe(2);
+    expect(secondPreview.stats.importable).toBe(0);
+
+    // Batch is undoable via rollbackBatch
+    const rolled = await rollbackBatch(committed.batchId as string);
+    expect(rolled.success).toBe(true);
+    expect(db.getUnifiedTransactions()).toHaveLength(0);
+  });
+
+  it('revalidates AI-extracted rows[] and rejects invalid future dates', async () => {
+    const preview = await previewTransactionImportTool.execute({
+      accountId: 'acc-ai',
+      rows: [
+        { date: '2025-02-01', type: 'BUY', symbol: 'AAPL', quantity: '3', price: '210', amount: '630', currency: 'USD' },
+        { date: '2999-01-01', type: 'BUY', symbol: 'MSFT', quantity: '1', price: '400', amount: '400', currency: 'USD' },
+      ],
+    });
+    expect(preview.stats.valid).toBe(1);
+    expect(preview.stats.errors).toBe(1);
+    expect(preview.errorSamples).toHaveLength(1);
   });
 });

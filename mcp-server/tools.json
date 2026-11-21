@@ -329,6 +329,108 @@
       }
     },
     {
+      "name": "import_transactions",
+      "description": "Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. Requires explicit human confirmation before execution. Always call preview_transaction_import first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Target account ID (optional when only one account exists)"
+          },
+          "csvText": {
+            "type": "string",
+            "description": "Raw CSV content (use this or rows)"
+          },
+          "mapping": {
+            "type": "object",
+            "description": "Optional explicit field->header overrides",
+            "additionalProperties": {
+              "type": "string",
+              "description": "CSV column header name"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "description": "Structured transaction rows extracted from an image or PDF statement",
+            "items": {
+              "type": "object",
+              "description": "One transaction row extracted from a PDF or screenshot",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Transaction date in ISO YYYY-MM-DD format"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Transaction type (BUY, SELL, DEPOSIT, WITHDRAW, INCOME, EXPENSE, TRANSFER, SWAP)"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Asset ticker symbol (e.g. AAPL, BTC, EUR)"
+                },
+                "isin": {
+                  "type": "string",
+                  "description": "Optional 12-character ISIN code"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Optional instrument name"
+                },
+                "quantity": {
+                  "type": "string",
+                  "description": "Optional unit quantity"
+                },
+                "price": {
+                  "type": "string",
+                  "description": "Optional unit price"
+                },
+                "amount": {
+                  "type": "string",
+                  "description": "Cash amount of the transaction"
+                },
+                "fee": {
+                  "type": "string",
+                  "description": "Optional fee amount"
+                },
+                "feeAsset": {
+                  "type": "string",
+                  "description": "Optional fee asset/currency code"
+                },
+                "tax": {
+                  "type": "string",
+                  "description": "Optional withholding tax amount"
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Optional ISO 4217 currency code (EUR, USD, ...)"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Optional raw description label"
+                }
+              },
+              "required": [
+                "date",
+                "type",
+                "amount"
+              ]
+            }
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Original filename recorded on the import batch"
+          }
+        }
+      },
+      "annotations": {
+        "title": "import_transactions",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "list_alert_rules",
       "description": "List all custom user-defined alert rules (price threshold, P&L %, cash ratio) with their trigger history and enabled state.",
       "inputSchema": {
@@ -623,6 +725,108 @@
       },
       "annotations": {
         "title": "preview_snapshot_import",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "preview_transaction_import",
+      "description": "Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Target account ID (optional when only one account exists)"
+          },
+          "csvText": {
+            "type": "string",
+            "description": "Raw CSV content (use this or rows)"
+          },
+          "mapping": {
+            "type": "object",
+            "description": "Optional explicit field->header overrides (transactionDate, amountPrimary, assetSymbol, ...)",
+            "additionalProperties": {
+              "type": "string",
+              "description": "CSV column header name"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "description": "Structured transaction rows extracted from an image or PDF statement",
+            "items": {
+              "type": "object",
+              "description": "One transaction row extracted from a PDF or screenshot",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Transaction date in ISO YYYY-MM-DD format"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Transaction type (BUY, SELL, DEPOSIT, WITHDRAW, INCOME, EXPENSE, TRANSFER, SWAP)"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Asset ticker symbol (e.g. AAPL, BTC, EUR)"
+                },
+                "isin": {
+                  "type": "string",
+                  "description": "Optional 12-character ISIN code"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Optional instrument name"
+                },
+                "quantity": {
+                  "type": "string",
+                  "description": "Optional unit quantity"
+                },
+                "price": {
+                  "type": "string",
+                  "description": "Optional unit price"
+                },
+                "amount": {
+                  "type": "string",
+                  "description": "Cash amount of the transaction"
+                },
+                "fee": {
+                  "type": "string",
+                  "description": "Optional fee amount"
+                },
+                "feeAsset": {
+                  "type": "string",
+                  "description": "Optional fee asset/currency code"
+                },
+                "tax": {
+                  "type": "string",
+                  "description": "Optional withholding tax amount"
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Optional ISO 4217 currency code (EUR, USD, ...)"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Optional raw description label"
+                }
+              },
+              "required": [
+                "date",
+                "type",
+                "amount"
+              ]
+            }
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Original statement filename"
+          }
+        }
+      },
+      "annotations": {
+        "title": "preview_transaction_import",
         "readOnlyHint": true,
         "destructiveHint": false,
         "openWorldHint": false

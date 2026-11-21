@@ -1,12 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Layout from '../../../src/components/Layout';
 
-// Mock AIChatDrawer to keep tests lightweight
-vi.mock('../../../src/components/ai/AIChatDrawer', () => ({
-  AIChatDrawer: () => <div data-testid="ai-chat-drawer" />,
+// Mock AIChatPanel to keep tests lightweight
+vi.mock('../../../src/components/ai/AIChatPanel', () => ({
+  AIChatPanel: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="ai-chat-panel" /> : null,
 }));
 
 // Mock react-i18next
@@ -29,6 +30,7 @@ vi.mock('../../../src/context/DataContext', () => ({
 
 describe('<Layout /> Route Shell Resilience', () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.clearAllMocks();
     mockUseData.mockReturnValue({
       lastPriceRefresh: null,
@@ -133,7 +135,7 @@ describe('<Layout /> Route Shell Resilience', () => {
     }
   });
 
-  it('renders full dashboard layout shell with sidebar and header on protected routes when authenticated', () => {
+  it('renders full dashboard layout shell with sidebar and header on protected routes and shifts main shell when AI panel opens', () => {
     mockUseAuth.mockReturnValue({
       user: {
         id: 'user-demo',
@@ -144,7 +146,7 @@ describe('<Layout /> Route Shell Resilience', () => {
       lockVault: vi.fn(),
     });
 
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={['/']}>
         <Layout>
           <div data-testid="dashboard-content">Dashboard Content</div>
@@ -153,9 +155,16 @@ describe('<Layout /> Route Shell Resilience', () => {
     );
 
     expect(screen.getByTestId('dashboard-content')).toBeTruthy();
-    // Sidebar and Header must be rendered
     expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0);
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByText('Alex Trader')).toBeTruthy();
+
+    // Open AI panel via header button
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.getPropertyValue('--gf-ai-panel-w')).toBe('0px');
+    fireEvent.click(screen.getByLabelText('ai:drawer.openButton'));
+    expect(screen.getByTestId('ai-chat-panel')).toBeTruthy();
+    expect(root.style.getPropertyValue('--gf-ai-panel-w')).toBe('420px');
+    expect(screen.getByTestId('main-content-shell').className).toContain('lg:pr-[var(--gf-ai-panel-w)]');
   });
 });
