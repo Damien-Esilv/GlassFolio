@@ -90,7 +90,13 @@ jobs:
           fi
 
       - name: Build the local web app
-        run: npm run build:local
+        shell: bash
+        env:
+          # The variables of `npm run build:local`, set here because npm runs scripts with cmd.exe on Windows,
+          # which does not understand `VAR=value command` (tests/unit/desktop/releaseWorkflow.test.ts keeps them in step)
+          VITE_DEPLOYMENT_MODE: local
+          VITE_APP_TARGET: app
+        run: npx vite build
 
       - name: Install the desktop app dependencies
         run: npm --prefix desktop ci
