@@ -297,7 +297,8 @@ jobs:
             # 2624 -> 2656: Named multi-2FA TOTP UI & WebAuthn AAGUID passkey detection (TGLA-220)
             # 2656 -> 2784: Automatic sync (engine, Connections tab, SnapTrade, wallets) + lazy xpub
             #               derivation chunk (~40 KB, loaded only for extended keys) (TGLA-221, TGLA-224, TGLA-225)
-            limit_kb: 2784
+            # 2784 -> 2816: desktop update prompt (TGLA-228, TGLA-229) on top of the sync code in develop
+            limit_kb: 2816
             landing: absent
             smoke: false
           - label: cloud-app
@@ -307,7 +308,8 @@ jobs:
             # 2624 -> 2656: Named multi-2FA TOTP UI & WebAuthn AAGUID passkey detection (TGLA-220)
             # 2656 -> 2784: Automatic sync (engine, Connections tab, SnapTrade, wallets) + lazy xpub
             #               derivation chunk (~40 KB, loaded only for extended keys) (TGLA-221, TGLA-224, TGLA-225)
-            limit_kb: 2784
+            # 2784 -> 2816: desktop update prompt (TGLA-228, TGLA-229) on top of the sync code in develop
+            limit_kb: 2816
             landing: absent
             smoke: false
           - label: showcase
