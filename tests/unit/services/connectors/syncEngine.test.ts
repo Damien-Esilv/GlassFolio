@@ -204,6 +204,40 @@ describe('sync engine — holdings mode', () => {
     expect(db.getImportBatches()).toHaveLength(batches);
   });
 
+  it('removing a connection removes what it imported and its accounts left empty, nothing else', async () => {
+    const connection = await walletConnection();
+    await syncEngine.runSync(connection.id);
+    expect(db.getUnifiedTransactionsByAccount('acc-2').length).toBeGreaterThan(0);
+    // A manual row on the broker account (fed by no connection) must survive
+    const manual = { ...db.getUnifiedTransactionsByAccount('acc-2')[0], id: 'manual-1', accountId: 'acc-1', batchId: 'manual-batch', rowHash: 'manual' };
+    db.saveUnifiedTransactions([...db.getUnifiedTransactions(), manual]);
+
+    const removed = await syncEngine.removeConnection(connection.id);
+
+    expect(removed.transactions).toBeGreaterThan(0);
+    expect(removed.accounts).toBe(1);
+    expect(await connectionService.getConnection(connection.id)).toBeNull();
+    expect(db.getUnifiedTransactionsByAccount('acc-2')).toHaveLength(0);
+    expect(db.getAccounts().map(account => account.id)).toEqual(['acc-1']);
+    // The wallet's institute had no account left; the broker's keeps its account
+    expect(db.getInstitutes().map(institute => institute.id)).toEqual(['inst-1']);
+    expect(db.getUnifiedTransactions().map(row => row.id)).toEqual(['manual-1']);
+    expect(db.getPositions().some(position => position.symbol === 'BTC' && position.accountId === 'acc-2')).toBe(false);
+  });
+
+  it('removing a connection keeps an account that still holds other rows', async () => {
+    const connection = await walletConnection();
+    await syncEngine.runSync(connection.id);
+    const manual = { ...db.getUnifiedTransactionsByAccount('acc-2')[0], id: 'manual-2', batchId: 'manual-batch', rowHash: 'manual-2' };
+    db.saveUnifiedTransactions([...db.getUnifiedTransactions(), manual]);
+
+    const removed = await syncEngine.removeConnection(connection.id);
+
+    expect(removed.accounts).toBe(0);
+    expect(db.getAccounts().map(account => account.id)).toContain('acc-2');
+    expect(db.getUnifiedTransactionsByAccount('acc-2').map(row => row.id)).toEqual(['manual-2']);
+  });
+
   it('never closes positions on an empty answer', async () => {
     const connection = await walletConnection();
     await syncEngine.runSync(connection.id);

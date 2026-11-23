@@ -148,6 +148,20 @@
       }
     },
     {
+      "name": "get_bank_sync_status",
+      "description": "French banks (BoursoBank, Fortuneo, Crédit Agricole… every bank Woob supports) read on the user's computer by Woob: whether this GlassFolio can reach banks (desktop app or self-hosted only, never the online app), which banks are supported, and which linked banks need the user to reconnect. Read-only; bank credentials and two-factor codes are only entered by the user in Settings → Connections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "get_bank_sync_status",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "get_cost_basis_method",
       "description": "Read-only. Return the cost basis method of accounts: WAC (weighted average cost, French PRU) or FIFO (first in, first out lots).",
       "inputSchema": {
@@ -460,7 +474,7 @@
     },
     {
       "name": "list_connections",
-      "description": "List the automatic sync sources (SnapTrade, watch-only wallets…) with their status, last sync time and the GlassFolio accounts they feed. Credentials are never returned.",
+      "description": "List the automatic sync sources (SnapTrade, French banks, watch-only wallets…) with their status, last sync time and the GlassFolio accounts they feed. Credentials are never returned.",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -481,6 +495,20 @@
       },
       "annotations": {
         "title": "list_goals",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_institutions",
+      "description": "List the institutions (banks, brokers, wallets) and their accounts: id, name, type, currency, number of operations, and the automatic sync that feeds each account (null when it is fed by imports and manual entries).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list_institutions",
         "readOnlyHint": true,
         "destructiveHint": false,
         "openWorldHint": false
@@ -927,6 +955,42 @@
       }
     },
     {
+      "name": "rename_account",
+      "description": "Rename an institution or an account. Requires explicit human confirmation. Use list_institutions to find the id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "What to rename",
+            "enum": [
+              "institution",
+              "account"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "description": "Id from list_institutions"
+          },
+          "name": {
+            "type": "string",
+            "description": "New name (80 characters at most)"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ]
+      },
+      "annotations": {
+        "title": "rename_account",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "resend_verification_email",
       "description": "Send a new verification email (security code + confirmation link) to the current account address. Only for unverified email/password accounts. Requires explicit user confirmation.",
       "inputSchema": {
@@ -1035,7 +1099,7 @@
     },
     {
       "name": "sync_connection",
-      "description": "Sync one source now: new activities or holdings are recorded in its accounts (a re-sync never duplicates; the batch can be rolled back from the import history). Requires explicit human confirmation. Use list_connections to find the id.",
+      "description": "Sync one source now: new activities or holdings are recorded in its accounts (a re-sync never duplicates; the batch can be rolled back from the import history). A French bank is never asked for a two-factor code here: if it wants one, the result is reauth_required and the user reconnects it in Settings → Connections. Requires explicit human confirmation. Use list_connections to find the id.",
       "inputSchema": {
         "type": "object",
         "properties": {

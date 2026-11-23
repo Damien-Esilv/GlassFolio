@@ -11,7 +11,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findUnpinnedActions, findUnpinnedDockerBases } from './lib/supplyChainPins.mjs';
+import { findUnhashedPythonRequirements, findUnpinnedActions, findUnpinnedDockerBases, findUnpinnedRuntimeArchives } from './lib/supplyChainPins.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,10 +67,29 @@ try {
   const root = resolve(__dirname, '..');
   const pinFailures = [];
 
-  const dockerfile = join(root, 'docker/Dockerfile');
-  if (existsSync(dockerfile)) {
-    findUnpinnedDockerBases(readFileSync(dockerfile, 'utf-8')).forEach((image) =>
-      pinFailures.push(`docker/Dockerfile: base image "${image}" is not pinned by @sha256 digest`));
+  // Every image Dockerfile: the app and the optional Woob bank worker (TGLA-239)
+  const dockerDir = join(root, 'docker');
+  const dockerfiles = existsSync(dockerDir) ? readdirSync(dockerDir).filter((f) => /(^|\.)Dockerfile$/.test(f)) : [];
+  for (const name of dockerfiles) {
+    findUnpinnedDockerBases(readFileSync(join(dockerDir, name), 'utf-8')).forEach((image) =>
+      pinFailures.push(`docker/${name}: base image "${image}" is not pinned by @sha256 digest`));
+  }
+
+  // Woob bank worker (TGLA-236/238): Python locks by hash, Woob by commit, the desktop Python archives by SHA-256
+  for (const lock of ['companions/woob/requirements.lock', 'companions/woob/requirements-dev.lock']) {
+    const file = join(root, lock);
+    if (!existsSync(file)) continue;
+    findUnhashedPythonRequirements(readFileSync(file, 'utf-8')).forEach((name) =>
+      pinFailures.push(`${lock}: "${name}" has no pinned version with a sha256 hash`));
+  }
+  const woobSource = join(root, 'companions/woob/woob-source.json');
+  if (existsSync(woobSource) && !/^[0-9a-f]{40}$/.test(JSON.parse(readFileSync(woobSource, 'utf-8')).commit ?? '')) {
+    pinFailures.push('companions/woob/woob-source.json: Woob is not pinned to a full commit SHA');
+  }
+  const runtimeManifest = join(root, 'desktop/woob-runtime.json');
+  if (existsSync(runtimeManifest)) {
+    findUnpinnedRuntimeArchives(JSON.parse(readFileSync(runtimeManifest, 'utf-8'))).forEach((target) =>
+      pinFailures.push(`desktop/woob-runtime.json: "${target}" is not pinned to an https URL and a SHA-256`));
   }
 
   const workflowFiles = [];
@@ -95,7 +114,7 @@ try {
     pinFailures.forEach((f) => console.error(`  - ${f}`));
     process.exit(1);
   }
-  console.log(`[PASS] Docker base images and ${workflowFiles.length} workflow/action files are pinned by content hash.`);
+  console.log(`[PASS] ${dockerfiles.length} Dockerfile(s), the Woob worker inputs and ${workflowFiles.length} workflow/action files are pinned by content hash.`);
   process.exit(0);
 } catch (err) {
   console.error('[FAIL] Error reading package-lock.json:', err.message);

@@ -115,6 +115,7 @@
           "Coffre chiffré : en-tête de coffre (sel, paramètres de dérivation) et enveloppes chiffrées contenant vos données financières, illisibles côté serveur.",
           "Préférences d'interface (thème, langue) enregistrées localement dans votre navigateur.",
           "Mode local (application de bureau ou Docker) : aucune de ces données ne quitte votre machine.",
+          "Banques françaises (mode local uniquement, facultatif) : quand vous reliez une banque, votre ordinateur se connecte lui-même au site de la banque avec Woob, une bibliothèque publiée sous licence LGPL. Vos identifiants bancaires restent chiffrés dans votre coffre ; la session bancaire (cookies) est conservée dans le dossier de données de l'application, sur votre machine, et supprimée quand vous retirez la banque. Rien ne passe par l'éditeur.",
           "Recherche de mise à jour de l'application de bureau : au démarrage puis toutes les quelques heures, sauf si vous la désactivez dans les Réglages, l'application demande à GitHub la dernière version publiée. GitHub reçoit la requête et donc votre adresse IP, comme pour toute requête web. Rien sur vous ni sur vos données n'est envoyé, et rien n'est installé sans votre confirmation."
         ]
       },

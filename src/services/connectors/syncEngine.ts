@@ -30,7 +30,8 @@ import {
     transactionManager,
 } from '../core/transactionManager';
 import { db } from '../db';
-import { commitBatch, flagDuplicates, type StagedTransaction } from '../import/importManager';
+import { commitBatch, flagDuplicates, rollbackBatches, type StagedTransaction } from '../import/importManager';
+import { accountService, instituteService } from '../instituteService';
 import { getAccountContext } from '../import/accountContext';
 import { removeInstruments } from '../import/instrumentDrafts';
 import {
@@ -76,6 +77,7 @@ const statusForError = (code: ConnectionErrorCode): ConnectionStatus => {
     if (code === 'auth_failed') return 'auth_failed';
     if (code === 'rate_limited') return 'rate_limited';
     if (code === 'account_missing') return 'needs_mapping';
+    if (code === 'reauth_required') return 'reauth_required';
     return 'error';
 };
 
@@ -457,6 +459,39 @@ export const syncEngine = {
         return run;
     },
 
+    /**
+     * Removes a connection with what it brought: the journal rows of every sync (rolled back like an import), then
+     * the accounts it fed that are left empty and no other connection feeds, and their institute once it has no
+     * account left. An account that still holds other rows (a file import, a manual entry) is kept.
+     */
+    async removeConnection(connectionId: string): Promise<{ transactions: number; accounts: number }> {
+        const connection = await connectionService.getConnection(connectionId);
+        if (!connection) return { transactions: 0, accounts: 0 };
+        const batchIds = db.getImportBatches()
+            .filter(batch => batch.metadata?.connectionId === connectionId && batch.status !== 'rolled_back')
+            .map(batch => batch.id);
+        const rolledBack = await rollbackBatches(batchIds);
+        if (!rolledBack.success) throw new ConnectorError('unknown', rolledBack.error ?? 'Rollback failed');
+        await connectionService.deleteConnection(connectionId);
+
+        const stillUsed = new Set(db.getUnifiedTransactions().map(transaction => transaction.accountId));
+        const fedByOthers = new Set((await connectionService.listConnections()).flatMap(other => Object.values(other.accountMap)));
+        const institutes = new Set<string>();
+        let accounts = 0;
+        for (const accountId of new Set(Object.values(connection.accountMap))) {
+            if (stillUsed.has(accountId) || fedByOthers.has(accountId)) continue;
+            const account = db.getAccounts().find(item => item.id === accountId);
+            if (account && await accountService.deleteAccount(accountId)) {
+                accounts += 1;
+                institutes.add(account.instituteId);
+            }
+        }
+        for (const instituteId of institutes) {
+            if (!db.getAccounts().some(account => account.instituteId === instituteId)) await instituteService.deleteInstitute(instituteId);
+        }
+        return { transactions: rolledBack.deleted, accounts };
+    },
+
     /** Accounts the provider lists with the stored credentials (to change where each one is recorded). */
     async listExternalAccounts(connectionId: string): Promise<ExternalAccount[]> {
         const connection = await connectionService.getConnection(connectionId);
@@ -471,7 +506,8 @@ export const syncEngine = {
 
     /** Whether a connection is due for an automatic sync. */
     isDue(connection: Pick<SafeConnection, 'lastSyncAt' | 'syncIntervalHours' | 'lastStatus'>, now: number = Date.now()): boolean {
-        if (connection.lastStatus === 'auth_failed' || connection.lastStatus === 'needs_mapping') return false;
+        // Only the user can fix these: retrying on a timer would hammer the provider (or a bank) for nothing
+        if (connection.lastStatus === 'auth_failed' || connection.lastStatus === 'needs_mapping' || connection.lastStatus === 'reauth_required') return false;
         if (!connection.lastSyncAt) return true;
         const last = Date.parse(connection.lastSyncAt);
         return Number.isNaN(last) || now - last >= connection.syncIntervalHours * 60 * 60 * 1000;

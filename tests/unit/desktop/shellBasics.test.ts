@@ -4,6 +4,10 @@ import { DEFAULT_PORT } from '../../../desktop/lib/constants.mjs';
 import { isAppUrl, isExternalOpenable, appUrl } from '../../../desktop/lib/navigation.mjs';
 import { choosePort, isPortFree } from '../../../desktop/lib/ports.mjs';
 import { buildServerEnv } from '../../../desktop/lib/serverEnv.mjs';
+import { findWoobRuntime } from '../../../desktop/lib/woobRuntime.mjs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { compareVersions, isNewerVersion, parseVersion } from '../../../desktop/lib/version.mjs';
 import { messagesFor } from '../../../desktop/lib/messages.mjs';
 
@@ -45,6 +49,40 @@ describe('local server environment', () => {
       baseEnv: { PATH: '/bin', HOME: '/home/u', ACCESS_TOKEN: 'secret-secret-secret', GLASSFOLIO_DEMO: '1', CSP_CONNECT_SRC: 'https://evil.example', ALLOWED_HOSTS: 'evil.example' },
     });
     expect(env).toEqual({ PATH: '/bin', HOME: '/home/u', NODE_ENV: 'production', PORT: '3790', HOST: '127.0.0.1', DATA_DIR: '/data', STATIC_DIR: '/dist' });
+  });
+
+  it('points the server to the shipped Woob worker when the app has one (TGLA-238)', () => {
+    const env = buildServerEnv({ port: 3790, dataDir: '/data', staticDir: '/dist', baseEnv: {}, woob: { python: '/res/woob-runtime/python/bin/python3', modules: '/res/woob-runtime/woob-modules' } });
+    expect(env).toMatchObject({ GLASSFOLIO_WOOB_PYTHON: '/res/woob-runtime/python/bin/python3', GLASSFOLIO_WOOB_MODULES: '/res/woob-runtime/woob-modules' });
+  });
+});
+
+describe('Woob runtime of the desktop app (TGLA-238)', () => {
+  const touch = (file: string) => {
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '');
+  };
+
+  it('uses the runtime in the app resources once packaged', () => {
+    const resources = mkdtempSync(path.join(os.tmpdir(), 'gf-res-'));
+    expect(findWoobRuntime({ resourcesRoot: resources, packaged: true, platform: 'darwin' })).toBeNull();
+    touch(path.join(resources, 'woob-runtime/python/bin/python3'));
+    mkdirSync(path.join(resources, 'woob-runtime/woob-modules'));
+    expect(findWoobRuntime({ resourcesRoot: resources, packaged: true, platform: 'darwin' }))
+      .toEqual({ python: path.join(resources, 'woob-runtime/python/bin/python3'), modules: path.join(resources, 'woob-runtime/woob-modules') });
+    touch(path.join(resources, 'woob-runtime/python/python.exe'));
+    expect(findWoobRuntime({ resourcesRoot: resources, packaged: true, platform: 'win32' })?.python).toBe(path.join(resources, 'woob-runtime/python/python.exe'));
+  });
+
+  it('from the repository, prefers a runtime prepared for the installers, then the development one', () => {
+    const repo = mkdtempSync(path.join(os.tmpdir(), 'gf-repo-'));
+    touch(path.join(repo, '.woob-runtime/venv/bin/python'));
+    mkdirSync(path.join(repo, '.woob-runtime/woob-modules'));
+    expect(findWoobRuntime({ resourcesRoot: repo, packaged: false, platform: 'linux', arch: 'x64' })?.python).toBe(path.join(repo, '.woob-runtime/venv/bin/python'));
+    touch(path.join(repo, 'desktop/.woob-runtime/linux-x64/python/bin/python3'));
+    mkdirSync(path.join(repo, 'desktop/.woob-runtime/linux-x64/woob-modules'));
+    expect(findWoobRuntime({ resourcesRoot: repo, packaged: false, platform: 'linux', arch: 'x64' })?.python)
+      .toBe(path.join(repo, 'desktop/.woob-runtime/linux-x64/python/bin/python3'));
   });
 });
 

@@ -5,7 +5,8 @@
         "profile": "Profile",
         "preferences": "Preferences",
         "security": "Security & Access",
-        "connections": "Connections"
+        "connections": "Connections",
+        "accounts": "Institutions & accounts"
     },
     "profile": {
         "publicProfile": "Public Profile",
@@ -141,16 +142,18 @@
         "syncNow": "Sync now",
         "delete": "Remove this source",
         "confirmDelete": "Confirm removal",
+        "syncedAccounts": "Synced accounts",
+        "recordedInAccount": "Recorded in {{account}}",
+        "deleteWarning": "Removes this source, the operations it imported and its accounts left empty. This cannot be undone.",
         "result_one": "{{count}} change recorded.",
         "result_other": "{{count}} changes recorded.",
         "drift": "The provider shows other quantities than your journal for: {{assets}}. Check your imports.",
-        "comingSoon": "Coming next: French banks (BoursoBank, Fortuneo…) through a local Woob companion, after the manual test of the study.",
         "sources": {
             "snaptrade": "SnapTrade Personal",
             "wallet_btc": "Bitcoin wallet (watch-only)",
             "wallet_evm": "Ethereum wallet (watch-only)",
             "wallet_sol": "Solana wallet (watch-only)",
-            "woob": "French banks (local companion)"
+            "woob": "French banks (Woob)"
         },
         "status": {
             "never_synced": "Never synced",
@@ -158,7 +161,8 @@
             "error": "Failed",
             "auth_failed": "Access refused",
             "rate_limited": "Paused (limit)",
-            "needs_mapping": "Account to choose"
+            "needs_mapping": "Account to choose",
+            "reauth_required": "Validation needed"
         },
         "errors": {
             "auth_failed": "the provider refused the credentials",
@@ -168,7 +172,10 @@
             "relay_unavailable": "relay unavailable",
             "account_missing": "a linked account no longer exists",
             "busy": "an import was in progress, retry in a moment",
-            "unknown": "unexpected error"
+            "unknown": "unexpected error",
+            "reauth_required": "the bank asks for a new validation: use Reconnect",
+            "action_needed": "the bank's website asks you to do something",
+            "companion_unavailable": "this computer's bank module does not respond"
         },
         "form": {
             "title": "Add a watch-only wallet",
@@ -224,6 +231,10 @@
             "drift": {
                 "title": "Quantities differ: {{label}}",
                 "message": "{{label}} shows other quantities than your journal for {{count}} asset(s)."
+            },
+            "reauth_required": {
+                "title": "Bank validation needed: {{label}}",
+                "message": "{{label}} asks you to validate the connection again. Open the connections and use Reconnect."
             }
         },
         "fields": {
@@ -262,6 +273,145 @@
         "wallets": {
             "title": "Your wallets",
             "empty": "No wallet added yet."
+        },
+        "banks": {
+            "title": "French banks",
+            "description": "BoursoBank, Fortuneo and other French banks, read on this computer by Woob (open source): positions of your PEA, securities account, life insurance and PER, and the balance of your current and savings accounts. Nothing goes through a GlassFolio server.",
+            "unavailable": {
+                "cloud": "French banks are read on your own computer, never by a server: connect them from the GlassFolio desktop app or the self-hosted version.",
+                "cloudLink": "Download the desktop app",
+                "local": "The bank module is not installed here. With Docker, start it with \"docker compose --profile woob up -d\"; in development, run \"npm run woob:setup\".",
+                "localLink": "Self-hosting guide"
+            },
+            "add": "Add a bank",
+            "bank": "Bank",
+            "fields": {
+                "login": "Identifier",
+                "password": "Password",
+                "birthdate": "Date of birth"
+            },
+            "acknowledge": "I understand that GlassFolio signs in to my bank's website for me, from this computer, only to read my accounts. My credentials stay encrypted in my vault. Some banks forbid automated access in their terms.",
+            "connect": "Connect",
+            "connecting": "Signing in to {{bank}}… keep this page open.",
+            "challenge": {
+                "imageAlt": "Image shown by your bank for the code",
+                "imageHelp": "Read this image with your bank's device (for example a Digipass), then type the code it gives.",
+                "title": "Bank validation",
+                "app": "Open your {{bank}} app and approve the sign-in, then come back here.",
+                "validated": "I approved it",
+                "code": "Enter the code {{bank}} just sent you",
+                "codeSentTo": "Enter the code sent to {{target}}",
+                "submit": "Validate"
+            },
+            "found_one": "{{count}} account found. Choose where to record it.",
+            "found_other": "{{count}} accounts found. Choose where to record each one.",
+            "mappingHelp": "At each sync, the bank's picture replaces the positions of the chosen account. Prefer a new or empty account to one you fill with CSV imports.",
+            "reconnect": "Reconnect",
+            "reauthNeeded": "{{bank}} asks you to validate the connection again (code or app). Automatic syncs are paused until then.",
+            "newCredentials": "The bank refused the stored credentials. Enter them again:",
+            "accountTypes": {
+                "checking": "Current account",
+                "savings": "Savings account",
+                "investment": "Investment account",
+                "other": "Account"
+            },
+            "wrappers": {
+                "PEA": "PEA",
+                "PEA_PME": "PEA-PME",
+                "CTO": "Securities account",
+                "ASSURANCE_VIE": "Life insurance",
+                "PER": "Retirement savings (PER)",
+                "LIVRET": "Savings account",
+                "OTHER": "Other"
+            },
+            "errors": {
+                "auth_failed": "The bank refused the identifier or password.",
+                "invalid_format": "“{{field}}” does not have the format this bank's module expects. It was checked on this computer: nothing was sent to the bank.",
+                "invalid_format_digits": "“{{field}}” must contain digits only for this bank. It was checked on this computer: nothing was sent to the bank.",
+                "bankSays": "Bank's message: “{{message}}”",
+                "technicalDetail": "Technical detail: {{detail}}",
+                "account_locked": "The bank locked access after several attempts: unlock it on its website.",
+                "action_needed": "The bank asks you to do something on its website first. {{detail}}",
+                "validation_refused": "The validation was refused or expired in your bank's app. Try again.",
+                "challenge_expired": "The code expired. Sign in again.",
+                "rate_limited": "Too many connections to this bank today: try again tomorrow.",
+                "bank_unavailable": "The bank's website refused the connection or did not answer. Try again in a moment.",
+                "bank_timeout": "The bank took too long to answer. Try again.",
+                "companion_unavailable": "This computer's bank module does not respond. Restart GlassFolio.",
+                "busy": "A connection to this bank is already in progress.",
+                "unsupported_bank": "This bank is not supported.",
+                "reauth_required": "The bank asks for a new validation: use Reconnect.",
+                "acknowledge": "Tick the box to confirm you understand how the connection works.",
+                "credentials_missing": "Fill in every field.",
+                "none_chosen": "Choose at least one account to sync.",
+                "noAccounts": "The bank lists no account to sync.",
+                "unknown": "The connection failed. Try again."
+            },
+            "count_one": "{{count}} bank available",
+            "count_other": "{{count}} banks available",
+            "searchPlaceholder": "Search a bank (BoursoBank, Crédit Agricole, Fortuneo…)",
+            "choose": "Choose…",
+            "chooseBank": "Choose a bank…",
+            "noMatch": "No bank matches this search.",
+            "optional": "(optional)",
+            "unverifiedHelp": "Not verified yet: Woob reads this bank, but GlassFolio has not tested it on a real account. Compare the first sync with your bank's website.",
+            "limits": {
+                "balancesOnly": "Woob reads the balances of this bank, not the detail of its investments.",
+                "strongAuth": "Woob cannot complete this bank's strong authentication: the connection will probably be refused.",
+                "validationEachLogin": "This bank will ask for a validation (code) at each connection, automatic syncs included."
+            },
+            "modules": {
+                "title": "Bank modules: where they come from and how they update",
+                "intro": "Woob reads each bank through a module that follows the bank's website. When a bank changes its site, its module must be updated. Choose where GlassFolio takes them from:",
+                "choice": "Source of the bank modules",
+                "verifiedTitle": "Verified by GlassFolio (recommended)",
+                "verifiedDesc": "GlassFolio tests each new Woob version on its GitHub before shipping it, about once a week. They arrive with GlassFolio's own updates (desktop app update, new Docker image): nothing is downloaded on its own.",
+                "latestTitle": "Woob's latest modules",
+                "latestDesc": "Downloaded straight from Woob's official repository (gitlab.com/woob/woob) as soon as Woob fixes a bank, then refreshed automatically every day while GlassFolio runs, or with “Update now”. GlassFolio has not checked them.",
+                "inUse": "In use",
+                "verifiedActive": "Bank modules verified by GlassFolio (Woob {{commit}}, {{date}}). They are updated every week after GlassFolio checks them.",
+                "latestActive": "Woob's latest bank modules ({{commit}}, {{date}}), downloaded on {{updated}}. GlassFolio has not checked them.",
+                "keptVerified_one": "{{count}} bank kept its verified module: its latest version does not work here.",
+                "keptVerified_other": "{{count}} banks kept their verified module: their latest version does not work here.",
+                "lastError": "Last update failed ({{detail}}): the modules in use did not change.",
+                "warning": "Woob's latest bank modules are downloaded from gitlab.com and run on this computer with your bank credentials, without GlassFolio having checked them. Only use them if a bank does not work with the verified modules.",
+                "accept": "I understand that code not checked by GlassFolio will handle my bank credentials.",
+                "enable": "Use the latest modules",
+                "updateNow": "Update now",
+                "backToVerified": "Back to the verified modules",
+                "working": "Downloading and checking the bank modules… (up to a minute)",
+                "failed": "The bank modules could not be changed ({{detail}}). The modules in use did not change."
+            }
         }
+    },
+    "accounts": {
+        "title": "Institutions & accounts",
+        "description": "Every institution and account in GlassFolio. Rename them, or delete those you no longer track with everything recorded in them. Accounts fed by a sync (bank, broker keys, wallet) are managed from Connections.",
+        "empty": "No institution yet: they are created when you import a file or connect a bank.",
+        "emptyAction": "Import data",
+        "accountCount_one": "{{count}} account",
+        "accountCount_other": "{{count}} accounts",
+        "operations_one": "{{count}} operation",
+        "operations_other": "{{count}} operations",
+        "rename": "Rename",
+        "renameLabel": "Rename {{name}}",
+        "newName": "New name",
+        "manual": "Imports & manual entries",
+        "syncedBy": "Synced · {{source}}",
+        "syncedHelp": "Fed by an automatic sync: manage or remove it in Connections.",
+        "institutionSynced": "Has synced accounts: remove the sync in Connections",
+        "deleteAccount": "Delete {{name}}",
+        "deleteInstitution": "Delete {{name}}",
+        "deleteAccountWarning_one": "Deletes this account and its {{count}} operation. This cannot be undone.",
+        "deleteAccountWarning_other": "Deletes this account and its {{count}} operations. This cannot be undone.",
+        "deleteInstitutionWarning_one": "Deletes this institution, its {{count}} account and its {{operations}} operations. This cannot be undone.",
+        "deleteInstitutionWarning_other": "Deletes this institution, its {{count}} accounts and their {{operations}} operations. This cannot be undone.",
+        "confirmDelete": "Confirm deletion",
+        "errors": {
+            "not_found": "This item no longer exists.",
+            "synced": "A sync feeds this account: remove it in Connections.",
+            "empty_name": "Enter a name."
+        },
+        "importLink": "Manage institutions and accounts"
     }
 }

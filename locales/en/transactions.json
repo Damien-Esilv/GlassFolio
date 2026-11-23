@@ -349,9 +349,9 @@
         "subtitle": "Record the balance of {{accountName}}",
         "options": {
             "title": "How would you like to update your balance?",
-            "manualTitle": "Saisie Manuelle (Manual Entry)",
+            "manualTitle": "Manual entry",
             "manualDescription": "Quickly type in the current balance and the date of the update",
-            "csvTitle": "Import CSV (File Upload)",
+            "csvTitle": "Import a CSV file",
             "csvDescription": "Upload a CSV file containing date and balance history to see progress over time"
         },
         "manualForm": {

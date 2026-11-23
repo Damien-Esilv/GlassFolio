@@ -125,6 +125,8 @@ export const portfolioService = {
                 instrumentId: instrument?.id,
                 instrument: instrument?.name || firstTx.label || symbol,
                 symbol,
+                // A bank's last quote is kept by ISIN: without it on the position, the price fallback cannot find it
+                isin: instrument?.marketIdentifier.isin || firstTx.assetIsin || undefined,
                 quantity: state.quantity,
                 avgCost: state.quantity > 0 ? state.costBasis / state.quantity : 0,
                 lastPrice,

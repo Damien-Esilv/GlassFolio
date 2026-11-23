@@ -190,6 +190,19 @@ The image is rebuilt and the container replaced; the data volume is untouched.
 
 In Settings, choose the Ollama provider and enter its address (`http://localhost:11434` by default). The call is made by your browser, so Ollama must allow the app origin (set `OLLAMA_ORIGINS`, for example `OLLAMA_ORIGINS=http://localhost:3780`). If Ollama runs on another machine, add its origin with `GLASSFOLIO_CSP_CONNECT_SRC=https://ollama.example.com`. The helper `npm run ollama:proxy` starts a small local CORS proxy on port 11435 if you need one.
 
+### French banks (Woob, optional)
+
+BoursoBank, Fortuneo and other French banks can be read by [Woob](https://woob.tech) (open source), from your own machine: positions of your PEA, securities account, life insurance and PER, plus the balance of your current and savings accounts. Start the bank worker with the `woob` profile:
+
+```bash
+docker compose --env-file docker/docker.env --profile woob up -d --build
+```
+
+Then link your bank in Settings > Connections. Your bank credentials stay encrypted in your vault and are only passed to the worker for the time of a sync; the worker keeps the bank session (cookies) in the `glassfolio-woob` volume. Its port is never published: only the GlassFolio container reaches it, with a token it writes on first start. The desktop app ships the same worker, nothing to install.
+
+- **Banks**: every bank module of Woob that loads (84 today, from BoursoBank and Crédit Agricole to La Banque Postale and the life insurers), each with the form its module describes. BoursoBank is tested on a real account; the others are marked "not verified".
+- **Updates**: Woob is pinned to a commit (`companions/woob/woob-source.json`). Every Monday the `Woob weekly bump` workflow proposes the latest commit in a pull request once the worker tests pass on it. Settings > Connections > Advanced can switch a machine to Woob's latest bank modules, downloaded from gitlab.com and not checked by GlassFolio (off by default, behind a warning).
+
 ### Container hardening
 
 - Read-only root filesystem, `/tmp` on tmpfs, `cap_drop: ALL`, `no-new-privileges`.
@@ -234,6 +247,7 @@ To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLI
 | `npm run mcp:catalog` | Regenerate `mcp-server/tools.json` after changing an AI tool |
 | `npm run docker:up` / `docker:down` / `docker:logs` / `docker:smoke` | Self-hosting helpers |
 | `npm run desktop:install` / `desktop:dev` / `desktop:pack` / `desktop:dist` / `desktop:smoke` | Desktop app: install its dependencies, run it, package a folder, build installers, smoke-test it |
+| `npm run woob:setup` | French banks in development: builds `.woob-runtime/` (Python 3.11–3.13 required, Woob at its pinned commit, every bank module); run it again after a Woob bump, then restart `npm run dev` |
 
 ## ✅ Quality and security
 

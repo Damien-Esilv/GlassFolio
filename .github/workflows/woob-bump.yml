@@ -1,0 +1,113 @@
+name: Woob weekly bump
+
+# Every Monday (TGLA-241): if Woob's master branch moved, point companions/woob/woob-source.json at it, check
+# that the lock still covers Woob and its bank modules, run the worker tests on the real modules, then push a
+# branch `chore/woob-bump-<sha>` and open a pull request to develop. Nothing is merged here: the maintainer
+# reviews it (AGENTS.md). Pushes made with GITHUB_TOKEN do not start other workflows: this job runs the worker
+# tests itself; the PR's full CI starts once the PR gets a new commit or is reopened.
+# When the repository does not let Actions open pull requests, an issue with the one-click link is opened instead.
+# The repository is public: no step prints a secret, and nothing here uses `set -x`.
+
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: woob-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump Woob to its latest commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Find Woob's latest commit
+        id: woob
+        shell: bash
+        run: |
+          latest="$(git ls-remote https://gitlab.com/woob/woob.git refs/heads/master | cut -f1)"
+          current="$(python -c "import json; print(json.load(open('companions/woob/woob-source.json'))['commit'])")"
+          if ! [[ "$latest" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::Could not read Woob's master commit"; exit 1; fi
+          branch="chore/woob-bump-${latest:0:12}"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          if [ "$latest" = "$current" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Woob is already pinned to its latest commit ($current)." >> "$GITHUB_STEP_SUMMARY"
+          elif git ls-remote --exit-code origin "refs/heads/$branch" > /dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "A branch already proposes Woob $latest: $branch." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Point the pin at it
+        if: steps.woob.outputs.changed == 'true'
+        env:
+          LATEST: ${{ steps.woob.outputs.latest }}
+        run: python companions/woob/tools/bump.py pin companions/woob/woob-source.json "$LATEST"
+
+      - name: Check the lock still covers Woob and its bank modules
+        if: steps.woob.outputs.changed == 'true'
+        env:
+          LATEST: ${{ steps.woob.outputs.latest }}
+        run: |
+          git init -q "$RUNNER_TEMP/woob"
+          git -C "$RUNNER_TEMP/woob" fetch -q --depth 1 https://gitlab.com/woob/woob.git "$LATEST"
+          git -C "$RUNNER_TEMP/woob" checkout -q FETCH_HEAD
+          python -m pip install --disable-pip-version-check --quiet --require-hashes --no-deps -r companions/woob/requirements-dev.lock
+          python companions/woob/tools/bump.py check "$RUNNER_TEMP/woob" companions/woob/requirements.in companions/woob/requirements.lock
+
+      - name: Build the worker runtime at that commit and run its tests
+        if: steps.woob.outputs.changed == 'true'
+        run: |
+          node scripts/woob-setup.mjs
+          .woob-runtime/venv/bin/python -m pip install --disable-pip-version-check --quiet --require-hashes -r companions/woob/requirements-dev.lock
+          cd companions/woob && ../../.woob-runtime/venv/bin/python -m pytest -q
+
+      - name: Push the branch and open the pull request
+        if: steps.woob.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.woob.outputs.latest }}
+          BRANCH: ${{ steps.woob.outputs.branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          date="$(python -c "import json; print(json.load(open('companions/woob/woob-source.json'))['date'])")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add companions/woob/woob-source.json
+          git commit -q -m "chore(woob): bump Woob to ${LATEST:0:12} (${date})" -m "Weekly bump: the worker tests passed on the real bank modules of this commit."
+          git push -q origin "$BRANCH"
+          title="chore(woob): bump Woob to ${LATEST:0:12} (${date})"
+          body="Weekly Woob bump (TGLA-241): https://gitlab.com/woob/woob/-/commit/${LATEST}
+
+          - The lock covers Woob and its bank modules; the worker tests passed on the real modules of this commit.
+          - To check before merging: the desktop installers (Desktop app workflow, manual run) and a real bank sync.
+          - Not merged automatically (AGENTS.md)."
+          if ! gh pr create --repo "$REPO" --base develop --head "$BRANCH" --title "$title" --body "$body"; then
+            link="https://github.com/${REPO}/compare/develop...${BRANCH}?expand=1"
+            echo "::warning::Actions may not open pull requests in this repository: an issue links to the change instead."
+            gh issue create --repo "$REPO" --title "$title" --body "${body}
+
+          Open the pull request: ${link}"
+          fi

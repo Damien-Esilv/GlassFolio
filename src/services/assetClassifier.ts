@@ -15,7 +15,7 @@
  * only chosen by the user (or by an "other" account).
  */
 
-import { yahooFinanceUrl } from '../config/marketData';
+import { fetchYahoo } from './market/yahooClient';
 import { appStorage } from './storage/appStorage';
 import {
     AccountType,
@@ -120,6 +120,7 @@ const writeEntry = (key: string, entry: CacheEntry): void => {
 
 export function clearAssetClassCache(): void {
     appStorage.removeItem(CACHE_KEY);
+    failedLookups.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -178,17 +179,27 @@ interface CoinGeckoCoin {
     market_cap_rank?: number | null;
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+/** The answer, or undefined when the source could not be asked (network, refusal, rate limit). */
+async function fetchJson<T>(url: string): Promise<T | undefined> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
     try {
         const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) return null;
+        if (!res.ok) return undefined;
         return (await res.json()) as T;
     } catch {
-        return null;
+        return undefined;
     } finally {
         clearTimeout(timer);
+    }
+}
+
+async function readJson<T>(response: Response | null): Promise<T | undefined> {
+    if (!response?.ok) return undefined;
+    try {
+        return (await response.json()) as T;
+    } catch {
+        return undefined;
     }
 }
 
@@ -208,11 +219,20 @@ function pickQuote(quotes: YahooSearchQuote[], query: string, preferCrypto: bool
     return exact ?? sameBase[0];
 }
 
-async function lookupYahoo(query: string, preferCrypto: boolean, isinQuery: boolean): Promise<CacheEntry | null> {
-    const data = await fetchJson<{ quotes?: YahooSearchQuote[] }>(
-        yahooFinanceUrl(`/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`)
+/** Null: Yahoo knows no such asset. Undefined: Yahoo could not be asked (TGLA-242: never remembered as "unknown"). */
+/**
+ * Lookups that could not be made (offline, rate limit), kept in memory only: an import of many rows does not
+ * ask again for each one, and the next session asks again instead of keeping "stock" for good (TGLA-242).
+ */
+const FAILED_LOOKUP_RETRY_MS = 10 * 60 * 1000;
+const failedLookups = new Map<string, number>();
+
+async function lookupYahoo(query: string, preferCrypto: boolean, isinQuery: boolean): Promise<CacheEntry | null | undefined> {
+    const data = await readJson<{ quotes?: YahooSearchQuote[] }>(
+        await fetchYahoo('/v1/finance/search', `q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0`, LOOKUP_TIMEOUT_MS)
     );
-    const quotes = data?.quotes ?? [];
+    if (data === undefined) return undefined;
+    const quotes = data.quotes ?? [];
     // An ISIN search returns the listings of that security: any of them tells what it is
     const hit = isinQuery ? quotes.find(q => q.quoteType) : pickQuote(quotes, query, preferCrypto);
     if (!hit?.quoteType) return null;
@@ -225,9 +245,10 @@ async function lookupYahoo(query: string, preferCrypto: boolean, isinQuery: bool
     };
 }
 
-async function lookupCoinGecko(symbol: string): Promise<CacheEntry | null> {
+async function lookupCoinGecko(symbol: string): Promise<CacheEntry | null | undefined> {
     const data = await fetchJson<{ coins?: CoinGeckoCoin[] }>(`${COINGECKO_SEARCH}?query=${encodeURIComponent(symbol)}`);
-    const matches = (data?.coins ?? []).filter(c => c.symbol?.toUpperCase() === symbol.toUpperCase());
+    if (data === undefined) return undefined;
+    const matches = (data.coins ?? []).filter(c => c.symbol?.toUpperCase() === symbol.toUpperCase());
     if (matches.length === 0) return null;
     const best = matches.reduce((a, b) => ((b.market_cap_rank ?? Infinity) < (a.market_cap_rank ?? Infinity) ? b : a));
     return { type: 'crypto', name: best.name, source: 'coingecko', at: Date.now() };
@@ -254,11 +275,19 @@ export async function classifyAsset(input: ClassificationInput): Promise<Classif
     const cached = readEntry(key);
     if (cached?.type) return { type: cached.type, name: cached.name, exchange: cached.exchange, source: 'cache' };
 
-    if (!cached && isAssetLookupEnabled()) {
-        const hit = hasIsin
+    const failedAt = failedLookups.get(key);
+    const recentlyFailed = failedAt !== undefined && Date.now() - failedAt < FAILED_LOOKUP_RETRY_MS;
+    if (!cached && !recentlyFailed && isAssetLookupEnabled()) {
+        let hit = hasIsin
             ? await lookupYahoo(isin as string, false, true)
-            : (await lookupYahoo(symbol, isCryptoContext(input) || isKnownCrypto(symbol), false)) ?? (await lookupCoinGecko(symbol));
-        writeEntry(key, hit ?? { type: null, source: 'yahoo', at: Date.now() });
+            : await lookupYahoo(symbol, isCryptoContext(input) || isKnownCrypto(symbol), false);
+        if (!hasIsin && !hit) {
+            const coin = await lookupCoinGecko(symbol);
+            // "Unknown" only when both sources answered; a source that could not be asked is retried next time
+            hit = coin ?? (hit === undefined || coin === undefined ? undefined : null);
+        }
+        if (hit !== undefined) writeEntry(key, hit ?? { type: null, source: 'yahoo', at: Date.now() });
+        else failedLookups.set(key, Date.now());
         if (hit?.type) return { type: hit.type, name: hit.name, exchange: hit.exchange, source: hit.source };
     }
 

@@ -7,11 +7,12 @@ import type { Alert } from '../../types/domain';
 import type { SafeConnection, SyncReport } from '../../types/connections';
 import { db } from '../db';
 
-type Reason = 'error' | 'auth_failed' | 'needs_mapping' | 'drift';
+type Reason = 'error' | 'auth_failed' | 'needs_mapping' | 'reauth_required' | 'drift';
 
 const reasonOf = (report: SyncReport): Reason | null => {
     if (report.status === 'auth_failed') return 'auth_failed';
     if (report.status === 'needs_mapping') return 'needs_mapping';
+    if (report.status === 'reauth_required') return 'reauth_required';
     if (report.status === 'error' || report.status === 'rate_limited') return 'error';
     if (report.accounts.some(account => account.drift.length > 0)) return 'drift';
     return null;

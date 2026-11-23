@@ -146,7 +146,9 @@ describe('assetClassifier', () => {
       expect(await classifyAsset({ symbol: 'NEAR' })).toEqual({ type: 'stock', source: 'local' });
       const calls = mockFetch.mock.calls.length;
       await classifyAsset({ symbol: 'NEAR' });
-      expect(mockFetch.mock.calls.length).toBe(calls); // the failed lookup is remembered for a day
+      expect(mockFetch.mock.calls.length).toBe(calls); // the failed lookup is not repeated for a while…
+      // …but it is never remembered as "unknown": a later session asks again (TGLA-242)
+      expect(JSON.stringify(localStorage)).not.toContain('"type":null');
     });
 
     it('gives up after 3 seconds instead of holding the import', async () => {

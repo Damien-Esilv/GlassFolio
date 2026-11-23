@@ -96,22 +96,24 @@ const SnapshotWizard: React.FC<SnapshotWizardProps> = ({
 
             {snapshot.step !== 'complete' && <DuplicateFileBanner batch={snapshot.existingBatch ?? existingBatch} />}
 
-            {/* Step Content */}
-            {snapshot.step === 'mapping' && (
-                <SnapshotMappingStep snapshot={snapshot} headers={headers} previewRows={previewRows} />
-            )}
+            {/* Step Content: each step fades in as it opens */}
+            <div key={snapshot.step} className="animate-fade-in-up">
+                {snapshot.step === 'mapping' && (
+                    <SnapshotMappingStep snapshot={snapshot} headers={headers} previewRows={previewRows} />
+                )}
 
-            {snapshot.step === 'options' && (
-                <SnapshotOptionsStep snapshot={snapshot} />
-            )}
+                {snapshot.step === 'options' && (
+                    <SnapshotOptionsStep snapshot={snapshot} />
+                )}
 
-            {snapshot.step === 'preview' && (
-                <SnapshotPreviewStep snapshot={snapshot} />
-            )}
+                {snapshot.step === 'preview' && (
+                    <SnapshotPreviewStep snapshot={snapshot} />
+                )}
 
-            {snapshot.step === 'complete' && (
-                <SnapshotCompleteStep snapshot={snapshot} onComplete={onComplete} />
-            )}
+                {snapshot.step === 'complete' && (
+                    <SnapshotCompleteStep snapshot={snapshot} onComplete={onComplete} />
+                )}
+            </div>
 
             {/* Navigation */}
             {snapshot.step !== 'complete' && (

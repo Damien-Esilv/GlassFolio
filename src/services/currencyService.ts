@@ -73,6 +73,27 @@ async function fetchYahooFxRate(ticker: string): Promise<number | null> {
   }
 }
 
+/** The FX cache as last parsed, so a conversion per position and per render does not parse it again. */
+let parsedFx: { raw: string; data: Record<string, number> } | null = null;
+
+/**
+ * Last market rate fetched for a pair (direct or inverse), even past the cache's 15 minutes: closer to the truth
+ * than the fixed table, which is only the last resort.
+ */
+function lastKnownRate(fromCurr: string, toCurr: string): number | undefined {
+  try {
+    const raw = appStorage.getItem(FX_CACHE_KEY);
+    if (!raw) return undefined;
+    if (parsedFx?.raw !== raw) parsedFx = { raw, data: (JSON.parse(raw) as FxCache).data ?? {} };
+    const direct = parsedFx.data[`${fromCurr}_${toCurr}`];
+    if (direct > 0) return direct;
+    const inverse = parsedFx.data[`${toCurr}_${fromCurr}`];
+    return inverse > 0 ? 1 / inverse : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Get fallback exchange rate using USD bridge from SUPPORTED_CURRENCIES.
  */
@@ -204,12 +225,12 @@ export const currencyService = {
       }
     }
 
-    // Fallback if Yahoo fetch failed
+    // Market unreachable: the last market rate, else the fixed table. Neither is cached as a market rate, so
+    // the fixed table never hides a real rate and the next call tries the market again.
     if (rate === null) {
-      rate = getFallbackExchangeRate(fromClean, toClean);
+      return lastKnownRate(fromClean, toClean) ?? getFallbackExchangeRate(fromClean, toClean);
     }
 
-    // Cache resolved rate
     writeFxCache({ [pairKey]: rate });
     return rate;
   },
@@ -254,8 +275,7 @@ export const currencyService = {
       return amount * rates[fromClean];
     }
 
-    // Otherwise use static fallback rate
-    const fallbackRate = getFallbackExchangeRate(fromClean, toClean);
-    return amount * fallbackRate;
+    // Otherwise the last market rate fetched for this pair (loaded with the positions), then the fixed table
+    return amount * (lastKnownRate(fromClean, toClean) ?? getFallbackExchangeRate(fromClean, toClean));
   }
 };

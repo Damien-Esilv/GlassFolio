@@ -20,6 +20,12 @@ export const PriceCacheSchema = z.object({
   currencies: z.record(z.string(), z.string().min(1)).optional(),
   /** Last price ever fetched per ticker, kept past expiry for when a source fails (TGLA-235). */
   lastKnown: z.record(z.string(), z.number().finite().positive()).optional(),
+  /** Price a provider gave with a holding (a bank's last quote, TGLA-242), by ISIN or symbol: used when the market source fails. */
+  providerQuotes: z.record(z.string(), z.object({
+    price: z.number().finite().positive(),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    at: ValidIsoTimestampSchema,
+  })).optional(),
   fetchedAt: ValidIsoTimestampSchema,
 });
 

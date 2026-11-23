@@ -56,3 +56,35 @@ describe('Build input pinning (Epic E31)', () => {
     expect(output).toContain('pinned by content hash');
   });
 });
+
+describe('Woob bank worker pinning (TGLA-239)', () => {
+  it('flags Python requirements without a version and a sha256 hash', async () => {
+    const { findUnhashedPythonRequirements } = await import('../../../scripts/lib/supplyChainPins.mjs');
+    const hash = '--hash=sha256:' + 'c'.repeat(64);
+    const lock = [
+      `lxml==6.1.3 \\\n    ${hash}\n    # via -r requirements.in`,
+      'requests==2.34.2\n    # via -r requirements.in',
+      `pillow \\\n    ${hash}`,
+    ].join('\n');
+    expect(findUnhashedPythonRequirements(lock)).toEqual(['requests', 'pillow']);
+  });
+
+  it('flags desktop runtime archives without an https URL and a SHA-256', async () => {
+    const { findUnpinnedRuntimeArchives } = await import('../../../scripts/lib/supplyChainPins.mjs');
+    expect(findUnpinnedRuntimeArchives({ targets: {
+      ok: { url: 'https://example.test/python.tar.gz', sha256: 'd'.repeat(64) },
+      http: { url: 'http://example.test/python.tar.gz', sha256: 'd'.repeat(64) },
+      nohash: { url: 'https://example.test/python.tar.gz' },
+    } })).toEqual(['http', 'nohash']);
+  });
+
+  it('keeps the repository locks, Woob commit and runtime archives pinned', async () => {
+    const { findUnhashedPythonRequirements, findUnpinnedRuntimeArchives, findUnpinnedDockerBases } = await import('../../../scripts/lib/supplyChainPins.mjs');
+    for (const lock of ['companions/woob/requirements.lock', 'companions/woob/requirements-dev.lock']) {
+      expect(findUnhashedPythonRequirements(readFileSync(resolve(process.cwd(), lock), 'utf-8'))).toEqual([]);
+    }
+    expect(JSON.parse(readFileSync(resolve(process.cwd(), 'companions/woob/woob-source.json'), 'utf-8')).commit).toMatch(/^[0-9a-f]{40}$/);
+    expect(findUnpinnedRuntimeArchives(JSON.parse(readFileSync(resolve(process.cwd(), 'desktop/woob-runtime.json'), 'utf-8')))).toEqual([]);
+    expect(findUnpinnedDockerBases(readFileSync(resolve(process.cwd(), 'docker/woob.Dockerfile'), 'utf-8'))).toEqual([]);
+  });
+});

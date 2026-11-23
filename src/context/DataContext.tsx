@@ -8,7 +8,7 @@ import { alertService } from '../services/alertService';
 import { goalService } from '../services/goalService';
 import { achievementService } from '../services/achievementService';
 import { gamificationService } from '../services/gamificationService';
-import { getLastPriceFetchTime, clearPriceCache } from '../services/priceService';
+import { getLastPriceFetchTime, clearPriceCache, expirePriceCache } from '../services/priceService';
 import { currencyService } from '../services/currencyService';
 import { db } from '../services/db';
 import CelebrationModal, { CelebrationData } from '../components/CelebrationModal';
@@ -219,9 +219,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user?.id, t]);
 
-  /** Clears the 15-min price cache and triggers a full data reload with fresh prices. */
+  /** Asks every market price again (the fallbacks stay) and reloads the data. */
   const forceRefreshPrices = useCallback(async () => {
-    clearPriceCache();
+    expirePriceCache();
     await refreshData();
   }, [refreshData]);
 

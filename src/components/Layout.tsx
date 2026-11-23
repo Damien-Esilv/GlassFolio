@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { getPriceSourceStatus } from '../services/priceService';
+import { yahooPausedUntil } from '../services/market/yahooClient';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
@@ -250,6 +252,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (diffMin < 60) return t('dashboard:priceRefreshedMinutesAgo', { count: diffMin });
     return t('dashboard:priceRefreshedOverAnHourAgo');
   }, [lastPriceRefresh, t]);
+
+  /** Why there is no fresh market price (TGLA-242): no network, a bank's quotes stand in, or Yahoo's rate limit. */
+  const unavailableLabel = useMemo(() => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return t('dashboard:priceOffline');
+    if (getPriceSourceStatus().providerQuotesUsed) return t('dashboard:priceBankQuotes');
+    const pausedUntil = yahooPausedUntil();
+    if (pausedUntil) return t('dashboard:priceRateLimited', { count: Math.max(1, Math.ceil((pausedUntil - Date.now()) / 60000)) });
+    return t('dashboard:priceUnavailable');
+    // Recomputed after each refresh attempt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastPriceRefresh, isRefreshingPrices, t]);
 
   const handleForceRefresh = useCallback(async () => {
     setIsRefreshingPrices(true);
@@ -707,7 +720,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               ) : (
                 <span className="flex items-center gap-1.5 text-tertiary text-[11px] font-medium">
                   <span className="w-2 h-2 rounded-full bg-warning" />
-                  <span className="hidden sm:inline">{t('dashboard:priceOffline')}</span>
+                  <span className="hidden sm:inline">{unavailableLabel}</span>
                 </span>
               )}
               <button

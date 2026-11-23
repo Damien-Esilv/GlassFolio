@@ -1,0 +1,8 @@
+# Allow-list build context of the bank worker image (docker/woob.Dockerfile, TGLA-239): the worker only.
+*
+!companions/woob/glassfolio_woob
+!companions/woob/requirements.lock
+!companions/woob/woob-source.json
+!companions/woob/LICENSES
+**/__pycache__
+**/.DS_Store

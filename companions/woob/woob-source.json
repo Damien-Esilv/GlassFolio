@@ -1,0 +1,7 @@
+{
+    "$comment": "Woob code the worker runs (TGLA-236). Pinned by commit: git checks the integrity of what it fetches. Bumped every week by .github/workflows/woob-bump.yml (a PR, never merged on its own). The shipped modules are every bank module and the modules they import (glassfolio_woob/catalog.py, TGLA-240).",
+    "repository": "https://gitlab.com/woob/woob.git",
+    "commit": "49f267fe1d3890d994ed511acac3d77dcd884e60",
+    "date": "2026-11-20",
+    "version": "3.7"
+}

@@ -11,6 +11,7 @@ import { createAccessControl } from './accessControl.mjs';
 import { buildSecurityHeaders } from './securityHeaders.mjs';
 import { evaluateNetworkExposure } from './networkExposure.mjs';
 import { createLocalMcpBridge } from './mcpBridgeSetup.mjs';
+import { createLocalWoobHandler, createWoobWorker, isWoobPath, resolveWoobRuntime } from './woobBridge.mjs';
 
 export function localVaultPlugin({ dataDir } = {}) {
   const mode = (process.env.VITE_DEPLOYMENT_MODE || 'local').trim().toLowerCase();
@@ -23,6 +24,7 @@ export function localVaultPlugin({ dataDir } = {}) {
   const securityHeaders = buildSecurityHeaders('local');
   let handler = null;
   let relayHandler = null;
+  let woobHandler = null;
   let mcpBridge;
 
   // Same rule as `npm run docker:up`: the vault API must not be reachable from the network without a token.
@@ -58,6 +60,20 @@ export function localVaultPlugin({ dataDir } = {}) {
           clientHeader: CLIENT_HEADER,
         });
         relayHandler(req, res).catch(next);
+        return;
+      }
+      if (isWoobPath(url.pathname)) {
+        if (access.enabled && !(await access.authorize(req, res, securityHeaders))) return;
+        // Development runtime from `npm run woob:setup` (.woob-runtime/), or the variables the desktop app sets
+        woobHandler ??= createLocalWoobHandler({
+          worker: createWoobWorker(resolveWoobRuntime({ env: process.env, repoRoot: process.cwd() }), { dataDir: path.join(resolvedDir, 'woob') }),
+          securityHeaders,
+          allowedHosts: (process.env.ALLOWED_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
+          isAllowedHost,
+          isSameOrigin,
+          clientHeader: CLIENT_HEADER,
+        });
+        woobHandler(req, res, url.pathname).catch(next);
         return;
       }
       if (!isLocalVaultPath(url.pathname)) {

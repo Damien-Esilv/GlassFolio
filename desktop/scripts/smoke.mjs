@@ -53,6 +53,8 @@ try {
     const vault = await fetch('/api/local-vault/config', { headers: { 'X-GlassFolio-Local': '1' } });
     const root = await fetch('/');
     const bridge = await fetch('/mcp/bridge/config');
+    const woob = await fetch('/api/woob/status', { headers: { 'X-GlassFolio-Local': '1' } });
+    const woobBody = woob.ok ? await woob.json() : null;
     const bridgeBody = bridge.ok ? await bridge.json() : null;
     return {
       info,
@@ -62,6 +64,9 @@ try {
       csp: root.headers.get('content-security-policy') ?? '',
       bridgeStatus: bridge.status,
       bridgeHasToken: typeof bridgeBody?.token === 'string' && bridgeBody.token.length >= 16,
+      woobStatus: woob.status,
+      woobAvailable: woobBody?.available === true,
+      woobBanks: Array.isArray(woobBody?.banks) ? woobBody.banks.length : 0,
       hasNode: typeof window.require !== 'undefined' || typeof window.process !== 'undefined',
     };
   });
@@ -72,6 +77,10 @@ try {
   check('vault API answers on the same origin', probe.vaultStatus === 200, String(probe.vaultStatus));
   check('CSP with Trusted Types is served', probe.csp.includes("require-trusted-types-for 'script'") && probe.csp.includes("script-src 'self'"));
   check('MCP bridge hands its token to the window', probe.bridgeStatus === 200 && probe.bridgeHasToken, String(probe.bridgeStatus));
+  // French banks (TGLA-238): an installer build ships the Woob worker; GLASSFOLIO_EXPECT_WOOB=1 when the runtime was prepared
+  const expectWoob = Boolean(packagedExecutable) || process.env.GLASSFOLIO_EXPECT_WOOB === '1';
+  check('bank worker status answers', probe.woobStatus === 200, String(probe.woobStatus));
+  if (expectWoob) check('bank worker shipped and running', probe.woobAvailable && probe.woobBanks > 0, `${probe.woobBanks} banks`);
 
   const state = await page.evaluate(() => window.glassfolioDesktop.getUpdateState());
   check('update state is readable', typeof state?.status === 'string', state?.strategy);

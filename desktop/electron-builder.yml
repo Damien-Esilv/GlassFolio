@@ -26,6 +26,9 @@ extraResources:
     filter: ['*.mjs', '*.json']
   - from: ../LICENSE
     to: LICENSE
+  # Python + Woob for the French bank sync (TGLA-238), built per target by scripts/prepare-woob-runtime.mjs
+  - from: .woob-runtime/${os}-${arch}
+    to: woob-runtime
 publish:
   provider: github
   owner: Damien-Esilv

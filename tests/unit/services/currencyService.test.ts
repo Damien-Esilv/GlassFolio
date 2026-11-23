@@ -234,6 +234,21 @@ describe('currencyService.convertAmount', () => {
     expect(result).toBeCloseTo(-460);
   });
 
+  it('uses the last market rate fetched for the pair before the fixed table, even past 15 minutes', () => {
+    // A display in USD of a EUR position must follow the market, not the fixed 1/0.92
+    seedStaleCache({ EUR_USD: 1.16 });
+    expect(currencyService.convertAmount(-45, 'EUR', 'USD')).toBeCloseTo(-52.2, 5);
+    expect(currencyService.convertAmount(116, 'USD', 'EUR')).toBeCloseTo(100, 5);
+  });
+
+  it('never caches the fixed table as a market rate when the market is unreachable', async () => {
+    localStorage.removeItem(FX_CACHE_KEY);
+    mockFetch.mockRejectedValue(new Error('offline'));
+    const rate = await currencyService.getExchangeRate('EUR', 'GBP');
+    expect(rate).toBeCloseTo(getFallbackExchangeRate('EUR', 'GBP'), 6);
+    expect(localStorage.getItem(FX_CACHE_KEY)).toBeNull();
+  });
+
   it('normalizes currency codes', () => {
     const rates = { 'USD': 0.92 };
     const lower = currencyService.convertAmount(100, 'usd', 'eur', rates);

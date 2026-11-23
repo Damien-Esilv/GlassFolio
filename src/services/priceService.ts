@@ -12,7 +12,7 @@
  * - Zero hardcoding, 100% typed
  */
 
-import { fetchYahoo } from './market/yahooClient';
+import { fetchYahoo, resetYahooPause } from './market/yahooClient';
 import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
 import { db } from './db';
@@ -35,8 +35,22 @@ interface PriceCache {
     currencies?: Record<string, string>;
     /** Last price ever fetched per ticker, kept past expiry: used only when a source fails. */
     lastKnown?: Record<string, number>;
+    /** A provider's own quote (a bank's last price), by ISIN or symbol: the fallback when the market source fails. */
+    providerQuotes?: Record<string, ProviderQuote>;
     fetchedAt: string;            // ISO 8601 string timestamp
 }
+
+interface ProviderQuote {
+    price: number;
+    currency: string;
+    at: string;
+}
+
+/** fetchedAt of a cache that holds provider quotes but no market price yet. */
+const NEVER_FETCHED = '1970-01-01T00:00:00.000Z';
+
+/** Whether the last refresh had to use a provider's quote for at least one asset (shown in the price status). */
+let lastRefreshUsedProviderQuotes = false;
 
 interface PriceQuote {
     price: number;
@@ -283,6 +297,7 @@ function writeCache(data: Record<string, number>, currencies: Record<string, str
             currencies: { ...(any?.currencies ?? {}), ...currencies },
             // Every price ever fetched, expired ones included: used only when a source fails later
             lastKnown: { ...(any?.lastKnown ?? {}), ...(any?.data ?? {}), ...data },
+            providerQuotes: any?.providerQuotes,
             fetchedAt: new Date().toISOString()
         };
         appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
@@ -312,10 +327,66 @@ export function forgetCachedPrices(symbols: string[]): void {
     }
 }
 
+/**
+ * "Refresh prices": every market price is asked again, but the fallbacks stay (last known prices, a bank's
+ * quotes, prices entered by hand), so a refused refresh never empties the portfolio (TGLA-242).
+ */
+export function expirePriceCache(): void {
+    resetYahooPause();
+    try {
+        const current = readCache(true);
+        if (!current) return;
+        const cache: PriceCache = {
+            data: {},
+            currencies: current.currencies,
+            lastKnown: { ...(current.lastKnown ?? {}), ...current.data },
+            providerQuotes: current.providerQuotes,
+            fetchedAt: NEVER_FETCHED,
+        };
+        appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {
+        // Storage limit or disabled
+    }
+}
+
 export function clearPriceCache(): void {
+    // A full reset (the user forces a refresh) also lifts a Yahoo rate-limit pause
+    resetYahooPause();
+    lastRefreshUsedProviderQuotes = false;
     appStorage.removeItem(CACHE_KEY);
     appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
     appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
+}
+
+/**
+ * Records the prices a provider gave with its holdings (Woob: the bank's last quote of each line), so the
+ * positions keep a real value when the market source refuses (TGLA-242). Never changes the market fetch time.
+ */
+export function recordProviderQuotes(quotes: Array<{ key: string; price: number; currency: string }>): void {
+    const valid = quotes.filter(quote => quote.key.trim() && Number.isFinite(quote.price) && quote.price > 0 && /^[A-Z]{3}$/.test(quote.currency));
+    if (valid.length === 0) return;
+    try {
+        const current = readCache(true);
+        const at = new Date().toISOString();
+        const cache: PriceCache = {
+            data: current?.data ?? {},
+            currencies: current?.currencies,
+            lastKnown: current?.lastKnown,
+            providerQuotes: {
+                ...(current?.providerQuotes ?? {}),
+                ...Object.fromEntries(valid.map(quote => [quote.key.trim().toUpperCase(), { price: quote.price, currency: quote.currency, at }])),
+            },
+            fetchedAt: current?.fetchedAt ?? NEVER_FETCHED,
+        };
+        appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {
+        // Storage limit or disabled
+    }
+}
+
+/** What the price status shows: whether the last refresh fell back on a provider's quotes. */
+export function getPriceSourceStatus(): { providerQuotesUsed: boolean } {
+    return { providerQuotesUsed: lastRefreshUsedProviderQuotes };
 }
 
 export function getLastPriceFetchTime(): string | null {
@@ -323,6 +394,7 @@ export function getLastPriceFetchTime(): string | null {
         const raw = appStorage.getItem(CACHE_KEY);
         if (!raw) return null;
         const parsed: PriceCache = JSON.parse(raw);
+        if (parsed.fetchedAt === NEVER_FETCHED) return null;
         return parsed.fetchedAt;
     } catch {
         return null;
@@ -507,11 +579,24 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
             writeCache(prices, currencies);
         }
 
-        // A source that failed (rate limit, network) keeps the last known price rather than showing 0
+        // A source that failed (rate limit, network): the provider's own quote (a bank's last price), else the
+        // last known market price, rather than 0
         const stale = readCache(true);
+        lastRefreshUsedProviderQuotes = false;
         for (const ticker of missingTickers) {
+            if (ticker in prices) continue;
+            const holder = tickerToPositions.get(ticker)?.[0];
+            const quote = [holder?.isin, holder?.symbol, ticker]
+                .map(key => (key ? stale?.providerQuotes?.[key.trim().toUpperCase()] : undefined))
+                .find(Boolean);
+            if (quote) {
+                prices[ticker] = quote.price;
+                currencies[ticker] = quote.currency;
+                lastRefreshUsedProviderQuotes = true;
+                continue;
+            }
             const last = stale?.lastKnown?.[ticker] ?? stale?.data[ticker];
-            if (ticker in prices || !last) continue;
+            if (!last) continue;
             prices[ticker] = last;
             const lastCurrency = stale?.currencies?.[ticker];
             if (lastCurrency) currencies[ticker] = lastCurrency;
