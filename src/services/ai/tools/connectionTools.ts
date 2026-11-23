@@ -5,9 +5,11 @@
  */
 import { AIToolDefinition } from '../types';
 import { accountService, instituteService } from '../../instituteService';
-import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID } from '../../connectors';
+import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID, woobClient } from '../../connectors';
+import { isVerifiedWoobBank, woobBankName } from '../../../config/woobBanks';
 import { notifySyncOutcome } from '../../connectors/syncNotifications';
 import type { ConnectionErrorCode, ConnectionStatus, SourceId } from '../../../types/connections';
+import { getDeploymentMode } from '../../../config/deployment';
 
 interface ConnectionSummary {
   id: string;
@@ -24,7 +26,7 @@ interface ConnectionSummary {
 export const listConnectionsTool: AIToolDefinition<Record<string, never>, ConnectionSummary[]> = {
   name: 'list_connections',
   description:
-    'List the automatic sync sources (SnapTrade, watch-only wallets…) with their status, last sync time and the GlassFolio accounts they feed. Credentials are never returned.',
+    'List the automatic sync sources (SnapTrade, French banks, watch-only wallets…) with their status, last sync time and the GlassFolio accounts they feed. Credentials are never returned.',
   parameters: { type: 'object', properties: {} },
   execute: async () => {
     const [connections, accounts] = await Promise.all([connectionService.listConnections(), accountService.getAccounts()]);
@@ -55,7 +57,7 @@ interface SyncSummary {
 export const syncConnectionTool: AIToolDefinition<{ connectionId: string }, SyncSummary> = {
   name: 'sync_connection',
   description:
-    'Sync one source now: new activities or holdings are recorded in its accounts (a re-sync never duplicates; the batch can be rolled back from the import history). Requires explicit human confirmation. Use list_connections to find the id.',
+    'Sync one source now: new activities or holdings are recorded in its accounts (a re-sync never duplicates; the batch can be rolled back from the import history). A French bank is never asked for a two-factor code here: if it wants one, the result is reauth_required and the user reconnects it in Settings → Connections. Requires explicit human confirmation. Use list_connections to find the id.',
   requiresConfirmation: true,
   parameters: {
     type: 'object',
@@ -141,3 +143,45 @@ export const addWatchOnlyWalletTool: AIToolDefinition<
     };
   },
 };
+
+interface BankSyncStatus {
+  available: boolean;
+  reason: 'ok' | 'online_app' | 'module_missing';
+  supportedBanks: Array<{ module: string; name: string; verified: boolean; positions: boolean }>;
+  /** Bank modules in use: verified by GlassFolio, or Woob's latest (a choice only the user makes, in the settings). */
+  modules: { active: 'verified' | 'latest'; commit: string | null };
+  connectedBanks: Array<{ connectionId: string; bank: string; status: ConnectionStatus; lastSyncAt: string | null; needsReconnect: boolean }>;
+}
+
+export const getBankSyncStatusTool: AIToolDefinition<Record<string, never>, BankSyncStatus> = {
+  name: 'get_bank_sync_status',
+  description:
+    'French banks (BoursoBank, Fortuneo, Crédit Agricole… every bank Woob supports) read on the user\'s computer by Woob: whether this GlassFolio can reach banks (desktop app or self-hosted only, never the online app), which banks are supported, and which linked banks need the user to reconnect. Read-only; bank credentials and two-factor codes are only entered by the user in Settings → Connections.',
+  parameters: { type: 'object', properties: {} },
+  execute: async () => {
+    const [status, connections] = await Promise.all([woobClient.status(), connectionService.listConnections()]);
+    const online = getDeploymentMode() !== 'local';
+    return {
+      available: status.available,
+      reason: status.available ? 'ok' : online ? 'online_app' : 'module_missing',
+      modules: status.modules?.active === 'latest'
+        ? { active: 'latest', commit: status.modules.commit ?? null }
+        : { active: 'verified', commit: status.commit ?? null },
+      // Every bank module of the Woob version shipped that loads on this machine (TGLA-240)
+      supportedBanks: (status.banks ?? []).map(bank => ({ module: bank.module, name: woobBankName(bank), verified: isVerifiedWoobBank(bank.module), positions: bank.positions })),
+      connectedBanks: connections
+        .filter(connection => connection.sourceId === 'woob')
+        .map(connection => ({
+          connectionId: connection.id,
+          bank: (() => {
+            const bank = status.banks?.find(item => item.module === connection.publicParams.module);
+            return bank ? woobBankName(bank) : connection.label;
+          })(),
+          status: connection.lastStatus,
+          lastSyncAt: connection.lastSyncAt ?? null,
+          needsReconnect: connection.lastStatus === 'reauth_required' || connection.lastStatus === 'auth_failed',
+        })),
+    };
+  },
+};
+

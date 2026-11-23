@@ -743,6 +743,28 @@ export async function rollbackBatch(batchId: string): Promise<{ deleted: number;
     }
 }
 
+/**
+ * Rolls back several batches in one transaction with a single position recalculation: everything an automatic
+ * sync connection brought, one batch per sync.
+ */
+export async function rollbackBatches(batchIds: string[]): Promise<{ deleted: number; success: boolean; error?: string }> {
+    if (batchIds.length === 0) return { deleted: 0, success: true };
+    try {
+        transactionManager.begin();
+        for (const batchId of batchIds) {
+            transactionManager.deleteTransactionsByBatch(batchId);
+            transactionManager.updateBatchStatus(batchId, 'rolled_back');
+        }
+        const result = transactionManager.commit();
+        if (!result.success) return { deleted: 0, success: false, error: result.error };
+        await recalculatePositions();
+        return { deleted: result.transactionCount, success: true };
+    } catch (error) {
+        transactionManager.rollback();
+        return { deleted: 0, success: false, error: error instanceof Error ? error.message : 'Rollback failed' };
+    }
+}
+
 // ============================================================================
 // POSITION RECALCULATION
 // ============================================================================
@@ -821,6 +843,7 @@ export const importManager = {
     parseDecimal,
     commitBatch,
     rollbackBatch,
+    rollbackBatches,
     getImportHistory,
     saveMappingTemplate,
     getMappingTemplates,

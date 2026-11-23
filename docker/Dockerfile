@@ -38,7 +38,9 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 # /data is the only writable path; a named volume inherits this ownership on first use.
-RUN mkdir -p /data && chown node:node /data
+# /run/glassfolio-token: token volume shared with the optional `woob` container (same uid 1000 in both images),
+# so whichever container creates the volume first, the bank worker can write its token and this server read it.
+RUN mkdir -p /data /run/glassfolio-token && chown node:node /data /run/glassfolio-token
 
 COPY --from=builder /app/dist ./dist
 COPY server ./server

@@ -34,5 +34,8 @@
         "simulated": "Estimate",
         "historicalHint": "Holdings valued with real historical closing prices",
         "simulatedHint": "Smooth estimate between your cost basis and today's price"
-    }
+    },
+    "priceBankQuotes": "Bank prices (market data unavailable)",
+    "priceRateLimited": "Market prices limited by Yahoo, retry in {{count}} min",
+    "priceUnavailable": "Market prices unavailable"
 }

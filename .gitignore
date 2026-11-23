@@ -80,3 +80,8 @@ desktop/release/
 .graph-memory/
 
 .prerender
+
+# Woob worker development runtime (npm run woob:setup) and Python caches
+.woob-runtime/
+__pycache__/
+.pytest_cache/

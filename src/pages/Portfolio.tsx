@@ -136,7 +136,9 @@ const Portfolio: React.FC = () => {
                 }, 0);
 
                 accounts.push({
-                    id: key,
+                    // The same account appears under several asset classes (a PEA holds stocks, ETFs and cash):
+                    // its row id includes the class so expanding it under one class leaves the others closed.
+                    id: `${config.id}||${key}`,
                     name: accName,
                     institution: instName,
                     positions: positions.sort((a, b) => {

@@ -8,6 +8,7 @@
     "node": "22.x"
   },
   "scripts": {
+    "woob:setup": "node scripts/woob-setup.mjs",
     "dev": "node scripts/dev-server.mjs",
     "dev:demo": "node scripts/dev-server.mjs --demo",
     "dev:online": "node scripts/dev-server.mjs --online",

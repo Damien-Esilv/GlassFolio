@@ -34,5 +34,8 @@
         "simulated": "Estimation",
         "historicalHint": "Positions valorisées avec les cours de clôture historiques réels",
         "simulatedHint": "Estimation lissée entre votre prix de revient et le cours actuel"
-    }
+    },
+    "priceBankQuotes": "Cours de la banque (marché indisponible)",
+    "priceRateLimited": "Cours de marché limités par Yahoo, nouvel essai dans {{count}} min",
+    "priceUnavailable": "Cours de marché indisponibles"
 }

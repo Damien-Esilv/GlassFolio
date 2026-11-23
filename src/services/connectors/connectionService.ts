@@ -19,11 +19,17 @@ import { userRepository } from '../repositories';
 import { auditLogService } from '../security/auditLogService';
 import { appStorage } from '../storage/appStorage';
 import { CONNECTIONS_STORAGE_KEY } from '../storage/storageKeys';
+import { woobClient } from './woobClient';
 
 export { CONNECTIONS_STORAGE_KEY };
 
 const DEFAULT_SYNC_INTERVAL_HOURS = 24;
 const MIN_SYNC_INTERVAL_HOURS = 1;
+
+const CONNECTION_ID_PATTERN = /^conn-\d{10,16}-[0-9a-f]{8}$/;
+
+/** A new connection id, for a caller that needs it before the connection exists (a bank login). */
+export const newConnectionId = (): string => `conn-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
 export const maskCredential = (value: string): string => {
     const trimmed = value.trim();
@@ -142,8 +148,12 @@ export const connectionService = {
 
         const now = new Date().toISOString();
         const currentUser = await userRepository.getUser();
+        const items = readAll();
+        if (input.id !== undefined && (!CONNECTION_ID_PATTERN.test(input.id) || items.some(item => item.id === input.id))) {
+            throw new Error('Invalid connection id.');
+        }
         const connection: Connection = {
-            id: `conn-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+            id: input.id ?? newConnectionId(),
             ownerId: currentUser?.id || 'default-user',
             sourceId: input.sourceId,
             label,
@@ -158,7 +168,7 @@ export const connectionService = {
             createdAt: now,
             updatedAt: now,
         };
-        writeAll([...readAll(), connection]);
+        writeAll([...items, connection]);
         await auditLogService.record('connection_created', `Sync connection created for ${connection.sourceId} (${label})`);
         return toSafe(connection);
     },
@@ -211,6 +221,8 @@ export const connectionService = {
         const target = items.find(item => item.id === id);
         if (!target) return;
         writeAll(items.filter(item => item.id !== id));
+        // A bank connection also leaves a saved bank session (cookies) with the local worker: delete it too
+        if (target.sourceId === 'woob') await woobClient.forget(id);
         await auditLogService.record('connection_deleted', `Sync connection deleted for ${target.sourceId}`);
     },
 

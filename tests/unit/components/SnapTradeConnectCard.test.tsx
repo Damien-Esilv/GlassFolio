@@ -46,7 +46,7 @@ describe('<SnapTradeConnectCard />', () => {
         expect(screen.queryByLabelText('Client ID')).toBeNull();
         expect(screen.getByText('Keys saved in your vault · Client ID ••••••••1234')).toBeTruthy();
         expect(screen.getByText('IBKR PEA ****1234')).toBeTruthy();
-        expect(screen.getByText('Interactive Brokers · PEA')).toBeTruthy();
+        expect(screen.getByText('Recorded in Interactive Brokers · PEA')).toBeTruthy();
         expect(screen.getByText('Up to date')).toBeTruthy();
     });
 

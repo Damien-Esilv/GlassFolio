@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, CornerDownRight, RefreshCw, Trash2, Wallet } from 'lucide-react';
 import Button from '../Button';
 import type { ConnectionStatus, SafeConnection, SyncReport } from '../../types/connections';
 
@@ -11,6 +11,7 @@ export const STATUS_STYLE: Record<ConnectionStatus, string> = {
     auth_failed: 'bg-negative-subtle text-negative',
     rate_limited: 'bg-warning-subtle text-warning',
     needs_mapping: 'bg-warning-subtle text-warning',
+    reauth_required: 'bg-warning-subtle text-warning',
 };
 
 export const useSyncDate = (): ((iso?: string) => string) => {
@@ -28,43 +29,93 @@ export const StatusBadge: React.FC<{ status: ConnectionStatus }> = ({ status }) 
     );
 };
 
-/** Last sync, error, "Sync now" and remove (with confirmation) of one connection. */
+/**
+ * Last sync, error, "Sync now" and remove of one connection. Removing asks once more in place: the bin becomes
+ * "Confirm removal" where it stood, the other actions give way to what the removal deletes.
+ */
 export const SyncControls: React.FC<{
     connection: SafeConnection;
     syncing: boolean;
     disabled: boolean;
     onSync: () => void;
-    onDelete: () => void;
+    onDelete: () => void | Promise<void>;
     children?: React.ReactNode;
 }> = ({ connection, syncing, disabled, onSync, onDelete, children }) => {
     const { t } = useTranslation();
     const formatDate = useSyncDate();
     const [confirming, setConfirming] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const remove = async (): Promise<void> => {
+        setDeleting(true);
+        try {
+            await onDelete();
+        } finally {
+            setDeleting(false);
+            setConfirming(false);
+        }
+    };
     return (
         <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-secondary">
-                {t('settings:connections.lastSync', { date: formatDate(connection.lastSyncAt) })}
-                {connection.lastErrorCode && ` · ${t(`settings:connections.errors.${connection.lastErrorCode}`)}`}
-            </p>
-            <div className="flex flex-wrap gap-2">
-                {children}
-                <Button size="sm" variant="secondary" isLoading={syncing} disabled={disabled} onClick={onSync}>
-                    <RefreshCw size={14} className="mr-1.5" aria-hidden="true" />
-                    {t('settings:connections.syncNow')}
-                </Button>
+            {confirming ? (
+                <p className="flex items-start gap-1.5 text-xs text-negative min-w-0 flex-1" role="alert">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+                    {t('settings:connections.deleteWarning')}
+                </p>
+            ) : (
+                <p className="text-xs text-secondary">
+                    {t('settings:connections.lastSync', { date: formatDate(connection.lastSyncAt) })}
+                    {connection.lastErrorCode && ` · ${t(`settings:connections.errors.${connection.lastErrorCode}`)}`}
+                </p>
+            )}
+            <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
                 {confirming ? (
                     <>
-                        <Button size="sm" variant="danger" onClick={onDelete}>{t('settings:connections.confirmDelete')}</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>{t('common:buttons.cancel')}</Button>
+                        <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirming(false)}>{t('common:buttons.cancel')}</Button>
+                        <Button size="sm" variant="danger" isLoading={deleting} disabled={deleting} onClick={() => void remove()}>
+                            <Trash2 size={14} className="mr-1.5" aria-hidden="true" />
+                            {t('settings:connections.confirmDelete')}
+                        </Button>
                     </>
                 ) : (
-                    <Button size="sm" variant="ghost" aria-label={t('settings:connections.delete')} title={t('settings:connections.delete')}
-                        onClick={() => setConfirming(true)}>
-                        <Trash2 size={14} aria-hidden="true" />
-                    </Button>
+                    <>
+                        {children}
+                        <Button size="sm" variant="secondary" isLoading={syncing} disabled={disabled} onClick={onSync}>
+                            <RefreshCw size={14} className="mr-1.5" aria-hidden="true" />
+                            {t('settings:connections.syncNow')}
+                        </Button>
+                        <Button size="sm" variant="ghost" disabled={disabled} aria-label={t('settings:connections.delete')} title={t('settings:connections.delete')}
+                            onClick={() => setConfirming(true)}>
+                            <Trash2 size={14} aria-hidden="true" />
+                        </Button>
+                    </>
                 )}
             </div>
         </div>
+    );
+};
+
+/** The provider's accounts of a connection, each with the GlassFolio account it is recorded in. */
+export const LinkedAccounts: React.FC<{
+    accountMap: Record<string, string>;
+    names: Record<string, string>;
+    describeAccount: (accountId: string) => string;
+}> = ({ accountMap, names, describeAccount }) => {
+    const { t } = useTranslation();
+    return (
+        <ul className="divide-y divide-border border border-border rounded-lg" aria-label={t('settings:connections.syncedAccounts')}>
+            {Object.entries(accountMap).map(([externalId, accountId]) => (
+                <li key={externalId} className="flex items-center gap-3 px-3 py-2.5">
+                    <Wallet size={16} className="text-tertiary shrink-0" aria-hidden="true" />
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium text-primary truncate">{names[externalId] ?? externalId}</p>
+                        <p className="flex items-center gap-1 text-xs text-secondary min-w-0">
+                            <CornerDownRight size={12} className="text-tertiary shrink-0" aria-hidden="true" />
+                            <span className="truncate">{t('settings:connections.recordedInAccount', { account: describeAccount(accountId) })}</span>
+                        </p>
+                    </div>
+                </li>
+            ))}
+        </ul>
     );
 };
 

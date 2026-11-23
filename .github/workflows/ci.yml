@@ -276,6 +276,36 @@ jobs:
           echo "$RESPONSE" | grep -q "GlassFolio is not connected" || (echo "::error::Expected safe disconnected bridge message" && exit 1)
 
   # ═══════════════════════════════════════════════════════════════════════════
+  # WOOB BANK WORKER (Python, companions/woob — TGLA-236)
+  #   Real Woob at its pinned commit, locked dependencies (hashes), fake banks: no network to any bank
+  # ═══════════════════════════════════════════════════════════════════════════
+  woob-companion:
+    name: 🏦 Woob bank worker (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [gate-1-integrity-audit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Build the worker runtime (npm run woob:setup, without the npm install)
+        run: node scripts/woob-setup.mjs
+
+      - name: Install the test dependencies (hashes checked)
+        run: .woob-runtime/venv/bin/python -m pip install --disable-pip-version-check --require-hashes -r companions/woob/requirements-dev.lock
+
+      - name: Run the worker tests
+        working-directory: companions/woob
+        run: ../../.woob-runtime/venv/bin/python -m pytest -q
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # GATE 5 — Production Builds & Bundle Budgets
   #   local / cloud-app / showcase: the split builds (Docker + per-domain targets)
   #   vercel-parity: the exact unified build Vercel ships to glassfolio.dev and
@@ -490,6 +520,7 @@ jobs:
       - gate-4-tests
       - gate-4-coverage
       - mcp-protocol
+      - woob-companion
       - gate-5-build
       - gate-6-docker
       - gate-7-e2e

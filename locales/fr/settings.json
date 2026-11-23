@@ -5,7 +5,8 @@
         "profile": "Profil",
         "preferences": "Préférences",
         "security": "Sécurité & Accès",
-        "connections": "Connexions"
+        "connections": "Connexions",
+        "accounts": "Établissements et comptes"
     },
     "profile": {
         "publicProfile": "Profil public",
@@ -141,16 +142,18 @@
         "syncNow": "Synchroniser",
         "delete": "Retirer cette source",
         "confirmDelete": "Confirmer le retrait",
+        "syncedAccounts": "Comptes synchronisés",
+        "recordedInAccount": "Enregistré dans {{account}}",
+        "deleteWarning": "Supprime cette source, les opérations qu’elle a importées et ses comptes restés vides. Action irréversible.",
         "result_one": "{{count}} changement enregistré.",
         "result_other": "{{count}} changements enregistrés.",
         "drift": "Le fournisseur indique d'autres quantités que votre journal pour : {{assets}}. Vérifiez vos imports.",
-        "comingSoon": "À venir : les banques françaises (BoursoBank, Fortuneo…) via un compagnon Woob local, après le test manuel de l'étude.",
         "sources": {
             "snaptrade": "SnapTrade Personal",
             "wallet_btc": "Wallet Bitcoin (lecture seule)",
             "wallet_evm": "Wallet Ethereum (lecture seule)",
             "wallet_sol": "Wallet Solana (lecture seule)",
-            "woob": "Banques françaises (compagnon local)"
+            "woob": "Banques françaises (Woob)"
         },
         "status": {
             "never_synced": "Jamais synchronisé",
@@ -158,7 +161,8 @@
             "error": "Échec",
             "auth_failed": "Accès refusé",
             "rate_limited": "En pause (limite)",
-            "needs_mapping": "Compte à choisir"
+            "needs_mapping": "Compte à choisir",
+            "reauth_required": "Validation requise"
         },
         "errors": {
             "auth_failed": "le fournisseur a refusé les identifiants",
@@ -168,7 +172,10 @@
             "relay_unavailable": "relais indisponible",
             "account_missing": "un compte associé n'existe plus",
             "busy": "un import était en cours, réessayez dans un instant",
-            "unknown": "erreur inattendue"
+            "unknown": "erreur inattendue",
+            "reauth_required": "la banque demande une nouvelle validation : utilisez « Se reconnecter »",
+            "action_needed": "le site de la banque vous demande une action",
+            "companion_unavailable": "le module bancaire de cet ordinateur ne répond pas"
         },
         "form": {
             "title": "Ajouter un wallet en lecture seule",
@@ -224,6 +231,10 @@
             "drift": {
                 "title": "Quantités différentes : {{label}}",
                 "message": "{{label}} indique d'autres quantités que votre journal pour {{count}} actif(s)."
+            },
+            "reauth_required": {
+                "title": "Validation bancaire requise : {{label}}",
+                "message": "{{label}} vous demande de valider à nouveau la connexion. Ouvrez les connexions et utilisez « Se reconnecter »."
             }
         },
         "fields": {
@@ -262,6 +273,145 @@
         "wallets": {
             "title": "Vos wallets",
             "empty": "Aucun wallet ajouté pour l’instant."
+        },
+        "banks": {
+            "title": "Banques françaises",
+            "description": "BoursoBank, Fortuneo et d’autres banques françaises, lues sur cet ordinateur par Woob (open source) : positions de vos PEA, comptes-titres, assurances vie et PER, et soldes de vos comptes courants et livrets. Rien ne passe par un serveur GlassFolio.",
+            "unavailable": {
+                "cloud": "Les banques françaises sont lues sur votre propre ordinateur, jamais par un serveur : reliez-les depuis l’appli de bureau GlassFolio ou la version auto-hébergée.",
+                "cloudLink": "Télécharger l’appli de bureau",
+                "local": "Le module bancaire n’est pas installé ici. Avec Docker, lancez-le avec « docker compose --profile woob up -d » ; en développement, lancez « npm run woob:setup ».",
+                "localLink": "Guide d’auto-hébergement"
+            },
+            "add": "Ajouter une banque",
+            "bank": "Banque",
+            "fields": {
+                "login": "Identifiant",
+                "password": "Mot de passe",
+                "birthdate": "Date de naissance"
+            },
+            "acknowledge": "Je comprends que GlassFolio se connecte au site de ma banque à ma place, depuis cet ordinateur, uniquement pour lire mes comptes. Mes identifiants restent chiffrés dans mon coffre. Certaines banques interdisent l’accès automatisé dans leurs conditions.",
+            "connect": "Se connecter",
+            "connecting": "Connexion à {{bank}}… gardez cette page ouverte.",
+            "challenge": {
+                "imageAlt": "Image affichée par votre banque pour le code",
+                "imageHelp": "Lisez cette image avec le boîtier de votre banque (par exemple un Digipass), puis saisissez le code qu’il affiche.",
+                "title": "Validation bancaire",
+                "app": "Ouvrez votre appli {{bank}} et validez la connexion, puis revenez ici.",
+                "validated": "J’ai validé",
+                "code": "Saisissez le code que {{bank}} vient de vous envoyer",
+                "codeSentTo": "Saisissez le code envoyé au {{target}}",
+                "submit": "Valider"
+            },
+            "found_one": "{{count}} compte trouvé. Choisissez où l’enregistrer.",
+            "found_other": "{{count}} comptes trouvés. Choisissez où enregistrer chacun.",
+            "mappingHelp": "À chaque synchro, la photo de la banque remplace les positions du compte choisi. Préférez un compte nouveau ou vide à un compte que vous remplissez par import CSV.",
+            "reconnect": "Se reconnecter",
+            "reauthNeeded": "{{bank}} vous demande de valider à nouveau la connexion (code ou appli). Les synchros automatiques sont en pause d’ici là.",
+            "newCredentials": "La banque a refusé les identifiants enregistrés. Saisissez-les à nouveau :",
+            "accountTypes": {
+                "checking": "Compte courant",
+                "savings": "Compte d’épargne",
+                "investment": "Compte d’investissement",
+                "other": "Compte"
+            },
+            "wrappers": {
+                "PEA": "PEA",
+                "PEA_PME": "PEA-PME",
+                "CTO": "Compte-titres",
+                "ASSURANCE_VIE": "Assurance vie",
+                "PER": "Plan d’épargne retraite (PER)",
+                "LIVRET": "Livret",
+                "OTHER": "Autre"
+            },
+            "errors": {
+                "auth_failed": "La banque a refusé l’identifiant ou le mot de passe.",
+                "invalid_format": "« {{field}} » n’a pas le format attendu par le module de cette banque. La vérification a eu lieu sur cet ordinateur : rien n’a été envoyé à la banque.",
+                "invalid_format_digits": "« {{field}} » ne doit contenir que des chiffres pour cette banque. La vérification a eu lieu sur cet ordinateur : rien n’a été envoyé à la banque.",
+                "bankSays": "Message de la banque : « {{message}} »",
+                "technicalDetail": "Détail technique : {{detail}}",
+                "account_locked": "La banque a bloqué l’accès après plusieurs essais : débloquez-le sur son site.",
+                "action_needed": "La banque vous demande d’abord une action sur son site. {{detail}}",
+                "validation_refused": "La validation a été refusée ou a expiré dans l’appli de votre banque. Réessayez.",
+                "challenge_expired": "Le code a expiré. Reconnectez-vous.",
+                "rate_limited": "Trop de connexions à cette banque aujourd’hui : réessayez demain.",
+                "bank_unavailable": "Le site de la banque a refusé la connexion ou n’a pas répondu. Réessayez dans un instant.",
+                "bank_timeout": "La banque a mis trop de temps à répondre. Réessayez.",
+                "companion_unavailable": "Le module bancaire de cet ordinateur ne répond pas. Redémarrez GlassFolio.",
+                "busy": "Une connexion à cette banque est déjà en cours.",
+                "unsupported_bank": "Cette banque n’est pas prise en charge.",
+                "reauth_required": "La banque demande une nouvelle validation : utilisez « Se reconnecter ».",
+                "acknowledge": "Cochez la case pour confirmer que vous avez compris le fonctionnement de la connexion.",
+                "credentials_missing": "Remplissez tous les champs.",
+                "none_chosen": "Choisissez au moins un compte à synchroniser.",
+                "noAccounts": "La banque ne liste aucun compte à synchroniser.",
+                "unknown": "La connexion a échoué. Réessayez."
+            },
+            "count_one": "{{count}} banque disponible",
+            "count_other": "{{count}} banques disponibles",
+            "searchPlaceholder": "Rechercher une banque (BoursoBank, Crédit Agricole, Fortuneo…)",
+            "choose": "Choisir…",
+            "chooseBank": "Choisir une banque…",
+            "noMatch": "Aucune banque ne correspond à cette recherche.",
+            "optional": "(facultatif)",
+            "unverifiedHelp": "Pas encore vérifiée : Woob lit cette banque, mais GlassFolio ne l’a pas testée sur un vrai compte. Comparez la première synchro avec le site de votre banque.",
+            "limits": {
+                "balancesOnly": "Woob lit les soldes de cette banque, pas le détail de ses placements.",
+                "strongAuth": "Woob ne sait pas réaliser l’authentification forte de cette banque : la connexion sera probablement refusée.",
+                "validationEachLogin": "Cette banque demandera une validation (code) à chaque connexion, synchros automatiques comprises."
+            },
+            "modules": {
+                "title": "Modules bancaires : leur provenance et leurs mises à jour",
+                "intro": "Woob lit chaque banque grâce à un module qui suit le site de la banque. Quand une banque change son site, son module doit être mis à jour. Choisissez d’où GlassFolio les prend :",
+                "choice": "Provenance des modules bancaires",
+                "verifiedTitle": "Vérifiés par GlassFolio (recommandé)",
+                "verifiedDesc": "GlassFolio teste chaque nouvelle version de Woob sur son GitHub avant de la livrer, environ une fois par semaine. Ils arrivent avec les mises à jour de GlassFolio (mise à jour de l’app de bureau, nouvelle image Docker) : rien n’est téléchargé tout seul.",
+                "latestTitle": "Derniers modules de Woob",
+                "latestDesc": "Téléchargés directement depuis le dépôt officiel de Woob (gitlab.com/woob/woob) dès que Woob corrige une banque, puis rafraîchis automatiquement chaque jour tant que GlassFolio tourne, ou avec « Mettre à jour maintenant ». GlassFolio ne les a pas vérifiés.",
+                "inUse": "Utilisé",
+                "verifiedActive": "Modules bancaires vérifiés par GlassFolio (Woob {{commit}}, {{date}}). Ils sont mis à jour chaque semaine après vérification par GlassFolio.",
+                "latestActive": "Modules bancaires les plus récents de Woob ({{commit}}, {{date}}), téléchargés le {{updated}}. GlassFolio ne les a pas vérifiés.",
+                "keptVerified_one": "{{count}} banque garde son module vérifié : sa version la plus récente ne fonctionne pas ici.",
+                "keptVerified_other": "{{count}} banques gardent leur module vérifié : leur version la plus récente ne fonctionne pas ici.",
+                "lastError": "La dernière mise à jour a échoué ({{detail}}) : les modules utilisés n’ont pas changé.",
+                "warning": "Les modules bancaires les plus récents de Woob sont téléchargés depuis gitlab.com et s’exécutent sur cet ordinateur avec vos identifiants bancaires, sans que GlassFolio les ait vérifiés. Ne les utilisez que si une banque ne fonctionne pas avec les modules vérifiés.",
+                "accept": "Je comprends que du code non vérifié par GlassFolio manipulera mes identifiants bancaires.",
+                "enable": "Utiliser les modules les plus récents",
+                "updateNow": "Mettre à jour maintenant",
+                "backToVerified": "Revenir aux modules vérifiés",
+                "working": "Téléchargement et vérification des modules bancaires… (jusqu’à une minute)",
+                "failed": "Les modules bancaires n’ont pas pu être changés ({{detail}}). Les modules utilisés n’ont pas changé."
+            }
         }
+    },
+    "accounts": {
+        "title": "Établissements et comptes",
+        "description": "Tous les établissements et comptes de GlassFolio. Renommez-les, ou supprimez ceux que vous ne suivez plus avec tout ce qu’ils contiennent. Les comptes alimentés par une synchro (banque, clés de courtier, wallet) se gèrent depuis Connexions.",
+        "empty": "Aucun établissement pour l’instant : ils sont créés quand vous importez un fichier ou connectez une banque.",
+        "emptyAction": "Importer des données",
+        "accountCount_one": "{{count}} compte",
+        "accountCount_other": "{{count}} comptes",
+        "operations_one": "{{count}} opération",
+        "operations_other": "{{count}} opérations",
+        "rename": "Renommer",
+        "renameLabel": "Renommer {{name}}",
+        "newName": "Nouveau nom",
+        "manual": "Imports et saisies",
+        "syncedBy": "Synchronisé · {{source}}",
+        "syncedHelp": "Alimenté par une synchro automatique : gérez-la ou supprimez-la dans Connexions.",
+        "institutionSynced": "A des comptes synchronisés : supprimez la synchro dans Connexions",
+        "deleteAccount": "Supprimer {{name}}",
+        "deleteInstitution": "Supprimer {{name}}",
+        "deleteAccountWarning_one": "Supprime ce compte et {{count}} opération. Action irréversible.",
+        "deleteAccountWarning_other": "Supprime ce compte et ses {{count}} opérations. Action irréversible.",
+        "deleteInstitutionWarning_one": "Supprime cet établissement, {{count}} compte et ses {{operations}} opérations. Action irréversible.",
+        "deleteInstitutionWarning_other": "Supprime cet établissement, ses {{count}} comptes et leurs {{operations}} opérations. Action irréversible.",
+        "confirmDelete": "Confirmer la suppression",
+        "errors": {
+            "not_found": "Cet élément n’existe plus.",
+            "synced": "Une synchro alimente ce compte : supprimez-la dans Connexions.",
+            "empty_name": "Saisissez un nom."
+        },
+        "importLink": "Gérer les établissements et comptes"
     }
 }

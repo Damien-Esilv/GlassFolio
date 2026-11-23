@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { STAGGER_DELAY_MS } from '../constants/animations';
 import Button from './Button';
 import {
   Camera,
@@ -153,7 +154,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 animate-fade-in">
         <Camera className="text-success" size={28} />
         <div>
           <h2 className="text-xl font-bold text-primary">{t('cashWizard.title')}</h2>
@@ -169,12 +170,13 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
 
       {/* Steps switcher */}
       {step === 'options' && (
-        <div className="space-y-6">
+        <div className="animate-fade-in-up space-y-6">
           <h3 className="text-lg font-bold text-primary">{t('cashWizard.options.title')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setStep('manual')}
-              className="p-6 rounded-xl border-2 border-subtle bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between"
+              className="p-6 rounded-xl border-2 border-subtle bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between animate-fade-in-up"
+              style={{ animationDelay: `${1 * STAGGER_DELAY_MS}ms`, animationFillMode: 'both' }}
             >
               <div>
                 <Plus className="text-success" size={32} />
@@ -186,7 +188,8 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
 
             <button
               onClick={() => setStep('csv_upload')}
-              className="p-6 rounded-xl border-2 border-subtle bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between"
+              className="p-6 rounded-xl border-2 border-subtle bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between animate-fade-in-up"
+              style={{ animationDelay: `${2 * STAGGER_DELAY_MS}ms`, animationFillMode: 'both' }}
             >
               <div>
                 <Upload className="text-success" size={32} />
@@ -206,7 +209,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       )}
 
       {step === 'manual' && (
-        <div className="space-y-6 bg-card border border-subtle rounded-xl p-6 shadow-sm">
+        <div className="animate-fade-in-up space-y-6 bg-card border border-subtle rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-bold text-primary">{t('cashWizard.manualForm.title')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -245,7 +248,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       )}
 
       {step === 'csv_upload' && (
-        <div className="space-y-6">
+        <div className="animate-fade-in-up space-y-6">
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
@@ -278,7 +281,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       )}
 
       {step === 'csv_mapping' && (
-        <div className="space-y-6">
+        <div className="animate-fade-in-up space-y-6">
           <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-primary">{t('cashWizard.csvMapping.title')}</h3>
             <p className="text-secondary text-sm">{t('cashWizard.csvMapping.description')}</p>
@@ -355,7 +358,7 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       )}
 
       {step === 'success' && (
-        <div className="max-w-md mx-auto text-center space-y-6 bg-card border border-subtle rounded-xl p-8 shadow-sm">
+        <div className="animate-fade-in-up max-w-md mx-auto text-center space-y-6 bg-card border border-subtle rounded-xl p-8 shadow-sm">
           <div className="w-20 h-20 bg-success/20 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="text-success" size={48} />
           </div>

@@ -26,6 +26,7 @@ import {
   Trash2,
   AlertTriangle,
   Building2,
+  Settings2,
   Wallet,
   History,
   Camera,
@@ -106,7 +107,9 @@ const ImportWizard: React.FC = () => {
       )}
 
       {/* Step Content */}
-      <div className="min-h-[450px] animate-fade-in">
+      {/* Keyed by step and flow: every step change plays the entrance, like the rest of the app */}
+      <div key={wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 ? 'cash' : showSnapshotWizard ? 'snapshot' : `step-${wizard.step}`}
+        className="min-h-[450px] animate-fade-in-up">
         {/* Route to Cash Import Wizard if Cash Account is selected */}
         {wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 ? (
           <CashImportWizard
@@ -252,7 +255,12 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
       <div className="bg-card border border-subtle rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <Building2 className="text-brand" size={24} />
-          <h2 className="text-lg font-bold text-primary">{t('importWizard.context.selectInstitution')}</h2>
+          <h2 className="text-lg font-bold text-primary flex-1">{t('importWizard.context.selectInstitution')}</h2>
+          {/* Renaming or deleting institutions and accounts happens in Settings */}
+          <Link to="/settings?tab=accounts" className="inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline">
+            <Settings2 size={14} aria-hidden="true" />
+            {t('settings:accounts.importLink')}
+          </Link>
         </div>
 
         {!showNewInstitute ? (

@@ -1,0 +1,2 @@
+# Test dependencies of the worker (CI job woob-companion). Lock: requirements-dev.lock
+pytest

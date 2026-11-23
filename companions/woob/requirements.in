@@ -1,0 +1,30 @@
+# Dependencies of Woob at the pinned commit (woob-source.json, pyproject.toml of Woob), plus what the
+# shipped bank modules declare in their requirements.txt (all CapBank modules, TGLA-240). Lock: requirements.lock (`uv pip compile --universal --generate-hashes`).
+lxml
+requests>=2.0.0,!=2.32.0,!=2.32.1,!=2.32.2,!=2.32.3,!=2.32.4
+python-dateutil
+PyYAML
+html2text>=3.200
+unidecode
+Pillow
+Babel
+packaging>=23.0,<27
+pycountry
+rich>=13
+termcolor
+schwifty>=2026.11.1
+deprecated
+rstr<4
+# caissedepargne
+python-jose
+# 1.4.1 ships no Intel macOS wheel: the desktop installers need one for every target
+chompjs==1.4.0
+# several bank modules (requirements.txt)
+pycryptodomex
+pyjwt
+xlrd
+# La Banque Postale (bp) imports Selenium; its headless login then fails (no browser, and the runtime
+# builders delete selenium-manager so nothing downloads a browser) and the module falls back to its
+# classic login. AmEx, HSBC HK and Sogecartenet pin selenium<4.1.4 (urllib3 1.x): not offered.
+selenium
+

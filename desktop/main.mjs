@@ -18,6 +18,7 @@ import { buildServerEnv } from './lib/serverEnv.mjs';
 import { createSettingsStore } from './lib/settingsStore.mjs';
 import { createUpdateController } from './lib/updateController.mjs';
 import { publicKeyFromBase64 } from './lib/updateManifest.mjs';
+import { findWoobRuntime } from './lib/woobRuntime.mjs';
 import { UPDATE_PUBLIC_KEY_BASE64 } from './update-public-key.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -84,7 +85,7 @@ async function boot() {
 function startServer(port) {
   const dataDir = path.join(app.getPath('userData'), DATA_DIR_NAME);
   serverProcess = utilityProcess.fork(serverScript, [], {
-    env: buildServerEnv({ port, dataDir, staticDir }),
+    env: buildServerEnv({ port, dataDir, staticDir, woob: findWoobRuntime({ resourcesRoot, packaged: app.isPackaged }) }),
     serviceName: 'glassfolio-server',
     stdio: 'ignore',
   });

@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Briefcase, CheckCircle2, ExternalLink, Settings2 } from 'lucide-react';
+import { Briefcase, CheckCircle2, ExternalLink, Settings2 } from 'lucide-react';
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { accountService, instituteService } from '../../services/instituteService';
 import { connectionService, ConnectorError, sourceRegistry, syncEngine } from '../../services/connectors';
-import { StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
+import { LinkedAccounts, StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
+import { AccountMappingEditor, NEW_ACCOUNT, SKIP, type AccountMapping } from './AccountMappingEditor';
 import type { AccountChoice } from './accountChoices';
 import type { ConnectionCursor, ExternalAccount, SafeConnection, SyncReport } from '../../types/connections';
 
-const NEW_ACCOUNT = '__new__';
-const SKIP = '__skip__';
 const SNAPTRADE_PERSONAL_URL = 'https://snaptrade.com/personal-investing';
 const inputClass = 'w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5';
 
-interface Mapping { target: string; startDate: string }
+type Mapping = AccountMapping;
 
 interface Props {
     /** The SnapTrade connection, once linked (one SnapTrade account covers every broker). */
@@ -32,49 +31,6 @@ interface Props {
 
 const errorKey = (caught: unknown): string =>
     `settings:connections.errors.${caught instanceof ConnectorError ? caught.code : 'unknown'}`;
-
-/** Broker account → GlassFolio account, with the date to import from (shared by the first link and "Manage"). */
-const MappingEditor: React.FC<{
-    external: ExternalAccount[];
-    mappings: Record<string, Mapping>;
-    accountChoices: AccountChoice[];
-    onChange: (externalId: string, patch: Partial<Mapping>) => void;
-}> = ({ external, mappings, accountChoices, onChange }) => {
-    const { t } = useTranslation();
-    return (
-        <ul className="space-y-3">
-            {external.map(account => {
-                const mapping = mappings[account.externalId];
-                return (
-                    <li key={account.externalId} className="border border-border rounded-lg p-3 space-y-2">
-                        <p className="text-sm font-medium text-primary">{account.name}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-xs font-medium text-secondary mb-1" htmlFor={`snaptrade-target-${account.externalId}`}>
-                                    {t('settings:connections.form.account')}
-                                </label>
-                                <select id={`snaptrade-target-${account.externalId}`} value={mapping?.target ?? NEW_ACCOUNT}
-                                    onChange={event => onChange(account.externalId, { target: event.target.value })} className={inputClass}>
-                                    <option value={NEW_ACCOUNT}>{t('settings:connections.form.newAccountNamed', { name: account.name })}</option>
-                                    {accountChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-                                    <option value={SKIP}>{t('settings:connections.snaptrade.skip')}</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-secondary mb-1" htmlFor={`snaptrade-start-${account.externalId}`}>
-                                    {t('settings:connections.snaptrade.startDate')}
-                                </label>
-                                <input id={`snaptrade-start-${account.externalId}`} type="date" value={mapping?.startDate ?? ''}
-                                    disabled={mapping?.target === SKIP}
-                                    onChange={event => onChange(account.externalId, { startDate: event.target.value })} className={inputClass} />
-                            </div>
-                        </div>
-                    </li>
-                );
-            })}
-        </ul>
-    );
-};
 
 /** Settings → Connections: link SnapTrade Personal once, then see and manage the synced broker accounts (TGLA-221, TGLA-235). */
 export const SnapTradeConnectCard: React.FC<Props> = ({
@@ -193,7 +149,8 @@ export const SnapTradeConnectCard: React.FC<Props> = ({
     const mappingStep = external !== null && (
         <div className="space-y-4 mt-4">
             <p className="text-sm text-primary">{t('settings:connections.snaptrade.found', { count: external.length })}</p>
-            <MappingEditor external={external} mappings={mappings} accountChoices={accountChoices} onChange={setMapping} />
+            <AccountMappingEditor idPrefix="snaptrade" accounts={external.map(account => ({ externalId: account.externalId, name: account.name }))}
+                mappings={mappings} accountChoices={accountChoices} showStartDate onChange={setMapping} />
             <p className="text-xs text-tertiary">{t('settings:connections.snaptrade.startHelp')}</p>
             {error && <p role="alert" className="text-xs text-negative">{error}</p>}
             <div className="flex flex-wrap gap-2">
@@ -236,15 +193,7 @@ export const SnapTradeConnectCard: React.FC<Props> = ({
                         {linked.length === 0 ? (
                             <p className="text-sm text-tertiary">{t('settings:connections.snaptrade.noLinkedAccounts')}</p>
                         ) : (
-                            <ul className="divide-y divide-border border border-border rounded-lg">
-                                {linked.map(([externalId, accountId]) => (
-                                    <li key={externalId} className="flex flex-wrap items-center gap-2 px-3 py-2.5 text-sm">
-                                        <span className="font-medium text-primary">{names[externalId] ?? externalId}</span>
-                                        <ArrowRight size={14} className="text-tertiary" aria-hidden="true" />
-                                        <span className="text-secondary">{describeAccount(accountId)}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            <LinkedAccounts accountMap={connection.accountMap} names={names} describeAccount={describeAccount} />
                         )}
                         {error && <p role="alert" className="text-xs text-negative mt-3">{error}</p>}
                         <div className="mt-4">

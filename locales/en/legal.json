@@ -115,6 +115,7 @@
           "Encrypted vault: vault header (salt, derivation parameters) and encrypted envelopes holding your financial data, unreadable on the server side.",
           "Interface preferences (theme, language) stored locally in your browser.",
           "Local mode (desktop app or Docker): none of this data leaves your machine.",
+          "French banks (local mode only, optional): when you link a bank, your computer signs in to the bank's website itself with Woob, a library published under the LGPL licence. Your bank credentials stay encrypted in your vault; the bank session (cookies) is kept in the app's data folder on your machine and deleted when you remove the bank. Nothing goes through the publisher.",
           "Desktop app update check: at start-up and every few hours, unless you turn it off in Settings, the app asks GitHub for the latest release. GitHub receives the request and therefore your IP address, like for any web request. Nothing about you or your data is sent, and nothing is installed without your confirmation."
         ]
       },

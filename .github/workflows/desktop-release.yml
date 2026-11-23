@@ -15,6 +15,7 @@ on:
     paths:
       - 'desktop/**'
       - 'server/**'
+      - 'companions/**'
       - '.github/workflows/desktop-release.yml'
   workflow_dispatch:
 
@@ -43,7 +44,17 @@ jobs:
       - name: Install the desktop app dependencies
         run: npm --prefix desktop ci
 
+      - name: Setup Python (builds the Woob bank worker runtime)
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Prepare the Woob runtime the installers ship (TGLA-238)
+        run: node desktop/scripts/prepare-woob-runtime.mjs --target linux-x64 --python python
+
       - name: Run the app in a virtual display and check it
+        env:
+          GLASSFOLIO_EXPECT_WOOB: '1'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1
@@ -59,9 +70,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, label: macOS, flag: --mac }
-          - { os: windows-latest, label: Windows, flag: --win }
-          - { os: ubuntu-latest, label: Linux, flag: --linux }
+          - { os: macos-latest, label: macOS, flag: --mac, woob: 'mac-arm64 mac-x64' }
+          - { os: windows-latest, label: Windows, flag: --win, woob: win-x64 }
+          - { os: ubuntu-latest, label: Linux, flag: --linux, woob: linux-x64 }
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,10 +101,30 @@ jobs:
           fi
 
       - name: Build the local web app
-        run: npm run build:local
+        shell: bash
+        env:
+          # The variables of `npm run build:local`, set here because npm runs scripts with cmd.exe on Windows,
+          # which does not understand `VAR=value command` (tests/unit/desktop/releaseWorkflow.test.ts keeps them in step)
+          VITE_DEPLOYMENT_MODE: local
+          VITE_APP_TARGET: app
+        run: npx vite build
 
       - name: Install the desktop app dependencies
         run: npm --prefix desktop ci
+
+      - name: Setup Python (builds the Woob bank worker runtime)
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Prepare the Woob runtime of each installer (TGLA-238)
+        shell: bash
+        env:
+          WOOB_TARGETS: ${{ matrix.woob }}
+        run: |
+          for target in $WOOB_TARGETS; do
+            node desktop/scripts/prepare-woob-runtime.mjs --target "$target" --python python
+          done
 
       - name: Package the installers
         run: npm --prefix desktop run dist -- ${{ matrix.flag }}

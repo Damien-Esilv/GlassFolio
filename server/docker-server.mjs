@@ -21,6 +21,7 @@ import { createAccessControl } from './accessControl.mjs';
 import { buildSecurityHeaders } from './securityHeaders.mjs';
 import { handleYahooProxy, isYahooProxyPath } from './yahooProxy.mjs';
 import { createLocalMcpBridge } from './mcpBridgeSetup.mjs';
+import { createLocalWoobHandler, createWoobWorker, isWoobPath, resolveWoobRuntime } from './woobBridge.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +72,16 @@ const DEMO = process.env.GLASSFOLIO_DEMO === '1';
 const mcpBridge = createLocalMcpBridge({ dataDir: DATA_DIR, headers: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS });
 const handleLocalVault = createLocalVaultHandler(vaultStore, { securityHeaders: SECURITY_HEADERS, allowedHosts: ALLOWED_HOSTS, demo: DEMO });
 const handleConnectorRelay = createLocalConnectorRelayHandler({
+  securityHeaders: SECURITY_HEADERS,
+  allowedHosts: ALLOWED_HOSTS,
+  isAllowedHost,
+  isSameOrigin,
+  clientHeader: CLIENT_HEADER,
+});
+// French banks through Woob (TGLA-236): worker shipped with the desktop app, or the `woob` Docker container
+const woobWorker = createWoobWorker(resolveWoobRuntime({ env: process.env }), { dataDir: path.join(DATA_DIR, 'woob') });
+const handleWoob = createLocalWoobHandler({
+  worker: woobWorker,
   securityHeaders: SECURITY_HEADERS,
   allowedHosts: ALLOWED_HOSTS,
   isAllowedHost,
@@ -133,6 +144,12 @@ async function handleRequest(req, res) {
   // 2b. Connector relay: allowlisted, signed sync requests to providers that refuse browser calls (TGLA-221)
   if (isConnectorRelayPath(pathname)) {
     await handleConnectorRelay(req, res);
+    return;
+  }
+
+  // 2c. French banks through the local Woob worker (TGLA-236)
+  if (isWoobPath(pathname)) {
+    await handleWoob(req, res, pathname);
     return;
   }
 

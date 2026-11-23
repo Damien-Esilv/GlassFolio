@@ -13,6 +13,9 @@ export default [
       'node_modules/**',
       'desktop/node_modules/**',
       'desktop/release/**',
+      // Python runtimes of the Woob bank worker (npm run woob:setup, desktop/scripts/prepare-woob-runtime.mjs)
+      '.woob-runtime/**',
+      'desktop/.woob-runtime/**',
       'coverage/**',
       '.claude/**',
       '*.config.js',

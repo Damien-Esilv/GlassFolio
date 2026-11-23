@@ -3,10 +3,10 @@
  *
  * GlassFolio pulls holdings and activities from a small set of aggregated sources instead of one
  * connector per institution: SnapTrade Personal (brokers and major exchanges), public wallets
- * (BTC, EVM, Solana) and, later, a local Woob companion (French banks). Every source returns the
+ * (BTC, EVM, Solana) and French banks through the local Woob worker (TGLA-236). Every source returns the
  * same normalized shapes below, so the sync engine never knows which provider it talks to.
  */
-import type { InstrumentType, TransactionSubType, TransactionType } from './types.backend';
+import type { AccountType, InstrumentType, TransactionSubType, TransactionType, WrapperType } from './types.backend';
 
 /** Source adapters known to the sync engine. */
 export type SourceId = 'snaptrade' | 'wallet_btc' | 'wallet_evm' | 'wallet_sol' | 'woob';
@@ -26,7 +26,9 @@ export type ConnectionStatus =
     | 'error'
     | 'auth_failed'
     | 'rate_limited'
-    | 'needs_mapping';
+    | 'needs_mapping'
+    /** The bank asks for a new two-factor validation: only the user can do it ("Reconnect"). */
+    | 'reauth_required';
 
 /**
  * Error codes surfaced to the UI (translated under `connections:errors.<code>`).
@@ -40,6 +42,12 @@ export type ConnectionErrorCode =
     | 'relay_unavailable'
     | 'account_missing'
     | 'busy'
+    /** Bank (Woob): a new two-factor validation is needed. */
+    | 'reauth_required'
+    /** Bank (Woob): the bank's website asks the user to do something (accept terms, change a password…). */
+    | 'action_needed'
+    /** Bank (Woob): the local worker is missing (online app) or stopped. */
+    | 'companion_unavailable'
     | 'unknown';
 
 /** An account as the provider exposes it (one SnapTrade connection can hold several). */
@@ -52,6 +60,12 @@ export interface ExternalAccount {
     institutionName?: string;
     /** Base currency of the account (ISO 4217), when known. */
     currency?: string;
+    /** GlassFolio account type to create for it, when the provider knows (French banks). */
+    accountType?: AccountType;
+    /** Tax wrapper to create it with (PEA, CTO, ASSURANCE_VIE, LIVRET…), when known. */
+    wrapperType?: WrapperType;
+    /** Current balance, shown while choosing where the account goes. */
+    balance?: string;
 }
 
 /** A current holding, as returned by a source. Decimal values are strings, like the journal. */
@@ -110,6 +124,8 @@ export interface ConnectionPublicParams {
     chainIds?: number[];
     /** Provider display name of each linked external account (shown in the settings). */
     accountNames?: Record<string, string>;
+    /** Bank (Woob): the Woob module of the bank (`boursorama`, `fortuneo`…), from src/config/woobBanks.ts. */
+    module?: string;
 }
 
 /** Incremental sync state, per external account. */
@@ -147,6 +163,11 @@ export type SafeConnection = Omit<Connection, 'credentials'> & {
 };
 
 export interface NewConnectionInput {
+    /**
+     * Id chosen ahead (`newConnectionId()`): a bank session opened before the connection is saved
+     * (French banks, TGLA-237) is kept under this id, so the first sync needs no second validation.
+     */
+    id?: string;
     sourceId: SourceId;
     label: string;
     credentials?: Record<string, string>;

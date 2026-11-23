@@ -32,3 +32,26 @@ export const findUnpinnedActions = (workflowText) => {
   }
   return unpinned;
 };
+
+/**
+ * Requirements of a pip lock file (`uv pip compile --generate-hashes`) without a `--hash=sha256:` (TGLA-239):
+ * `pip install --require-hashes` would refuse them anyway, this catches a lock edited by hand.
+ */
+export const findUnhashedPythonRequirements = (lockText) => {
+  const unhashed = [];
+  const blocks = lockText.split(/\n(?=\S)/);
+  for (const block of blocks) {
+    const first = block.split('\n')[0].trim();
+    if (!first || first.startsWith('#') || first.startsWith('-')) continue;
+    const name = first.split(/[\s=;\\]/)[0];
+    if (!/==/.test(first) || !/--hash=sha256:[0-9a-f]{64}/.test(block)) unhashed.push(name);
+  }
+  return unhashed;
+};
+
+/** Downloads of the desktop Woob runtime (desktop/woob-runtime.json) not pinned to an https URL and a SHA-256. */
+export const findUnpinnedRuntimeArchives = (manifest) =>
+  Object.entries(manifest?.targets ?? {})
+    .filter(([, target]) => !/^https:\/\//.test(target?.url ?? '') || !/^[0-9a-f]{64}$/.test(target?.sha256 ?? ''))
+    .map(([name]) => name);
+

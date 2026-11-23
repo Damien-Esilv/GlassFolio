@@ -1,0 +1,15 @@
+[project]
+name = "glassfolio-woob"
+version = "0.1.0"
+description = "GlassFolio worker that reads French bank accounts with Woob, on the user's machine"
+requires-python = ">=3.11"
+license = { text = "PolyForm-Noncommercial-1.0.0" }
+# Runtime dependencies are installed from requirements.lock (hashes) and Woob from its pinned commit
+# (woob-source.json): see scripts/woob-setup.mjs, desktop/scripts/prepare-woob-runtime.mjs, docker/woob.Dockerfile.
+dependencies = []
+
+[tool.setuptools]
+packages = ["glassfolio_woob"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

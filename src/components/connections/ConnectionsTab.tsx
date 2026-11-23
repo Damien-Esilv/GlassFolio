@@ -8,6 +8,7 @@ import { accountService, instituteService } from '../../services/instituteServic
 import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID } from '../../services/connectors';
 import { notifySyncOutcome } from '../../services/connectors/syncNotifications';
 import { SnapTradeConnectCard } from './SnapTradeConnectCard';
+import { BankConnectCard } from './BankConnectCard';
 import { StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
 import { accountLabel, toAccountChoices } from './accountChoices';
 import type { Account, Institute } from '../../types';
@@ -52,7 +53,7 @@ const AutoGrowTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElemen
     return <textarea ref={ref} rows={1} {...props} />;
 };
 
-/** Settings → Connections (TGLA-221, TGLA-235): SnapTrade for brokers, watch-only wallets for self-custody. */
+/** Settings → Connections (TGLA-221, TGLA-235, TGLA-237): SnapTrade for brokers, French banks through Woob, watch-only wallets. */
 export const ConnectionsTab: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -96,7 +97,8 @@ export const ConnectionsTab: React.FC = () => {
     }, [accountById, instituteById, t]);
 
     const snaptrade = connections.find(connection => connection.sourceId === 'snaptrade') ?? null;
-    const wallets = connections.filter(connection => connection.sourceId !== 'snaptrade');
+    const banks = connections.filter(connection => connection.sourceId === 'woob');
+    const wallets = connections.filter(connection => connection.sourceId !== 'snaptrade' && connection.sourceId !== 'woob');
 
     const runSync = async (connection: SafeConnection): Promise<void> => {
         setSyncing(connection.id);
@@ -118,9 +120,11 @@ export const ConnectionsTab: React.FC = () => {
         if (changed) await runSync(changed);
     };
 
+    /** Removes a source with everything it imported (its operations, and its accounts left empty). */
     const remove = async (id: string): Promise<void> => {
-        await connectionService.deleteConnection(id);
+        await syncEngine.removeConnection(id);
         await load();
+        await refreshData();
     };
 
     const addWallet = async (event: React.FormEvent): Promise<void> => {
@@ -183,6 +187,17 @@ export const ConnectionsTab: React.FC = () => {
                 report={snaptrade ? reports[snaptrade.id] : undefined}
                 syncing={snaptrade !== null && syncing === snaptrade.id}
                 busy={syncing !== null}
+                onSync={runSync}
+                onDelete={remove}
+                onChanged={syncChanged}
+            />
+
+            <BankConnectCard
+                connections={banks}
+                accountChoices={allChoices}
+                describeAccount={describeAccount}
+                reports={reports}
+                syncing={syncing}
                 onSync={runSync}
                 onDelete={remove}
                 onChanged={syncChanged}
@@ -283,7 +298,6 @@ export const ConnectionsTab: React.FC = () => {
                         ))}
                     </ul>
                 )}
-                <p className="text-xs text-tertiary mt-4">{t('settings:connections.comingSoon')}</p>
             </div>
         </div>
     );

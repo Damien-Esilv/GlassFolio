@@ -349,7 +349,7 @@
         "subtitle": "Enregistrer le solde actuel pour {{accountName}}",
         "options": {
             "title": "Comment souhaitez-vous mettre à jour votre solde ?",
-            "manualTitle": "Saisie Manuelle",
+            "manualTitle": "Saisie manuelle",
             "manualDescription": "Saisir rapidement le solde actuel et la date du relevé",
             "csvTitle": "Import CSV",
             "csvDescription": "Déposer un fichier CSV contenant l'historique des soldes pour tracer l'évolution dans le temps"
