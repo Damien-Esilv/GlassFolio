@@ -8,10 +8,11 @@ import {
   DESKTOP_OS_ORDER,
   DESKTOP_RELEASES_URL,
   downloadsFor,
+  otherMacDownload,
   primaryDownloadFor,
 } from '../../../src/config/downloads';
 import { GITHUB_REPO_URL, SELF_HOST_DEFAULT_PORT } from '../../../src/config/project';
-import { detectDesktopOs } from '../../../src/hooks/useDetectedOs';
+import { detectDesktopOs, macArchFromHint } from '../../../src/hooks/useDetectedOs';
 import { DEFAULT_PORT, GITHUB_REPO_URL as SHELL_REPO_URL, INSTALLER_FILES, RELEASES_PAGE_URL } from '../../../desktop/lib/constants.mjs';
 
 const read = (file: string): string => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
@@ -30,6 +31,16 @@ describe('desktop download catalog', () => {
       expect(primaryDownloadFor(os).os).toBe(os);
     });
     expect(primaryDownloadFor('mac').arch).toBe('arm64');
+  });
+
+  it('proposes Apple Silicon first on a Mac unless the chip is known to be Intel, and offers the other chip', () => {
+    expect(primaryDownloadFor('mac', null).id).toBe('mac-arm64');
+    expect(primaryDownloadFor('mac', 'arm64').id).toBe('mac-arm64');
+    expect(primaryDownloadFor('mac', 'x64').id).toBe('mac-x64');
+    expect(primaryDownloadFor('win', 'x64').id).toBe('win-x64');
+    expect(primaryDownloadFor('linux', 'x64').id).toBe('linux-appimage');
+    expect(otherMacDownload(primaryDownloadFor('mac', 'arm64'))?.id).toBe('mac-x64');
+    expect(otherMacDownload(primaryDownloadFor('mac', 'x64'))?.id).toBe('mac-arm64');
   });
 
   it('only ever points to installers the release workflow builds (names shared with desktop/)', () => {
@@ -72,5 +83,14 @@ describe('desktop system detection', () => {
     expect(detectDesktopOs('Mozilla/5.0 (Linux; Android 14; Pixel 8)', 'Linux armv8l')).toBeNull();
     expect(detectDesktopOs('Mozilla/5.0 (X11; CrOS x86_64 14541.0.0)', '')).toBeNull();
     expect(detectDesktopOs('', '')).toBeNull();
+  });
+});
+
+describe('Mac chip from the browser hint', () => {
+  it('reads the architecture hint of Chromium browsers and stays unknown otherwise', () => {
+    expect(macArchFromHint('arm')).toBe('arm64');
+    expect(macArchFromHint('x86')).toBe('x64');
+    expect(macArchFromHint('')).toBeNull();
+    expect(macArchFromHint(undefined)).toBeNull();
   });
 });

@@ -22,11 +22,11 @@ export interface DesktopDownload {
 }
 
 /**
- * Flip to `true` once the first release carries the installers (draft release published on GitHub).
+ * `true` once the latest GitHub release carries the installers (v1.1.0 is the first one).
  * While `false`, the website says "coming soon" and sends visitors to Docker or the cloud version,
- * so it never links to a file that does not exist.
+ * so it never links to a file that does not exist. Back to `false` if a release ever goes out without its installers.
  */
-export const DESKTOP_INSTALLERS_PUBLISHED = false;
+export const DESKTOP_INSTALLERS_PUBLISHED = true;
 
 /** Default port of the desktop app's local server (`desktop/lib/constants.mjs`); Docker keeps 3780. */
 export const DESKTOP_DEFAULT_PORT = '3790';
@@ -47,7 +47,17 @@ export const DESKTOP_OS_ORDER: readonly DesktopOs[] = ['mac', 'win', 'linux'];
 
 export const downloadsFor = (os: DesktopOs): readonly DesktopDownload[] => DESKTOP_DOWNLOADS.filter((download) => download.os === os);
 
-/** The installer to put first for a system: Apple Silicon Macs, the Windows installer, the AppImage. */
-export const primaryDownloadFor = (os: DesktopOs): DesktopDownload => downloadsFor(os)[0];
+/**
+ * The installer to put first for a system: Apple Silicon Macs (unless the visitor is known to be on Intel),
+ * the Windows installer, the AppImage.
+ */
+export const primaryDownloadFor = (os: DesktopOs, arch: DesktopArch | null = null): DesktopDownload => {
+  const installers = downloadsFor(os);
+  return (arch ? installers.find((item) => item.arch === arch) : undefined) ?? installers[0];
+};
+
+/** The Mac installer for the other chip than `current`, to offer when the guess may be wrong. */
+export const otherMacDownload = (current: DesktopDownload): DesktopDownload | undefined =>
+  downloadsFor('mac').find((item) => item.id !== current.id);
 
 export const buildDownloadUrl = (file: string): string => `${DESKTOP_DOWNLOAD_BASE_URL}/${file}`;

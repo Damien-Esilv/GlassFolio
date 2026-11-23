@@ -55,23 +55,9 @@
     "envelopesBadge": "PEA • CTO • Crypto • Assurance-Vie • Livrets",
     "cardTitle": "Multi-Envelope Wealth Overview",
     "demoCard": {
-      "badge": "Instant Access • No sign-up required",
-      "title": "Explore the full GlassFolio experience live",
-      "subtitle": "Try the complete application with zero friction — no email, no sign-up: PEA, brokerage, crypto, Cerfa tax helper and AI assistant with a preloaded sample portfolio.",
       "cta": "Try the 1-Click Interactive Demo",
       "ctaLoading": "Unlocking demo vault...",
-      "perks": {
-        "noAccount": "100% anonymous & no account needed",
-        "realAssets": "Pre-populated realistic portfolio",
-        "aiAssistant": "Active AI assistant & local MCP server",
-        "taxEngine": "Full French fiscal simulator unlocked"
-      },
-      "stats": {
-        "portfolioValue": "€148,450",
-        "portfolioLabel": "Sample Net Worth",
-        "unrealizedGain": "+€18,420 (+14.17%)",
-        "envelopes": "6 active envelopes"
-      }
+      "hint": "No sign-up, with a sample portfolio"
     },
     "envelopeFilterLabel": "Filter Envelope",
     "currencySwitchLabel": "Base Currency",
@@ -95,25 +81,16 @@
       "cashYield": "Cash, Livrets & Assurance-Vie"
     },
     "modes": {
-      "ariaLabel": "Three ways to use GlassFolio",
-      "desktop": {
-        "badge": "New",
-        "title": "Install the app",
-        "tagline": "Desktop app for Mac, Windows and Linux",
-        "points": {
-          "p1": "Its own window: no Docker, no terminal",
-          "p2": "Your data stays on your computer, encrypted"
-        },
-        "cta": "Download the app"
-      },
+      "ariaLabel": "Two ways to use GlassFolio",
       "local": {
-        "title": "Run it with Docker",
-        "tagline": "Self-hosted, for home servers",
+        "title": "Run it at home",
+        "tagline": "Desktop app or Docker",
         "points": {
           "p1": "Your data stays on your machine",
           "p2": "Source-available code, full control"
         },
-        "cta": "Install with Docker"
+        "cta": "Download the desktop app",
+        "ctaDocker": "Prefer Docker? Install it with Docker"
       },
       "cloud": {
         "title": "Use it online",
@@ -304,19 +281,30 @@
     }
   },
   "localCloud": {
-    "title": "Two ways to use GlassFolio",
+    "title": "Three ways to use GlassFolio",
     "subtitle": "The same app, the same encryption and the same features. Choose where it runs, and switch whenever you like.",
-    "local": {
-      "title": "Self-hosted",
-      "tagline": "Desktop app or Docker, on your computer or server",
+    "desktop": {
+      "badge": "Recommended",
+      "title": "Desktop app",
+      "tagline": "Install it like any other app, on Mac, Windows or Linux",
+      "points": {
+        "p1": "Its own window: no Docker, no terminal",
+        "p2": "Your data stays on your computer, encrypted",
+        "p3": "New versions offered inside the app"
+      },
+      "windowTitle": "GlassFolio",
+      "cta": "Get the desktop app"
+    },
+    "docker": {
+      "title": "Docker",
+      "tagline": "On your computer or a home server, opened in your browser",
       "points": {
         "p1": "Full control: your data never leaves your disk",
         "p2": "Source-available code you can audit",
         "p3": "Works offline, except for market prices"
       },
       "ctaGithub": "View the code on GitHub",
-      "ctaGuide": "Read the installation guide",
-      "ctaDesktop": "Get the desktop app"
+      "ctaGuide": "Read the installation guide"
     },
     "cloud": {
       "title": "Cloud",
@@ -429,7 +417,7 @@
       },
       "q6": {
         "question": "How can I try GlassFolio without creating an account?",
-        "answer": "Use the demo button at the top of this page. It opens a pre-filled demo portfolio (PEA, CTO, crypto, tax scenarios and goals) in your browser. You can still log in or create your own account afterwards."
+        "answer": "Use the demo button below. It opens a pre-filled demo portfolio (PEA, CTO, crypto, tax scenarios and goals) in your browser. You can still log in or create your own account afterwards."
       },
       "q7": {
         "question": "How do I install the Docker edition?",
@@ -437,7 +425,15 @@
       },
       "q8": {
         "question": "Can I use GlassFolio without Docker or a browser tab?",
-        "answer": "Yes. The desktop app for Mac, Windows and Linux opens GlassFolio in its own window: download it from the download page, open it and create your vault. It keeps your data on your computer, checks for new versions and installs them when you click. Your system may ask you to confirm the first launch, because the app is not signed with a paid developer certificate yet; the download page shows how."
+        "answer": "Yes. The desktop app for Mac, Windows and Linux opens GlassFolio in its own window. On the download page one button picks the right installer for your computer (a .dmg for a Mac, an .exe for Windows, an AppImage or a .deb for Linux), and the other versions are one click away. Open it and create your vault: your data stays on your computer, encrypted. The app checks for new versions and installs them when you click."
+      },
+      "q9": {
+        "question": "Why does my system warn me the first time I open the desktop app?",
+        "answer": "GlassFolio is free and source-available, and it is not signed with a paid developer certificate yet, so macOS and Windows ask you to confirm the first launch. On a Mac, open System Settings > Privacy & Security and click Open Anyway. On Windows, click More info, then Run anyway. The download page shows the steps for each system, and every release lists the SHA-256 fingerprint of each installer so you can check your download."
+      },
+      "q10": {
+        "question": "Can I unlock with Touch ID, a passkey or my password manager in the desktop app?",
+        "answer": "On a Mac, the desktop app unlocks with your master password: Touch ID, passkeys and your password manager's autofill are not available in it yet. They work in the browser editions (Docker and cloud). On Windows and Linux, support depends on your system."
       }
     }
   },

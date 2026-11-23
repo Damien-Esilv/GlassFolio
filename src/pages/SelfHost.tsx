@@ -151,7 +151,7 @@ const SelfHost: React.FC = () => {
 
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 grid lg:grid-cols-[13rem_1fr] gap-10 lg:gap-14">
             <nav aria-label={t('selfhost:tocLabel')} className="hidden lg:block">
-              <ol className="sticky top-24 space-y-1 text-sm border-l border-subtle">
+              <ol className="sticky top-36 mt-4 space-y-1 text-sm border-l border-subtle">
                 {SECTIONS.map((id) => (
                   <li key={id}>
                     <a

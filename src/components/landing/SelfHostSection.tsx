@@ -6,12 +6,16 @@ import {
   BookOpen, Github, HardDrive, Globe, Laptop, Smartphone, Tablet, RefreshCw, CheckCircle2,
   ShieldCheck, Sparkles, Download, Code2, Check,
 } from 'lucide-react';
+import { BrowserFrame, SCREENSHOT_HEIGHT, SCREENSHOT_WIDTH } from './BrowserFrame';
 import { InstallTerminal } from './InstallTerminal';
+import { Reveal } from './motion/Reveal';
 import { AppLink } from './LandingHeader';
 import { GITHUB_REPO_URL, buildPublicPagePath } from '../../config/project';
 
 const COMPARISON_ROWS = ['data', 'account', 'internet', 'twoFactor', 'ai', 'cost'] as const;
 const MODE_POINTS = ['p1', 'p2', 'p3'] as const;
+
+type Mode = 'desktop' | 'docker' | 'cloud';
 
 /** Promises that hold in both modes. */
 const SHARED_GUARANTEES = [
@@ -64,35 +68,69 @@ const CloudSyncPanel: React.FC = () => {
   );
 };
 
+/** The desktop app: a window around a screenshot of the app, next to the install transcript and the cloud panel. */
+const DesktopAppPanel: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const lang: 'en' | 'fr' = i18n.language?.startsWith('fr') ? 'fr' : 'en';
+  return (
+    <BrowserFrame address={t('landing:localCloud.desktop.windowTitle')}>
+      <img
+        src={`/screenshots/${lang}/dashboard.webp`}
+        alt=""
+        width={SCREENSHOT_WIDTH}
+        height={SCREENSHOT_HEIGHT}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-auto object-cover object-top"
+      />
+    </BrowserFrame>
+  );
+};
+
 const primaryButton =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap bg-primary hover:bg-primary-hover text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-canvas';
 const secondaryButton =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap bg-subtle hover:bg-card-hover border border-subtle text-primary text-sm font-bold px-5 py-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary';
 
-/** Local (desktop app or Docker) and cloud side by side, with the same weight, then what each one implies. */
+/** The three ways in, one under the other so each gets the full width: the desktop app first, then Docker and the cloud. */
 export const SelfHostSection: React.FC = () => {
   const { t } = useTranslation();
 
-  const renderMode = (mode: 'local' | 'cloud', icon: React.ReactNode, visual: React.ReactNode, actions: React.ReactNode) => (
-    <div className="flex flex-col rounded-2xl border border-subtle bg-canvas p-5 sm:p-7">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">{icon}</div>
-        <div>
-          <h3 className="text-lg sm:text-xl font-bold text-primary leading-tight">{t(`landing:localCloud.${mode}.title`)}</h3>
-          <p className="text-sm text-secondary">{t(`landing:localCloud.${mode}.tagline`)}</p>
+  const renderMode = (mode: Mode, icon: React.ReactNode, visual: React.ReactNode, actions: React.ReactNode) => (
+    <Reveal>
+    <div
+      className={`grid lg:grid-cols-2 gap-8 lg:gap-12 items-center rounded-2xl border bg-canvas p-5 sm:p-8 ${
+        mode === 'desktop' ? 'border-brand/40 ring-1 ring-brand/20' : 'border-subtle'
+      }`}
+    >
+      <div className="flex flex-col">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">{icon}</div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-bold text-primary leading-tight">{t(`landing:localCloud.${mode}.title`)}</h3>
+              {mode === 'desktop' && (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-brand bg-brand/10 border border-brand/30 rounded-full px-2 py-0.5">
+                  {t('landing:localCloud.desktop.badge')}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-secondary">{t(`landing:localCloud.${mode}.tagline`)}</p>
+          </div>
         </div>
+        <ul className="space-y-2 mb-6">
+          {MODE_POINTS.map((point) => (
+            <li key={point} className="flex items-start gap-2 text-sm text-primary">
+              <Check size={16} className="text-positive mt-0.5 shrink-0" />
+              <span>{t(`landing:localCloud.${mode}.points.${point}`)}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">{actions}</div>
       </div>
-      <ul className="space-y-2 mb-6">
-        {MODE_POINTS.map((point) => (
-          <li key={point} className="flex items-start gap-2 text-sm text-primary">
-            <Check size={16} className="text-positive mt-0.5 shrink-0" />
-            <span>{t(`landing:localCloud.${mode}.points.${point}`)}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mb-6">{visual}</div>
-      <div className="mt-auto flex flex-col sm:flex-row sm:flex-wrap gap-3">{actions}</div>
+      <div>{visual}</div>
     </div>
+    </Reveal>
   );
 
   return (
@@ -105,24 +143,29 @@ export const SelfHostSection: React.FC = () => {
           <p className="text-base text-secondary leading-relaxed">{t('landing:localCloud.subtitle')}</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 mb-16">
+        <div className="space-y-6 mb-16">
           {renderMode(
-            'local',
+            'desktop',
+            <Laptop size={21} />,
+            <DesktopAppPanel />,
+            <Link to={buildPublicPagePath('/download')} className={primaryButton}>
+              <Download size={17} />
+              <span>{t('landing:localCloud.desktop.cta')}</span>
+            </Link>
+          )}
+          {renderMode(
+            'docker',
             <HardDrive size={21} />,
             <InstallTerminal />,
             <>
-              <Link to={buildPublicPagePath('/download')} className={primaryButton}>
-                <Laptop size={17} />
-                <span>{t('landing:localCloud.local.ctaDesktop')}</span>
+              <Link to={buildPublicPagePath('/self-host')} className={secondaryButton}>
+                <BookOpen size={16} className="text-secondary" />
+                <span>{t('landing:localCloud.docker.ctaGuide')}</span>
               </Link>
               <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
                 <Github size={17} />
-                <span>{t('landing:localCloud.local.ctaGithub')}</span>
+                <span>{t('landing:localCloud.docker.ctaGithub')}</span>
               </a>
-              <Link to={buildPublicPagePath('/self-host')} className={secondaryButton}>
-                <BookOpen size={16} className="text-secondary" />
-                <span>{t('landing:localCloud.local.ctaGuide')}</span>
-              </Link>
             </>
           )}
           {renderMode(
