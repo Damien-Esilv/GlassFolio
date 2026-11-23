@@ -11,7 +11,7 @@
  * - Strictly typed & zero hardcoding
  */
 
-import { yahooFinanceUrl } from '../config/marketData';
+import { fetchYahoo } from './market/yahooClient';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
 import { appStorage } from './storage/appStorage';
 
@@ -54,17 +54,10 @@ function writeFxCache(data: Record<string, number>): void {
  * Fetch a single exchange rate ticker from Yahoo Finance v8 chart API.
  */
 async function fetchYahooFxRate(ticker: string): Promise<number | null> {
-  const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
-
-  const url = `${base}?interval=1d&range=1d`;
-
   try {
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000) // 5s timeout
-    });
+    const response = await fetchYahoo(`/v8/finance/chart/${encodeURIComponent(ticker)}`, 'interval=1d&range=1d', 5000);
 
-    if (!response.ok) return null;
+    if (!response?.ok) return null;
 
     const json = await response.json();
     const meta = json.chart?.result?.[0]?.meta;
@@ -109,13 +102,9 @@ const historyCache = new Map<string, Promise<DailyRates>>();
 const HISTORY_MAX_GAP_DAYS = 7;
 
 async function fetchYahooFxHistory(ticker: string): Promise<DailyRates> {
-  const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
   try {
-    const response = await fetch(`${base}?interval=1d&range=max`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!response.ok) return [];
+    const response = await fetchYahoo(`/v8/finance/chart/${encodeURIComponent(ticker)}`, 'interval=1d&range=max', 8000);
+    if (!response?.ok) return [];
     const json = await response.json();
     const result = json.chart?.result?.[0];
     const timestamps: number[] = result?.timestamp ?? [];

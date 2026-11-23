@@ -18,6 +18,8 @@ export const ValidIsoTimestampSchema = z
 export const PriceCacheSchema = z.object({
   data: z.record(z.string(), z.number().finite().positive()),
   currencies: z.record(z.string(), z.string().min(1)).optional(),
+  /** Last price ever fetched per ticker, kept past expiry for when a source fails (TGLA-235). */
+  lastKnown: z.record(z.string(), z.number().finite().positive()).optional(),
   fetchedAt: ValidIsoTimestampSchema,
 });
 

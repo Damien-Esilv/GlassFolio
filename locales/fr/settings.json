@@ -136,7 +136,6 @@
         "title": "Connexions",
         "subtitle": "Les sources qui tiennent vos positions à jour toutes seules, en lecture seule.",
         "privacyNote": "Les synchros tournent uniquement dans cet onglet, coffre déverrouillé : clés et adresses restent chiffrées dans votre coffre et ne sont jamais stockées sur un serveur. Les requêtes qu'un fournisseur refuse depuis un navigateur passent par un relais qui ne garde ni ne journalise rien.",
-        "empty": "Aucune source connectée pour l'instant. Ajoutez-en une ci-dessous.",
         "accountMissing": "Compte à choisir de nouveau",
         "lastSync": "Dernière synchro : {{date}}",
         "syncNow": "Synchroniser",
@@ -204,7 +203,9 @@
                 "bitcoin": "Bitcoin",
                 "evm": "Ethereum & EVM (Arbitrum, Base, Optimism, Polygon)",
                 "solana": "Solana"
-            }
+            },
+            "newAccountNamed": "Un nouveau compte « {{name}} »",
+            "accountHelp": "Choisissez un compte existant pour ajouter le wallet à ce que vous y suivez déjà (un compte Bitget, par exemple), ou gardez un nouveau compte rien qu’à lui."
         },
         "notifications": {
             "action": "Ouvrir les connexions",
@@ -244,12 +245,23 @@
             "skip": "Ne pas synchroniser ce compte",
             "startDate": "Importer les opérations à partir du",
             "startHelp": "Date vide : tout l'historique fourni par le courtier. Pour un compte qui contient déjà des lignes importées, le lendemain de la dernière est proposé, pour ne rien importer deux fois.",
-            "save": "Enregistrer et synchroniser",
+            "save": "Connecter et synchroniser",
             "errors": {
                 "keys": "Saisissez votre Client ID et votre Consumer key.",
-                "noAccounts": "Aucun compte trouvé : liez d'abord un courtier dans le tableau de bord SnapTrade.",
+                "noAccounts": "Vos clés fonctionnent, mais SnapTrade ne liste encore aucun compte d’investissement : reliez un courtier dans le tableau de bord SnapTrade, puis testez à nouveau.",
                 "noneChosen": "Choisissez au moins un compte à synchroniser."
-            }
+            },
+            "connectedHint": "Votre compte SnapTrade est relié. Il couvre tous vos courtiers : reliez un nouveau courtier dans le tableau de bord SnapTrade, puis choisissez où l’enregistrer avec « Gérer les comptes ».",
+            "connectedKeys": "Clés enregistrées dans votre coffre · Client ID {{clientId}}",
+            "accountsTitle": "Comptes synchronisés",
+            "noLinkedAccounts": "Aucun compte n’est synchronisé. Utilisez « Gérer les comptes » pour en choisir un.",
+            "manage": "Gérer les comptes",
+            "saveMapping": "Enregistrer et synchroniser"
+        },
+        "recordedIn": "enregistré dans {{account}}",
+        "wallets": {
+            "title": "Vos wallets",
+            "empty": "Aucun wallet ajouté pour l’instant."
         }
     }
 }

@@ -101,6 +101,8 @@ export interface ConnectionUpdate {
     mode?: Connection['mode'];
     syncIntervalHours?: number;
     historyStartDate?: string;
+    /** Merged into the stored cursor (start date of a newly linked account). */
+    cursor?: Record<string, ConnectionCursor>;
 }
 
 export interface SyncOutcome {
@@ -180,6 +182,7 @@ export const connectionService = {
                 ? current.syncIntervalHours
                 : clampInterval(update.syncIntervalHours),
             historyStartDate: update.historyStartDate ?? current.historyStartDate,
+            cursor: update.cursor ? { ...current.cursor, ...update.cursor } : current.cursor,
             updatedAt: new Date().toISOString(),
         };
         items[index] = next;

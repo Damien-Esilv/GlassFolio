@@ -17,6 +17,8 @@ import { ConnectorError, type AdapterContext, type SourceAdapter } from '../type
 import { EVM_CHAINS, SOL, SOLANA_TOKENS } from './walletAssets';
 
 const ACTIVITY_PAGE_SIZE = 1000;
+/** SnapTrade account kinds with no investments to sync. */
+const CASH_ACCOUNT_KINDS = new Set(['deposit', 'checking', 'savings', 'credit', 'credit_card', 'loan']);
 const MAX_ACTIVITY_PAGES = 20;
 
 /** Market Identifier Code → Yahoo Finance suffix, to price a listing (CW8 on XPAR → CW8.PA). */
@@ -239,7 +241,9 @@ export const snaptradeSource: SourceAdapter = {
     async listExternalAccounts(ctx: AdapterContext): Promise<ExternalAccount[]> {
         const accounts = parse(AccountsSchema, await snaptradeGet(ctx, '/accounts/all'));
         return accounts.results
-            .filter(account => !account.kind || account.kind === 'investment')
+            // Bank-side accounts (checking, credit card…) carry no positions; every other kind is kept,
+            // crypto exchanges included, whatever name SnapTrade gives them
+            .filter(account => !CASH_ACCOUNT_KINDS.has((account.kind ?? '').toLowerCase()))
             .map(account => ({
                 externalId: account.id,
                 name: [account.display_name, account.masked_account_number].filter(Boolean).join(' ') || account.id,

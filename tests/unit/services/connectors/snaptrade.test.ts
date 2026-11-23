@@ -51,6 +51,7 @@ const relay = (calls: RelayCall[], overrides: { status?: number } = {}) =>
       return json({ results: [
         { kind: 'investment', id: 'ibkr-pea', display_name: 'IBKR PEA', masked_account_number: '****1234', net_value: { currency: 'EUR' } },
         { kind: 'deposit', id: 'cash-1', display_name: 'Checking' },
+        { kind: 'crypto', id: 'binance-1', display_name: 'Binance' },
       ] });
     }
     if (call.path.endsWith('/positions/all')) {
@@ -89,7 +90,11 @@ describe('SnapTrade request signing', () => {
     vi.stubGlobal('fetch', relay(calls));
     const accounts = await snaptradeSource.listExternalAccounts(ctx);
 
-    expect(accounts).toEqual([{ externalId: 'ibkr-pea', name: 'IBKR PEA ****1234', currency: 'EUR' }]);
+    // Bank-side accounts are left out; any other kind (a crypto exchange here) is offered
+    expect(accounts).toEqual([
+      { externalId: 'ibkr-pea', name: 'IBKR PEA ****1234', currency: 'EUR' },
+      { externalId: 'binance-1', name: 'Binance', currency: undefined },
+    ]);
     const [call] = calls;
     expect(call).toMatchObject({ provider: 'snaptrade', method: 'GET', path: '/accounts/all' });
     expect(call.query).toMatch(new RegExp(`^clientId=${CLIENT_ID}&timestamp=\\d{10}$`));
@@ -196,5 +201,35 @@ describe('SnapTrade sync', () => {
     db.saveUnifiedTransactions([{ id: 't1', accountId: 'acc-pea', transactionDate: '2026-02-10T12:00:00.000Z' } as never]);
     expect(connectionService.suggestStartDate('acc-pea')).toBe('2026-02-11');
     expect(connectionService.suggestStartDate('acc-empty')).toBe('');
+  });
+
+  it('lists the accounts again with the stored keys, to change where each one goes', async () => {
+    const calls: RelayCall[] = [];
+    vi.stubGlobal('fetch', relay(calls));
+    const connection = await connectionService.createConnection({
+      sourceId: 'snaptrade', label: 'SnapTrade', credentials: { clientId: CLIENT_ID, consumerKey: CONSUMER_KEY },
+      accountMap: { 'ibkr-pea': 'acc-pea' }, mode: 'history',
+    });
+    const accounts = await syncEngine.listExternalAccounts(connection.id);
+    expect(accounts.map(account => account.externalId)).toEqual(['ibkr-pea', 'binance-1']);
+    expect(calls[0].query).toContain(`clientId=${CLIENT_ID}`);
+  });
+
+  it('a newly linked account gets its own start date, the others keep their cursor', async () => {
+    const connection = await connectionService.createConnection({
+      sourceId: 'snaptrade', label: 'SnapTrade', credentials: { clientId: CLIENT_ID, consumerKey: CONSUMER_KEY },
+      accountMap: { 'ibkr-pea': 'acc-pea' }, mode: 'history',
+      cursor: { 'ibkr-pea': { lastActivityDate: '2026-04-01T10:00:00.000Z' } },
+    });
+    const updated = await connectionService.updateConnection(connection.id, {
+      accountMap: { 'ibkr-pea': 'acc-pea', 'binance-1': 'acc-pea' },
+      cursor: { 'binance-1': { lastActivityDate: '2026-05-01T00:00:00.000Z' } },
+      publicParams: { accountNames: { 'ibkr-pea': 'IBKR PEA', 'binance-1': 'Binance' } },
+    });
+    expect(updated.cursor).toEqual({
+      'ibkr-pea': { lastActivityDate: '2026-04-01T10:00:00.000Z' },
+      'binance-1': { lastActivityDate: '2026-05-01T00:00:00.000Z' },
+    });
+    expect(updated.publicParams.accountNames?.['binance-1']).toBe('Binance');
   });
 });
