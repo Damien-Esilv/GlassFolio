@@ -572,7 +572,7 @@ const FeeAnalysis: React.FC = () => {
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.etfHeader')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.category')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.isin')}</th>
-                           <th className="pb-3 px-3">{t('reports:feeAnalysis.terHeader')}</th>
+                           <th className="pb-3 px-3 text-right">{t('reports:feeAnalysis.terHeader')}</th>
                            <th className="pb-3 px-3">{t('reports:feeAnalysis.viewOnYahoo')}</th>
                         </tr>
                      </thead>
@@ -589,7 +589,7 @@ const FeeAnalysis: React.FC = () => {
                                  </td>
                                  <td className="py-3 px-3 font-semibold text-secondary">{info.category}</td>
                                  <td className="py-3 px-3 text-xs text-tertiary font-mono">{info.isin || t('reports:feeAnalysis.notAvailable')}</td>
-                                 <td className="py-3 px-3 font-bold">
+                                 <td className="py-3 px-3 font-bold text-right">
                                     <span className={`px-2 py-0.5 rounded text-xs ${
                                        info.ter <= 0.20 ? 'bg-accent-green/10 text-accent-green' : 'bg-subtle text-primary'
                                     }`}>

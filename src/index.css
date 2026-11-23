@@ -268,6 +268,8 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-canvas);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' on, 'cv05' on;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -501,6 +503,22 @@ textarea::selection {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    font-variant-numeric: tabular-nums;
+    /* Ensures native OpenType tnum (tabular digits) and cv05 (l-tail) are active across all elements */
+    font-feature-settings: 'tnum' on, 'cv05' on;
+  }
+
+  input,
+  button,
+  select,
+  textarea {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' on, 'cv05' on;
+  }
+}
 
 @layer utilities {
   .font-mono {
