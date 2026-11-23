@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Cpu, Github, HardDrive, Laptop, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Cpu, HardDrive, Laptop, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Github } from '../components/icons/Github';
 import { PublicPageShell } from '../components/landing/PublicPageShell';
 import { Reveal } from '../components/landing/motion/Reveal';
 import { AllDownloads } from '../components/download/AllDownloads';

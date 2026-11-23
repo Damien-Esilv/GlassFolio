@@ -232,8 +232,8 @@ const Dashboard: React.FC = () => {
 
           {/* Main Chart Section with X-Axis Dates */}
           <div className="h-[300px] w-full mt-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart key={displayedRange} data={chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
+            <ResponsiveContainer key={displayedRange} width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 25, left: 25, bottom: 30 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />

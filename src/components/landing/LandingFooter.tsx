@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Hexagon, Sparkles, Lock, ArrowRight, ShieldCheck, Cookie, Github } from 'lucide-react';
+import { Hexagon, Sparkles, Lock, ArrowRight, ShieldCheck, Cookie } from 'lucide-react';
+import { Github } from '../icons/Github';
 import { useDemoAccess } from '../../hooks/useDemoAccess';
 import { openConsentPreferences } from '../../services/consentService';
 import { getDeploymentMode, getAppUrl, buildAppDestinationUrl, getAppTarget } from '../../config/deployment';

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Github } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import { Github } from '../components/icons/Github';
 import { PublicPageShell } from '../components/landing/PublicPageShell';
 import { CodeBlock } from '../components/landing/CodeBlock';
 import { GITHUB_REPO_URL, SELF_HOST_DEFAULT_URL, buildPublicPagePath } from '../config/project';

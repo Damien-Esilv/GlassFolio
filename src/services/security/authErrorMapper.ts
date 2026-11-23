@@ -9,7 +9,11 @@
  *   4. the caller's fallback key — raw (English) server text is never shown to the user.
  */
 
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+/** The `t` of react-i18next: since i18next 27 it fits a key alone or a key with options, written as two signatures. */
+interface Translate {
+    (key: string): string;
+    (key: string, options: Record<string, unknown>): string;
+}
 
 interface MappedKey {
     key: string;

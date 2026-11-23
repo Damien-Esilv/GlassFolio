@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
 import {
-  BookOpen, Github, HardDrive, Globe, Laptop, Smartphone, Tablet, RefreshCw, CheckCircle2,
-  ShieldCheck, Sparkles, Download, Code2, Check,
+  BookOpen, HardDrive, Globe, Laptop, Smartphone, Tablet, RefreshCw, CheckCircle2, ShieldCheck, Sparkles, Download, Code2, Check,
 } from 'lucide-react';
+import { Github } from '../icons/Github';
 import { BrowserFrame, SCREENSHOT_HEIGHT, SCREENSHOT_WIDTH } from './BrowserFrame';
 import { InstallTerminal } from './InstallTerminal';
 import { Reveal } from './motion/Reveal';

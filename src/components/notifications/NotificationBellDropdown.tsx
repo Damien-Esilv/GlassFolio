@@ -37,7 +37,7 @@ function getCategoryIcon(category?: NotificationCategory, type?: string) {
   }
 }
 
-function formatRelativeTime(dateStr: string, t: (key: string, opts?: any) => string): string {
+function formatRelativeTime(dateStr: string, t: { (key: string): string; (key: string, opts: Record<string, unknown>): string }): string {
   const ts = Date.parse(dateStr);
   if (Number.isNaN(ts)) return dateStr;
 
