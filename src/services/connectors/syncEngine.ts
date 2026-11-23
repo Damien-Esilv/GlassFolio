@@ -15,6 +15,7 @@ import { VALID_FIAT_CURRENCIES } from '../../types/types.backend';
 import type {
     ConnectionErrorCode,
     ConnectionStatus,
+    ExternalAccount,
     NormalizedActivity,
     NormalizedHolding,
     SafeConnection,
@@ -454,6 +455,18 @@ export const syncEngine = {
         const run = queue.then(() => runSyncNow(connectionId));
         queue = run.catch(() => undefined);
         return run;
+    },
+
+    /** Accounts the provider lists with the stored credentials (to change where each one is recorded). */
+    async listExternalAccounts(connectionId: string): Promise<ExternalAccount[]> {
+        const connection = await connectionService.getConnection(connectionId);
+        const adapter = connection ? sourceRegistry.get(connection.sourceId) : undefined;
+        if (!connection || !adapter) throw new ConnectorError('unknown', 'Unknown connection');
+        return adapter.listExternalAccounts({
+            connectionId,
+            credentials: await connectionService.getCredentials(connectionId),
+            publicParams: connection.publicParams,
+        });
     },
 
     /** Whether a connection is due for an automatic sync. */

@@ -136,7 +136,6 @@
         "title": "Connections",
         "subtitle": "Sources that keep your positions up to date on their own, read-only.",
         "privacyNote": "Syncs run in this tab only, while your vault is unlocked: keys and addresses stay encrypted in your vault and are never stored on a server. Requests that a provider refuses from a browser go through a relay that stores and logs nothing.",
-        "empty": "No source connected yet. Add one below.",
         "accountMissing": "Account to choose again",
         "lastSync": "Last sync: {{date}}",
         "syncNow": "Sync now",
@@ -204,7 +203,9 @@
                 "bitcoin": "Bitcoin",
                 "evm": "Ethereum & EVM (Arbitrum, Base, Optimism, Polygon)",
                 "solana": "Solana"
-            }
+            },
+            "newAccountNamed": "A new account “{{name}}”",
+            "accountHelp": "Pick an existing account to add the wallet to what you already track there (a Bitget account, for example), or keep a new account of its own."
         },
         "notifications": {
             "action": "Open connections",
@@ -244,12 +245,23 @@
             "skip": "Do not sync this account",
             "startDate": "Import operations from",
             "startHelp": "Empty date: the whole history the broker gives. For an account that already holds imported rows, the day after the last one is proposed, so nothing is imported twice.",
-            "save": "Save and sync",
+            "save": "Connect and sync",
             "errors": {
                 "keys": "Enter your Client ID and Consumer key.",
-                "noAccounts": "No account found: link a broker in the SnapTrade dashboard first.",
+                "noAccounts": "Your keys work, but SnapTrade lists no investment account yet: link a broker in the SnapTrade dashboard, then test again.",
                 "noneChosen": "Choose at least one account to sync."
-            }
+            },
+            "connectedHint": "Your SnapTrade account is linked. It covers all your brokers: link a new broker in the SnapTrade dashboard, then use “Manage accounts” to choose where it goes.",
+            "connectedKeys": "Keys saved in your vault · Client ID {{clientId}}",
+            "accountsTitle": "Synced accounts",
+            "noLinkedAccounts": "No account is synced yet. Use “Manage accounts” to choose one.",
+            "manage": "Manage accounts",
+            "saveMapping": "Save and sync"
+        },
+        "recordedIn": "recorded in {{account}}",
+        "wallets": {
+            "title": "Your wallets",
+            "empty": "No wallet added yet."
         }
     }
 }

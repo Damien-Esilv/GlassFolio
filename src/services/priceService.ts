@@ -12,7 +12,7 @@
  * - Zero hardcoding, 100% typed
  */
 
-import { yahooFinanceUrl } from '../config/marketData';
+import { fetchYahoo } from './market/yahooClient';
 import { Position } from '../types';
 import { appStorage } from './storage/appStorage';
 import { db } from './db';
@@ -33,6 +33,8 @@ interface PriceCache {
     data: Record<string, number>; // e.g. { 'AAPL': 224.50, 'BTC-USD': 64200, 'CW8.PA': 520.50 }
     /** Quote currency of each fetched price (absent for hand-entered prices, already in the asset's currency). */
     currencies?: Record<string, string>;
+    /** Last price ever fetched per ticker, kept past expiry: used only when a source fails. */
+    lastKnown?: Record<string, number>;
     fetchedAt: string;            // ISO 8601 string timestamp
 }
 
@@ -126,6 +128,9 @@ const EXCHANGE_SUFFIX_MAP: Record<string, string> = {
     'NYSE': '',
     'AMEX': ''
 };
+
+/** Wait before the single retry of a CoinGecko request refused for rate limit. */
+const COINGECKO_RETRY_MS = 1500;
 
 const COINGECKO_MAP: Record<string, string> = {
     'BTC': 'bitcoin',
@@ -252,13 +257,15 @@ function latestManualPrice(symbol: string): number | undefined {
     return latest.price > 0 ? latest.price : undefined;
 }
 
-function readCache(): PriceCache | null {
+/** The price cache; an expired one only when `allowStale` (last known prices, when a source fails). */
+function readCache(allowStale = false): PriceCache | null {
     try {
         const raw = appStorage.getItem(CACHE_KEY);
         if (!raw) return null;
         const validated = PriceCacheSchema.safeParse(JSON.parse(raw));
         if (!validated.success) return null;
         const parsed = validated.data;
+        if (allowStale) return parsed;
         const age = Date.now() - new Date(parsed.fetchedAt).getTime();
         if (!Number.isFinite(age) || age < 0 || age > CACHE_TTL_MS) return null; // Expired or invalid cache
         return parsed;
@@ -269,11 +276,13 @@ function readCache(): PriceCache | null {
 
 function writeCache(data: Record<string, number>, currencies: Record<string, string> = {}): void {
     try {
-        const existing = readCache();
-        const merged = { ...(existing?.data ?? {}), ...data };
+        const fresh = readCache();
+        const any = readCache(true);
         const cache: PriceCache = {
-            data: merged,
-            currencies: { ...(existing?.currencies ?? {}), ...currencies },
+            data: { ...(fresh?.data ?? {}), ...data },
+            currencies: { ...(any?.currencies ?? {}), ...currencies },
+            // Every price ever fetched, expired ones included: used only when a source fails later
+            lastKnown: { ...(any?.lastKnown ?? {}), ...(any?.data ?? {}), ...data },
             fetchedAt: new Date().toISOString()
         };
         appStorage.setItem(CACHE_KEY, JSON.stringify(cache));
@@ -293,6 +302,8 @@ export function forgetCachedPrices(symbols: string[]): void {
             if (!clean) continue;
             delete parsed.data[clean];
             delete parsed.data[`${clean}-USD`];
+            delete parsed.lastKnown?.[clean];
+            delete parsed.lastKnown?.[`${clean}-USD`];
             delete parsed.currencies?.[clean];
         }
         appStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
@@ -326,19 +337,10 @@ export function getLastPriceFetchTime(): string | null {
  * Fetches price for a single ticker via Yahoo Finance v8 chart API.
  */
 async function fetchYahooTickerPrice(ticker: string): Promise<PriceQuote | null> {
-    const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
-
-    const url = `${base}?interval=1d&range=1d`;
-
     try {
-        const response = await fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-            },
-            signal: AbortSignal.timeout(6000) // 6s timeout per ticker
-        });
+        const response = await fetchYahoo(`/v8/finance/chart/${encodeURIComponent(ticker)}`, 'interval=1d&range=1d', 6000);
 
-        if (!response.ok) return null;
+        if (!response?.ok) return null;
 
         const validated = YahooChartResponseSchema.safeParse(await response.json());
         if (!validated.success) return null;
@@ -386,10 +388,16 @@ async function fetchCoinGeckoBatch(ids: string[], demoKey?: string | null): Prom
     if (valid.length === 0) return {};
     try {
         const url = `https://api.coingecko.com/api/v3/simple/price?ids=${valid.join(',')}&vs_currencies=usd`;
-        const res = await fetch(url, {
+        const request = (): Promise<Response> => fetch(url, {
             headers: demoKey ? { 'x-cg-demo-api-key': demoKey } : undefined,
             signal: AbortSignal.timeout(5000),
         });
+        let res = await request();
+        // The keyless tier refuses bursts: one more try a moment later
+        if (res.status === 429) {
+            await new Promise(resolve => setTimeout(resolve, COINGECKO_RETRY_MS));
+            res = await request();
+        }
         if (!res.ok) return {};
         const validated = CoinGeckoSimplePriceSchema.safeParse(await res.json());
         if (!validated.success) return {};
@@ -497,6 +505,16 @@ export async function refreshPositionPrices(positions: Position[]): Promise<Posi
             prices = { ...prices, ...fetchedPrices };
             currencies = { ...currencies, ...fetchedCurrencies };
             writeCache(prices, currencies);
+        }
+
+        // A source that failed (rate limit, network) keeps the last known price rather than showing 0
+        const stale = readCache(true);
+        for (const ticker of missingTickers) {
+            const last = stale?.lastKnown?.[ticker] ?? stale?.data[ticker];
+            if (ticker in prices || !last) continue;
+            prices[ticker] = last;
+            const lastCurrency = stale?.currencies?.[ticker];
+            if (lastCurrency) currencies[ticker] = lastCurrency;
         }
     }
 
@@ -656,17 +674,10 @@ export async function fetchRealPriceHistory(
     let quoteCurrency: string | undefined;
 
     // 2. Fetch from Yahoo Finance
-    const base = yahooFinanceUrl(`/v8/finance/chart/${encodeURIComponent(ticker)}`);
-
-    const url = `${base}?range=${rangeParam}&interval=${intervalParam}`;
-
     try {
-        const res = await fetch(url, {
-            headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(6000)
-        });
+        const res = await fetchYahoo(`/v8/finance/chart/${encodeURIComponent(ticker)}`, `range=${rangeParam}&interval=${intervalParam}`, 6000);
 
-        if (res.ok) {
+        if (res?.ok) {
             const json = await res.json();
             const timestamps: number[] = json.chart?.result?.[0]?.timestamp || [];
             const closes: (number | null)[] = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];

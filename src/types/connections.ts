@@ -108,6 +108,8 @@ export interface ConnectionPublicParams {
     addresses?: string[];
     /** EVM chain ids to scan (Etherscan V2 `chainid`). */
     chainIds?: number[];
+    /** Provider display name of each linked external account (shown in the settings). */
+    accountNames?: Record<string, string>;
 }
 
 /** Incremental sync state, per external account. */

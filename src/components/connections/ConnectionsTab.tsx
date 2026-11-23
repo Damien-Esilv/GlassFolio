@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bitcoin, Briefcase, Link2, RefreshCw, ShieldCheck, Trash2, AlertTriangle, Wallet } from 'lucide-react';
+import { Bitcoin, Link2, ShieldCheck, Wallet } from 'lucide-react';
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -8,8 +8,10 @@ import { accountService, instituteService } from '../../services/instituteServic
 import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID } from '../../services/connectors';
 import { notifySyncOutcome } from '../../services/connectors/syncNotifications';
 import { SnapTradeConnectCard } from './SnapTradeConnectCard';
-import type { Account } from '../../types';
-import type { ConnectionStatus, SafeConnection, SourceId, SyncReport } from '../../types/connections';
+import { StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
+import { accountLabel, toAccountChoices } from './accountChoices';
+import type { Account, Institute } from '../../types';
+import type { SafeConnection, SourceId, SyncReport } from '../../types/connections';
 
 type WalletChain = 'bitcoin' | 'evm' | 'solana';
 
@@ -20,28 +22,46 @@ const WALLET_CHAINS: Record<WalletChain, { sourceId: SourceId; isValid: (entry: 
     solana: { sourceId: 'wallet_sol', isValid: isSolanaAddress },
 };
 
-const STATUS_STYLE: Record<ConnectionStatus, string> = {
-    ok: 'bg-positive-subtle text-positive',
-    never_synced: 'bg-subtle text-secondary',
-    error: 'bg-negative-subtle text-negative',
-    auth_failed: 'bg-negative-subtle text-negative',
-    rate_limited: 'bg-warning-subtle text-warning',
-    needs_mapping: 'bg-warning-subtle text-warning',
-};
-
 const NEW_ACCOUNT = '__new__';
 const inputClass = 'w-full bg-subtle border border-subtle text-primary text-sm rounded-lg focus:ring-primary focus:border-primary p-2.5';
+const cardStyle = 'bg-card rounded-xl p-6 shadow-lg border border-border';
 
-/** Settings → Connections (TGLA-221): the automatic sync sources and their last result. */
+/** One line high, growing with what is pasted (a long xpub or several addresses). */
+const AutoGrowTextarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = props => {
+    const ref = useRef<HTMLTextAreaElement>(null);
+    const fit = useCallback((): void => {
+        const element = ref.current;
+        if (!element) return;
+        element.style.height = 'auto';
+        element.style.height = `${element.scrollHeight}px`;
+    }, []);
+    useLayoutEffect(fit, [props.value, fit]);
+    // A narrower field wraps the same text on more lines (window resized, phone turned)
+    useEffect(() => {
+        const element = ref.current;
+        if (!element || typeof ResizeObserver === 'undefined') return undefined;
+        let width = element.clientWidth;
+        const observer = new ResizeObserver(() => {
+            if (element.clientWidth === width) return;
+            width = element.clientWidth;
+            fit();
+        });
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [fit]);
+    return <textarea ref={ref} rows={1} {...props} />;
+};
+
+/** Settings → Connections (TGLA-221, TGLA-235): SnapTrade for brokers, watch-only wallets for self-custody. */
 export const ConnectionsTab: React.FC = () => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const { user } = useAuth();
     const { refreshData } = useData();
     const [connections, setConnections] = useState<SafeConnection[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
+    const [institutes, setInstitutes] = useState<Institute[]>([]);
     const [reports, setReports] = useState<Record<string, SyncReport>>({});
     const [syncing, setSyncing] = useState<string | null>(null);
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
     const [chain, setChain] = useState<WalletChain>('bitcoin');
     const [label, setLabel] = useState('');
@@ -51,20 +71,32 @@ export const ConnectionsTab: React.FC = () => {
     const [saving, setSaving] = useState(false);
 
     const load = useCallback(async () => {
-        const [list, allAccounts] = await Promise.all([connectionService.listConnections(), accountService.getAccounts()]);
+        const [list, allAccounts, allInstitutes] = await Promise.all([
+            connectionService.listConnections(), accountService.getAccounts(), instituteService.getInstitutes(),
+        ]);
         setConnections(list);
         setAccounts(allAccounts);
+        setInstitutes(allInstitutes);
     }, []);
 
     useEffect(() => {
         void load();
     }, [load]);
 
-    const accountName = useMemo(() => new Map(accounts.map(account => [account.id, account.name])), [accounts]);
-    const cryptoAccounts = useMemo(() => accounts.filter(account => account.type.startsWith('crypto')), [accounts]);
+    const instituteById = useMemo(() => new Map(institutes.map(institute => [institute.id, institute])), [institutes]);
+    const accountById = useMemo(() => new Map(accounts.map(account => [account.id, account])), [accounts]);
+    const allChoices = useMemo(() => toAccountChoices(accounts, instituteById), [accounts, instituteById]);
+    const cryptoChoices = useMemo(
+        () => toAccountChoices(accounts.filter(account => account.type.startsWith('crypto')), instituteById),
+        [accounts, instituteById]
+    );
+    const describeAccount = useCallback((accountId: string): string => {
+        const account = accountById.get(accountId);
+        return account ? accountLabel(account, instituteById) : t('settings:connections.accountMissing');
+    }, [accountById, instituteById, t]);
 
-    const formatDate = (iso?: string): string =>
-        iso ? new Date(iso).toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+    const snaptrade = connections.find(connection => connection.sourceId === 'snaptrade') ?? null;
+    const wallets = connections.filter(connection => connection.sourceId !== 'snaptrade');
 
     const runSync = async (connection: SafeConnection): Promise<void> => {
         setSyncing(connection.id);
@@ -79,16 +111,15 @@ export const ConnectionsTab: React.FC = () => {
         }
     };
 
-    /** First sync of a source just added from a card (SnapTrade). */
-    const syncNewConnection = async (connectionId: string): Promise<void> => {
+    /** A source just added or changed: show it, then sync it at once. */
+    const syncChanged = async (connectionId: string): Promise<void> => {
         await load();
-        const created = await connectionService.getConnection(connectionId);
-        if (created) await runSync(created);
+        const changed = await connectionService.getConnection(connectionId);
+        if (changed) await runSync(changed);
     };
 
     const remove = async (id: string): Promise<void> => {
         await connectionService.deleteConnection(id);
-        setConfirmDelete(null);
         await load();
     };
 
@@ -121,16 +152,13 @@ export const ConnectionsTab: React.FC = () => {
             setLabel('');
             setAddresses('');
             setTarget(NEW_ACCOUNT);
-            await load();
-            await runSync(connection);
+            await syncChanged(connection.id);
         } catch {
             setFormError(t('settings:connections.form.errors.generic'));
         } finally {
             setSaving(false);
         }
     };
-
-    const cardStyle = 'bg-card rounded-xl p-6 shadow-lg border border-border';
 
     return (
         <div className="space-y-6">
@@ -142,111 +170,59 @@ export const ConnectionsTab: React.FC = () => {
                         <p className="text-sm text-secondary mt-1">{t('settings:connections.subtitle')}</p>
                     </div>
                 </div>
-                <div className="flex items-start gap-2 text-xs text-secondary bg-subtle border border-subtle rounded-lg p-3 mb-5">
+                <div className="flex items-start gap-2 text-xs text-secondary bg-subtle border border-subtle rounded-lg p-3">
                     <ShieldCheck size={16} className="text-positive shrink-0" aria-hidden="true" />
                     <span>{t('settings:connections.privacyNote')}</span>
                 </div>
-
-                {connections.length === 0 ? (
-                    <p className="text-sm text-tertiary">{t('settings:connections.empty')}</p>
-                ) : (
-                    <ul className="space-y-3">
-                        {connections.map(connection => {
-                            const report = reports[connection.id];
-                            const drift = report?.accounts.flatMap(account => account.drift) ?? [];
-                            const imported = report?.accounts.reduce((total, account) => total + account.imported, 0) ?? 0;
-                            return (
-                                <li key={connection.id} className="border border-border rounded-lg p-4">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        {connection.sourceId === 'wallet_btc' && <Bitcoin size={20} className="text-brand shrink-0" aria-hidden="true" />}
-                                        {connection.sourceId === 'snaptrade' && <Briefcase size={20} className="text-brand shrink-0" aria-hidden="true" />}
-                                        {(connection.sourceId === 'wallet_evm' || connection.sourceId === 'wallet_sol') && (
-                                            <Wallet size={20} className="text-brand shrink-0" aria-hidden="true" />
-                                        )}
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-medium text-primary truncate">{connection.label}</p>
-                                            <p className="text-xs text-tertiary">
-                                                {t(`settings:connections.sources.${connection.sourceId}`)}
-                                                {' · '}
-                                                {Object.values(connection.accountMap).map(id => accountName.get(id) ?? t('settings:connections.accountMissing')).join(', ')
-                                                    || t('settings:connections.accountMissing')}
-                                            </p>
-                                        </div>
-                                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${STATUS_STYLE[connection.lastStatus]}`}>
-                                            {t(`settings:connections.status.${connection.lastStatus}`)}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
-                                        <p className="text-xs text-secondary">
-                                            {t('settings:connections.lastSync', { date: formatDate(connection.lastSyncAt) })}
-                                            {connection.lastErrorCode && ` · ${t(`settings:connections.errors.${connection.lastErrorCode}`)}`}
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <Button size="sm" variant="secondary" isLoading={syncing === connection.id} disabled={syncing !== null}
-                                                onClick={() => void runSync(connection)}>
-                                                <RefreshCw size={14} className="mr-1.5" aria-hidden="true" />
-                                                {t('settings:connections.syncNow')}
-                                            </Button>
-                                            {confirmDelete === connection.id ? (
-                                                <Button size="sm" variant="danger" onClick={() => void remove(connection.id)}>
-                                                    {t('settings:connections.confirmDelete')}
-                                                </Button>
-                                            ) : (
-                                                <Button size="sm" variant="ghost" aria-label={t('settings:connections.delete')}
-                                                    onClick={() => setConfirmDelete(connection.id)}>
-                                                    <Trash2 size={14} aria-hidden="true" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {report && (
-                                        <p className="text-xs text-secondary mt-2" role="status">
-                                            {t('settings:connections.result', { count: imported })}
-                                        </p>
-                                    )}
-                                    {drift.length > 0 && (
-                                        <div className="flex items-start gap-2 text-xs text-primary bg-warning-subtle rounded-lg p-2 mt-2">
-                                            <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" aria-hidden="true" />
-                                            <span>{t('settings:connections.drift', { assets: drift.map(item => item.asset).join(', ') })}</span>
-                                        </div>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                )}
             </div>
 
-            <SnapTradeConnectCard accounts={accounts} onConnected={syncNewConnection} />
+            <SnapTradeConnectCard
+                connection={snaptrade}
+                accountChoices={allChoices}
+                describeAccount={describeAccount}
+                report={snaptrade ? reports[snaptrade.id] : undefined}
+                syncing={snaptrade !== null && syncing === snaptrade.id}
+                busy={syncing !== null}
+                onSync={runSync}
+                onDelete={remove}
+                onChanged={syncChanged}
+            />
 
             <div className={cardStyle}>
-                <h3 className="text-lg font-semibold text-primary">{t('settings:connections.form.title')}</h3>
-                <p className="text-sm text-secondary mt-1 mb-4">{t('settings:connections.form.description')}</p>
-                <form onSubmit={event => void addWallet(event)} className="space-y-4">
-                    <div>
-                        <label htmlFor="connection-chain" className="block text-xs font-medium text-secondary mb-1.5">
-                            {t('settings:connections.form.chain')}
-                        </label>
-                        <select id="connection-chain" value={chain} onChange={event => setChain(event.target.value as WalletChain)} className={inputClass}>
-                            {(Object.keys(WALLET_CHAINS) as WalletChain[]).map(key => (
-                                <option key={key} value={key}>{t(`settings:connections.form.chains.${key}`)}</option>
-                            ))}
-                        </select>
+                <div className="flex items-start gap-3">
+                    <Wallet size={20} className="text-brand shrink-0 mt-1" aria-hidden="true" />
+                    <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-primary">{t('settings:connections.form.title')}</h3>
+                        <p className="text-sm text-secondary mt-1">{t('settings:connections.form.description')}</p>
                     </div>
-                    <div>
-                        <label htmlFor="connection-label" className="block text-xs font-medium text-secondary mb-1.5">
-                            {t('settings:connections.form.label')}
-                        </label>
-                        <input id="connection-label" type="text" value={label} onChange={event => setLabel(event.target.value)}
-                            placeholder={t('settings:connections.form.labelPlaceholder')} className={inputClass} />
+                </div>
+                <form onSubmit={event => void addWallet(event)} className="space-y-4 mt-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="connection-chain" className="block text-xs font-medium text-secondary mb-1.5">
+                                {t('settings:connections.form.chain')}
+                            </label>
+                            <select id="connection-chain" value={chain} onChange={event => setChain(event.target.value as WalletChain)} className={inputClass}>
+                                {(Object.keys(WALLET_CHAINS) as WalletChain[]).map(key => (
+                                    <option key={key} value={key}>{t(`settings:connections.form.chains.${key}`)}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="connection-label" className="block text-xs font-medium text-secondary mb-1.5">
+                                {t('settings:connections.form.label')}
+                            </label>
+                            <input id="connection-label" type="text" value={label} onChange={event => setLabel(event.target.value)}
+                                placeholder={t('settings:connections.form.labelPlaceholder')} className={inputClass} />
+                        </div>
                     </div>
                     <div>
                         <label htmlFor="connection-addresses" className="block text-xs font-medium text-secondary mb-1.5">
                             {t('settings:connections.form.addresses')}
                         </label>
-                        <textarea id="connection-addresses" rows={3} value={addresses} onChange={event => setAddresses(event.target.value)}
+                        <AutoGrowTextarea id="connection-addresses" value={addresses} onChange={event => setAddresses(event.target.value)}
                             placeholder={t(`settings:connections.form.addressesPlaceholder.${chain}`)} spellCheck={false}
-                            className={`${inputClass} font-mono text-xs`} />
+                            className={`${inputClass} font-mono text-xs resize-none overflow-hidden break-all`} />
                         <p className="text-xs text-tertiary mt-1">{t(`settings:connections.form.addressesHelp.${chain}`)}</p>
                     </div>
                     <div>
@@ -254,15 +230,59 @@ export const ConnectionsTab: React.FC = () => {
                             {t('settings:connections.form.account')}
                         </label>
                         <select id="connection-account" value={target} onChange={event => setTarget(event.target.value)} className={inputClass}>
-                            <option value={NEW_ACCOUNT}>{t('settings:connections.form.newAccount')}</option>
-                            {cryptoAccounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                            <option value={NEW_ACCOUNT}>
+                                {label.trim()
+                                    ? t('settings:connections.form.newAccountNamed', { name: label.trim() })
+                                    : t('settings:connections.form.newAccount')}
+                            </option>
+                            {cryptoChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
                         </select>
+                        <p className="text-xs text-tertiary mt-1">{t('settings:connections.form.accountHelp')}</p>
                     </div>
                     {formError && <p role="alert" className="text-xs text-negative">{formError}</p>}
                     <Button type="submit" isLoading={saving} disabled={saving}>
                         {t('settings:connections.form.submit')}
                     </Button>
                 </form>
+
+                <h4 className="text-sm font-semibold text-primary mt-6 mb-2">{t('settings:connections.wallets.title')}</h4>
+                {wallets.length === 0 ? (
+                    <p className="text-sm text-tertiary">{t('settings:connections.wallets.empty')}</p>
+                ) : (
+                    <ul className="space-y-3">
+                        {wallets.map(connection => (
+                            <li key={connection.id} className="border border-border rounded-lg p-4">
+                                <div className="flex items-center gap-3">
+                                    {connection.sourceId === 'wallet_btc'
+                                        ? <Bitcoin size={20} className="text-brand shrink-0" aria-hidden="true" />
+                                        : <Wallet size={20} className="text-brand shrink-0" aria-hidden="true" />}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-primary truncate">{connection.label}</p>
+                                        <p className="text-xs text-tertiary">
+                                            {t(`settings:connections.sources.${connection.sourceId}`)}
+                                            {' · '}
+                                            {t('settings:connections.recordedIn', {
+                                                account: Object.values(connection.accountMap).map(describeAccount).join(', ')
+                                                    || t('settings:connections.accountMissing'),
+                                            })}
+                                        </p>
+                                        {(connection.publicParams.addresses ?? []).length > 0 && (
+                                            <p className="text-xs text-tertiary font-mono truncate mt-0.5" title={(connection.publicParams.addresses ?? []).join('\n')}>
+                                                {(connection.publicParams.addresses ?? []).join(', ')}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <StatusBadge status={connection.lastStatus} />
+                                </div>
+                                <div className="mt-3">
+                                    <SyncControls connection={connection} syncing={syncing === connection.id} disabled={syncing !== null}
+                                        onSync={() => void runSync(connection)} onDelete={() => void remove(connection.id)} />
+                                </div>
+                                <SyncResult report={reports[connection.id]} />
+                            </li>
+                        ))}
+                    </ul>
+                )}
                 <p className="text-xs text-tertiary mt-4">{t('settings:connections.comingSoon')}</p>
             </div>
         </div>
