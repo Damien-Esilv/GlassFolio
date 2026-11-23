@@ -590,8 +590,8 @@ const PortfolioPerformance: React.FC = () => {
             </div>
 
             <div className="h-[380px] w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart key={`${timeRange}-${benchmarkRate}`} data={combinedChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
+               <ResponsiveContainer key={`${timeRange}-${benchmarkRate}`} width="100%" height="100%">
+                  <AreaChart data={combinedChartData} margin={{ top: 10, right: 25, left: 25, bottom: 0 }}>
                      <defs>
                         <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.35} />

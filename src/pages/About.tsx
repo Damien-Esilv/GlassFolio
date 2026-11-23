@@ -2,7 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
-import { Github, GraduationCap, Sparkles, ListChecks, GitBranch, FlaskConical, ShieldCheck, Rocket, BookOpen } from 'lucide-react';
+import { GraduationCap, Sparkles, ListChecks, GitBranch, FlaskConical, ShieldCheck, Rocket, BookOpen } from 'lucide-react';
+import { Github } from '../components/icons/Github';
 import { PublicPageShell } from '../components/landing/PublicPageShell';
 import { GITHUB_PROFILE_URL, GITHUB_REPO_URL, buildPublicPagePath } from '../config/project';
 

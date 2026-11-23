@@ -330,8 +330,8 @@ const RealizedUnrealizedPL: React.FC = () => {
                </div>
             ) : (
                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                     <BarChart key={timeRange} data={periodicPLData} margin={{ top: 15, right: 25, left: 25, bottom: 0 }}>
+                  <ResponsiveContainer key={timeRange} width="100%" height="100%">
+                     <BarChart data={periodicPLData} margin={{ top: 15, right: 25, left: 25, bottom: 0 }}>
                         <XAxis
                            dataKey="name"
                            axisLine={false}

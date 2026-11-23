@@ -79,7 +79,7 @@ describe('mapAuthErrorMessage', () => {
     });
 
     it('interpolates the lockout delay', () => {
-        expect(mapAuthErrorMessage(new Error('Account temporarily locked. Please wait 42 seconds.'), (key, params) => `${key}:${params?.seconds}`))
+        expect(mapAuthErrorMessage(new Error('Account temporarily locked. Please wait 42 seconds.'), (key: string, params?: Record<string, unknown>) => `${key}:${params?.seconds}`))
             .toBe('common:errors.auth.accountLocked:42');
     });
 

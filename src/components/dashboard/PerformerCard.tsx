@@ -115,8 +115,8 @@ const PerformerCardBase: React.FC<PerformerCardProps> = ({
       {/* Mini sparkline, stretched edge to edge below the card padding */}
       <div className="h-20 -mx-6 -mb-6 mt-4 overflow-hidden rounded-b-xl z-0">
         {sparklineData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart key={`${position.symbol}-${timeRange}`} data={sparklineData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+          <ResponsiveContainer key={`${position.symbol}-${timeRange}`} width="100%" height="100%">
+            <AreaChart data={sparklineData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={strokeColor} stopOpacity={0.3} />

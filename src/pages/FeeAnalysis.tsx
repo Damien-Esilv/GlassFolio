@@ -825,8 +825,8 @@ const FeeAnalysis: React.FC = () => {
                {feeDragPoints.length === 0 ? (
                   <p className="h-full flex items-center justify-center text-sm text-tertiary">{t('reports:noData')}</p>
                ) : (
-               <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart key={horizonYears} data={feeDragPoints} margin={{ top: 10, right: 30, left: 20, bottom: 25 }}>
+               <ResponsiveContainer key={horizonYears} width="100%" height="100%">
+                  <AreaChart data={feeDragPoints} margin={{ top: 10, right: 30, left: 20, bottom: 25 }}>
                      <defs>
                         <linearGradient id="colorOptimized" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="5%" stopColor="var(--color-accent-green)" stopOpacity={0.3} />
