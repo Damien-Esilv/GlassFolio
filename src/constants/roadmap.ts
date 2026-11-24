@@ -17,10 +17,9 @@ export interface RoadmapItem {
 export const ROADMAP_ITEMS: readonly RoadmapItem[] = [
   { key: 'assetClasses', status: 'inProgress', horizon: 'q4-2026' },
   { key: 'manualEntry', status: 'planned', horizon: 'q4-2026' },
-  { key: 'aiImport', status: 'planned', horizon: 'q4-2026' },
   { key: 'liabilities', status: 'planned', horizon: 'q1-2027' },
   { key: 'wealthProjection', status: 'exploring', horizon: 'q1-2027' },
-  { key: 'brokerSync', status: 'exploring', horizon: 'q1-2027' },
+  { key: 'bankHistory', status: 'planned', horizon: 'q1-2027' },
   { key: 'autoCashflow', status: 'exploring', horizon: 'q1-2027' },
   { key: 'jurisdictions', status: 'exploring', horizon: 'later' },
 ];

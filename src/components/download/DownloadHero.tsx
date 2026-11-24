@@ -10,8 +10,9 @@ import { SCREENSHOT_HEIGHT, SCREENSHOT_WIDTH } from '../landing/BrowserFrame';
 import { TiltCard } from '../landing/motion/TiltCard';
 import { buildDownloadUrl, otherMacDownload, primaryDownloadFor, type DesktopArch, type DesktopOs } from '../../config/downloads';
 import { buildPublicPagePath } from '../../config/project';
+import { LANDING_EASE_OUT } from '../../constants/animations';
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 const bigButton =
   'relative inline-flex items-center justify-center gap-3 whitespace-nowrap text-base font-bold px-8 py-4 rounded-2xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-canvas';

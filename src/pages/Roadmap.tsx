@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { PublicPageShell } from '../components/landing/PublicPageShell';
 import { ROADMAP_ITEMS, RoadmapStatus } from '../constants/roadmap';
 import { buildPublicPagePath } from '../config/project';
+import { LANDING_EASE_OUT } from '../constants/animations';
 
 const STATUS_STYLE: Record<RoadmapStatus, string> = {
   inProgress: 'bg-brand/10 text-brand border-brand/30',
@@ -13,7 +14,7 @@ const STATUS_STYLE: Record<RoadmapStatus, string> = {
   exploring: 'bg-subtle text-secondary border-subtle',
 };
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 /** What is coming next, as an animated timeline. Indicative horizons, never firm dates. */
 const Roadmap: React.FC = () => {

@@ -46,7 +46,8 @@
     "pageRoadmap": "Feuille de route",
     "pageChangelog": "Nouveautés",
     "pageDocs": "Documentation",
-    "pageContact": "Contact"
+    "pageContact": "Contact",
+    "navSync": "Synchro"
   },
   "hero": {
     "badge": "Suivi de patrimoine privé et chiffré",
@@ -225,6 +226,24 @@
         "title": "Une récupération sous votre contrôle",
         "body": "Une clé de récupération générée pour vous rétablit l'accès en cas de mot de passe perdu."
       }
+    },
+    "sync": {
+      "title": "Synchro automatique : ce qui reste où",
+      "subtitle": "Chaque façon de synchroniser garde vos secrets de votre côté.",
+      "items": {
+        "banks": {
+          "title": "Banques françaises (Woob)",
+          "body": "Vos identifiants bancaires sont stockés chiffrés dans votre coffre, sur votre appareil. Ils ne sont déchiffrés qu’en mémoire, sur votre ordinateur, le temps de la connexion ; aucun serveur GlassFolio ni aucun tiers ne les voit. Seule la session de la banque est gardée en local, et supprimée avec la connexion."
+        },
+        "wallets": {
+          "title": "Wallets crypto",
+          "body": "Uniquement des adresses publiques, en lecture seule : rien de secret n’est stocké et aucune clé privée n’est jamais demandée."
+        },
+        "brokers": {
+          "title": "Courtiers (SnapTrade)",
+          "body": "Vos clés SnapTrade sont chiffrées dans votre coffre. Les données de votre courtier passent par le service SnapTrade, selon les conditions de SnapTrade que vous acceptez en créant vos clés. GlassFolio n’est pas affilié à SnapTrade."
+        }
+      }
     }
   },
   "aiChoice": {
@@ -304,7 +323,8 @@
         "p3": "Fonctionne hors ligne, sauf pour les cours de marché"
       },
       "ctaGithub": "Voir le code sur GitHub",
-      "ctaGuide": "Lire le guide d'installation"
+      "ctaGuide": "Lire le guide d'installation",
+      "badge": "La plus complète"
     },
     "cloud": {
       "title": "Cloud",
@@ -432,8 +452,16 @@
         "answer": "GlassFolio est gratuit et à code source disponible, et n’est pas encore signé avec un certificat de développeur payant : macOS et Windows vous demandent donc de confirmer le premier lancement. Sur Mac, ouvrez Réglages Système > Confidentialité et sécurité et cliquez sur Ouvrir quand même. Sur Windows, cliquez sur Informations complémentaires, puis Exécuter quand même. La page de téléchargement montre les étapes pour chaque système, et chaque version liste l’empreinte SHA-256 de chaque installateur pour vérifier votre téléchargement."
       },
       "q10": {
-        "question": "Puis-je déverrouiller avec Touch ID, une passkey ou mon gestionnaire de mots de passe dans l’application de bureau ?",
-        "answer": "Sur Mac, l’application de bureau se déverrouille avec votre mot de passe maître : Touch ID, les passkeys et le remplissage automatique de votre gestionnaire de mots de passe n’y sont pas encore disponibles. Ils fonctionnent dans les éditions navigateur (Docker et cloud). Sur Windows et Linux, la prise en charge dépend de votre système."
+        "question": "Puis-je utiliser le remplissage automatique de mon gestionnaire de mots de passe ou une passkey dans l’application de bureau ?",
+        "answer": "L’application de bureau se déverrouille avec votre mot de passe maître. Le remplissage automatique par une extension de gestionnaire de mots de passe (1Password, Bitwarden, celui de votre navigateur…) n’y est disponible sur aucun système, car les extensions ne tournent que dans un navigateur. Les passkeys n’y sont pas disponibles sur Mac ; sous Windows et Linux, cela dépend de votre système. Les deux fonctionnent dans les éditions navigateur (Docker et cloud)."
+      },
+      "q11": {
+        "question": "Mes comptes peuvent-ils se mettre à jour tout seuls ?",
+        "answer": "Oui, de trois façons : vos courtiers grâce à vos propres clés API SnapTrade, vos wallets crypto à partir de leurs adresses publiques (lecture seule), et vos banques françaises via Woob, sur votre ordinateur. Les synchros tournent seules à intervalle régulier ; les identifiants restent chiffrés dans votre coffre et rien ne passe par un serveur GlassFolio. GlassFolio n’est pas affilié à SnapTrade."
+      },
+      "q12": {
+        "question": "Pourquoi les banques françaises ne marchent-elles que dans l’app de bureau et Docker ?",
+        "answer": "Woob se connecte au site de votre banque depuis votre propre ordinateur, avec vos identifiants déchiffrés uniquement en mémoire. L’app en ligne ne contacte jamais une banque : cela voudrait dire qu’un serveur manipule vos identifiants bancaires. Utilisez l’app de bureau (Woob inclus, rien à installer) ou l’édition Docker."
       }
     }
   },
@@ -463,5 +491,33 @@
     },
     "projectHeading": "Le projet",
     "downloadApp": "Télécharger l'application de bureau"
+  },
+  "sync": {
+    "title": "Vos comptes se mettent à jour tout seuls",
+    "subtitle": "Connectez une fois un courtier, un wallet crypto ou votre banque française : GlassFolio récupère positions et soldes de lui-même, et votre tableau de bord reste à jour sans le moindre import.",
+    "modes": {
+      "brokers": {
+        "title": "Courtiers, avec vos clés API",
+        "where": "En ligne et en local",
+        "description": "Les courtiers pris en charge par SnapTrade (Interactive Brokers et bien d’autres) : positions et opérations de vos comptes-titres. Vous créez vos propres clés SnapTrade ; elles restent chiffrées dans votre coffre.",
+        "siteLink": "Site officiel de SnapTrade",
+        "siteNote": "GlassFolio n’est pas affilié à SnapTrade."
+      },
+      "wallets": {
+        "title": "Wallets crypto, en lecture seule",
+        "where": "En ligne et en local",
+        "description": "Bitcoin (adresses ou xpub), Ethereum et réseaux EVM, Solana : à partir d’adresses publiques uniquement. GlassFolio lit les soldes et ne peut jamais déplacer vos fonds."
+      },
+      "banks": {
+        "title": "Banques françaises, sur votre ordinateur",
+        "where": "Local uniquement",
+        "description": "BoursoBank, Fortuneo, Crédit Agricole et plus de 80 banques via Woob : positions de vos PEA, comptes-titres, assurances vie et PER, et soldes de vos comptes courants et livrets.",
+        "siteLink": "Site officiel de Woob",
+        "siteNote": "Logiciel libre sous licence LGPL, indépendant de GlassFolio."
+      }
+    },
+    "localOnly": "Votre banque est lue depuis votre propre ordinateur : disponible dans l’app de bureau et l’édition Docker, pas dans l’app en ligne.",
+    "localOnlyLink": "Télécharger l’app de bureau",
+    "promise": "Identifiants et clés restent chiffrés dans votre coffre, rien ne passe par un serveur GlassFolio, et un code bancaire n’est demandé que lorsque vous cliquez vous-même sur Se connecter."
   }
 }

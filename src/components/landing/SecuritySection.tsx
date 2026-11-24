@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
-import { Laptop, Network, Database, KeyRound, Lock, Unlock, Fingerprint, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { Laptop, Network, Database, KeyRound, Lock, Unlock, Fingerprint, ShieldCheck, LifeBuoy, Landmark, Wallet, Briefcase } from 'lucide-react';
+import { LANDING_EASE_OUT, LANDING_REVEAL_DURATION_S, LANDING_STAGGER_S } from '../../constants/animations';
 
 const STAGES = [
   { key: 'device', icon: Laptop },
@@ -18,7 +19,14 @@ const KEY_FACTS = [
   { key: 'recovery', icon: LifeBuoy },
 ] as const;
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
+
+/** What each automatic sync keeps, and where (TGLA-246). */
+const SYNC_FACTS = [
+  { key: 'banks', icon: Landmark },
+  { key: 'wallets', icon: Wallet },
+  { key: 'brokers', icon: Briefcase },
+] as const;
 
 /**
  * Where the data is protected, as a flow: on the device, in transit, at rest. The connecting
@@ -57,7 +65,7 @@ export const SecuritySection: React.FC = () => {
                 key={key}
                 variants={{
                   hidden: { opacity: 0, y: 18 },
-                  visible: { opacity: 1, y: 0, transition: { delay: 0.15 + index * 0.25, duration: 0.55, ease: EASE_OUT } },
+                  visible: { opacity: 1, y: 0, transition: { delay: 0.15 + index * 0.25, duration: LANDING_REVEAL_DURATION_S, ease: EASE_OUT } },
                 }}
                 className="flex flex-col"
               >
@@ -99,6 +107,28 @@ export const SecuritySection: React.FC = () => {
                 <Icon size={20} className="text-brand mb-3" />
                 <p className="text-sm font-bold text-primary mb-1.5">{t(`landing:security.keys.${key}.title`)}</p>
                 <p className="text-sm text-secondary leading-relaxed">{t(`landing:security.keys.${key}.body`)}</p>
+              </m.li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Automatic sync: where each kind of secret lives */}
+        <div className="mt-14">
+          <h3 className="text-xl sm:text-2xl font-bold text-primary tracking-tight mb-2">{t('landing:security.sync.title')}</h3>
+          <p className="text-sm text-secondary mb-6">{t('landing:security.sync.subtitle')}</p>
+          <ul className="grid md:grid-cols-3 gap-6">
+            {SYNC_FACTS.map(({ key, icon: Icon }, index) => (
+              <m.li
+                key={key}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ delay: index * LANDING_STAGGER_S, duration: LANDING_REVEAL_DURATION_S, ease: EASE_OUT }}
+                className="rounded-2xl border border-subtle bg-canvas p-6"
+              >
+                <Icon size={20} className="text-brand mb-3" aria-hidden="true" />
+                <p className="text-sm font-bold text-primary mb-1.5">{t(`landing:security.sync.items.${key}.title`)}</p>
+                <p className="text-sm text-secondary leading-relaxed">{t(`landing:security.sync.items.${key}.body`)}</p>
               </m.li>
             ))}
           </ul>

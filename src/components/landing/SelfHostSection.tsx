@@ -11,6 +11,7 @@ import { InstallTerminal } from './InstallTerminal';
 import { Reveal } from './motion/Reveal';
 import { AppLink } from './LandingHeader';
 import { GITHUB_REPO_URL, buildPublicPagePath } from '../../config/project';
+import { LANDING_EASE_OUT } from '../../constants/animations';
 
 const COMPARISON_ROWS = ['data', 'account', 'internet', 'twoFactor', 'ai', 'cost'] as const;
 const MODE_POINTS = ['p1', 'p2', 'p3'] as const;
@@ -31,7 +32,7 @@ const DEVICES = [
   { key: 'tablet', icon: Tablet },
 ] as const;
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 /** Cloud counterpart of the install terminal: the same vault reaching every device. */
 const CloudSyncPanel: React.FC = () => {
@@ -100,7 +101,7 @@ export const SelfHostSection: React.FC = () => {
     <Reveal>
     <div
       className={`grid lg:grid-cols-2 gap-8 lg:gap-12 items-center rounded-2xl border bg-canvas p-5 sm:p-8 ${
-        mode === 'desktop' ? 'border-brand/40 ring-1 ring-brand/20' : 'border-subtle'
+        mode === 'desktop' ? 'border-brand/40 ring-1 ring-brand/20' : mode === 'docker' ? 'border-positive/40 ring-1 ring-positive/20' : 'border-subtle'
       }`}
     >
       <div className="flex flex-col">
@@ -112,6 +113,12 @@ export const SelfHostSection: React.FC = () => {
               {mode === 'desktop' && (
                 <span className="text-[10px] font-bold uppercase tracking-wide text-brand bg-brand/10 border border-brand/30 rounded-full px-2 py-0.5">
                   {t('landing:localCloud.desktop.badge')}
+                </span>
+              )}
+              {/* Docker opens in the browser: every feature, French banks and password-manager extensions included */}
+              {mode === 'docker' && (
+                <span className="text-[10px] font-bold uppercase tracking-wide text-positive bg-positive-subtle border border-positive/30 rounded-full px-2 py-0.5">
+                  {t('landing:localCloud.docker.badge')}
                 </span>
               )}
             </div>

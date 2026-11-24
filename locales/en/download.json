@@ -106,7 +106,7 @@
   },
   "ways": {
     "title": "Three ways to use GlassFolio",
-    "intro": "The same app, the same encryption and the same features. Choose where it runs, and switch whenever you like.",
+    "intro": "The same app and the same encryption everywhere. Automatic sync of French banks needs the app to run on your own computer: here is what each version offers.",
     "recommended": "Recommended",
     "goodToKnow": "Good to know",
     "desktop": {
@@ -117,21 +117,22 @@
         "p2": "Your data stays on your computer, encrypted",
         "p3": "New versions offered inside the app"
       },
-      "note": "On a Mac, the app unlocks with your master password. Touch ID, passkeys and the autofill of your password manager work in the browser versions (Docker and cloud).",
+      "note": "French banks included: Woob comes with the app, nothing else to install. The app unlocks with your master password: password-manager autofill (browser extensions) is not available in it, and neither are passkeys on a Mac. Both work in the browser versions (Docker and cloud).",
       "cta": "Choose your download"
     },
     "docker": {
       "title": "Docker",
       "body": "Run GlassFolio as a container on your computer or on a home server, and open it in your browser. The same local, encrypted vault.",
-      "note": "It opens in your browser, so Touch ID, passkeys and your password manager work like on any website.",
+      "note": "The most complete edition: every feature, including French banks (start it with the woob profile, see the Docker guide), and since it opens in your browser, password-manager autofill and passkeys work like on any website.",
       "cta": "Read the Docker guide"
     },
     "cloud": {
       "title": "Cloud version",
       "body": "Nothing to install: create a free account and use GlassFolio from any browser, with your data end-to-end encrypted.",
-      "note": "It runs in your browser too, and follows you on all your devices.",
+      "note": "It runs in your browser and follows you on all your devices. Brokers (SnapTrade) and crypto wallets sync here too; French banks do not, they are read only from your own computer (desktop app or Docker).",
       "cta": "Create a free account"
-    }
+    },
+    "mostComplete": "Most complete"
   },
   "updates": {
     "title": "How updates work",

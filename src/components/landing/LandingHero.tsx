@@ -4,9 +4,10 @@ import { m } from 'motion/react';
 import { ShieldCheck } from 'lucide-react';
 import { DemoButton } from './DemoButton';
 import { HeroModeChoice } from './HeroModeChoice';
+import { LANDING_EASE_OUT } from '../../constants/animations';
 
 /** One orchestrated page-load sequence: badge, headline words, copy, actions, then the live card. */
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 const rise = (delay: number) => ({
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },

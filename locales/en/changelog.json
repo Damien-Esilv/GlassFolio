@@ -8,6 +8,21 @@
   },
   "roadmapLink": "See what's coming next",
   "entries": {
+    "v1-5": {
+      "title": "GlassFolio 1.5 — Automatic sync, French banks & desktop app",
+      "highlights": {
+        "autoSync": "Automatic sync: connect your brokers with your own SnapTrade API keys and your positions and operations update on their own, without a single import.",
+        "frenchBanks": "French banks on your computer: BoursoBank, Fortuneo, Crédit Agricole and 80+ banks through Woob bring in your PEA, securities account, life insurance and PER positions and your account balances (desktop app and Docker).",
+        "cryptoWallets": "Read-only crypto wallets: follow Bitcoin (addresses or xpub), Ethereum and EVM networks, and Solana balances from public addresses.",
+        "desktopApp": "GlassFolio desktop app for macOS, Windows and Linux: your data on your computer, encrypted, with new versions offered inside the app.",
+        "aiStatementImport": "AI statement import: drop a PDF, a picture or any export and the assistant proposes the transactions, in a side panel next to your data.",
+        "accountsManagement": "Institutions & accounts in Settings: see what feeds each account, rename them and delete those you no longer track.",
+        "newPresets": "Ready-made imports for Revolut, Bitpanda and Coinhouse exports.",
+        "reliablePrices": "More reliable valuations: your bank’s own quote when market prices are unavailable, and real exchange rates when you display another currency.",
+        "downloadPage": "A clearer download page that tells what each version offers.",
+        "readableFigures": "Amounts aligned in columns, easier to compare at a glance."
+      }
+    },
     "v1-0-1": {
       "title": "GlassFolio 1.0.1 — Multi-Vault, Multi-2FA & Polish",
       "highlights": {

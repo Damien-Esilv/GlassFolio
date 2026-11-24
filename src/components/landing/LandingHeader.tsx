@@ -10,10 +10,11 @@ import { buildPublicPagePath } from '../../config/project';
 import { isDemoAccount } from '../../services/security/demoAccount';
 
 /** Scroll anchors, in the exact order the sections appear on the landing page. */
-export const LANDING_SECTION_ANCHORS = ['features', 'security', 'ai', 'more', 'local-cloud', 'faq'] as const;
+export const LANDING_SECTION_ANCHORS = ['features', 'sync', 'security', 'ai', 'more', 'local-cloud', 'faq'] as const;
 
 const NAV_LABEL_KEYS: Record<(typeof LANDING_SECTION_ANCHORS)[number], string> = {
   features: 'landing:header.navFeatures',
+  sync: 'landing:header.navSync',
   security: 'landing:header.navSecurity',
   ai: 'landing:header.navAi',
   more: 'landing:header.navMore',

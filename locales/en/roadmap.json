@@ -20,10 +20,6 @@
       "title": "Manual transaction entry",
       "body": "Record a purchase, a sale or a dividend directly in the app, alongside CSV import."
     },
-    "aiImport": {
-      "title": "AI-assisted import",
-      "body": "Let the assistant read an unfamiliar CSV export and propose the column mapping for you to confirm."
-    },
     "liabilities": {
       "title": "Loans and liabilities",
       "body": "Track mortgages and consumer loans to see your net worth after debts."
@@ -32,10 +28,6 @@
       "title": "Long-term wealth projection",
       "body": "Simulate portfolio trajectories and retirement milestones across multi-year scenarios with customizable contribution rates and compound returns."
     },
-    "brokerSync": {
-      "title": "Direct broker connections",
-      "body": "Refresh positions straight from supported brokers and exchanges, without exporting files."
-    },
     "autoCashflow": {
       "title": "Expense tracking & automatic cashflow",
       "body": "Track your expenses, accounts and cashflow automatically. We are exploring several technical options (SnapTrade Personal, Crypto & On-chain, Enable Banking or Woob via woob.tech); these choices are not final and automatic tracking capabilities may evolve or be dropped if technical constraints make them impossible."
@@ -43,6 +35,10 @@
     "jurisdictions": {
       "title": "New tax jurisdictions",
       "body": "Extend the modular tax engine beyond France, starting with the countries most requested by users."
+    },
+    "bankHistory": {
+      "title": "Purchase history from your banks",
+      "body": "Bring in the dates and prices of your past purchases from your bank, so your gains are tracked from the day you invested."
     }
   },
   "disclaimer": "Already shipped features are listed in the changelog.",

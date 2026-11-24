@@ -17,3 +17,9 @@ export const ENTRANCE_DELAY_MS = 80;
 export const ENTRANCE_START_SCALE = 0.92;
 /** Cards beyond this rank appear together with it, so a long grid does not take seconds to show. */
 export const MAX_STAGGER_STEPS = 12;
+
+/** Public landing page (motion/react): one easing, one reveal duration and one stagger for every section. */
+export const LANDING_EASE_OUT = [0.16, 1, 0.3, 1] as const;
+export const LANDING_REVEAL_DURATION_S = 0.55;
+/** Gap between neighbours appearing one after the other, in seconds (same rhythm as the app). */
+export const LANDING_STAGGER_S = STAGGER_DELAY_MS / 1000;

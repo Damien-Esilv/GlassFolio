@@ -1,7 +1,8 @@
 import React from 'react';
 import { m } from 'motion/react';
+import { LANDING_EASE_OUT, LANDING_REVEAL_DURATION_S } from '../../../constants/animations';
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 interface RevealProps {
   children: React.ReactNode;
@@ -20,7 +21,7 @@ export const Reveal: React.FC<RevealProps> = ({ children, className, delay = 0 }
     initial={{ opacity: 0, y: 18 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, amount: 0.15 }}
-    transition={{ duration: 0.55, delay, ease: EASE_OUT }}
+    transition={{ duration: LANDING_REVEAL_DURATION_S, delay, ease: EASE_OUT }}
   >
     {children}
   </m.div>

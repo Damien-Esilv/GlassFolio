@@ -357,7 +357,8 @@ jobs:
             # 1600 -> 1632: three sync MCP tools in the documentation catalog (TGLA-221)
             # 1632 -> 1664: AI multi-format/side-panel i18n keys & legal storage inventory (TGLA-230, TGLA-232)
             # 1664 -> 1728: dependency updates, react 19.3, i18next 27, motion 14.14, lucide 1.x (TGLA-245)
-            limit_kb: 1728
+            # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
+            limit_kb: 1760
             landing: present
             smoke: false
           - label: vercel-parity
@@ -369,7 +370,8 @@ jobs:
             # 1600 -> 1632: three sync MCP tools in the documentation catalog (TGLA-221)
             # 1632 -> 1664: AI multi-format/side-panel i18n keys & legal storage inventory (TGLA-230, TGLA-232)
             # 1664 -> 1728: dependency updates, react 19.3, i18next 27, motion 14.14, lucide 1.x (TGLA-245)
-            limit_kb: 1728
+            # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
+            limit_kb: 1760
             landing: present
             smoke: true
     steps:

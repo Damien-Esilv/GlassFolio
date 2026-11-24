@@ -6,6 +6,7 @@ import { GraduationCap, Sparkles, ListChecks, GitBranch, FlaskConical, ShieldChe
 import { Github } from '../components/icons/Github';
 import { PublicPageShell } from '../components/landing/PublicPageShell';
 import { GITHUB_PROFILE_URL, GITHUB_REPO_URL, buildPublicPagePath } from '../config/project';
+import { LANDING_EASE_OUT } from '../constants/animations';
 
 const NAME_PARTS = ['glass', 'folio'] as const;
 
@@ -17,7 +18,7 @@ const PRACTICES = [
   { key: 'delivery', icon: Rocket },
 ] as const;
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 const linkButton =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold px-5 py-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary';

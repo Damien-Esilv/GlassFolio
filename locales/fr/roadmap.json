@@ -20,10 +20,6 @@
       "title": "Saisie manuelle des transactions",
       "body": "Enregistrez un achat, une vente ou un dividende directement dans l'application, en complément de l'import CSV."
     },
-    "aiImport": {
-      "title": "Import assisté par IA",
-      "body": "Laissez l'assistant analyser un export CSV inconnu et vous proposer le bon alignement des colonnes à valider."
-    },
     "liabilities": {
       "title": "Emprunts et passif",
       "body": "Suivez vos crédits immobiliers et prêts à la consommation pour visualiser votre patrimoine net réel déduction faite des dettes."
@@ -32,10 +28,6 @@
       "title": "Projection patrimoniale pluriannuelle",
       "body": "Simulez la trajectoire future de votre patrimoine et vos objectifs de retraite selon plusieurs scénarios d'épargne et d'intérêts composés."
     },
-    "brokerSync": {
-      "title": "Connexions directes aux courtiers",
-      "body": "Actualisez vos positions directement depuis les courtiers et plateformes partenaires, sans export de fichiers."
-    },
     "autoCashflow": {
       "title": "Suivi des dépenses & Cashflow automatique",
       "body": "Suivez automatiquement vos dépenses, comptes et flux de trésorerie. Nous explorons plusieurs pistes techniques (SnapTrade Personal, Crypto & On-chain, Enable Banking ou Woob via woob.tech) ; ces choix restent ouverts et certaines synchronisations automatiques pourront évoluer ou être abandonnées en cas d'impossibilité technique."
@@ -43,6 +35,10 @@
     "jurisdictions": {
       "title": "Nouvelles juridictions fiscales",
       "body": "Étendez le moteur fiscal modulaire au-delà de la France, en commençant par les pays les plus demandés."
+    },
+    "bankHistory": {
+      "title": "Historique d’achats de vos banques",
+      "body": "Récupérez les dates et prix de vos achats passés depuis votre banque, pour suivre vos plus-values depuis le jour où vous avez investi."
     }
   },
   "disclaimer": "Les fonctionnalités déjà disponibles sont listées dans les nouveautés.",
