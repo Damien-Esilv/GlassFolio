@@ -3,6 +3,7 @@ import { LandingHeader } from '../components/landing/LandingHeader';
 import { LandingHero } from '../components/landing/LandingHero';
 import { LandingStats } from '../components/landing/LandingStats';
 import { ProductStory } from '../components/landing/ProductStory';
+import { SyncSection } from '../components/landing/SyncSection';
 import { SecuritySection } from '../components/landing/SecuritySection';
 import { AiChoiceSection } from '../components/landing/AiChoiceSection';
 import { FeatureBentoGrid } from '../components/landing/FeatureBentoGrid';
@@ -21,6 +22,7 @@ const Landing: React.FC = () => {
         <LandingHero />
         <LandingStats />
         <ProductStory />
+        <SyncSection />
         <SecuritySection />
         <AiChoiceSection />
         <FeatureBentoGrid />

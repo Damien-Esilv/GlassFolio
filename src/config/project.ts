@@ -43,3 +43,7 @@ export const DOCKER_QUICKSTART_COMMANDS: readonly string[] = [
 export function buildPublicPagePath(path: string): string {
   return getAppTarget() === 'showcase' ? path : `/welcome${path}`;
 }
+
+/** Official sites of the automatic sync providers, linked from the public pages (plain links, never called by the app). */
+export const SNAPTRADE_SITE_URL = 'https://snaptrade.com';
+export const WOOB_SITE_URL = 'https://woob.tech';

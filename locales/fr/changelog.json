@@ -8,6 +8,21 @@
   },
   "roadmapLink": "Voir ce qui arrive",
   "entries": {
+    "v1-5": {
+      "title": "GlassFolio 1.5 — Synchro automatique, banques françaises et app de bureau",
+      "highlights": {
+        "autoSync": "Synchro automatique : connectez vos courtiers avec vos propres clés API SnapTrade, positions et opérations se mettent à jour toutes seules, sans aucun import.",
+        "frenchBanks": "Banques françaises sur votre ordinateur : BoursoBank, Fortuneo, Crédit Agricole et plus de 80 banques via Woob récupèrent vos positions de PEA, comptes-titres, assurances vie et PER, et les soldes de vos comptes (app de bureau et Docker).",
+        "cryptoWallets": "Wallets crypto en lecture seule : suivez vos soldes Bitcoin (adresses ou xpub), Ethereum et réseaux EVM, et Solana à partir d’adresses publiques.",
+        "desktopApp": "App de bureau GlassFolio pour macOS, Windows et Linux : vos données sur votre ordinateur, chiffrées, avec les nouvelles versions proposées dans l’app.",
+        "aiStatementImport": "Import de relevés par l’IA : déposez un PDF, une image ou n’importe quel export, l’assistant propose les transactions dans un panneau à côté de vos données.",
+        "accountsManagement": "Établissements et comptes dans les Paramètres : voyez ce qui alimente chaque compte, renommez-les et supprimez ceux que vous ne suivez plus.",
+        "newPresets": "Imports prêts à l’emploi pour les exports Revolut, Bitpanda et Coinhouse.",
+        "reliablePrices": "Valorisations plus fiables : le cours de votre banque quand les cours de marché manquent, et les vrais taux de change quand vous affichez une autre devise.",
+        "downloadPage": "Une page de téléchargement plus claire, qui dit ce que permet chaque version.",
+        "readableFigures": "Montants alignés en colonnes, plus faciles à comparer d’un coup d’œil."
+      }
+    },
     "v1-0-1": {
       "title": "GlassFolio 1.0.1 — Multi-coffres, Multi-2FA & Finitions",
       "highlights": {

@@ -46,7 +46,8 @@
     "pageRoadmap": "Roadmap",
     "pageChangelog": "Changelog",
     "pageDocs": "Documentation",
-    "pageContact": "Contact"
+    "pageContact": "Contact",
+    "navSync": "Sync"
   },
   "hero": {
     "badge": "Private, encrypted wealth tracking",
@@ -225,6 +226,24 @@
         "title": "Recovery under your control",
         "body": "A recovery key generated for you restores access if you lose your password."
       }
+    },
+    "sync": {
+      "title": "Automatic sync: what stays where",
+      "subtitle": "Each way of syncing keeps your secrets on your side.",
+      "items": {
+        "banks": {
+          "title": "French banks (Woob)",
+          "body": "Your bank credentials are stored encrypted in your vault on your device. They are decrypted only in memory, on your computer, for the time of the connection; no GlassFolio server and no third party ever sees them. Only the bank session is kept locally, and deleted with the connection."
+        },
+        "wallets": {
+          "title": "Crypto wallets",
+          "body": "Only public addresses, read-only: nothing secret is stored and a private key is never asked for."
+        },
+        "brokers": {
+          "title": "Brokers (SnapTrade)",
+          "body": "Your SnapTrade keys are encrypted in your vault. Your broker data goes through the SnapTrade service, under the SnapTrade terms you accept when you create your keys. GlassFolio is not affiliated with SnapTrade."
+        }
+      }
     }
   },
   "aiChoice": {
@@ -304,7 +323,8 @@
         "p3": "Works offline, except for market prices"
       },
       "ctaGithub": "View the code on GitHub",
-      "ctaGuide": "Read the installation guide"
+      "ctaGuide": "Read the installation guide",
+      "badge": "Most complete"
     },
     "cloud": {
       "title": "Cloud",
@@ -432,8 +452,16 @@
         "answer": "GlassFolio is free and source-available, and it is not signed with a paid developer certificate yet, so macOS and Windows ask you to confirm the first launch. On a Mac, open System Settings > Privacy & Security and click Open Anyway. On Windows, click More info, then Run anyway. The download page shows the steps for each system, and every release lists the SHA-256 fingerprint of each installer so you can check your download."
       },
       "q10": {
-        "question": "Can I unlock with Touch ID, a passkey or my password manager in the desktop app?",
-        "answer": "On a Mac, the desktop app unlocks with your master password: Touch ID, passkeys and your password manager's autofill are not available in it yet. They work in the browser editions (Docker and cloud). On Windows and Linux, support depends on your system."
+        "question": "Can I use my password manager’s autofill or a passkey in the desktop app?",
+        "answer": "The desktop app unlocks with your master password. Autofill from a password manager extension (1Password, Bitwarden, your browser’s manager…) is not available in it on any system, since extensions only run in a browser. Passkeys are not available on a Mac; on Windows and Linux, it depends on your system. Both work in the browser editions (Docker and cloud)."
+      },
+      "q11": {
+        "question": "Can my accounts update themselves?",
+        "answer": "Yes, in three ways: your brokers through your own SnapTrade API keys, your crypto wallets from their public addresses (read-only), and your French banks through Woob, on your computer. Syncs run on their own at regular intervals; credentials stay encrypted in your vault and nothing goes through a GlassFolio server. GlassFolio is not affiliated with SnapTrade."
+      },
+      "q12": {
+        "question": "Why do French banks only work in the desktop app and Docker?",
+        "answer": "Woob signs in to your bank’s website from your own computer, with your credentials decrypted only in memory. The online app never contacts a bank: that would mean a server handling your bank credentials. Use the desktop app (Woob included, nothing to install) or the Docker edition."
       }
     }
   },
@@ -463,5 +491,33 @@
     },
     "projectHeading": "The project",
     "downloadApp": "Download the desktop app"
+  },
+  "sync": {
+    "title": "Your accounts update themselves",
+    "subtitle": "Connect a broker, a crypto wallet or your French bank once: GlassFolio brings in positions and balances on its own, so your dashboard stays up to date without a single import.",
+    "modes": {
+      "brokers": {
+        "title": "Brokers, with your API keys",
+        "where": "Online and local",
+        "description": "The brokers SnapTrade supports (Interactive Brokers and many others): positions and operations of your securities accounts. You create your own SnapTrade keys; they stay encrypted in your vault.",
+        "siteLink": "SnapTrade official site",
+        "siteNote": "GlassFolio is not affiliated with SnapTrade."
+      },
+      "wallets": {
+        "title": "Crypto wallets, read-only",
+        "where": "Online and local",
+        "description": "Bitcoin (addresses or xpub), Ethereum and EVM networks, Solana: from public addresses only. GlassFolio reads the balances and can never move your funds."
+      },
+      "banks": {
+        "title": "French banks, on your computer",
+        "where": "Local only",
+        "description": "BoursoBank, Fortuneo, Crédit Agricole and 80+ banks through Woob: positions of your PEA, securities account, life insurance and PER, plus the balance of your current and savings accounts.",
+        "siteLink": "Woob official site",
+        "siteNote": "Free software under the LGPL licence, independent from GlassFolio."
+      }
+    },
+    "localOnly": "Your bank is read from your own computer: available in the desktop app and the Docker edition, not in the online app.",
+    "localOnlyLink": "Get the desktop app",
+    "promise": "Credentials and keys stay encrypted in your vault, nothing goes through a GlassFolio server, and a bank code is only ever asked when you click Connect yourself."
   }
 }

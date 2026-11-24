@@ -106,7 +106,7 @@
   },
   "ways": {
     "title": "Trois façons d’utiliser GlassFolio",
-    "intro": "La même application, le même chiffrement et les mêmes fonctionnalités. Choisissez où elle tourne, et changez quand vous voulez.",
+    "intro": "La même app et le même chiffrement partout. La synchro automatique des banques françaises demande que l’app tourne sur votre ordinateur : voici ce que permet chaque version.",
     "recommended": "Recommandé",
     "goodToKnow": "Bon à savoir",
     "desktop": {
@@ -117,21 +117,22 @@
         "p2": "Vos données restent sur votre ordinateur, chiffrées",
         "p3": "Les nouvelles versions vous sont proposées dans l’application"
       },
-      "note": "Sur Mac, l’application se déverrouille avec votre mot de passe maître. Touch ID, les passkeys et le remplissage automatique de votre gestionnaire de mots de passe fonctionnent dans les versions navigateur (Docker et cloud).",
+      "note": "Banques françaises incluses : Woob est livré avec l’app, rien d’autre à installer. L’app se déverrouille avec votre mot de passe maître : le remplissage automatique de votre gestionnaire de mots de passe (extensions de navigateur) n’y est pas disponible, ni les passkeys sur Mac. Les deux fonctionnent dans les versions navigateur (Docker et cloud).",
       "cta": "Choisir votre téléchargement"
     },
     "docker": {
       "title": "Docker",
       "body": "Lancez GlassFolio en conteneur sur votre ordinateur ou un serveur à la maison, et ouvrez-le dans votre navigateur. Le même coffre local et chiffré.",
-      "note": "Il s’ouvre dans votre navigateur : Touch ID, les passkeys et votre gestionnaire de mots de passe fonctionnent comme sur n’importe quel site.",
+      "note": "L’édition la plus complète : toutes les fonctions, y compris les banques françaises (à lancer avec le profil woob, voir le guide Docker), et comme elle s’ouvre dans votre navigateur, le remplissage automatique de votre gestionnaire de mots de passe et les passkeys fonctionnent comme sur n’importe quel site.",
       "cta": "Lire le guide Docker"
     },
     "cloud": {
       "title": "Version cloud",
       "body": "Rien à installer : créez un compte gratuit et utilisez GlassFolio depuis n’importe quel navigateur, avec vos données chiffrées de bout en bout.",
-      "note": "Elle fonctionne aussi dans votre navigateur, et vous suit sur tous vos appareils.",
+      "note": "Elle tourne dans votre navigateur et vous suit sur tous vos appareils. Courtiers (SnapTrade) et wallets crypto s’y synchronisent aussi ; les banques françaises non, elles ne sont lues que depuis votre propre ordinateur (app de bureau ou Docker).",
       "cta": "Créer un compte gratuit"
-    }
+    },
+    "mostComplete": "La plus complète"
   },
   "updates": {
     "title": "Comment fonctionnent les mises à jour",

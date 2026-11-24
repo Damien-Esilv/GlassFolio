@@ -5,6 +5,7 @@ import { Cpu, Cloud, PlugZap, ShieldCheck, EyeOff, CheckCircle2, Wrench } from '
 import { BrowserFrame, SCREENSHOT_HEIGHT, SCREENSHOT_WIDTH } from './BrowserFrame';
 import { TiltCard } from './motion/TiltCard';
 import { AI_TOOL_COUNT } from '../../constants/productFacts';
+import { LANDING_EASE_OUT } from '../../constants/animations';
 
 const RUNTIMES = [
   { key: 'local', icon: Cpu },
@@ -18,7 +19,7 @@ const GUARDRAILS = [
   { key: 'tools', icon: Wrench },
 ] as const;
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 /** Three equal ways to run the assistant, then the guardrails that apply to all of them. */
 export const AiChoiceSection: React.FC = () => {

@@ -5,7 +5,7 @@ import { useDemoAccess } from '../../hooks/useDemoAccess';
 import { useDemoOffered } from '../../hooks/useDemoOffered';
 
 /** From "can I try it?" to "how do I install it?" to "is it safe?" to the details of the features. */
-const FAQ_KEYS = ['q6', 'q5', 'q8', 'q9', 'q10', 'q7', 'q1', 'q4', 'q3', 'q2'] as const;
+const FAQ_KEYS = ['q6', 'q5', 'q11', 'q12', 'q8', 'q9', 'q10', 'q7', 'q1', 'q4', 'q3', 'q2'] as const;
 
 export const FaqAccordion: React.FC = () => {
   const { t } = useTranslation();

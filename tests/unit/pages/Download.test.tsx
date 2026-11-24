@@ -158,7 +158,7 @@ describe('Download page', () => {
     // the first block of the page, before the benefits
     const benefits = screen.getByRole('heading', { name: 'Why the desktop app' });
     expect(ways.compareDocumentPosition(benefits) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText(/On a Mac, the app unlocks with your master password/)).toBeTruthy();
+    expect(screen.getByText(/password-manager autofill \(browser extensions\) is not available in it/)).toBeTruthy();
     expect(screen.getByRole('link', { name: /Read the Docker guide/ }).getAttribute('href')).toBe('/self-host');
     expect(screen.getByRole('link', { name: /Create a free account/ })).toBeTruthy();
   });

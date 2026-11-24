@@ -192,7 +192,7 @@ describe('<Landing /> & Dual-Mode Access Suite', () => {
     expect(screen.getByRole('button', { name: /without Docker or a browser tab/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /warn me the first time I open the desktop app/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Apple Silicon or Intel/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /Touch ID, a passkey or my password manager/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /password manager’s autofill or a passkey/i })).toBeTruthy();
     // closed answers stay in the page for crawlers
     expect(screen.getByText(/Open Anyway/)).toBeTruthy();
   });

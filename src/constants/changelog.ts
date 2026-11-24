@@ -28,6 +28,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    id: 'v1-5',
+    version: '1.5',
+    date: '2026-11-24',
+    highlights: [
+      { key: 'autoSync', kind: 'new' },
+      { key: 'frenchBanks', kind: 'new' },
+      { key: 'cryptoWallets', kind: 'new' },
+      { key: 'desktopApp', kind: 'new' },
+      { key: 'aiStatementImport', kind: 'new' },
+      { key: 'accountsManagement', kind: 'new' },
+      { key: 'newPresets', kind: 'new' },
+      { key: 'reliablePrices', kind: 'improved' },
+      { key: 'downloadPage', kind: 'improved' },
+      { key: 'readableFigures', kind: 'improved' },
+    ],
+  },
+  {
     id: 'v1-0-1',
     version: '1.0.1',
     date: '2026-11-19',

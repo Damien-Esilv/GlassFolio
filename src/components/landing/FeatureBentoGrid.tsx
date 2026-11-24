@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { m } from 'motion/react';
 import { Palette, Download, Coins, BellRing } from 'lucide-react';
 import { TiltCard } from './motion/TiltCard';
+import { LANDING_EASE_OUT } from '../../constants/animations';
 
 /**
  * Everything not shown in the product story: real features, no overlap with the story steps,
@@ -15,7 +16,7 @@ const CARDS = [
   { key: 'alerts', icon: BellRing, wide: true },
 ] as const;
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = LANDING_EASE_OUT;
 
 export const FeatureBentoGrid: React.FC = () => {
   const { t } = useTranslation();
