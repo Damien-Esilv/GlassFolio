@@ -51,6 +51,8 @@ const SHOTS = [
   { name: 'positions', path: '/positions', settleMs: 5000 },
   { name: 'analytics', path: '/analytics/performance', settleMs: 6000 },
   { name: 'fees', path: '/analytics/fees', settleMs: 5000 },
+  { name: 'cashflow', path: '/cashflow', settleMs: 6000 },
+  { name: 'cashflow-flows', path: '/cashflow/flows', settleMs: 6000 },
   { name: 'tax', path: '/tax', settleMs: 5000 },
   { name: 'import', path: '/import', settleMs: 4000 },
   { name: 'progress', path: '/progress', settleMs: 5000 },

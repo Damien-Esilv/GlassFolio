@@ -7,6 +7,14 @@ import { instrumentService } from './instrumentService';
 import { isAssetClassMatch } from '../constants/assetClasses';
 import { transactionRepository } from './repositories';
 
+const BANK_MOVEMENT_TYPES: ReadonlySet<TransactionType> = new Set(['DEPOSIT', 'WITHDRAW', 'INCOME', 'EXPENSE', 'TRANSFER']);
+
+/** A movement of a checking or savings account (balance statements stay visible). */
+const isBankOperation = (tx: UnifiedTransaction, accounts: Map<string, Account>): boolean => {
+    const type = accounts.get(tx.accountId)?.type;
+    return (type === 'checking' || type === 'savings') && BANK_MOVEMENT_TYPES.has(tx.type);
+};
+
 export const transactionService = {
     getTransactions: async (filter?: TransactionFilter): Promise<Transaction[]> => {
         await delay(200);
@@ -24,12 +32,18 @@ export const transactionService = {
         const instituteMap = new Map(institutes.map(i => [i.id, i]));
         const instrumentMap = new Map(instruments.map(i => [i.id, i]));
 
+        // Movements of checking and savings accounts belong to the cash flow (Epic E52): left out unless asked
+        const showBankOperations = filter?.includeBankOperations === true;
+        const visibleTxs = showBankOperations
+            ? unifiedTxs
+            : unifiedTxs.filter(tx => !isBankOperation(tx, accountMap));
+
         // Convert to legacy format
-        let transactions = unifiedTxs.map(tx =>
+        let transactions = visibleTxs.map(tx =>
             convertToLegacyTransaction(tx, accountMap, instituteMap, instrumentMap)
         );
 
-        if (transactions.length === 0) {
+        if (transactions.length === 0 && unifiedTxs.length === 0) {
             transactions = await transactionRepository.getAll();
         }
 

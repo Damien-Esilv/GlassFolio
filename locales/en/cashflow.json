@@ -1,0 +1,296 @@
+{
+    "title": "Cash flow",
+    "subtitle": "Money in, money out and savings, month after month",
+    "tabs": {
+        "label": "Cash flow sections",
+        "overview": "Overview",
+        "flows": "Flows",
+        "categories": "Categories",
+        "distribution": "Distribution",
+        "operations": "Operations"
+    },
+    "periods": {
+        "label": "Period",
+        "month": "Month",
+        "3m": "3 months",
+        "6m": "6 months",
+        "12m": "12 months",
+        "ytd": "Year to date"
+    },
+    "monthPicker": {
+        "label": "Month",
+        "previous": "Previous month",
+        "next": "Next month"
+    },
+    "accounts": {
+        "filter": "Accounts",
+        "all": "All accounts",
+        "selected_one": "{{count}} account",
+        "selected_other": "{{count}} accounts"
+    },
+    "actions": {
+        "import": "Import a statement",
+        "sync": "Sync my banks",
+        "syncing": "Syncing…",
+        "create": "Add an operation",
+        "categorizeAi": "Categorise with the assistant",
+        "settings": "Cash flow settings",
+        "close": "Close"
+    },
+    "kpi": {
+        "availableIn": "Cash available in {{month}}",
+        "availablePeriod": "Cash available over the period",
+        "income": "Money in",
+        "expenses": "Money out",
+        "savingsRate": "Savings rate",
+        "savingsInvested": "Savings invested",
+        "passiveCoverage": "Spending covered by passive income",
+        "vsPrevious": "vs previous period"
+    },
+    "overview": {
+        "trendTitle": "Month after month",
+        "trendHint": "Each month: money in, then money out (recurring, day-to-day, savings) topped by what stayed available. The line is the savings rate.",
+        "legend": {
+            "income": "Money in",
+            "fixed": "Recurring",
+            "variable": "Day-to-day",
+            "savings": "Savings invested",
+            "available": "Available",
+            "savingsRate": "Savings rate"
+        },
+        "tabsTitle": "This month",
+        "tabIncome": "Money in",
+        "tabExpenses": "Money out",
+        "tabRecurring": "Recurring",
+        "topCategories": "Where the money went",
+        "noExpenses": "No spending this month.",
+        "noIncome": "No income this month.",
+        "noRecurring": "No recurring payment detected yet.",
+        "banks": "By bank",
+        "seeAll": "See all",
+        "uncategorized_one": "{{count}} operation is not categorised yet",
+        "uncategorized_other": "{{count}} operations are not categorised yet",
+        "review": "Review",
+        "passiveHint": "Dividends and interest compared with your spending of the period."
+    },
+    "flows": {
+        "title": "Where your money goes",
+        "subtitle": "From your income to taxes, savings and spending.",
+        "empty": "No income or spending in this period yet."
+    },
+    "sankey": {
+        "income_total": "Income",
+        "group_taxes": "Taxes",
+        "group_savings": "Savings",
+        "group_expenses": "Spending",
+        "from_savings": "Drawn from savings",
+        "available": "Left available",
+        "others": "Others",
+        "tooltip": "{{from}} → {{to}}"
+    },
+    "categoriesPage": {
+        "expenses": "Spending",
+        "income": "Income",
+        "total": "Total",
+        "share": "Share",
+        "vsAverage": "vs 12-month average",
+        "noAverage": "No history yet",
+        "operations_one": "{{count}} operation",
+        "operations_other": "{{count}} operations",
+        "detailTitle": "Last 12 months",
+        "subcategories": "Sub-categories",
+        "merchants": "Main merchants",
+        "seeOperations": "See the operations",
+        "empty": "Nothing in this period."
+    },
+    "distribution": {
+        "title": "Spending by amount",
+        "subtitle": "How many payments, of which size.",
+        "operations_one": "{{count}} payment",
+        "operations_other": "{{count}} payments",
+        "countAxis": "Payments",
+        "weekdays": "Spending by day of the week",
+        "bucketUnder": "< {{max}}",
+        "bucketRange": "{{min}}–{{max}}",
+        "bucketOver": "> {{min}}",
+        "days": {
+            "0": "Mon",
+            "1": "Tue",
+            "2": "Wed",
+            "3": "Thu",
+            "4": "Fri",
+            "5": "Sat",
+            "6": "Sun"
+        },
+        "empty": "No spending in this period."
+    },
+    "operations": {
+        "search": "Search an operation",
+        "category": "Category",
+        "allCategories": "All categories",
+        "uncategorizedOnly": "To categorise",
+        "direction": {
+            "all": "In and out",
+            "in": "Money in",
+            "out": "Money out"
+        },
+        "columns": {
+            "date": "Date",
+            "label": "Operation",
+            "category": "Category",
+            "account": "Account",
+            "amount": "Amount"
+        },
+        "empty": "No operation in this period.",
+        "noResults": "No operation matches these filters.",
+        "excludedBadge": "Excluded",
+        "changeCategory": "Change the category of {{label}}",
+        "applySimilarTitle": "Apply to similar operations?",
+        "applySimilarBody": "Every operation from “{{merchant}}”, past and future, will go to {{category}}.",
+        "applySimilarYes": "Yes, create a rule",
+        "applySimilarNo": "Only this one",
+        "saved": "Saved",
+        "ruleCreated": "Rule created: similar operations follow",
+        "detail": {
+            "title": "Operation",
+            "rawLabel": "Bank label",
+            "displayLabel": "Label shown",
+            "note": "Note",
+            "excluded": "Leave out of the cash flow",
+            "excludedHint": "It stays in the account balance.",
+            "source": "Why this category",
+            "date": "Date",
+            "amount": "Amount",
+            "account": "Account",
+            "synced": "Synced from your bank: the date and the amount follow the bank.",
+            "save": "Save",
+            "delete": "Delete the operation",
+            "deleteConfirm": "Delete this operation? A synced operation will not come back at the next sync.",
+            "deleted": "Operation deleted"
+        },
+        "source": {
+            "override": "Your choice",
+            "transfer": "Transfer between your accounts",
+            "rule": "One of your rules",
+            "type": "Operation type",
+            "bank": "Category given by the bank",
+            "keyword": "Recognised merchant",
+            "fallback": "Not categorised yet"
+        }
+    },
+    "manual": {
+        "title": "Add an operation",
+        "date": "Date",
+        "label": "Label",
+        "labelPlaceholder": "Market, rent, gift…",
+        "amount": "Amount",
+        "direction": {
+            "out": "Money out",
+            "in": "Money in"
+        },
+        "account": "Account",
+        "category": "Category",
+        "automatic": "Automatic",
+        "note": "Note",
+        "save": "Add",
+        "cancel": "Cancel",
+        "noAccount": "Create a checking or savings account first (Settings, Accounts).",
+        "errors": {
+            "account_not_found": "Choose an account.",
+            "empty_label": "Enter a label.",
+            "invalid_amount": "Enter an amount other than zero.",
+            "invalid_date": "Enter a valid date.",
+            "future_date": "The date cannot be in the future.",
+            "commit_failed": "The operation could not be saved.",
+            "synced_operation": "A synced operation follows the bank.",
+            "not_found": "This operation no longer exists."
+        }
+    },
+    "settings": {
+        "title": "Cash flow settings",
+        "accounts": "Accounts counted",
+        "accountsHint": "By default every checking and savings account is counted.",
+        "useAll": "Count every checking and savings account",
+        "investmentIncome": "Count dividends and interest of investment accounts",
+        "monthStart": "A month starts on day",
+        "monthStartHint": "Set it to your pay day so a month runs from one salary to the next.",
+        "categories": "My categories",
+        "categoriesHint": "A category of yours sits under a built-in one and takes its colour.",
+        "parent": "Under",
+        "name": "Name",
+        "add": "Add",
+        "rename": "Rename",
+        "delete": "Delete",
+        "deleteCategoryConfirm": "Delete “{{name}}”? Its operations and rules go back to {{parent}}.",
+        "noCategories": "No category of yours yet.",
+        "rules": "My rules",
+        "rulesHint": "An operation whose label contains the text goes to the category.",
+        "ruleContains": "Contains “{{text}}”",
+        "noRules": "No rule yet: change the category of an operation and choose “create a rule”.",
+        "deleteRule": "Delete the rule",
+        "ruleDirection": {
+            "any": "In and out",
+            "in": "Money in",
+            "out": "Money out"
+        },
+        "ruleBy": {
+            "user": "You",
+            "ai": "Assistant"
+        },
+        "errors": {
+            "empty_name": "Enter a name.",
+            "duplicate_name": "This name already exists here.",
+            "invalid_parent": "Choose a category.",
+            "not_found": "Not found."
+        }
+    },
+    "empty": {
+        "title": "Your cash flow starts with your bank operations",
+        "body": "Import a statement from your bank (CSV or OFX), add operations by hand, or connect your bank to follow it automatically.",
+        "connectWoob": "Connect my bank",
+        "woobCloud": "Automatic bank sync works in the desktop app and in Docker.",
+        "importFile": "Import a statement",
+        "createManual": "Add an operation"
+    },
+    "quota": {
+        "warning": "Your vault is nearly full ({{percent}} %). Older bank operations take room: consider exporting a backup."
+    },
+    "kinds": {
+        "income": "Income",
+        "expense": "Spending",
+        "savings": "Savings",
+        "transfer": "Transfer"
+    },
+    "categories": {
+        "salary": "Salary & work income",
+        "investment_income": "Investment income",
+        "benefits_refunds": "Benefits & refunds",
+        "other_income": "Other income",
+        "housing": "Housing",
+        "groceries": "Groceries",
+        "dining": "Eating out",
+        "transport": "Transport",
+        "subscriptions": "Subscriptions & telecom",
+        "health": "Health",
+        "shopping": "Shopping",
+        "leisure": "Leisure & culture",
+        "travel": "Travel",
+        "taxes": "Taxes",
+        "insurance": "Insurance",
+        "bank_fees": "Bank fees",
+        "family_education": "Children & education",
+        "gifts_donations": "Gifts & donations",
+        "cash_withdrawal": "Cash withdrawals",
+        "other_expense": "Other spending",
+        "donations": "Donations",
+        "home_services": "Home help",
+        "childcare": "Childcare",
+        "savings_invested": "Savings invested",
+        "internal_transfer": "Transfer between my accounts"
+    },
+    "errors": {
+        "load": "The cash flow could not be loaded.",
+        "save": "The change could not be saved."
+    },
+    "loading": "Loading the cash flow"
+}

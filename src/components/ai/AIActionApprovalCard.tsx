@@ -48,6 +48,10 @@ export const AIActionApprovalCard: React.FC<AIActionApprovalCardProps> = ({
     create_goal: t('ai:actionCard.types.create_goal'),
     import_transactions: t('ai:actionCard.types.import_transactions'),
     import_snapshot: t('ai:actionCard.types.import_snapshot'),
+    set_transaction_category: t('ai:actionCard.types.set_transaction_category'),
+    create_cashflow_category: t('ai:actionCard.types.create_cashflow_category'),
+    create_categorization_rule: t('ai:actionCard.types.create_categorization_rule'),
+    record_cash_operation: t('ai:actionCard.types.record_cash_operation'),
   };
   const typeLabel = typeLabelMap[proposal.type] ?? proposal.type;
 

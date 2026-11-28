@@ -27,7 +27,12 @@ import {
     UnifiedTransaction,
     MappingTemplate,
     AssetPosition,
-    Instrument
+    Instrument,
+    CustomCashflowCategory,
+    CategorizationRule,
+    CashflowAnnotation,
+    CashflowTombstone,
+    CashflowSettings
 } from '../types';
 import {
     institutes as initialInstitutes,
@@ -40,7 +45,8 @@ import {
     buildDemoAccounts,
     buildDemoImportBatches,
     buildDemoUnifiedTransactions,
-    buildDemoInstruments
+    buildDemoInstruments,
+    buildDemoCashflowRules
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
 import { getDeploymentMode } from '../config/deployment';
@@ -65,7 +71,58 @@ const STORAGE_KEYS = {
     UNIFIED_TRANSACTIONS: 'glassfolio_unified_transactions',
     MAPPING_TEMPLATES: 'glassfolio_mapping_templates',
     ASSET_POSITIONS: 'glassfolio_asset_positions',
-    INSTRUMENTS: 'glassfolio_instruments'
+    INSTRUMENTS: 'glassfolio_instruments',
+    // Cash flow (Epic E52): what the user decides about bank operations
+    CASHFLOW_CATEGORIES: 'glassfolio_cashflow_categories',
+    CASHFLOW_RULES: 'glassfolio_cashflow_rules',
+    CASHFLOW_ANNOTATIONS: 'glassfolio_cashflow_annotations',
+    CASHFLOW_TOMBSTONES: 'glassfolio_cashflow_tombstones',
+    CASHFLOW_SETTINGS: 'glassfolio_cashflow_settings'
+};
+
+/**
+ * Bank operations (rows of checking and savings accounts) are stored in one record per year, apart
+ * from the rest of the journal: a vault record is capped at 5 MB (10 MB per account online) and a
+ * checking account adds 100 to 250 rows a month (TGLA-248). `getUnifiedTransactions` returns both.
+ */
+export const BANK_OPERATIONS_KEY_PREFIX = 'glassfolio_bank_operations_';
+const BANK_OPERATIONS_KEY_PATTERN = /^glassfolio_bank_operations_\d{4}$/;
+const CASH_ACCOUNT_TYPES = new Set(['checking', 'savings']);
+
+/** Drops what the reader restores by default, so a year of bank rows stays small. */
+const compactJournalRow = (tx: UnifiedTransaction): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(tx)) {
+        if (value === undefined || value === null || value === '') continue;
+        if (key === 'isSynthetic' && value === false) continue;
+        if (key === 'version' && value === 1) continue;
+        if (key === 'sourceMode' && value === 'history') continue;
+        if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value as object).length === 0) continue;
+        out[key] = value;
+    }
+    return out;
+};
+
+const parseRows = (raw: string | null): UnifiedTransaction[] => {
+    if (!raw) return [];
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        return Array.isArray(parsed) ? (parsed as UnifiedTransaction[]) : [];
+    } catch {
+        return [];
+    }
+};
+
+/** Writes a record only when its content changed (each write is encrypted and sent to the server). */
+const writeIfChanged = (key: string, value: string): void => {
+    if (appStorage.getItem(key) !== value) appStorage.setItem(key, value);
+};
+
+export const DEFAULT_CASHFLOW_SETTINGS: Omit<CashflowSettings, 'updatedAt'> = {
+    ownerId: 'default-user',
+    includedAccountIds: null,
+    includeInvestmentIncome: true,
+    monthStartDay: 1,
 };
 
 /**
@@ -332,12 +389,21 @@ class MockDB {
     }
 
     // --- Unified Transactions ---
+    /** Yearly records holding the bank operations, oldest first. */
+    getBankOperationKeys(): string[] {
+        return appStorage.keys().filter(key => BANK_OPERATIONS_KEY_PATTERN.test(key)).sort();
+    }
+
     getUnifiedTransactions(): UnifiedTransaction[] {
         const stored = appStorage.getItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS);
-        if (!stored) return isRealUserVaultActive() ? [] : buildDemoUnifiedTransactions();
+        const bankKeys = this.getBankOperationKeys();
+        if (!stored && bankKeys.length === 0) return isRealUserVaultActive() ? [] : buildDemoUnifiedTransactions();
 
         // Migrate old transactions to new schema if needed
-        const transactions = JSON.parse(stored) as UnifiedTransaction[];
+        const transactions = [
+            ...parseRows(stored),
+            ...bankKeys.flatMap(key => parseRows(appStorage.getItem(key))),
+        ];
         return transactions.map(tx => ({
             ...tx,
             ownerId: tx.ownerId || 'default-user',
@@ -352,8 +418,29 @@ class MockDB {
         }));
     }
 
+    /**
+     * Saves the journal: rows of checking and savings accounts go to their yearly record (compact),
+     * every other row to the main record. Only the records whose content changed are rewritten.
+     */
     saveUnifiedTransactions(data: UnifiedTransaction[]) {
-        appStorage.setItem(STORAGE_KEYS.UNIFIED_TRANSACTIONS, JSON.stringify(data));
+        const cashAccounts = new Set(this.getAccounts().filter(a => CASH_ACCOUNT_TYPES.has(a.type)).map(a => a.id));
+        const main: UnifiedTransaction[] = [];
+        const years = new Map<string, Record<string, unknown>[]>();
+        for (const tx of data) {
+            const year = typeof tx.transactionDate === 'string' ? tx.transactionDate.slice(0, 4) : '';
+            if (cashAccounts.has(tx.accountId) && /^\d{4}$/.test(year)) {
+                const rows = years.get(year) ?? [];
+                rows.push(compactJournalRow(tx));
+                years.set(year, rows);
+            } else {
+                main.push(tx);
+            }
+        }
+        writeIfChanged(STORAGE_KEYS.UNIFIED_TRANSACTIONS, JSON.stringify(main));
+        for (const [year, rows] of years) writeIfChanged(`${BANK_OPERATIONS_KEY_PREFIX}${year}`, JSON.stringify(rows));
+        for (const key of this.getBankOperationKeys()) {
+            if (!years.has(key.slice(BANK_OPERATIONS_KEY_PREFIX.length))) appStorage.removeItem(key);
+        }
     }
 
     getUnifiedTransactionsByBatch(batchId: string): UnifiedTransaction[] {
@@ -451,6 +538,66 @@ class MockDB {
         return undefined;
     }
 
+    // --- Cash flow (Epic E52) ---
+    private readList<T>(key: string, fallback: () => T[]): T[] {
+        const stored = appStorage.getItem(key);
+        if (!stored) return isRealUserVaultActive() ? [] : fallback();
+        try {
+            const parsed: unknown = JSON.parse(stored);
+            return Array.isArray(parsed) ? (parsed as T[]) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    getCashflowCategories(): CustomCashflowCategory[] {
+        return this.readList<CustomCashflowCategory>(STORAGE_KEYS.CASHFLOW_CATEGORIES, () => []);
+    }
+
+    saveCashflowCategories(data: CustomCashflowCategory[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_CATEGORIES, JSON.stringify(data));
+    }
+
+    getCashflowRules(): CategorizationRule[] {
+        return this.readList<CategorizationRule>(STORAGE_KEYS.CASHFLOW_RULES, buildDemoCashflowRules);
+    }
+
+    saveCashflowRules(data: CategorizationRule[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_RULES, JSON.stringify(data));
+    }
+
+    getCashflowAnnotations(): CashflowAnnotation[] {
+        return this.readList<CashflowAnnotation>(STORAGE_KEYS.CASHFLOW_ANNOTATIONS, () => []);
+    }
+
+    saveCashflowAnnotations(data: CashflowAnnotation[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_ANNOTATIONS, JSON.stringify(data));
+    }
+
+    getCashflowTombstones(): CashflowTombstone[] {
+        return this.readList<CashflowTombstone>(STORAGE_KEYS.CASHFLOW_TOMBSTONES, () => []);
+    }
+
+    saveCashflowTombstones(data: CashflowTombstone[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_TOMBSTONES, JSON.stringify(data));
+    }
+
+    getCashflowSettings(): CashflowSettings {
+        const fallback: CashflowSettings = { ...DEFAULT_CASHFLOW_SETTINGS, updatedAt: new Date(0).toISOString() };
+        const stored = appStorage.getItem(STORAGE_KEYS.CASHFLOW_SETTINGS);
+        if (!stored) return fallback;
+        try {
+            const parsed = JSON.parse(stored) as Partial<CashflowSettings>;
+            return { ...fallback, ...parsed };
+        } catch {
+            return fallback;
+        }
+    }
+
+    saveCashflowSettings(data: CashflowSettings) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_SETTINGS, JSON.stringify(data));
+    }
+
     // =========================================================================
     // UTILITY METHODS
     // =========================================================================
@@ -462,6 +609,7 @@ class MockDB {
         Object.values(STORAGE_KEYS).forEach(key => {
             appStorage.removeItem(key);
         });
+        this.getBankOperationKeys().forEach(key => appStorage.removeItem(key));
     }
 
     /**
@@ -558,12 +706,21 @@ class MockDB {
             institutes: pick(() => this.getInstitutes(), STORAGE_KEYS.INSTITUTES),
             accounts: pick(() => this.getAccounts(), STORAGE_KEYS.ACCOUNTS),
             importBatches: pick(() => this.getImportBatches(), STORAGE_KEYS.IMPORT_BATCHES),
-            unifiedTransactions: pick(() => this.getUnifiedTransactions(), STORAGE_KEYS.UNIFIED_TRANSACTIONS),
+            unifiedTransactions: persistedOnly
+                ? [STORAGE_KEYS.UNIFIED_TRANSACTIONS, ...this.getBankOperationKeys()].flatMap(key => this.readPersistedList(key))
+                : this.getUnifiedTransactions(),
             mappingTemplates: pick(() => this.getMappingTemplates(), STORAGE_KEYS.MAPPING_TEMPLATES),
             assetPositions: pick(() => this.getAssetPositions(), STORAGE_KEYS.ASSET_POSITIONS),
             instruments: pick(() => this.getInstruments(), STORAGE_KEYS.INSTRUMENTS),
             quests: pick(() => this.getQuests(), STORAGE_KEYS.QUESTS),
             xpEvents: pick(() => this.getXpEvents(), STORAGE_KEYS.XP_EVENTS),
+            cashflowCategories: pick(() => this.getCashflowCategories(), STORAGE_KEYS.CASHFLOW_CATEGORIES),
+            cashflowRules: pick(() => this.getCashflowRules(), STORAGE_KEYS.CASHFLOW_RULES),
+            cashflowAnnotations: pick(() => this.getCashflowAnnotations(), STORAGE_KEYS.CASHFLOW_ANNOTATIONS),
+            cashflowTombstones: pick(() => this.getCashflowTombstones(), STORAGE_KEYS.CASHFLOW_TOMBSTONES),
+            cashflowSettings: persistedOnly
+                ? this.readPersistedList(STORAGE_KEYS.CASHFLOW_SETTINGS)
+                : [this.getCashflowSettings()],
             pinnedBadges: persistedOnly
                 ? this.readPersistedList(STORAGE_KEYS.PINNED_BADGES).map(id => ({ id }))
                 : this.getPinnedBadges().map(id => ({ id })),
@@ -581,6 +738,7 @@ class MockDB {
      */
     resetToInitialData(): void {
         Object.values(STORAGE_KEYS).forEach(key => appStorage.removeItem(key));
+        this.getBankOperationKeys().forEach(key => appStorage.removeItem(key));
         appStorage.removeItem('glassfolio_price_cache');
         appStorage.removeItem(MANUAL_PRICE_HISTORY_KEY);
         appStorage.getBacking().removeItem(LEGACY_MANUAL_PRICE_HISTORY_KEY);
@@ -606,8 +764,14 @@ class MockDB {
             STORAGE_KEYS.IMPORT_BATCHES,
             STORAGE_KEYS.UNIFIED_TRANSACTIONS,
             STORAGE_KEYS.ASSET_POSITIONS,
+            STORAGE_KEYS.CASHFLOW_CATEGORIES,
+            STORAGE_KEYS.CASHFLOW_RULES,
+            STORAGE_KEYS.CASHFLOW_ANNOTATIONS,
+            STORAGE_KEYS.CASHFLOW_TOMBSTONES,
         ];
         zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
+        this.getBankOperationKeys().forEach(key => appStorage.removeItem(key));
+        appStorage.removeItem(STORAGE_KEYS.CASHFLOW_SETTINGS);
         // Sync connections point to the accounts just wiped
         appStorage.removeItem(CONNECTIONS_STORAGE_KEY);
         appStorage.removeItem('glassfolio_price_cache');

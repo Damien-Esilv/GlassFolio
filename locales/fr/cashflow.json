@@ -1,0 +1,296 @@
+{
+    "title": "Cash flow",
+    "subtitle": "Entrées, sorties et épargne, mois après mois",
+    "tabs": {
+        "label": "Sections du cash flow",
+        "overview": "Vue d'ensemble",
+        "flows": "Flux",
+        "categories": "Catégories",
+        "distribution": "Distribution",
+        "operations": "Opérations"
+    },
+    "periods": {
+        "label": "Période",
+        "month": "Mois",
+        "3m": "3 mois",
+        "6m": "6 mois",
+        "12m": "12 mois",
+        "ytd": "Depuis janvier"
+    },
+    "monthPicker": {
+        "label": "Mois",
+        "previous": "Mois précédent",
+        "next": "Mois suivant"
+    },
+    "accounts": {
+        "filter": "Comptes",
+        "all": "Tous les comptes",
+        "selected_one": "{{count}} compte",
+        "selected_other": "{{count}} comptes"
+    },
+    "actions": {
+        "import": "Importer un relevé",
+        "sync": "Synchroniser mes banques",
+        "syncing": "Synchronisation…",
+        "create": "Ajouter une opération",
+        "categorizeAi": "Catégoriser avec l'assistant",
+        "settings": "Réglages du cash flow",
+        "close": "Fermer"
+    },
+    "kpi": {
+        "availableIn": "Cash disponible en {{month}}",
+        "availablePeriod": "Cash disponible sur la période",
+        "income": "Entrées",
+        "expenses": "Sorties",
+        "savingsRate": "Taux d'épargne",
+        "savingsInvested": "Épargne investie",
+        "passiveCoverage": "Dépenses couvertes par les revenus passifs",
+        "vsPrevious": "par rapport à la période précédente"
+    },
+    "overview": {
+        "trendTitle": "Mois après mois",
+        "trendHint": "Chaque mois : les entrées, puis les sorties (récurrentes, du quotidien, épargne) surmontées de ce qui reste disponible. La courbe est le taux d'épargne.",
+        "legend": {
+            "income": "Entrées",
+            "fixed": "Récurrent",
+            "variable": "Quotidien",
+            "savings": "Épargne investie",
+            "available": "Disponible",
+            "savingsRate": "Taux d'épargne"
+        },
+        "tabsTitle": "Ce mois-ci",
+        "tabIncome": "Entrées",
+        "tabExpenses": "Sorties",
+        "tabRecurring": "Récurrent",
+        "topCategories": "Où est passé l'argent",
+        "noExpenses": "Aucune dépense ce mois-ci.",
+        "noIncome": "Aucune entrée ce mois-ci.",
+        "noRecurring": "Aucun prélèvement récurrent repéré pour l'instant.",
+        "banks": "Par banque",
+        "seeAll": "Tout voir",
+        "uncategorized_one": "{{count}} opération n'est pas encore catégorisée",
+        "uncategorized_other": "{{count}} opérations ne sont pas encore catégorisées",
+        "review": "Les classer",
+        "passiveHint": "Dividendes et intérêts comparés à vos dépenses de la période."
+    },
+    "flows": {
+        "title": "Où va votre argent",
+        "subtitle": "De vos revenus vers les impôts, l'épargne et les dépenses.",
+        "empty": "Aucune entrée ni sortie sur cette période pour l'instant."
+    },
+    "sankey": {
+        "income_total": "Revenus",
+        "group_taxes": "Impôts",
+        "group_savings": "Épargne",
+        "group_expenses": "Dépenses",
+        "from_savings": "Puisé dans l'épargne",
+        "available": "Reste disponible",
+        "others": "Autres",
+        "tooltip": "{{from}} → {{to}}"
+    },
+    "categoriesPage": {
+        "expenses": "Dépenses",
+        "income": "Revenus",
+        "total": "Total",
+        "share": "Part",
+        "vsAverage": "par rapport à la moyenne sur 12 mois",
+        "noAverage": "Pas encore d'historique",
+        "operations_one": "{{count}} opération",
+        "operations_other": "{{count}} opérations",
+        "detailTitle": "12 derniers mois",
+        "subcategories": "Sous-catégories",
+        "merchants": "Principaux marchands",
+        "seeOperations": "Voir les opérations",
+        "empty": "Rien sur cette période."
+    },
+    "distribution": {
+        "title": "Dépenses par montant",
+        "subtitle": "Combien de paiements, de quelle taille.",
+        "operations_one": "{{count}} paiement",
+        "operations_other": "{{count}} paiements",
+        "countAxis": "Paiements",
+        "weekdays": "Dépenses par jour de la semaine",
+        "bucketUnder": "< {{max}}",
+        "bucketRange": "{{min}}–{{max}}",
+        "bucketOver": "> {{min}}",
+        "days": {
+            "0": "Lun",
+            "1": "Mar",
+            "2": "Mer",
+            "3": "Jeu",
+            "4": "Ven",
+            "5": "Sam",
+            "6": "Dim"
+        },
+        "empty": "Aucune dépense sur cette période."
+    },
+    "operations": {
+        "search": "Rechercher une opération",
+        "category": "Catégorie",
+        "allCategories": "Toutes les catégories",
+        "uncategorizedOnly": "À catégoriser",
+        "direction": {
+            "all": "Entrées et sorties",
+            "in": "Entrées",
+            "out": "Sorties"
+        },
+        "columns": {
+            "date": "Date",
+            "label": "Opération",
+            "category": "Catégorie",
+            "account": "Compte",
+            "amount": "Montant"
+        },
+        "empty": "Aucune opération sur cette période.",
+        "noResults": "Aucune opération ne correspond à ces filtres.",
+        "excludedBadge": "Exclue",
+        "changeCategory": "Changer la catégorie de {{label}}",
+        "applySimilarTitle": "Appliquer aux opérations similaires ?",
+        "applySimilarBody": "Toutes les opérations de « {{merchant}} », passées et à venir, iront dans {{category}}.",
+        "applySimilarYes": "Oui, créer une règle",
+        "applySimilarNo": "Seulement celle-ci",
+        "saved": "Enregistré",
+        "ruleCreated": "Règle créée : les opérations similaires suivent",
+        "detail": {
+            "title": "Opération",
+            "rawLabel": "Libellé de la banque",
+            "displayLabel": "Libellé affiché",
+            "note": "Note",
+            "excluded": "Exclure du cash flow",
+            "excludedHint": "Elle reste dans le solde du compte.",
+            "source": "Pourquoi cette catégorie",
+            "date": "Date",
+            "amount": "Montant",
+            "account": "Compte",
+            "synced": "Synchronisée depuis votre banque : la date et le montant suivent la banque.",
+            "save": "Enregistrer",
+            "delete": "Supprimer l'opération",
+            "deleteConfirm": "Supprimer cette opération ? Une opération synchronisée ne reviendra pas à la prochaine synchro.",
+            "deleted": "Opération supprimée"
+        },
+        "source": {
+            "override": "Votre choix",
+            "transfer": "Virement entre vos comptes",
+            "rule": "Une de vos règles",
+            "type": "Type d'opération",
+            "bank": "Catégorie donnée par la banque",
+            "keyword": "Marchand reconnu",
+            "fallback": "Pas encore catégorisée"
+        }
+    },
+    "manual": {
+        "title": "Ajouter une opération",
+        "date": "Date",
+        "label": "Libellé",
+        "labelPlaceholder": "Marché, loyer, cadeau…",
+        "amount": "Montant",
+        "direction": {
+            "out": "Sortie",
+            "in": "Entrée"
+        },
+        "account": "Compte",
+        "category": "Catégorie",
+        "automatic": "Automatique",
+        "note": "Note",
+        "save": "Ajouter",
+        "cancel": "Annuler",
+        "noAccount": "Créez d'abord un compte courant ou un livret (Réglages, Comptes).",
+        "errors": {
+            "account_not_found": "Choisissez un compte.",
+            "empty_label": "Saisissez un libellé.",
+            "invalid_amount": "Saisissez un montant différent de zéro.",
+            "invalid_date": "Saisissez une date valide.",
+            "future_date": "La date ne peut pas être dans le futur.",
+            "commit_failed": "L'opération n'a pas pu être enregistrée.",
+            "synced_operation": "Une opération synchronisée suit la banque.",
+            "not_found": "Cette opération n'existe plus."
+        }
+    },
+    "settings": {
+        "title": "Réglages du cash flow",
+        "accounts": "Comptes pris en compte",
+        "accountsHint": "Par défaut, tous les comptes courants et livrets sont pris en compte.",
+        "useAll": "Prendre tous les comptes courants et livrets",
+        "investmentIncome": "Compter les dividendes et intérêts des comptes d'investissement",
+        "monthStart": "Un mois commence le",
+        "monthStartHint": "Mettez le jour de votre paie : un mois va alors d'un salaire au suivant.",
+        "categories": "Mes catégories",
+        "categoriesHint": "Une catégorie à vous se range sous une catégorie intégrée et prend sa couleur.",
+        "parent": "Sous",
+        "name": "Nom",
+        "add": "Ajouter",
+        "rename": "Renommer",
+        "delete": "Supprimer",
+        "deleteCategoryConfirm": "Supprimer « {{name}} » ? Ses opérations et ses règles reviennent dans {{parent}}.",
+        "noCategories": "Aucune catégorie à vous pour l'instant.",
+        "rules": "Mes règles",
+        "rulesHint": "Une opération dont le libellé contient le texte va dans la catégorie.",
+        "ruleContains": "Contient « {{text}} »",
+        "noRules": "Aucune règle : changez la catégorie d'une opération et choisissez « créer une règle ».",
+        "deleteRule": "Supprimer la règle",
+        "ruleDirection": {
+            "any": "Entrées et sorties",
+            "in": "Entrées",
+            "out": "Sorties"
+        },
+        "ruleBy": {
+            "user": "Vous",
+            "ai": "Assistant"
+        },
+        "errors": {
+            "empty_name": "Saisissez un nom.",
+            "duplicate_name": "Ce nom existe déjà ici.",
+            "invalid_parent": "Choisissez une catégorie.",
+            "not_found": "Introuvable."
+        }
+    },
+    "empty": {
+        "title": "Votre cash flow commence avec vos opérations bancaires",
+        "body": "Importez un relevé de votre banque (CSV ou OFX), ajoutez des opérations à la main, ou connectez votre banque pour un suivi automatique.",
+        "connectWoob": "Connecter ma banque",
+        "woobCloud": "La synchro automatique des banques fonctionne dans l'application de bureau et dans Docker.",
+        "importFile": "Importer un relevé",
+        "createManual": "Ajouter une opération"
+    },
+    "quota": {
+        "warning": "Votre coffre est presque plein ({{percent}} %). Les anciennes opérations bancaires prennent de la place : pensez à exporter une sauvegarde."
+    },
+    "kinds": {
+        "income": "Revenus",
+        "expense": "Dépenses",
+        "savings": "Épargne",
+        "transfer": "Virement"
+    },
+    "categories": {
+        "salary": "Salaire et revenus d'activité",
+        "investment_income": "Revenus du patrimoine",
+        "benefits_refunds": "Aides et remboursements",
+        "other_income": "Autres revenus",
+        "housing": "Logement",
+        "groceries": "Alimentation",
+        "dining": "Restaurants et sorties",
+        "transport": "Transport",
+        "subscriptions": "Abonnements et télécom",
+        "health": "Santé",
+        "shopping": "Shopping",
+        "leisure": "Loisirs et culture",
+        "travel": "Voyages",
+        "taxes": "Impôts et taxes",
+        "insurance": "Assurances",
+        "bank_fees": "Frais bancaires",
+        "family_education": "Enfants et éducation",
+        "gifts_donations": "Cadeaux et dons",
+        "cash_withdrawal": "Retraits d'espèces",
+        "other_expense": "Autres dépenses",
+        "donations": "Dons",
+        "home_services": "Emploi à domicile",
+        "childcare": "Garde d'enfants",
+        "savings_invested": "Épargne investie",
+        "internal_transfer": "Virement entre mes comptes"
+    },
+    "errors": {
+        "load": "Le cash flow n'a pas pu être chargé.",
+        "save": "La modification n'a pas pu être enregistrée."
+    },
+    "loading": "Chargement du cash flow"
+}

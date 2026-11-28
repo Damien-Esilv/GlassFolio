@@ -43,6 +43,13 @@ const isShowcaseExcluded = import.meta.env.VITE_APP_TARGET === 'app';
 const GoogleAuthCallback = React.lazy(() => import('./pages/GoogleAuthCallback').then((m) => ({ default: m.GoogleAuthCallback })));
 const ImportWizard = React.lazy(() => import('./pages/ImportWizard'));
 const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
+// Cash flow (Epic E52): charts stay out of the main bundle
+const CashflowLayout = React.lazy(() => import('./pages/cashflow/CashflowLayout'));
+const CashflowOverview = React.lazy(() => import('./pages/cashflow/CashflowOverview'));
+const CashflowFlows = React.lazy(() => import('./pages/cashflow/CashflowFlows'));
+const CashflowCategories = React.lazy(() => import('./pages/cashflow/CashflowCategories'));
+const CashflowDistribution = React.lazy(() => import('./pages/cashflow/CashflowDistribution'));
+const CashflowOperations = React.lazy(() => import('./pages/cashflow/CashflowOperations'));
 
 const Landing = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/Landing'));
 const LegalCenter = isShowcaseExcluded ? () => null : React.lazy(() => import('./pages/LegalCenter'));
@@ -196,6 +203,13 @@ const App: React.FC = () => {
               <Route path="/analytics/performance" element={<ProtectedRoute><PortfolioPerformance /></ProtectedRoute>} />
               <Route path="/analytics/pl" element={<ProtectedRoute><RealizedUnrealizedPL /></ProtectedRoute>} />
               <Route path="/analytics/fees" element={<ProtectedRoute><FeeAnalysis /></ProtectedRoute>} />
+              <Route path="/cashflow" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><CashflowLayout /></React.Suspense></ProtectedRoute>}>
+                <Route index element={<CashflowOverview />} />
+                <Route path="flows" element={<CashflowFlows />} />
+                <Route path="categories" element={<CashflowCategories />} />
+                <Route path="distribution" element={<CashflowDistribution />} />
+                <Route path="operations" element={<CashflowOperations />} />
+              </Route>
               {/* /analytics/tax → redirect to the new fiscal module */}
               <Route path="/analytics/tax" element={<Navigate to="/tax" replace />} />
 

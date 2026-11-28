@@ -5,4 +5,5 @@
 export * from './types.backend';
 export * from './domain';
 export * from './connections';
+export * from './cashflow';
 export type { AssetClass } from '../constants/assetClasses';

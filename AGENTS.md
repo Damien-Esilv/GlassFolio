@@ -61,6 +61,7 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
   - Pas de hex, raw RGB/RGBA, ni classes Tailwind brutes (`text-emerald-*`, `bg-rose-*`, `text-amber-*`, etc.) dans les `.tsx`.
   - Utiliser obligatoirement les tokens d'intention `positive`, `negative`, `warning`, `neutral`, `brand` (`THEME_INTENT` de `src/constants/themeTokens.ts`) et les micro-composants `<TrendValue>` / `<TrendBadge>`.
   - Pour les comparatifs multi-courbes et dashboards comparatifs (jusqu'à 8 couleurs sans confusion avec les gains/pertes), utiliser `CHART_SERIES_PALETTE` via `getComparisonSeriesTokens(index)` ou `getAssetStableColor(symbol)`.
+  - Pour le cash flow (catégories de dépenses, rôles entrées/sorties/disponible/épargne, dégradé des tranches de montant), utiliser la palette dédiée `src/constants/cashflowPalette.ts` (`--color-cashflow-*`, déclarées dans les 5 thèmes) et `getCashflowCategoryTokens(categoryId)` ; une hausse de dépenses s'affiche avec `TrendBadge goodDirection="down"`.
   - Toute modification de `--color-positive` dans `src/index.css` doit cascader sur l'ensemble des écrans sans contradiction sémantique.
 - **Form elements** : respecter le pattern `bg-subtle text-primary border-subtle focus:ring-primary focus:border-primary`.
 - **Data access** : les composants/pages ne touchent jamais `localStorage` directement ; passer par `src/services/`.

@@ -84,6 +84,81 @@
       }
     },
     {
+      "name": "create_cashflow_category",
+      "description": "Create a sub-category of the user under a built-in category (it takes the parent's colour and kind), e.g. \"Garage\" under housing. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "description": "Built-in category id from list_cashflow_categories (not internal_transfer)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the new sub-category (40 characters at most)."
+          }
+        },
+        "required": [
+          "parentId",
+          "name"
+        ]
+      },
+      "annotations": {
+        "title": "create_cashflow_category",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "create_categorization_rule",
+      "description": "Create a categorisation rule: every operation (past and future) whose label contains the text goes to the category, optionally only money in or out, one account, or an amount range. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "labelContains": {
+            "type": "string",
+            "description": "Text to find in the label (case and accents ignored), e.g. NETFLIX."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Category id from list_cashflow_categories."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out",
+              "any"
+            ],
+            "description": "Money in, money out or both (default)."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Only operations of this account."
+          },
+          "minAmount": {
+            "type": "number",
+            "description": "Only operations of at least this absolute amount."
+          },
+          "maxAmount": {
+            "type": "number",
+            "description": "Only operations of at most this absolute amount."
+          }
+        },
+        "required": [
+          "labelContains",
+          "categoryId"
+        ]
+      },
+      "annotations": {
+        "title": "create_categorization_rule",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "create_goal",
       "description": "Create a new financial goal with a target amount. Requires explicit human confirmation before execution.",
       "inputSchema": {
@@ -156,6 +231,41 @@
       },
       "annotations": {
         "title": "get_bank_sync_status",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_cashflow_summary",
+      "description": "Cash flow of the user's checking and savings accounts for a period: money in, money out, savings invested, cash left available, savings rate, passive income coverage, monthly trend (12 months), totals per category and per bank, top merchants and the count of operations not categorised yet. Amounts are in the base currency, spending as positive numbers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "month",
+              "3m",
+              "6m",
+              "12m",
+              "ytd",
+              "all"
+            ],
+            "description": "Period: month (one budget month, see month), 3m, 6m, 12m, ytd or all. Default: month."
+          },
+          "month": {
+            "type": "string",
+            "description": "Budget month YYYY-MM for period=month. Default: the current month."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code, e.g. EUR. Default: EUR."
+          }
+        }
+      },
+      "annotations": {
+        "title": "get_cashflow_summary",
         "readOnlyHint": true,
         "destructiveHint": false,
         "openWorldHint": false
@@ -467,6 +577,85 @@
       },
       "annotations": {
         "title": "list_auth_methods",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_cashflow_categories",
+      "description": "Categories of the cash flow: built-in ones (kind income, expense, savings or transfer; built-in sub-categories have a parentId) and the user's own sub-categories (custom=true, with their name). Use these ids with set_transaction_category and create_categorization_rule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list_cashflow_categories",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_cashflow_rules",
+      "description": "The user's categorisation rules: an operation whose label contains the text (and matches direction, account and amount bounds) goes to the category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list_cashflow_rules",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_cashflow_transactions",
+      "description": "Bank operations counted in the cash flow, newest first, with their category and why it was chosen (categorySource: override, transfer, rule, type, bank, keyword, fallback). Use uncategorizedOnly=true to get the operations still waiting for a category (fallback) before proposing categories with set_transaction_category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "First day included, YYYY-MM-DD."
+          },
+          "end": {
+            "type": "string",
+            "description": "Day after the last one included, YYYY-MM-DD."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Only this category (and its sub-categories). Ids come from list_cashflow_categories."
+          },
+          "uncategorizedOnly": {
+            "type": "boolean",
+            "description": "Only operations not categorised yet."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ],
+            "description": "Only money in or only money out."
+          },
+          "search": {
+            "type": "string",
+            "description": "Text searched in the label and the note."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of operations (default 100, at most 500)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code. Default: EUR."
+          }
+        }
+      },
+      "annotations": {
+        "title": "list_cashflow_transactions",
         "readOnlyHint": true,
         "destructiveHint": false,
         "openWorldHint": false
@@ -891,6 +1080,51 @@
       }
     },
     {
+      "name": "record_cash_operation",
+      "description": "Record a bank operation typed by hand in a checking or savings account (negative amount = money out). Account ids come from list_institutions. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Checking or savings account id."
+          },
+          "date": {
+            "type": "string",
+            "description": "Date of the operation, YYYY-MM-DD (not in the future)."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Signed amount in the account currency: negative for money out."
+          },
+          "label": {
+            "type": "string",
+            "description": "Label of the operation."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Category id (optional: categorised automatically otherwise)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Optional note."
+          }
+        },
+        "required": [
+          "accountId",
+          "date",
+          "amount",
+          "label"
+        ]
+      },
+      "annotations": {
+        "title": "record_cash_operation",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "record_transaction",
       "description": "Record a new financial transaction (Buy, Sell, Deposit, Withdrawal). Requires explicit human confirmation before execution.",
       "inputSchema": {
@@ -1044,6 +1278,41 @@
       },
       "annotations": {
         "title": "set_cost_basis_method",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "set_transaction_category",
+      "description": "Put one or more cash flow operations (ids from list_cashflow_transactions) in a category. With createRule=true, the merchant of the first operation also becomes a rule so similar operations follow. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Operation id."
+            },
+            "description": "Ids of the operations (at most 500)."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Category id from list_cashflow_categories."
+          },
+          "createRule": {
+            "type": "boolean",
+            "description": "Also create a rule from the merchant of the first operation."
+          }
+        },
+        "required": [
+          "transactionIds",
+          "categoryId"
+        ]
+      },
+      "annotations": {
+        "title": "set_transaction_category",
         "readOnlyHint": false,
         "destructiveHint": false,
         "openWorldHint": false

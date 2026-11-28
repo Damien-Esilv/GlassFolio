@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { getTrendTokens } from '../../constants/themeTokens';
+import { getTrendTokens, type TrendDirection } from '../../constants/themeTokens';
 import { useCountUp } from '../../hooks/useCountUp';
 import { ANIMATION_DURATION_MS } from '../../constants/animations';
 import StableNumber from './StableNumber';
@@ -15,6 +15,8 @@ export interface TrendBadgeProps {
   size?: 'sm' | 'md';
   animated?: boolean;
   duration?: number;
+  /** 'down' colours a rise in red (spending); the sign and icon keep following the value. */
+  goodDirection?: TrendDirection;
 }
 
 export const TrendBadge: React.FC<TrendBadgeProps> = ({
@@ -27,8 +29,9 @@ export const TrendBadge: React.FC<TrendBadgeProps> = ({
   size = 'sm',
   animated = false,
   duration = ANIMATION_DURATION_MS,
+  goodDirection,
 }) => {
-  const tokens = getTrendTokens(value);
+  const tokens = getTrendTokens(value, goodDirection === 'down' ? 'down' : 'up');
   const animatedValue = useCountUp(value, animated ? duration : 0);
   const countValue = animated ? animatedValue : value;
 

@@ -25,6 +25,7 @@ const Transactions: React.FC = () => {
    const [side, setSide] = useState('All');
    const [source, setSource] = useState('All');
    const [currency, setCurrency] = useState('All');
+   const [showBankOperations, setShowBankOperations] = useState(false);
 
    const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
    const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +85,8 @@ const Transactions: React.FC = () => {
                assetClass,
                side,
                source,
-               currency
+               currency,
+               includeBankOperations: showBankOperations
             });
             setFilteredTransactions(result);
          } catch (error) {
@@ -97,7 +99,7 @@ const Transactions: React.FC = () => {
       const debounce = setTimeout(fetchTransactions, 300); // Debounce search
       return () => clearTimeout(debounce);
 
-   }, [searchQuery, dateRange, assetClass, side, source, currency, globalTransactions, refetchTrigger]); // Re-run if filters, global data, or manual trigger changes
+   }, [searchQuery, dateRange, assetClass, side, source, currency, showBankOperations, globalTransactions, refetchTrigger]); // Re-run if filters, global data, or manual trigger changes
 
    const cardStyle = "rounded-xl bg-card shadow-lg border border-subtle";
 
@@ -210,6 +212,20 @@ const Transactions: React.FC = () => {
                      <option>{t('transactions:filters.statusPending')}</option>
                   </select>
                </div>
+            </div>
+
+            {/* Bank operations live in the cash flow (Epic E52) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+               <label className="flex items-center gap-2 text-secondary cursor-pointer">
+                  <input
+                     type="checkbox"
+                     checked={showBankOperations}
+                     onChange={(e) => setShowBankOperations(e.target.checked)}
+                     className="rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary"
+                  />
+                  {t('transactions:filters.showBankOperations')}
+               </label>
+               <Link to="/cashflow/operations" className="font-semibold text-brand hover:underline">{t('transactions:filters.openCashflow')}</Link>
             </div>
 
             {/* Search Bar */}

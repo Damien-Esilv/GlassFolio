@@ -331,7 +331,10 @@ jobs:
             # 2816 -> 4640: lazy pdfjs-dist PDF reader + worker for non-native AI providers (TGLA-230)
             # 4640 -> 4672: dependency updates, react 19.3, react-router 7.18, i18next 27, lucide 1.x (TGLA-245;
             #               recharts stays on 3.6: 3.11 alone adds ~100 KB)
-            limit_kb: 4672
+            # 4672 -> 4928: cash flow section (Epic E52, TGLA-247..252): 5 lazy pages and their Sankey, the
+            #               categorisation engine and 8 AI tools loaded with the assistant, 34 colours x 5 themes;
+            #               its texts load with the section, so the public site does not grow
+            limit_kb: 4928
             landing: absent
             smoke: false
           - label: cloud-app
@@ -345,7 +348,10 @@ jobs:
             # 2816 -> 4640: lazy pdfjs-dist PDF reader + worker for non-native AI providers (TGLA-230)
             # 4640 -> 4672: dependency updates, react 19.3, react-router 7.18, i18next 27, lucide 1.x (TGLA-245;
             #               recharts stays on 3.6: 3.11 alone adds ~100 KB)
-            limit_kb: 4672
+            # 4672 -> 4928: cash flow section (Epic E52, TGLA-247..252): 5 lazy pages and their Sankey, the
+            #               categorisation engine and 8 AI tools loaded with the assistant, 34 colours x 5 themes;
+            #               its texts load with the section, so the public site does not grow
+            limit_kb: 4928
             landing: absent
             smoke: false
           - label: showcase
@@ -358,7 +364,9 @@ jobs:
             # 1632 -> 1664: AI multi-format/side-panel i18n keys & legal storage inventory (TGLA-230, TGLA-232)
             # 1664 -> 1728: dependency updates, react 19.3, i18next 27, motion 14.14, lucide 1.x (TGLA-245)
             # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
-            limit_kb: 1760
+            # 1760 -> 1792: cash flow (Epic E52, TGLA-247..252): the MCP docs list its 8 tools, the shared stylesheet
+            #               carries its 34 colours x 5 themes, the demo seed of the data layer gains a checking account
+            limit_kb: 1792
             landing: present
             smoke: false
           - label: vercel-parity
@@ -371,7 +379,9 @@ jobs:
             # 1632 -> 1664: AI multi-format/side-panel i18n keys & legal storage inventory (TGLA-230, TGLA-232)
             # 1664 -> 1728: dependency updates, react 19.3, i18next 27, motion 14.14, lucide 1.x (TGLA-245)
             # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
-            limit_kb: 1760
+            # 1760 -> 1792: cash flow (Epic E52, TGLA-247..252): the MCP docs list its 8 tools, the shared stylesheet
+            #               carries its 34 colours x 5 themes, the demo seed of the data layer gains a checking account
+            limit_kb: 1792
             landing: present
             smoke: true
     steps:

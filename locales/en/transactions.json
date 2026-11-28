@@ -26,7 +26,9 @@
         "statusAll": "All statuses",
         "statusCompleted": "Completed",
         "statusPending": "Pending",
-        "search": "Search transactions..."
+        "search": "Search transactions...",
+        "showBankOperations": "Show the operations of checking and savings accounts",
+        "openCashflow": "See them in the cash flow"
     },
     "table": {
         "dateUtc": "Date (UTC)",

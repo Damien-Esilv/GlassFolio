@@ -262,6 +262,8 @@ export interface TransactionFilter {
   source?: string;
   currency?: string;
   status?: string;
+  /** Show the movements of checking and savings accounts (they live in the cash flow; hidden by default) */
+  includeBankOperations?: boolean;
 }
 
 export interface PositionFilter {

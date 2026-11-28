@@ -26,7 +26,9 @@
         "statusAll": "Tous les statuts",
         "statusCompleted": "Terminé",
         "statusPending": "En attente",
-        "search": "Rechercher des transactions..."
+        "search": "Rechercher des transactions...",
+        "showBankOperations": "Afficher les opérations des comptes courants et livrets",
+        "openCashflow": "Les voir dans le cash flow"
     },
     "table": {
         "dateUtc": "Date UTC",
