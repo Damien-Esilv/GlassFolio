@@ -6,8 +6,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Bot, Sparkles } from 'lucide-react';
-import { askAssistant } from '../../services/ai/assistantRequests';
 import { TrendBadge } from '../../components/ui/TrendBadge';
 import { TrendValue } from '../../components/ui/TrendValue';
 import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
@@ -142,23 +140,6 @@ const CashflowOverview: React.FC = () => {
             </section>
 
             <ForecastCard currency={currency} accountIds={accountIds} version={version} labels={labels} />
-
-            {summary.uncategorizedCount > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-subtle border border-subtle text-sm">
-                    <span className="flex items-center gap-3 text-primary font-semibold">
-                        <Sparkles size={18} className="text-brand" />
-                        {t('cashflow:overview.uncategorized', { count: summary.uncategorizedCount })}
-                    </span>
-                    <span className="flex items-center gap-4">
-                        <button type="button" onClick={() => askAssistant(t('cashflow:ai.categorizePrompt'))} className="flex items-center gap-1.5 text-brand font-semibold hover:underline">
-                            <Bot size={14} /> {t('cashflow:actions.categorizeAi')}
-                        </button>
-                        <Link to="/cashflow/operations?uncategorized=1" className="flex items-center gap-1 text-brand font-semibold hover:underline">
-                            {t('cashflow:overview.review')}<ArrowRight size={14} />
-                        </Link>
-                    </span>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <section className={`${card} xl:col-span-2 space-y-4`}>
