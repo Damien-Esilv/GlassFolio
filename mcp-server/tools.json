@@ -532,6 +532,10 @@
                 "label": {
                   "type": "string",
                   "description": "Optional raw description label"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Optional category printed on a bank statement (e.g. Alimentation), used by the cash flow"
                 }
               },
               "required": [
@@ -1027,6 +1031,10 @@
                 "label": {
                   "type": "string",
                   "description": "Optional raw description label"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Optional category printed on a bank statement (e.g. Alimentation), used by the cash flow"
                 }
               },
               "required": [

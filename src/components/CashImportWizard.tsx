@@ -31,6 +31,8 @@ interface CashImportWizardProps {
   defaultCurrency: string;
   onBack: () => void;
   onComplete: () => void;
+  /** Import the account's operations (a bank statement) instead of balances — Epic E52 */
+  onChooseOperations?: () => void;
 }
 
 const CashImportWizard: React.FC<CashImportWizardProps> = ({
@@ -38,7 +40,8 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
   accountName,
   defaultCurrency,
   onBack,
-  onComplete
+  onComplete,
+  onChooseOperations
 }) => {
   const { t } = useTranslation('transactions');
   const { user } = useAuth();
@@ -172,7 +175,21 @@ const CashImportWizard: React.FC<CashImportWizardProps> = ({
       {step === 'options' && (
         <div className="animate-fade-in-up space-y-6">
           <h3 className="text-lg font-bold text-primary">{t('cashWizard.options.title')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${onChooseOperations ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+            {onChooseOperations && (
+              <button
+                onClick={onChooseOperations}
+                className="p-6 rounded-xl border-2 border-brand bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between animate-fade-in-up"
+                style={{ animationFillMode: 'both' }}
+              >
+                <div>
+                  <FileText className="text-brand" size={32} />
+                  <h4 className="text-primary font-bold mt-4">{t('cashWizard.options.operationsTitle')}</h4>
+                  <p className="text-secondary text-sm mt-2">{t('cashWizard.options.operationsDescription')}</p>
+                </div>
+                <ArrowRight className="text-brand mt-4 self-end" size={20} />
+              </button>
+            )}
             <button
               onClick={() => setStep('manual')}
               className="p-6 rounded-xl border-2 border-subtle bg-subtle hover:bg-card-hover transition-all text-left flex flex-col justify-between animate-fade-in-up"

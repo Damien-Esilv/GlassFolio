@@ -207,7 +207,8 @@
                     "identifier": "Asset: symbol, ISIN or currency",
                     "found": "Found in \"{{column}}\"",
                     "foundDerived": "Computed from quantity and unit price",
-                    "missing": "Not matched yet"
+                    "missing": "Not matched yet",
+                    "accountCurrency": "account currency"
                 },
                 "pagination": {
                     "range": "Columns {{from}}–{{to}} of {{total}}",
@@ -232,7 +233,13 @@
             "balanceAfter": "Balance After",
             "externalId": "External ID (for dedup)",
             "assetName": "Asset Name",
-            "currency": "Currency"
+            "currency": "Currency",
+            "debitAmount": "Debit (money out)",
+            "creditAmount": "Credit (money in)",
+            "category": "Bank category",
+            "categoryParent": "Bank parent category",
+            "counterparty": "Merchant / counterparty",
+            "bankTxType": "Bank operation type"
         },
         "staging": {
             "stats": {
@@ -344,7 +351,8 @@
             "apply": "Apply",
             "cancel": "Cancel",
             "existingNote": "This asset is already in your portfolio: changes apply immediately, not only to this import."
-        }
+        },
+        "bankImportHint": "Bank statement: choose (or create) your checking or savings account, then drop the CSV or OFX file from your bank. Debit / Credit columns and bank categories are read."
     },
     "cashWizard": {
         "title": "Cash / Savings Balance Update",
@@ -354,7 +362,9 @@
             "manualTitle": "Manual entry",
             "manualDescription": "Quickly type in the current balance and the date of the update",
             "csvTitle": "Import a CSV file",
-            "csvDescription": "Upload a CSV file containing date and balance history to see progress over time"
+            "csvDescription": "Upload a CSV file containing date and balance history to see progress over time",
+            "operationsTitle": "Operations (bank statement)",
+            "operationsDescription": "Every line of your statement, in and out, for the cash flow (CSV or OFX)."
         },
         "manualForm": {
             "title": "Manual Balance Entry",

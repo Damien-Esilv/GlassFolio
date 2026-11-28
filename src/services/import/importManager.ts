@@ -58,6 +58,7 @@ import { buildRowContext, normalizeRow } from './rowNormalizer';
  */
 export interface FieldMappings {
     transactionDate: string | number;
+    /** Signed amount; may be empty when the file has separate Debit / Credit columns */
     amountPrimary: string | number;
     assetSymbol?: string | number;
     assetIsin?: string | number;
@@ -83,6 +84,16 @@ export interface FieldMappings {
     assetName?: string | number;
     /** Currency of the row's amounts (ISO 4217); also the asset of a bank statement line */
     currency?: string | number;
+    /** Bank statements with two amount columns: money out (Debit) and money in (Credit) — Epic E52 */
+    debitAmount?: string | number;
+    creditAmount?: string | number;
+    /** Category given by the bank, and its parent when it has two levels (kept as bank hints) */
+    category?: string | number;
+    categoryParent?: string | number;
+    /** Merchant or counterparty named by the bank apart from the label */
+    counterparty?: string | number;
+    /** Bank operation type code (OFX TRNTYPE: POS, ATM, FEE, INT…) */
+    bankTxType?: string | number;
 }
 
 /**
@@ -265,7 +276,8 @@ export async function parseFile(
         dateFormat: config.dateFormat,
         delimiter,
         referenceDate: config.referenceDate,
-        accountCurrency
+        accountCurrency,
+        accountType
     });
 
     // Parse each row
@@ -315,7 +327,9 @@ export async function parseFile(
         }
 
         // Store raw row in metadata
-        parsed.metadata = { ...originalRow, ...parsed.metadata };
+        // A bank statement line keeps only its bank hints: a checking account adds hundreds of rows a
+        // month and the vault caps each record (Epic E52); the raw row stays in the staged preview
+        parsed.metadata = rowContext.cashAccount ? parsed.metadata : { ...originalRow, ...parsed.metadata };
 
         // Resolve instrument type for validation context
         const resolvedInstrument = instrumentId ? instrumentsById.get(instrumentId) : undefined;
@@ -625,7 +639,8 @@ export async function commitBatch(
             externalId: staged.parsed.externalId,
             sourceOrigin: options.sourceOrigin ?? ('FILE' as SourceOrigin),
             isSynthetic: false,
-            isFiscal: true,
+            // Bank movements of checking and savings accounts feed the cash flow, not the tax engine (Epic E52)
+            isFiscal: staged.parsed.isFiscal ?? true,
             sourceMode: mode,
             transactionDate: staged.parsed.transactionDate || now,
             valueDate: staged.parsed.valueDate,

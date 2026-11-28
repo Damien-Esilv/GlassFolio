@@ -22,6 +22,8 @@ interface ColumnMappingTableProps {
     pendingCount: number;
     onChange: (header: string, field: MappableField | null) => void;
     onAcceptAll: () => void;
+    /** Target is a checking or savings account: its currency identifies every line */
+    cashAccount?: boolean;
 }
 
 // Text stays text-primary on a tinted background (it keeps its contrast in every theme); the
@@ -43,11 +45,13 @@ const SummaryChip: React.FC<{ icon: LucideIcon; classes: string; iconClass: stri
     </span>
 );
 
-const RequiredFields: React.FC<{ mappings: Partial<FieldMappings> }> = ({ mappings }) => {
+const RequiredFields: React.FC<{ mappings: Partial<FieldMappings>; cashAccount?: boolean }> = ({ mappings, cashAccount = false }) => {
     const { t } = useTranslation('transactions');
-    const amountColumn = mappings.amountPrimary;
+    // Debit / Credit columns of a bank statement stand for the amount (Epic E52)
+    const amountColumn = mappings.amountPrimary || [mappings.debitAmount, mappings.creditAmount].filter(Boolean).join(' / ');
     const derivedAmount = !amountColumn && !!mappings.quantity && !!mappings.priceUnit;
-    const identifier = mappings.assetSymbol || mappings.assetIsin || mappings.currency;
+    // A checking or savings account gives its own currency to every line
+    const identifier = mappings.assetSymbol || mappings.assetIsin || mappings.currency || (cashAccount ? t('importWizard.mapping.match.required.accountCurrency') : undefined);
 
     const items: { key: string; label: string; state: string | null }[] = [
         {
@@ -168,7 +172,7 @@ const ColumnRow: React.FC<{
  * and a select to say otherwise. Doubtful columns come first and can be filtered.
  */
 const ColumnMappingTable: React.FC<ColumnMappingTableProps> = ({
-    columns, summary, rowCount, mappings, pendingCount, onChange, onAcceptAll,
+    columns, summary, rowCount, mappings, pendingCount, onChange, onAcceptAll, cashAccount = false,
 }) => {
     const { t } = useTranslation('transactions');
     const headingId = useId();
@@ -214,7 +218,7 @@ const ColumnMappingTable: React.FC<ColumnMappingTableProps> = ({
                 <SummaryChip icon={MinusCircle} classes="bg-subtle" iconClass="text-secondary" count={summary.unmatched} label={t('importWizard.mapping.match.summary.ignored')} />
             </div>
 
-            <RequiredFields mappings={mappings} />
+            <RequiredFields mappings={mappings} cashAccount={cashAccount} />
 
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div role="group" aria-label={t('importWizard.mapping.match.filter.label')} className="inline-flex p-1 bg-subtle rounded-lg border border-subtle gap-1">

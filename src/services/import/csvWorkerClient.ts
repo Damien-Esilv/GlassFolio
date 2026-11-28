@@ -8,6 +8,7 @@
  */
 
 import { decodeCsvBuffer, parseCSVText } from './csvCore';
+import { isOfx, ofxToCsv } from './ofxParser';
 import type { CsvEncoding, ParsedCSV } from './types';
 
 /** ~10k broker rows */
@@ -61,12 +62,19 @@ export async function readAndParseCsvFile(file: Blob, delimiter?: string): Promi
         ? await file.arrayBuffer()
         : new TextEncoder().encode(await file.text()).buffer as ArrayBuffer;
 
+    let result: ReadAndParseResult | undefined;
     if (buffer.byteLength >= LARGE_CSV_BYTES && typeof Worker !== 'undefined') {
         try {
-            return await parseInWorker(buffer.slice(0), delimiter);
+            result = await parseInWorker(buffer.slice(0), delimiter);
         } catch {
             // Worker unavailable (CSP, old browser): fall back to the main thread
         }
     }
-    return parseOnMainThread(buffer, delimiter);
+    result ??= parseOnMainThread(buffer, delimiter);
+    // An OFX / QFX bank statement becomes a small CSV the rest of the import reads like any other (Epic E52)
+    if (isOfx(result.text)) {
+        const text = ofxToCsv(result.text);
+        return { text, encoding: result.encoding, parsed: parseCSVText(text, ';'), offThread: result.offThread };
+    }
+    return result;
 }

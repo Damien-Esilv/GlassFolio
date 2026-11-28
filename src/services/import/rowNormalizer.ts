@@ -22,6 +22,7 @@ import {
 } from './typeNormalizer';
 import type { DecimalSeparator } from './typeNormalizer';
 import { extractTrailingAssetUnit, isPairHeader, normalizeTradingPair } from './assetPairNormalizer';
+import { withBankHints } from '../cashflow/bankHints';
 
 /** Rows read to infer file-wide conventions (decimal separator, amount signs) */
 const SAMPLE_ROW_LIMIT = 1000;
@@ -42,6 +43,10 @@ export interface RowContext {
     referenceDate?: string;
     /** Currency of the target account: a row currency equal to it is not "original" */
     accountCurrency?: string;
+    /** Target is a checking or savings account: the sign of a currency line decides its direction (Epic E52) */
+    cashAccount: boolean;
+    /** The file has separate Debit / Credit columns */
+    debitCredit: boolean;
 }
 
 export interface RowContextOptions {
@@ -50,6 +55,8 @@ export interface RowContextOptions {
     delimiter?: string;
     referenceDate?: string;
     accountCurrency?: string;
+    /** Type of the target account (checking, savings, investment…) */
+    accountType?: string;
 }
 
 export interface NormalizedRow {
@@ -92,6 +99,16 @@ const absString = (value: string | null): string | undefined => {
     return value.startsWith('-') ? value.slice(1) : value;
 };
 
+/** Signed amount of a Debit / Credit pair: credit − |debit|; null when both cells are empty. */
+function debitCreditAmount(debit: string | undefined, credit: string | undefined, decimalHint?: DecimalSeparator): string | null {
+    const out = parseDecimal(debit, decimalHint);
+    const inn = parseDecimal(credit, decimalHint);
+    if (out === null && inn === null) return null;
+    const value = (inn !== null ? Math.abs(parseFloat(inn)) : 0) - (out !== null ? Math.abs(parseFloat(out)) : 0);
+    if (!Number.isFinite(value)) return null;
+    return String(Math.round(value * 1e8) / 1e8);
+}
+
 const isFiat = (symbol: string | undefined): boolean =>
     !!symbol && (VALID_FIAT_CURRENCIES as readonly string[]).includes(symbol);
 
@@ -121,10 +138,13 @@ export function buildRowContext(
     const amountIsQuantity = sameColumn(mappings.amountPrimary, mappings.quantity);
     const dateHint = options.dateFormat
         || detectDateFormat(rows.map(row => cell(row, mappings.transactionDate, { columnIndex }) || ''));
+    const debitCredit = Boolean(mappings.debitAmount || mappings.creditAmount);
     const decimalHint = detectDecimalSeparator([
         ...samples(mappings.quantity),
         ...samples(mappings.priceUnit),
         ...samples(mappings.amountPrimary),
+        ...samples(mappings.debitAmount),
+        ...samples(mappings.creditAmount),
         ...samples(mappings.feeAmount)
     ], options.delimiter);
 
@@ -135,9 +155,11 @@ export function buildRowContext(
         dateHint,
         decimalHint,
         amountIsQuantity,
-        amountSigned: !amountIsQuantity && detectAmountSignConvention(samples(mappings.amountPrimary)) === 'signed',
+        amountSigned: debitCredit || (!amountIsQuantity && detectAmountSignConvention(samples(mappings.amountPrimary)) === 'signed'),
         referenceDate: options.referenceDate,
-        accountCurrency: options.accountCurrency?.toUpperCase()
+        accountCurrency: options.accountCurrency?.toUpperCase(),
+        cashAccount: options.accountType === 'checking' || options.accountType === 'savings',
+        debitCredit
     };
 }
 
@@ -162,7 +184,8 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
     // Numbers keep their sign here: it carries the direction of the trade
     const quantitySigned = parseDecimal(get(mappings.quantity), decimalHint);
     const priceParsed = parseDecimal(get(mappings.priceUnit), decimalHint);
-    const amountParsed = parseDecimal(rawAmount, decimalHint);
+    // Debit / Credit columns: money in minus money out (a debit cell is money out whatever its sign)
+    const amountParsed = parseDecimal(rawAmount, decimalHint) ?? (ctx.debitCredit ? debitCreditAmount(get(mappings.debitAmount), get(mappings.creditAmount), decimalHint) : null);
     const feeSigned = parseDecimal(rawFees, decimalHint);
 
     // Cash amount: explicit column, otherwise quantity × unit price. A column shared with the
@@ -222,6 +245,16 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
         isCashAsset
     });
     let type = resolution.type;
+    let bankSubType: UnifiedTransaction['subType'];
+    // A checking or savings account: the sign of the amount says money in or out. A type column only
+    // refines it (interest, fees); "Virement" or "Crédit" never flips the direction (Epic E52)
+    const signedCash = ctx.cashAccount && isCashAsset && amountParsed !== null && parseFloat(amountParsed) !== 0;
+    if (signedCash) {
+        const incoming = parseFloat(amountParsed as string) > 0;
+        if (type === 'TRANSFER') bankSubType = incoming ? 'TRANSFER_IN' : 'TRANSFER_OUT';
+        const keepsType = (type === 'INCOME' && incoming) || (type === 'EXPENSE' && !incoming);
+        if (!keepsType) type = incoming ? 'DEPOSIT' : 'WITHDRAW';
+    }
 
     if (resolution.corporateAction) {
         issues.push({
@@ -230,7 +263,7 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
             severity: 'error',
             code: 'CORPORATE_ACTION_UNSUPPORTED'
         });
-    } else if (rawType && !resolution.recognized) {
+    } else if (rawType && !resolution.recognized && !signedCash) {
         issues.push({
             field: 'type',
             message: `Unknown transaction type: ${rawType}`,
@@ -253,14 +286,23 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
     const parsed: Partial<UnifiedTransaction> = {
         transactionDate,
         type,
-        subType: inferTransactionSubType(rawType),
+        subType: bankSubType ?? inferTransactionSubType(rawType),
         rawType: rawType || 'Unknown',
         assetSymbol,
         sourceOrigin: 'FILE',
         isSynthetic: false,
-        isFiscal: true,
+        // Bank movements feed the cash flow, not the tax engine
+        isFiscal: !signedCash,
         sourceMode: ctx.mode
     };
+
+    const hints = withBankHints(undefined, {
+        category: get(mappings.category),
+        categoryParent: get(mappings.categoryParent),
+        counterparty: get(mappings.counterparty),
+        txType: get(mappings.bankTxType),
+    });
+    if (hints) parsed.metadata = hints;
 
     if (assetIsin) parsed.assetIsin = assetIsin;
 
@@ -287,7 +329,7 @@ export function normalizeRow(row: string[], ctx: RowContext): NormalizedRow {
         amountValue = '0';
         const pricedType = !isCashAsset && (type === 'BUY' || type === 'DEPOSIT' || type === 'SELL');
         if (pricedType && parsed.quantity) {
-            parsed.metadata = { costBasisUnknown: true };
+            parsed.metadata = { ...parsed.metadata, costBasisUnknown: true };
             issues.push({
                 field: 'amountPrimary',
                 message: 'No price or cash amount in the file: cost basis or proceeds are unknown (set to 0)',
