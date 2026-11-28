@@ -7,7 +7,7 @@
  */
 
 /** Tools registered by `registerAllStandardTools()` (in-app assistant + MCP clients). */
-export const AI_TOOL_COUNT = 43;
+export const AI_TOOL_COUNT = 51;
 
 export interface SupportedBroker {
   name: string;

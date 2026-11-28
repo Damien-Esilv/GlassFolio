@@ -59,6 +59,42 @@
   --color-accent-cyan: #06b6d4;
   --color-accent-orange: #f97316;
   --color-accent-indigo-subtle: rgba(99, 102, 241, 0.1);
+
+  /* Cash flow palette (TGLA-247): roles, 16 expense categories, 4 income shades, 7-step ramp. Contrast >= 3:1 on --bg-card. */
+  --color-cashflow-income: #596571;
+  --color-cashflow-expense: #c1558a;
+  --color-cashflow-expense-fixed: #a31b41;
+  --color-cashflow-available: #3370c7;
+  --color-cashflow-savings: #218a45;
+  --color-cashflow-transfer: #8a857e;
+  --color-cashflow-forecast: #7652ac;
+  --color-cashflow-cat-1: #bb475a;
+  --color-cashflow-cat-2: #199c7d;
+  --color-cashflow-cat-3: #a24f9f;
+  --color-cashflow-cat-4: #6f9518;
+  --color-cashflow-cat-5: #6c64c8;
+  --color-cashflow-cat-6: #ab7d15;
+  --color-cashflow-cat-7: #0e7db4;
+  --color-cashflow-cat-8: #d05f41;
+  --color-cashflow-cat-9: #078584;
+  --color-cashflow-cat-10: #c75b91;
+  --color-cashflow-cat-11: #188b3e;
+  --color-cashflow-cat-12: #9d6bcc;
+  --color-cashflow-cat-13: #807707;
+  --color-cashflow-cat-14: #5083df;
+  --color-cashflow-cat-15: #aa5e0d;
+  --color-cashflow-cat-16: #0096b1;
+  --color-cashflow-income-1: #0a5e62;
+  --color-cashflow-income-2: #037493;
+  --color-cashflow-income-3: #119488;
+  --color-cashflow-income-4: #054b78;
+  --color-cashflow-ramp-1: #ac8694;
+  --color-cashflow-ramp-2: #a77182;
+  --color-cashflow-ramp-3: #a25c6f;
+  --color-cashflow-ramp-4: #9c465b;
+  --color-cashflow-ramp-5: #942d45;
+  --color-cashflow-ramp-6: #8c062d;
+  --color-cashflow-ramp-7: #76041d;
 }
 
 /* Dark Mode (Zinc/Slate Mix) */
@@ -116,6 +152,42 @@
   --color-accent-cyan: #06b6d4;
   --color-accent-orange: #f97316;
   --color-accent-indigo-subtle: rgba(99, 102, 241, 0.15);
+
+  /* Cash flow palette (TGLA-247): roles, 16 expense categories, 4 income shades, 7-step ramp. Contrast >= 3:1 on --bg-card. */
+  --color-cashflow-income: #b2bfce;
+  --color-cashflow-expense: #f180b5;
+  --color-cashflow-expense-fixed: #df5770;
+  --color-cashflow-available: #6aa5fd;
+  --color-cashflow-savings: #6ccd83;
+  --color-cashflow-transfer: #848078;
+  --color-cashflow-forecast: #b28fef;
+  --color-cashflow-cat-1: #f88d98;
+  --color-cashflow-cat-2: #13b28e;
+  --color-cashflow-cat-3: #de92da;
+  --color-cashflow-cat-4: #84a647;
+  --color-cashflow-cat-5: #a7a6fd;
+  --color-cashflow-cat-6: #c18f23;
+  --color-cashflow-cat-7: #56bcfa;
+  --color-cashflow-cat-8: #dc795e;
+  --color-cashflow-cat-9: #00cac9;
+  --color-cashflow-cat-10: #d474a2;
+  --color-cashflow-cat-11: #72c882;
+  --color-cashflow-cat-12: #ad82d7;
+  --color-cashflow-cat-13: #bfb547;
+  --color-cashflow-cat-14: #6a97e8;
+  --color-cashflow-cat-15: #ee9b57;
+  --color-cashflow-cat-16: #17aac6;
+  --color-cashflow-income-1: #5ce9f0;
+  --color-cashflow-income-2: #49c1ea;
+  --color-cashflow-income-3: #10a89b;
+  --color-cashflow-income-4: #3080bc;
+  --color-cashflow-ramp-1: #fedee9;
+  --color-cashflow-ramp-2: #ffc3d5;
+  --color-cashflow-ramp-3: #f8abbe;
+  --color-cashflow-ramp-4: #f193a6;
+  --color-cashflow-ramp-5: #e97a8c;
+  --color-cashflow-ramp-6: #e16171;
+  --color-cashflow-ramp-7: #d74553;
 }
 
 /* Night Mode (Deep Blue) */
@@ -172,6 +244,42 @@
   --color-accent-cyan: #22d3ee;
   --color-accent-orange: #fb923c;
   --color-accent-indigo-subtle: rgba(129, 140, 248, 0.15);
+
+  /* Cash flow palette (TGLA-247): roles, 16 expense categories, 4 income shades, 7-step ramp. Contrast >= 3:1 on --bg-card. */
+  --color-cashflow-income: #b2bfce;
+  --color-cashflow-expense: #f180b5;
+  --color-cashflow-expense-fixed: #df5770;
+  --color-cashflow-available: #6aa5fd;
+  --color-cashflow-savings: #6ccd83;
+  --color-cashflow-transfer: #848078;
+  --color-cashflow-forecast: #b28fef;
+  --color-cashflow-cat-1: #f88d98;
+  --color-cashflow-cat-2: #13b28e;
+  --color-cashflow-cat-3: #de92da;
+  --color-cashflow-cat-4: #84a647;
+  --color-cashflow-cat-5: #a7a6fd;
+  --color-cashflow-cat-6: #c18f23;
+  --color-cashflow-cat-7: #56bcfa;
+  --color-cashflow-cat-8: #dc795e;
+  --color-cashflow-cat-9: #00cac9;
+  --color-cashflow-cat-10: #d474a2;
+  --color-cashflow-cat-11: #72c882;
+  --color-cashflow-cat-12: #ad82d7;
+  --color-cashflow-cat-13: #bfb547;
+  --color-cashflow-cat-14: #6a97e8;
+  --color-cashflow-cat-15: #ee9b57;
+  --color-cashflow-cat-16: #17aac6;
+  --color-cashflow-income-1: #5ce9f0;
+  --color-cashflow-income-2: #49c1ea;
+  --color-cashflow-income-3: #10a89b;
+  --color-cashflow-income-4: #3080bc;
+  --color-cashflow-ramp-1: #fedee9;
+  --color-cashflow-ramp-2: #ffc3d5;
+  --color-cashflow-ramp-3: #f8abbe;
+  --color-cashflow-ramp-4: #f193a6;
+  --color-cashflow-ramp-5: #e97a8c;
+  --color-cashflow-ramp-6: #e16171;
+  --color-cashflow-ramp-7: #d74553;
 }
 
 /* Emerald Prestige (Level 10 Unlockable Theme) */
@@ -217,6 +325,42 @@
   --color-accent-cyan: #2dd4bf;
   --color-accent-orange: #fb923c;
   --color-accent-indigo-subtle: rgba(129, 140, 248, 0.15);
+
+  /* Cash flow palette (TGLA-247): roles, 16 expense categories, 4 income shades, 7-step ramp. Contrast >= 3:1 on --bg-card. */
+  --color-cashflow-income: #b2bfce;
+  --color-cashflow-expense: #f180b5;
+  --color-cashflow-expense-fixed: #df5770;
+  --color-cashflow-available: #6aa5fd;
+  --color-cashflow-savings: #6ccd83;
+  --color-cashflow-transfer: #848078;
+  --color-cashflow-forecast: #b28fef;
+  --color-cashflow-cat-1: #f88d98;
+  --color-cashflow-cat-2: #13b28e;
+  --color-cashflow-cat-3: #de92da;
+  --color-cashflow-cat-4: #84a647;
+  --color-cashflow-cat-5: #a7a6fd;
+  --color-cashflow-cat-6: #c18f23;
+  --color-cashflow-cat-7: #56bcfa;
+  --color-cashflow-cat-8: #dc795e;
+  --color-cashflow-cat-9: #00cac9;
+  --color-cashflow-cat-10: #d474a2;
+  --color-cashflow-cat-11: #72c882;
+  --color-cashflow-cat-12: #ad82d7;
+  --color-cashflow-cat-13: #bfb547;
+  --color-cashflow-cat-14: #6a97e8;
+  --color-cashflow-cat-15: #ee9b57;
+  --color-cashflow-cat-16: #17aac6;
+  --color-cashflow-income-1: #5ce9f0;
+  --color-cashflow-income-2: #49c1ea;
+  --color-cashflow-income-3: #10a89b;
+  --color-cashflow-income-4: #3080bc;
+  --color-cashflow-ramp-1: #fedee9;
+  --color-cashflow-ramp-2: #ffc3d5;
+  --color-cashflow-ramp-3: #f8abbe;
+  --color-cashflow-ramp-4: #f193a6;
+  --color-cashflow-ramp-5: #e97a8c;
+  --color-cashflow-ramp-6: #e16171;
+  --color-cashflow-ramp-7: #d74553;
 }
 
 /* Cyber Neon (Level 15 Unlockable Theme) */
@@ -262,6 +406,42 @@
   --color-accent-cyan: #22d3ee;
   --color-accent-orange: #fb923c;
   --color-accent-indigo-subtle: rgba(129, 140, 248, 0.15);
+
+  /* Cash flow palette (TGLA-247): roles, 16 expense categories, 4 income shades, 7-step ramp. Contrast >= 3:1 on --bg-card. */
+  --color-cashflow-income: #b2bfce;
+  --color-cashflow-expense: #f180b5;
+  --color-cashflow-expense-fixed: #df5770;
+  --color-cashflow-available: #6aa5fd;
+  --color-cashflow-savings: #6ccd83;
+  --color-cashflow-transfer: #848078;
+  --color-cashflow-forecast: #b28fef;
+  --color-cashflow-cat-1: #f88d98;
+  --color-cashflow-cat-2: #13b28e;
+  --color-cashflow-cat-3: #de92da;
+  --color-cashflow-cat-4: #84a647;
+  --color-cashflow-cat-5: #a7a6fd;
+  --color-cashflow-cat-6: #c18f23;
+  --color-cashflow-cat-7: #56bcfa;
+  --color-cashflow-cat-8: #dc795e;
+  --color-cashflow-cat-9: #00cac9;
+  --color-cashflow-cat-10: #d474a2;
+  --color-cashflow-cat-11: #72c882;
+  --color-cashflow-cat-12: #ad82d7;
+  --color-cashflow-cat-13: #bfb547;
+  --color-cashflow-cat-14: #6a97e8;
+  --color-cashflow-cat-15: #ee9b57;
+  --color-cashflow-cat-16: #17aac6;
+  --color-cashflow-income-1: #5ce9f0;
+  --color-cashflow-income-2: #49c1ea;
+  --color-cashflow-income-3: #10a89b;
+  --color-cashflow-income-4: #3080bc;
+  --color-cashflow-ramp-1: #fedee9;
+  --color-cashflow-ramp-2: #ffc3d5;
+  --color-cashflow-ramp-3: #f8abbe;
+  --color-cashflow-ramp-4: #f193a6;
+  --color-cashflow-ramp-5: #e97a8c;
+  --color-cashflow-ramp-6: #e16171;
+  --color-cashflow-ramp-7: #d74553;
 }
 
 body {

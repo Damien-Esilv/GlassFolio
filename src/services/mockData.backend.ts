@@ -21,6 +21,13 @@ import {
     yearsAgoISO,
     currentYearString
 } from '../utils/demoDates';
+import {
+    buildDemoCashflowAccounts,
+    buildDemoCashflowBatch,
+    buildDemoCashflowOperations,
+} from './mockData.cashflow';
+
+export { buildDemoCashflowRules } from './mockData.cashflow';
 
 // ============================================================================
 // BUILDERS FOR DYNAMIC DEMO DATA
@@ -312,7 +319,8 @@ export function buildDemoAccounts(now: Date = new Date()): Account[] {
             openedAt: yearsAgoISO(5, 1, 1, 0, 0, now),
             createdAt: baseCreatedAt,
             updatedAt: baseCreatedAt
-        }
+        },
+        ...buildDemoCashflowAccounts(now),
     ];
 }
 
@@ -566,7 +574,8 @@ export function buildDemoImportBatches(now: Date = new Date()): ImportBatch[] {
             importedBy: 'default-user',
             status: 'completed',
             engineVersion: '3.0.0'
-        }
+        },
+        buildDemoCashflowBatch(now),
     ];
 }
 
@@ -650,7 +659,9 @@ export function buildDemoUnifiedTransactions(now: Date = new Date()): UnifiedTra
             feeAmount: '0.00',
             createdAt: defaultCreated,
             updatedAt: defaultCreated,
-            version: 1
+            version: 1,
+            // Money already there when the account was opened: not income of the cash flow
+            metadata: { openingBalance: true }
         },
 
         // --- Batch 2: Actions / Stocks Import (Multi-year accumulation) ---
@@ -1282,7 +1293,8 @@ export function buildDemoUnifiedTransactions(now: Date = new Date()): UnifiedTra
             createdAt: defaultCreated,
             updatedAt: defaultCreated,
             version: 1
-        }
+        },
+        ...buildDemoCashflowOperations(now),
     ];
 }
 

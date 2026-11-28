@@ -42,7 +42,7 @@
       "destination": "/_p/en/:page.html"
     },
     {
-      "source": "/(login|signup|forgot-password|reset-password|dashboard|portfolio|positions|transactions|analytics|tax|reports|goals|alerts|notifications|settings|progress|import|import-history)(/.*)?",
+      "source": "/(login|signup|forgot-password|reset-password|dashboard|portfolio|positions|transactions|analytics|cashflow|tax|reports|goals|alerts|notifications|settings|progress|import|import-history)(/.*)?",
       "destination": "/app-shell.html"
     },
     {

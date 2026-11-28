@@ -40,6 +40,16 @@ import {
 } from './importTools';
 import { listConnectionsTool, syncConnectionTool, addWatchOnlyWalletTool, getBankSyncStatusTool } from './connectionTools';
 import { listInstitutionsTool, renameAccountTool } from './accountTools';
+import {
+  getCashflowSummaryTool,
+  listCashflowTransactionsTool,
+  listCashflowCategoriesTool,
+  listCashflowRulesTool,
+  setTransactionCategoryTool,
+  createCashflowCategoryTool,
+  createCategorizationRuleTool,
+  recordCashOperationTool,
+} from './cashflowTools';
 
 /**
  * Initializes and registers all standard GlassFolio AI / MCP tools.
@@ -89,6 +99,15 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getBankSyncStatusTool);
   aiToolRegistry.registerTool(listInstitutionsTool);
   aiToolRegistry.registerTool(renameAccountTool);
+  // Cash flow (Epic E52)
+  aiToolRegistry.registerTool(getCashflowSummaryTool);
+  aiToolRegistry.registerTool(listCashflowTransactionsTool);
+  aiToolRegistry.registerTool(listCashflowCategoriesTool);
+  aiToolRegistry.registerTool(listCashflowRulesTool);
+  aiToolRegistry.registerTool(setTransactionCategoryTool);
+  aiToolRegistry.registerTool(createCashflowCategoryTool);
+  aiToolRegistry.registerTool(createCategorizationRuleTool);
+  aiToolRegistry.registerTool(recordCashOperationTool);
 }
 
 // Auto-register on import
@@ -136,4 +155,12 @@ export {
   syncConnectionTool,
   addWatchOnlyWalletTool,
   getBankSyncStatusTool,
+  getCashflowSummaryTool,
+  listCashflowTransactionsTool,
+  listCashflowCategoriesTool,
+  listCashflowRulesTool,
+  setTransactionCategoryTool,
+  createCashflowCategoryTool,
+  createCategorizationRuleTool,
+  recordCashOperationTool,
 };

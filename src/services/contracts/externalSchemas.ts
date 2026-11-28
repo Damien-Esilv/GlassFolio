@@ -164,3 +164,38 @@ export const EsploraAddressSchema = z.object({
     tx_count: z.number().int().nonnegative().optional().default(0),
   }),
 });
+
+// ---------------------------------------------------------------------------
+// Cash flow tools (Epic E52 — TGLA-252)
+// ---------------------------------------------------------------------------
+
+const isoDate = z.string().refine(val => !Number.isNaN(Date.parse(val)), { message: 'Must be a valid date (YYYY-MM-DD)' });
+
+export const SetTransactionCategoryArgsSchema = z.object({
+  transactionIds: z.array(z.string().trim().min(1)).min(1, 'At least one operation id is required').max(500),
+  categoryId: z.string().trim().min(1, 'Category id is required'),
+  createRule: z.boolean().optional(),
+});
+
+export const CreateCashflowCategoryArgsSchema = z.object({
+  parentId: z.string().trim().min(1, 'Parent category is required'),
+  name: z.string().trim().min(1, 'Name is required').max(40),
+});
+
+export const CreateCategorizationRuleArgsSchema = z.object({
+  labelContains: z.string().trim().min(2, 'The text to match needs at least 2 characters').max(60),
+  categoryId: z.string().trim().min(1, 'Category id is required'),
+  direction: z.enum(['in', 'out', 'any']).optional(),
+  accountId: z.string().trim().min(1).optional(),
+  minAmount: z.number().finite().nonnegative().optional(),
+  maxAmount: z.number().finite().nonnegative().optional(),
+});
+
+export const RecordCashOperationArgsSchema = z.object({
+  accountId: z.string().trim().min(1, 'Account id is required'),
+  date: isoDate,
+  amount: z.number().finite().refine(val => val !== 0, { message: 'Amount must not be zero' }),
+  label: z.string().trim().min(1, 'Label is required').max(140),
+  categoryId: z.string().trim().min(1).optional(),
+  note: z.string().trim().max(500).optional(),
+});

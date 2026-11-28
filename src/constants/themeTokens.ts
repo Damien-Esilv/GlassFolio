@@ -163,14 +163,18 @@ export const THEME_INTENT = {
   },
 } as const;
 
+/** Which direction of a delta is good news: 'up' for gains, 'down' for spending (a rise in expenses is bad). */
+export type TrendDirection = 'up' | 'down';
+
 /**
  * Helper returning the appropriate TrendTokenSet based on numeric financial value.
  * @param value P&L amount, return percentage, delta
+ * @param goodDirection 'up' (default): a rise is positive; 'down': a rise is negative (e.g. expenses)
  */
-export function getTrendTokens(value: number): TrendTokenSet {
-  if (value > 0) return THEME_INTENT.positive;
-  if (value < 0) return THEME_INTENT.negative;
-  return THEME_INTENT.neutral;
+export function getTrendTokens(value: number, goodDirection: TrendDirection = 'up'): TrendTokenSet {
+  if (value === 0) return THEME_INTENT.neutral;
+  const isGood = goodDirection === 'up' ? value > 0 : value < 0;
+  return isGood ? THEME_INTENT.positive : THEME_INTENT.negative;
 }
 
 /**
