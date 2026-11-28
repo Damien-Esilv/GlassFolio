@@ -9,8 +9,6 @@
  * Coinhouse has a CSV export but its columns are documented nowhere, so it has no preset yet.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 
 vi.mock('../../../../src/services/db', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../../src/services/db')>();
@@ -23,6 +21,7 @@ import { LocalAuthProvider } from '../../../../src/services/security/authService
 import { parseFile, parseCSVText } from '../../../../src/services/import/importManager';
 import type { FieldMappings, ParseResult } from '../../../../src/services/import/importManager';
 import { PRESET_PATTERNS, detectPreset } from '../../../../src/services/import/presetDetector';
+import { readTestData } from '../../../fixtures/testData';
 
 const REVOLUT_STOCKS_HEADERS = ['Date', 'Ticker', 'Type', 'Quantity', 'Price per share', 'Total Amount', 'Currency', 'FX Rate'];
 const REVOLUT_CRYPTO_HEADERS = ['Symbol', 'Type', 'Quantity', 'Price', 'Value', 'Fees', 'Date'];
@@ -164,7 +163,7 @@ describe('detectPreset — Bitpanda', () => {
 
 describe('detectPreset — no false positives', () => {
   const sample = (name: string): string[] =>
-    parseCSVText(fs.readFileSync(path.join(process.cwd(), 'test-data', name), 'utf8')).headers;
+    parseCSVText(readTestData(name)).headers;
 
   it.each([
     ['binance_transactions_2024.csv', 'Binance'],
@@ -204,7 +203,7 @@ describe('audited real-world broker fixtures (TGLA-223)', () => {
   beforeEach(seed);
 
   const readFixture = (name: string): string =>
-    fs.readFileSync(path.join(process.cwd(), 'test-data/presets', name), 'utf8');
+    readTestData(name);
 
   it('Trade Republic 2025 snake_case: promotes ISIN from symbol, handles CUSTOMER_INBOUND, SAVINGS_PLAN & DIVIDEND', async () => {
     const parsed = await parsePreset(readFixture('traderepublic_official_2025.csv'), 'TradeRepublic');

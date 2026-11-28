@@ -13,7 +13,7 @@ import {
 import { buildCashflowOperations, toRawOperation } from '../../../../src/services/cashflow/operations';
 import { budgetMonthOf, monthRange, summarizeCashflow } from '../../../../src/services/cashflow/aggregator';
 import { detectRecurringSeries, priceChangeOf } from '../../../../src/services/cashflow/recurring';
-import { budgetMonthBounds, resolvePeriod } from '../../../../src/services/cashflow/period';
+import { budgetMonthBounds, canMoveForward, periodMonths, resolvePeriod, shiftPeriodAnchor } from '../../../../src/services/cashflow/period';
 import type { CashflowOperation, CategorizationRule, CashflowSettings } from '../../../../src/types/cashflow';
 import type { Account, UnifiedTransaction } from '../../../../src/types/types.backend';
 
@@ -154,7 +154,7 @@ describe('cash flow categoriser', () => {
             raw({ id: 'back-from-pea', accountId: 'checking', amount: 900, date: '2026-04-10T10:00:00Z', rawLabel: 'VIR' }),
             raw({ id: 'out-pea-2', accountId: 'pea', amount: -900, date: '2026-04-09T10:00:00Z', rawLabel: 'RETRAIT' }),
             raw({ id: 'too-late', accountId: 'checking', amount: -77, date: '2026-05-01T10:00:00Z', rawLabel: 'VIR' }),
-            raw({ id: 'too-late-in', accountId: 'livret', amount: 77, date: '2026-05-08T10:00:00Z', rawLabel: 'VIR' }),
+            raw({ id: 'too-late-in', accountId: 'livret', amount: 77, date: '2026-05-09T10:00:00Z', rawLabel: 'VIR' }),
         ];
         const transfers = detectTransfers(ops, {
             includedAccountIds: new Set(['checking', 'livret']),
@@ -166,6 +166,35 @@ describe('cash flow categoriser', () => {
         expect(transfers.has('in-pea')).toBe(false);
         expect(transfers.get('back-from-pea')).toBe('internal_transfer');
         expect(transfers.has('too-late')).toBe(false);
+    });
+
+    it('recognises transfers between any of the user\'s institutions, not a fixed list of banks', () => {
+        const scope = {
+            includedAccountIds: new Set(['caisse', 'app', 'other-bank']),
+            ownAccountIds: new Set(['caisse', 'app', 'other-bank', 'broker']),
+            institutionOf: new Map([['caisse', normalizeText('Caisse d’Epargne')], ['app', normalizeText('Revolut')], ['other-bank', normalizeText('Hello bank')], ['broker', normalizeText('Trade Republic')]]),
+        };
+        const ops = [
+            // A top-up booked 6 days apart on each side
+            raw({ id: 'to-app', accountId: 'caisse', amount: -250, date: '2026-03-01T10:00:00Z', rawLabel: 'VIR SEPA REVOLUT' }),
+            raw({ id: 'topped-up', accountId: 'app', amount: 250, date: '2026-03-07T10:00:00Z', rawLabel: 'Top-up by *1234' }),
+            // The other leg not recorded: the line names another own institution
+            raw({ id: 'to-hello', accountId: 'caisse', amount: -400, date: '2026-03-10T10:00:00Z', rawLabel: 'VIR VERS HELLO BANK' }),
+            raw({ id: 'to-broker', accountId: 'caisse', amount: -300, date: '2026-03-12T10:00:00Z', rawLabel: 'VIREMENT TRADE REPUBLIC' }),
+            // A top-up from a card not recorded: never income
+            raw({ id: 'card-top-up', accountId: 'app', amount: 80, date: '2026-03-15T10:00:00Z', rawLabel: 'Rechargement par carte' }),
+            // Fees naming the bank are not a transfer; a payment to a merchant through an app neither
+            raw({ id: 'fees', accountId: 'caisse', amount: -2, date: '2026-03-20T10:00:00Z', rawLabel: 'FRAIS CAISSE D EPARGNE' }),
+            raw({ id: 'shop', accountId: 'app', amount: -35, date: '2026-03-21T10:00:00Z', rawLabel: 'PAYPAL *ZALANDO' }),
+        ];
+        const transfers = detectTransfers(ops, scope);
+        expect(transfers.get('to-app')).toBe('internal_transfer');
+        expect(transfers.get('topped-up')).toBe('internal_transfer');
+        expect(transfers.get('to-hello')).toBe('internal_transfer');
+        expect(transfers.get('to-broker')).toBe('savings_invested');
+        expect(transfers.get('card-top-up')).toBe('internal_transfer');
+        expect(transfers.has('fees')).toBe(false);
+        expect(transfers.has('shop')).toBe(false);
     });
 });
 
@@ -323,8 +352,8 @@ describe('cash flow totals', () => {
         expect(summary.months[0].variableExpenses).toBe(1504);
         expect(summary.distribution[0]).toMatchObject({ min: 0, max: 5, count: 1 });
         expect(summary.distribution[6]).toMatchObject({ min: 1000, max: null, count: 1 });
-        // 2026-03-16 is a Monday
-        expect(summary.weekdays[0]).toBe(4);
+        // 2026-03-16 is a Monday; the average over the 5 Mondays of March 2026
+        expect(summary.weekdays[0]).toBe(0.8);
     });
 
     it('balances the Sankey, with a "drawn from savings" source on a deficit', () => {
@@ -411,12 +440,37 @@ describe('recurring series', () => {
 describe('periods', () => {
     const today = new Date('2026-11-24T12:00:00Z');
 
-    it('resolves month, rolling and year-to-date periods with a 12-month trend', () => {
-        expect(resolvePeriod({ preset: 'month', today })).toEqual({ start: '2026-11-01', end: '2026-11-25', trendStart: '2025-12-01' });
+    it('resolves month, rolling and year-to-date periods, the trend covering the period and at least 6 months', () => {
+        expect(resolvePeriod({ preset: 'month', today })).toEqual({ start: '2026-11-01', end: '2026-11-25', trendStart: '2026-06-01' });
         expect(resolvePeriod({ preset: 'month', month: '2026-09', today })).toMatchObject({ start: '2026-09-01', end: '2026-10-01' });
-        expect(resolvePeriod({ preset: '3m', today })).toMatchObject({ start: '2026-09-01', end: '2026-11-25' });
-        expect(resolvePeriod({ preset: 'ytd', today })).toMatchObject({ start: '2026-01-01' });
+        expect(resolvePeriod({ preset: '3m', today })).toMatchObject({ start: '2026-09-01', end: '2026-11-25', trendStart: '2026-06-01' });
+        expect(resolvePeriod({ preset: '12m', today })).toMatchObject({ start: '2025-12-01', trendStart: '2025-12-01' });
+        expect(resolvePeriod({ preset: 'ytd', today })).toMatchObject({ start: '2026-01-01', trendStart: '2026-01-01' });
         expect(resolvePeriod({ preset: 'all', firstOperationDate: '2024-05-03T10:00:00Z', today })).toMatchObject({ start: '2024-05-03', trendStart: '2024-05-03' });
+    });
+
+    it('anchors 3, 6 and 12-month windows and years on the chosen month', () => {
+        expect(resolvePeriod({ preset: '3m', month: '2026-07', today })).toMatchObject({ start: '2026-05-01', end: '2026-08-01' });
+        expect(resolvePeriod({ preset: '12m', month: '2025-12', today })).toMatchObject({ start: '2025-01-01', end: '2026-01-01' });
+        expect(resolvePeriod({ preset: 'ytd', month: '2025-03', today })).toMatchObject({ start: '2025-01-01', end: '2026-01-01', trendStart: '2025-01-01' });
+        expect(resolvePeriod({ preset: 'ytd', month: '2026-03', today })).toMatchObject({ start: '2026-01-01', end: '2026-11-25' });
+        // Never past today
+        expect(resolvePeriod({ preset: '6m', month: '2027-02', today })).toMatchObject({ start: '2026-06-01', end: '2026-11-25' });
+    });
+
+    it('moves the period carousel by one block of the chosen period', () => {
+        const current = '2026-11';
+        expect(shiftPeriodAnchor('month', '2026-11', -1, current)).toBe('2026-10');
+        expect(shiftPeriodAnchor('3m', '2026-11', -1, current)).toBe('2026-08');
+        expect(shiftPeriodAnchor('6m', '2026-05', 1, current)).toBe('2026-11');
+        expect(shiftPeriodAnchor('12m', '2026-08', 1, current)).toBe('2026-11');
+        expect(shiftPeriodAnchor('ytd', '2026-11', -1, current)).toBe('2025-12');
+        expect(shiftPeriodAnchor('ytd', '2025-12', 1, current)).toBe('2026-11');
+        expect(canMoveForward('3m', '2026-11', current)).toBe(false);
+        expect(canMoveForward('ytd', '2025-12', current)).toBe(true);
+        expect(periodMonths('3m', '2026-11', current)).toEqual({ first: '2026-09', last: '2026-11' });
+        expect(periodMonths('ytd', '2025-06', current)).toEqual({ first: '2025-01', last: '2025-12' });
+        expect(periodMonths('ytd', '2026-11', current)).toEqual({ first: '2026-01', last: '2026-11' });
     });
 
     it('moves the month bounds with the start day', () => {

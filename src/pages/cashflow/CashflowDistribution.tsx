@@ -12,6 +12,7 @@ import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../../constants/animati
 import type { AmountBucket } from '../../types/cashflow';
 import type { CashflowLabels } from '../../components/cashflow/useCashflowLabels';
 import { ColorDot } from '../../components/cashflow/CategoryBadge';
+import { CountUpMoney, CountUpNumber } from '../../components/cashflow/CountUp';
 import { useCashflow } from './CashflowLayout';
 
 const card = 'rounded-2xl bg-card p-6 shadow-lg border border-border';
@@ -67,8 +68,8 @@ const CashflowDistribution: React.FC = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                                <span className="text-sm text-secondary tabular-nums">{labels.money(total)}</span>
-                                <span className="text-3xl font-bold text-primary tabular-nums">{count}</span>
+                                <span className="text-sm text-secondary tabular-nums"><CountUpMoney value={total} labels={labels} /></span>
+                                <span className="text-3xl font-bold text-primary tabular-nums"><CountUpNumber value={count} labels={labels} /></span>
                                 <span className="text-xs text-tertiary">{t('cashflow:distribution.operations', { count })}</span>
                             </div>
                         </div>
@@ -122,7 +123,10 @@ const CashflowDistribution: React.FC = () => {
             </div>
 
             <section className={`${card} space-y-4`}>
-                <h2 className="text-sm font-bold text-primary">{t('cashflow:distribution.weekdays')}</h2>
+                <div className="space-y-1">
+                    <h2 className="text-sm font-bold text-primary">{t('cashflow:distribution.weekdays')}</h2>
+                    <p className="text-xs text-tertiary">{t('cashflow:distribution.weekdaysHint')}</p>
+                </div>
                 <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={weekdays} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>

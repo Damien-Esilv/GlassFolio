@@ -11,9 +11,19 @@ vi.mock('../../../../../src/services/cashflow/cashflowService', () => ({
         getSummary: vi.fn(),
         listOperations: vi.fn(),
         listUpcoming: vi.fn(),
+        listRecurring: vi.fn(),
+        setRecurringStatus: vi.fn(),
+        updateOperation: vi.fn(),
         recordManualOperation: vi.fn(),
     },
 }));
+vi.mock('../../../../../src/services/cashflow/cashflowPlanningService', () => ({
+    cashflowPlanningService: { getBudgetStatus: vi.fn(), setBudget: vi.fn(), getForecast: vi.fn(), getTaxItems: vi.fn() },
+}));
+vi.mock('../../../../../src/services/repositories', async importOriginal => {
+    const actual = await importOriginal<typeof import('../../../../../src/services/repositories')>();
+    return { ...actual, userRepository: { ...actual.userRepository, getUser: vi.fn().mockResolvedValue({ preferences: { fiscalProfile: { estimatedTMI: 30 } } }) } };
+});
 vi.mock('../../../../../src/services/cashflow/cashflowCategoryService', () => ({
     cashflowCategoryService: {
         listCategories: vi.fn(),
@@ -30,6 +40,13 @@ import {
     listCashflowCategoriesTool,
     listCashflowRulesTool,
     listUpcomingOperationsTool,
+    listRecurringExpensesTool,
+    setRecurringStatusTool,
+    getBudgetStatusTool,
+    setBudgetTool,
+    getCashflowForecastTool,
+    getCashflowTaxItemsTool,
+    updateCashflowOperationTool,
     setTransactionCategoryTool,
     createCashflowCategoryTool,
     createCategorizationRuleTool,
@@ -39,12 +56,17 @@ import { aiToolRegistry } from '../../../../../src/services/ai/aiToolRegistry';
 import '../../../../../src/services/ai/tools';
 import { cashflowService } from '../../../../../src/services/cashflow/cashflowService';
 import { cashflowCategoryService } from '../../../../../src/services/cashflow/cashflowCategoryService';
+import { cashflowPlanningService } from '../../../../../src/services/cashflow/cashflowPlanningService';
+
+const planning = cashflowPlanningService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
 const service = cashflowService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 const categories = cashflowCategoryService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
-const READS = [getCashflowSummaryTool, listCashflowTransactionsTool, listCashflowCategoriesTool, listCashflowRulesTool, listUpcomingOperationsTool];
-const WRITES = [setTransactionCategoryTool, createCashflowCategoryTool, createCategorizationRuleTool, recordCashOperationTool];
+const READS = [getCashflowSummaryTool, listCashflowTransactionsTool, listCashflowCategoriesTool, listCashflowRulesTool, listUpcomingOperationsTool,
+    listRecurringExpensesTool, getBudgetStatusTool, getCashflowForecastTool, getCashflowTaxItemsTool];
+const WRITES = [setTransactionCategoryTool, createCashflowCategoryTool, createCategorizationRuleTool, recordCashOperationTool, setRecurringStatusTool,
+    setBudgetTool, updateCashflowOperationTool];
 
 describe('cashflowTools (AI & MCP)', () => {
     beforeEach(() => vi.clearAllMocks());
@@ -101,6 +123,56 @@ describe('cashflowTools (AI & MCP)', () => {
             { date: '2026-11-26', label: 'SNCF', amount: -42, currency: 'EUR', account: 'Courant', bank: 'Bourso', bankCategory: 'Transports' },
         ]);
         expect(service.listUpcoming).toHaveBeenCalledWith('acc');
+    });
+
+    it('lists recurring payments and confirms or sets aside a series', async () => {
+        service.listRecurring.mockResolvedValue({ month: '2026-11', start: '2026-11-01', end: '2026-12-01', items: [
+            { key: 'out:NETFLIX', label: 'Netflix', categoryId: 'subscriptions', direction: 'out', cadence: 'monthly', averageAmount: 13.49, lastAmount: 15.99,
+                priceChange: 0.185, nextDate: '2026-12-05', status: 'detected', payments: [{ date: '2026-11-05', amount: -15.99, expected: false, operationId: 'x' }] },
+            { key: 'out:GYM', label: 'Gym', categoryId: 'leisure', direction: 'out', cadence: 'monthly', averageAmount: 30, lastAmount: 30,
+                priceChange: null, nextDate: '2026-12-10', status: 'ignored', payments: [] },
+        ] });
+        const listed = await listRecurringExpensesTool.execute({ month: '2026-11' });
+        expect(listed).toEqual([expect.objectContaining({ key: 'out:NETFLIX', priceChange: 0.185, paymentsThisMonth: [{ date: '2026-11-05', amount: -15.99, expected: false }] })]);
+        expect(await listRecurringExpensesTool.execute({ includeIgnored: true })).toHaveLength(2);
+
+        service.setRecurringStatus.mockResolvedValue({ success: true, value: undefined });
+        expect((await setRecurringStatusTool.execute({ key: 'out:GYM', status: 'detected' })).success).toBe(true);
+        expect(service.setRecurringStatus).toHaveBeenCalledWith('out:GYM', 'detected');
+        expect((await setRecurringStatusTool.execute({ key: 'out:GYM', status: 'deleted' })).success).toBe(false);
+    });
+
+    it('reads the budgets and sets one, refusing a negative cap', async () => {
+        planning.getBudgetStatus.mockResolvedValue({ month: '2026-11', statuses: [{ categoryId: 'dining', limit: 200, spent: 230, ratio: 1.15, remaining: -30, state: 'over' }] });
+        expect(await getBudgetStatusTool.execute({ month: '2026-11' })).toEqual({ month: '2026-11', budgets: [expect.objectContaining({ categoryId: 'dining', state: 'over' })] });
+        planning.setBudget.mockResolvedValue({ success: true, value: undefined });
+        expect(await setBudgetTool.execute({ categoryId: 'dining', monthlyLimit: 250 })).toMatchObject({ success: true, message: 'Budget set.' });
+        expect(planning.setBudget).toHaveBeenCalledWith('dining', 250);
+        expect(await setBudgetTool.execute({ categoryId: 'dining', monthlyLimit: null })).toMatchObject({ success: true, message: 'Budget removed.' });
+        expect((await setBudgetTool.execute({ categoryId: 'dining', monthlyLimit: -5 })).success).toBe(false);
+        planning.setBudget.mockResolvedValue({ success: false, error: 'not_expense_category' });
+        expect(await setBudgetTool.execute({ categoryId: 'salary', monthlyLimit: 10 })).toEqual({ success: false, message: 'not_expense_category' });
+    });
+
+    it('gives the forecast with its curve and the tax items with the marginal rate of the profile', async () => {
+        planning.getForecast.mockResolvedValue({ month: '2026-11', balanceToday: 1000, projectedEnd: 640, points: [{ date: '2026-11-30', balance: 640, projected: true }] });
+        expect(await getCashflowForecastTool.execute({})).toMatchObject({ projectedEnd: 640, curve: [{ date: '2026-11-30', balance: 640, projected: true }] });
+        planning.getTaxItems.mockResolvedValue({ year: '2025', items: [{ kind: 'per', paid: 3000, base: 3000, rate: 0.3, estimate: 900, operationIds: [] }], marginalRate: 0.3 });
+        const tax = await getCashflowTaxItemsTool.execute({ year: '2025' });
+        expect(planning.getTaxItems).toHaveBeenCalledWith('2025', { estimatedTMI: 30 }, 'EUR');
+        expect(tax).toMatchObject({ year: '2025', items: [expect.objectContaining({ kind: 'per', estimate: 900 })] });
+        planning.getTaxItems.mockResolvedValue(null);
+        expect(await getCashflowTaxItemsTool.execute({ year: '2019' })).toMatchObject({ items: [], note: 'No rules for this year.' });
+    });
+
+    it('changes the note, label or exclusion of an operation, never its amount', async () => {
+        service.updateOperation.mockResolvedValue({ success: true, value: undefined });
+        expect(await updateCashflowOperationTool.execute({ transactionId: 'op', note: 'Avec Paul', excluded: true })).toMatchObject({ success: true });
+        expect(service.updateOperation).toHaveBeenCalledWith('op', { note: 'Avec Paul', excluded: true });
+        expect((await updateCashflowOperationTool.execute({ transactionId: 'op' })).success).toBe(false);
+        // An amount is not something this tool changes: nothing left to change, nothing called
+        expect((await updateCashflowOperationTool.execute({ transactionId: 'op', amount: 5 } as never)).success).toBe(false);
+        expect(service.updateOperation).toHaveBeenCalledTimes(1);
     });
 
     it('categorises operations and reports invalid arguments or service errors', async () => {

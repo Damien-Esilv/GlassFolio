@@ -43,7 +43,7 @@ GlassFolio/
 ├── desktop/         # Application de bureau (Electron) : lance server/ sur localhost:3790, mises à jour signées, installateurs
 ├── docker/          # Dockerfile de l'image auto-hébergée (+ docker-compose.yml à la racine)
 ├── locales/         # Traductions i18n (en/, fr/)
-├── test-data/       # CSV d'exemples (imports)
+├── test-data/       # Fichiers d'exemple (investments/ : historiques, snapshots, exports courtiers ; bank/ : relevés du cash flow), lus par nom via tests/fixtures/testData.ts
 ├── tailwind.config.ts / postcss.config.js  # Build Tailwind (couleurs = variables CSS)
 └── index.html       # Point d'entrée HTML (méta, JSON-LD) — aucun script tiers
 ```
@@ -63,6 +63,7 @@ Les détails complets sont dans `AI_CODING_STANDARDS.md`.
   - Pour les comparatifs multi-courbes et dashboards comparatifs (jusqu'à 8 couleurs sans confusion avec les gains/pertes), utiliser `CHART_SERIES_PALETTE` via `getComparisonSeriesTokens(index)` ou `getAssetStableColor(symbol)`.
   - Pour le cash flow (catégories de dépenses, rôles entrées/sorties/disponible/épargne, dégradé des tranches de montant), utiliser la palette dédiée `src/constants/cashflowPalette.ts` (`--color-cashflow-*`, déclarées dans les 5 thèmes) et `getCashflowCategoryTokens(categoryId)` ; une hausse de dépenses s'affiche avec `TrendBadge goodDirection="down"`.
   - Toute modification de `--color-positive` dans `src/index.css` doit cascader sur l'ensemble des écrans sans contradiction sémantique.
+- **Cohérence avec la page existante** : avant de modifier une page, l'analyser et reprendre ce qu'elle fait déjà (cartes, titres, liens « See all », boutons, espacements) pour un rendu uniforme (`AI_CODING_STANDARDS.md` §1.5).
 - **Form elements** : respecter le pattern `bg-subtle text-primary border-subtle focus:ring-primary focus:border-primary`.
 - **Data access** : les composants/pages ne touchent jamais `localStorage` directement ; passer par `src/services/`.
 - **Mode local = serveur source de vérité** : en mode local (Docker / `npm run dev`), les clés `glassfolio_*`, `gf_vault_header` et `gf_manual_price_history` sont persistées sur le serveur (`isServerPersistedKey` + liste blanche `server/localVault.mjs`, vérifiées par un test). Une nouvelle donnée utilisateur doit donc utiliser le préfixe `glassfolio_` ; seules les préférences d'appareil (thème, langue, consentement, état UI) restent dans le navigateur.

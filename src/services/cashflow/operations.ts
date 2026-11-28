@@ -127,7 +127,15 @@ export function buildCashflowOperations(data: CashflowDataset): CashflowOperatio
     const transfers = detectTransfers(raw, {
         includedAccountIds: included,
         ownAccountIds: new Set(accountsById.keys()),
+        institutionOf: new Map(data.accounts.map(account => [account.id, normalizeText(institutesById.get(account.instituteId)?.name)])),
     });
+    // The monthly total of a deferred-debit card is a transfer when the card's own payments are recorded in the account
+    const cardDetailAccounts = new Set(raw.filter(op => (op.hints.txType ?? '').toLowerCase() === 'deferred_card').map(op => op.accountId));
+    for (const op of raw) {
+        if ((op.hints.txType ?? '').toLowerCase() === 'card_summary' && cardDetailAccounts.has(op.accountId) && !transfers.has(op.id)) {
+            transfers.set(op.id, 'internal_transfer');
+        }
+    }
     const annotations = new Map(data.annotations.map(a => [a.transactionId, a]));
     const knownCategoryIds = new Set<string>([
         ...CASHFLOW_CATEGORIES.map(c => c.id),

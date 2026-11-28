@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     ChevronLeft,
@@ -506,7 +505,6 @@ const TopicDetail: React.FC<{ topicId: TopicId; onBack: () => void }> = ({ topic
 // ── Main component ──────────────────────────────────────────────────────────
 const TaxGuide: React.FC = () => {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const { user } = useAuth();
     const [search, setSearch] = useState('');
     const [activeTopic, setActiveTopic] = useState<TopicId | null>(null);
@@ -540,11 +538,7 @@ const TaxGuide: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 pb-4 border-b border-subtle">
                 <div>
-                    <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-3 transition-colors">
-                        <ChevronLeft size={16} />{t('tax:guide.backToHub')}
-                    </button>
-                    <h1 className="text-3xl font-bold text-primary mb-1">{t('tax:guide.title')}</h1>
-                    <p className="text-secondary text-sm">{t('tax:guide.subtitle')}</p>
+                    <h1 className="text-3xl font-bold text-primary">{t('tax:guide.title')}</h1>
                 </div>
 
                 {/* Country tab selector — visible only when multi-country */}

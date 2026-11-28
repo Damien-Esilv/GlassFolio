@@ -5,8 +5,7 @@ import Button from '../components/Button';
 import { Building2,
     User, Lock, Upload, Globe, Moon, Bell, Sun, Laptop, Languages, RotateCcw, Calendar, Scale, Check, Palette,
     TrendingUp, Trophy, ShieldAlert, SlidersHorizontal, ExternalLink, Download, FileText, Database, Sparkles,
-    Info, AlertCircle, FileSpreadsheet, UserX, AlertTriangle, Link2
-} from 'lucide-react';
+    Info, AlertCircle, FileSpreadsheet, UserX, AlertTriangle, Link2, Wallet } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { UserPreferences, NotificationCategoryPreferences } from '../types';
@@ -248,6 +247,7 @@ const Settings: React.FC = () => {
             goals: true,
             security: true,
             system: true,
+            cashflow: true,
         },
         dormantCashThresholdPercent: 25,
         volatilityThresholdPercent: 15,
@@ -270,12 +270,12 @@ const Settings: React.FC = () => {
         await savePreferences({ notificationPreferences: updatedNotif });
     };
 
-    const handleToggleCategory = async (cat: 'portfolio' | 'fiscal' | 'goals' | 'security') => {
+    const handleToggleCategory = async (cat: 'portfolio' | 'fiscal' | 'goals' | 'security' | 'cashflow') => {
         const updatedNotif: NotificationCategoryPreferences = {
             ...notifPrefs,
             categories: {
                 ...notifPrefs.categories,
-                [cat]: !notifPrefs.categories[cat],
+                [cat]: !(notifPrefs.categories[cat] ?? true),
             },
         };
         await savePreferences({ notificationPreferences: updatedNotif });
@@ -307,9 +307,8 @@ const Settings: React.FC = () => {
 
     return (
         <div className="max-w-5xl mx-auto pb-12">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-primary mb-2">{t('settings:title')}</h1>
-                <p className="text-secondary">{t('settings:subtitle')}</p>
+            <div className="mb-8 pb-4 border-b border-subtle">
+                <h1 className="text-3xl font-bold text-primary">{t('settings:title')}</h1>
             </div>
 
             <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
@@ -758,6 +757,25 @@ const Settings: React.FC = () => {
                                                                 aria-label={t('notifications:settings.categorySecurity')}
                                                             >
                                                                 <div className={`w-4 h-4 bg-white rounded-full transition-transform ${notifPrefs.categories.security ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Cash flow (Epic E52) */}
+                                                        <div className="flex items-center justify-between p-3 rounded-xl bg-subtle border border-subtle">
+                                                            <div className="flex items-center gap-2.5 mr-2">
+                                                                <Wallet size={16} className="text-brand shrink-0" />
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-primary">{t('notifications:settings.categoryCashflow')}</p>
+                                                                    <p className="text-[10px] text-tertiary line-clamp-1">{t('notifications:settings.categoryCashflowDesc')}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleCategory('cashflow')}
+                                                                className={`w-9 h-5 rounded-full transition-colors relative shrink-0 p-0.5 inline-flex items-center ${(notifPrefs.categories.cashflow ?? true) ? 'bg-primary' : 'bg-card border border-subtle'}`}
+                                                                aria-label={t('notifications:settings.categoryCashflow')}
+                                                            >
+                                                                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${(notifPrefs.categories.cashflow ?? true) ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                                                             </button>
                                                         </div>
                                                     </div>

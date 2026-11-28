@@ -1,7 +1,7 @@
 import { AssetClass } from '../constants/assetClasses';
 import { FiscalProfile } from './types.backend';
 
-export type NotificationCategory = 'portfolio' | 'fiscal' | 'goals' | 'security' | 'system';
+export type NotificationCategory = 'portfolio' | 'fiscal' | 'goals' | 'security' | 'system' | 'cashflow';
 
 export interface NotificationCategoryPreferences {
   masterEnabled: boolean;
@@ -12,6 +12,8 @@ export interface NotificationCategoryPreferences {
     goals: boolean;
     security: boolean;
     system: boolean;
+    /** Budgets, new subscriptions, price rises (Epic E52); absent (on) in preferences saved before */
+    cashflow?: boolean;
   };
   dormantCashThresholdPercent: number;
   volatilityThresholdPercent: number;

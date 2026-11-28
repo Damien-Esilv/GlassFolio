@@ -107,6 +107,8 @@ export interface WoobAccountHoldings extends WoobAccount {
     warnings: string[];
     /** Checking and savings accounts read with a history: the operations since the day asked for, or null (refused). */
     transactions?: WoobOperation[] | null;
+    /** Payments of the account's deferred-debit cards (the account itself only shows their monthly total) */
+    cardTransactions?: WoobOperation[];
     coming?: WoobOperation[];
     historyWarnings?: string[];
 }

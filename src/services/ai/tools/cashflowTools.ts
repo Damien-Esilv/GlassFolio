@@ -2,12 +2,17 @@
  * Cash flow tools for the in-app assistant and MCP clients (Epic E52 — TGLA-252, TGLA-254).
  *
  * Reads: summary of a period, operations (with filters, the uncategorised ones), categories, rules, operations the
- * banks announce as coming.
+ * banks announce as coming, recurring payments (TGLA-255). Changes also confirm or set aside a recurring series.
  * Changes (always confirmed by the user): put operations in a category (optionally with a rule),
  * create a sub-category, create a rule, record an operation typed by hand. Nothing is deleted by the AI.
  */
 import { AIToolDefinition } from '../types';
 import { cashflowService } from '../../cashflow/cashflowService';
+import { cashflowPlanningService } from '../../cashflow/cashflowPlanningService';
+import type { TaxItem } from '../../cashflow/taxItems';
+import { userRepository } from '../../repositories';
+import type { BudgetStatus, CashflowForecast } from '../../../types/cashflow';
+import type { FiscalProfile } from '../../../types/types.backend';
 import { cashflowCategoryService, type CategoryOption } from '../../cashflow/cashflowCategoryService';
 import type { CashflowPeriodPreset } from '../../cashflow/period';
 import type { CashflowSummary } from '../../../types/cashflow';
@@ -15,6 +20,9 @@ import {
     CreateCashflowCategoryArgsSchema,
     CreateCategorizationRuleArgsSchema,
     RecordCashOperationArgsSchema,
+    SetBudgetArgsSchema,
+    SetRecurringStatusArgsSchema,
+    UpdateCashflowOperationArgsSchema,
     SetTransactionCategoryArgsSchema,
 } from '../../contracts/externalSchemas';
 
@@ -34,8 +42,8 @@ export const getCashflowSummaryTool: AIToolDefinition<
     parameters: {
         type: 'object',
         properties: {
-            period: { type: 'string', enum: [...PRESETS], description: 'Period: month (one budget month, see month), 3m, 6m, 12m, ytd or all. Default: month.' },
-            month: { type: 'string', description: 'Budget month YYYY-MM for period=month. Default: the current month.' },
+            period: { type: 'string', enum: [...PRESETS], description: 'Period: month (one budget month), 3m, 6m or 12m (the months up to month), ytd (the calendar year of month, up to today for this one) or all. Default: month.' },
+            month: { type: 'string', description: 'Budget month YYYY-MM anchoring the period: the month itself, the last month of 3m/6m/12m, a month of the year for ytd. Default: the current month.' },
             currency: { type: 'string', description: 'Base currency ISO code, e.g. EUR. Default: EUR.' },
         },
     },
@@ -149,6 +157,162 @@ export const listUpcomingOperationsTool: AIToolDefinition<
         bank: item.instituteName,
         bankCategory: item.bankHints?.category,
     })),
+};
+
+export const listRecurringExpensesTool: AIToolDefinition<
+    { month?: string; includeIgnored?: boolean; currency?: string },
+    Array<{ key: string; label: string; categoryId: string; direction: string; cadence: string; averageAmount: number; lastAmount: number; priceChange: number | null; nextDate: string; status: string; paymentsThisMonth: Array<{ date: string; amount: number; expected: boolean }> }>
+> = {
+    name: 'list_recurring_expenses',
+    description:
+        'Recurring payments and income detected over the last 6 months (subscriptions, rent, salary…): rhythm, average and last amount, price change (0.185 = +18.5 %), next expected date, the user\'s decision (detected, confirmed, ignored) and the payments of the month asked, made or expected. Amounts in the base currency; averageAmount and lastAmount are absolute, payments are signed.',
+    parameters: {
+        type: 'object',
+        properties: {
+            month: { type: 'string', description: 'Budget month YYYY-MM for the payments of the month. Default: the current one.' },
+            includeIgnored: { type: 'boolean', description: 'Also list the series the user set aside.' },
+            currency: { type: 'string', description: 'Base currency ISO code. Default: EUR.' },
+        },
+    },
+    execute: async params => {
+        const result = await cashflowService.listRecurring({ currency: params.currency ?? 'EUR', month: params.month });
+        return result.items
+            .filter(item => params.includeIgnored || item.status !== 'ignored')
+            .map(item => ({
+                key: item.key,
+                label: item.label,
+                categoryId: item.categoryId,
+                direction: item.direction,
+                cadence: item.cadence,
+                averageAmount: item.averageAmount,
+                lastAmount: item.lastAmount,
+                priceChange: item.priceChange,
+                nextDate: item.nextDate,
+                status: item.status,
+                paymentsThisMonth: item.payments.map(payment => ({ date: payment.date, amount: payment.amount, expected: payment.expected })),
+            }));
+    },
+};
+
+export const setRecurringStatusTool: AIToolDefinition<{ key: string; status: string }, ToolResult> = {
+    name: 'set_recurring_status',
+    description:
+        'Confirm a detected recurring series (confirmed), set it aside because it is not a recurring payment (ignored: its operations then count as day-to-day spending), or forget the decision (detected). Keys come from list_recurring_expenses. Requires explicit human confirmation before execution.',
+    requiresConfirmation: true,
+    parameters: {
+        type: 'object',
+        properties: {
+            key: { type: 'string', description: 'Series key from list_recurring_expenses.' },
+            status: { type: 'string', enum: ['confirmed', 'ignored', 'detected'], description: 'The decision.' },
+        },
+        required: ['key', 'status'],
+    },
+    execute: async params => {
+        const validated = SetRecurringStatusArgsSchema.safeParse(params);
+        if (!validated.success) return failure(validated.error.issues[0]?.message || 'Invalid parameters.');
+        const result = await cashflowService.setRecurringStatus(validated.data.key, validated.data.status);
+        if (result.success === false) return failure(result.error);
+        return { success: true, message: `Series marked ${validated.data.status}.` };
+    },
+};
+
+export const getBudgetStatusTool: AIToolDefinition<{ month?: string; currency?: string }, { month: string; budgets: BudgetStatus[] }> = {
+    name: 'get_budget_status',
+    description:
+        'The user\'s monthly budgets (a spending cap per category) against what each category spent in a budget month: limit, spent, ratio, remaining and state (ok under 80 %, near from 80 %, over above the cap). Amounts in the base currency.',
+    parameters: {
+        type: 'object',
+        properties: {
+            month: { type: 'string', description: 'Budget month YYYY-MM. Default: the current one.' },
+            currency: { type: 'string', description: 'Base currency ISO code. Default: EUR.' },
+        },
+    },
+    execute: async params => {
+        const result = await cashflowPlanningService.getBudgetStatus({ month: params.month, currency: params.currency ?? 'EUR' });
+        return { month: result.month, budgets: result.statuses };
+    },
+};
+
+export const setBudgetTool: AIToolDefinition<{ categoryId: string; monthlyLimit: number | null }, ToolResult> = {
+    name: 'set_budget',
+    description:
+        'Set the monthly spending cap of a top-level expense category (ids from list_cashflow_categories, kind expense, without parentId), or remove it with monthlyLimit null or 0. The user is notified when the category goes over its cap. Requires explicit human confirmation before execution.',
+    requiresConfirmation: true,
+    parameters: {
+        type: 'object',
+        properties: {
+            categoryId: { type: 'string', description: 'Top-level expense category id, e.g. dining.' },
+            monthlyLimit: { type: 'number', description: 'Cap per budget month in the base currency; null or 0 removes the budget.' },
+        },
+        required: ['categoryId', 'monthlyLimit'],
+    },
+    execute: async params => {
+        const validated = SetBudgetArgsSchema.safeParse(params);
+        if (!validated.success) return failure(validated.error.issues[0]?.message || 'Invalid parameters.');
+        const result = await cashflowPlanningService.setBudget(validated.data.categoryId, validated.data.monthlyLimit);
+        if (result.success === false) return failure(result.error);
+        return { success: true, message: validated.data.monthlyLimit ? 'Budget set.' : 'Budget removed.' };
+    },
+};
+
+export const getCashflowForecastTool: AIToolDefinition<{ currency?: string }, Omit<CashflowForecast, 'points'> & { curve: Array<{ date: string; balance: number; projected: boolean }> }> = {
+    name: 'get_cashflow_forecast',
+    description:
+        'End-of-month forecast of the checking and savings accounts counted in the cash flow: today\'s balance, the balance expected at the end of the budget month (lowest point too), and what makes it up (operations the banks announce as coming, recurring payments and income expected, day-to-day spending at the daily average of the last 3 months), with the daily curve.',
+    parameters: { type: 'object', properties: { currency: { type: 'string', description: 'Base currency ISO code. Default: EUR.' } } },
+    execute: async params => {
+        const { points, ...rest } = await cashflowPlanningService.getForecast({ currency: params.currency ?? 'EUR' });
+        return { ...rest, curve: points };
+    },
+};
+
+export const getCashflowTaxItemsTool: AIToolDefinition<{ year: string; currency?: string }, { year: string; items: TaxItem[]; marginalRate?: number; note: string } | { year: string; items: []; note: string }> = {
+    name: 'get_cashflow_tax_items',
+    description:
+        'Tax reductions and credits spotted in the cash flow of an income year (France): donations (75 % for organisations helping people in need within its cap, else 66 % within 20 % of taxable income), home help and childcare (50 % credits within their caps), PER contributions (deductible within the cap on the tax notice; saving = contributions × marginal rate). Paid, base after caps, rate, estimated benefit and the operation ids. An estimate, not tax advice.',
+    parameters: {
+        type: 'object',
+        properties: {
+            year: { type: 'string', description: 'Income year, e.g. 2025.' },
+            currency: { type: 'string', description: 'Base currency ISO code. Default: EUR.' },
+        },
+        required: ['year'],
+    },
+    execute: async params => {
+        const user = await userRepository.getUser().catch(() => null);
+        const profile: FiscalProfile = user?.preferences?.fiscalProfile ?? {};
+        const note = 'Estimate from bank operations; the receipts and certificates decide, caps depend on the household.';
+        const result = await cashflowPlanningService.getTaxItems(String(params.year), profile, params.currency ?? 'EUR');
+        return result ? { ...result, note } : { year: String(params.year), items: [], note: 'No rules for this year.' };
+    },
+};
+
+export const updateCashflowOperationTool: AIToolDefinition<
+    { transactionId: string; note?: string | null; displayLabel?: string | null; excluded?: boolean },
+    ToolResult
+> = {
+    name: 'update_cashflow_operation',
+    description:
+        'Change how one cash flow operation shows (ids from list_cashflow_transactions): its note, its displayed label (null restores the bank\'s), or whether it is left out of the cash flow (excluded). The amount, date and account never change here. Requires explicit human confirmation before execution.',
+    requiresConfirmation: true,
+    parameters: {
+        type: 'object',
+        properties: {
+            transactionId: { type: 'string', description: 'Operation id.' },
+            note: { type: 'string', description: 'Note (500 characters at most); empty or null removes it.' },
+            displayLabel: { type: 'string', description: 'Label shown instead of the bank\'s (140 characters at most); null restores the bank\'s.' },
+            excluded: { type: 'boolean', description: 'true leaves the operation out of the cash flow totals.' },
+        },
+        required: ['transactionId'],
+    },
+    execute: async params => {
+        const validated = UpdateCashflowOperationArgsSchema.safeParse(params);
+        if (!validated.success) return failure(validated.error.issues[0]?.message || 'Invalid parameters.');
+        const { transactionId, ...edit } = validated.data;
+        const result = await cashflowService.updateOperation(transactionId, edit);
+        if (result.success === false) return failure(result.error);
+        return { success: true, message: 'Operation updated.' };
+    },
 };
 
 export const setTransactionCategoryTool: AIToolDefinition<

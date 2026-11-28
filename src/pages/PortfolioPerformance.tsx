@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
-import { ArrowLeft, Percent, ShieldAlert, Award, ArrowUpRight, ArrowDownRight, Search, Plus, Loader2, BookOpen, Check, X } from 'lucide-react';
+import { Percent, ShieldAlert, Award, ArrowUpRight, ArrowDownRight, Search, Plus, Loader2, BookOpen, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ChartModeToggle from '../components/ui/ChartModeToggle';
 import { useChartPriceMode } from '../hooks/useChartPriceMode';
@@ -22,7 +21,6 @@ import { useEscapeKey } from '../hooks/useEscapeKey';
 
 const PortfolioPerformance: React.FC = () => {
    const { t } = useTranslation();
-   const navigate = useNavigate();
    const { user } = useAuth();
    const { transactions, positions } = useData();
    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
@@ -425,19 +423,11 @@ const PortfolioPerformance: React.FC = () => {
 
    return (
       <div className="space-y-8">
-         {/* Top Header & Back Button */}
+         {/* Top Header */}
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-subtle">
             <div className="flex items-center gap-4">
-               <button
-                  onClick={() => navigate('/analytics')}
-                  className="p-2.5 rounded-xl bg-subtle hover:bg-subtle/80 text-secondary hover:text-primary transition-colors"
-                  title={t('reports:backToReports')}
-               >
-                  <ArrowLeft size={20} />
-               </button>
                <div>
-                  <h1 className="text-3xl font-bold text-primary mb-1">{t('reports:performance.title')}</h1>
-                  <p className="text-secondary text-sm">{t('reports:performance.subtitle')}</p>
+                  <h1 className="text-3xl font-bold text-primary">{t('reports:performance.title')}</h1>
                </div>
             </div>
 

@@ -5,8 +5,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 import {
   tokenizeHeader,
   matchHistoryColumns,
@@ -15,9 +13,10 @@ import {
 import { detectPreset } from '../../../../src/services/import/presetDetector';
 import { parseCSVText } from '../../../../src/services/import/csvParser';
 import type { FieldMappings } from '../../../../src/services/import/importManager';
+import { readTestData } from '../../../fixtures/testData';
 
 const headersOf = (file: string): string[] =>
-  parseCSVText(readFileSync(resolve(__dirname, '../../../../test-data', file), 'utf-8')).headers;
+  parseCSVText(readTestData(file)).headers;
 
 const historyMappingFor = (file: string): Partial<FieldMappings> => {
   const headers = headersOf(file);

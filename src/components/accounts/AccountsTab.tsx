@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Building2, Check, Link2, Pencil, Trash2, Wallet, X } from 'lucide-react';
 import Button from '../Button';
+import { DeleteInPlace as SharedDeleteInPlace } from '../ui/DeleteInPlace';
 import { useData } from '../../context/DataContext';
-import { accountManagementService, type ManagedInstitution, type ManagementResult } from '../../services/accountManagementService';
+import { accountManagementService, type CashAccountKind, type ManagedInstitution, type ManagementResult } from '../../services/accountManagementService';
 import { fieldsToAccountKind } from '../../constants/accountKinds';
-import { STAGGER_DELAY_MS } from '../../constants/animations';
 import type { AccountType, WrapperType } from '../../types/types.backend';
 
 const cardStyle = 'bg-card rounded-xl p-6 shadow-lg border border-border';
@@ -53,31 +53,11 @@ const RenamableName: React.FC<{ name: string; label: string; className: string; 
 };
 
 /** The bin, which turns into "Confirm deletion" in place with what will be deleted (same pattern as Connections). */
-const DeleteInPlace: React.FC<{ label: string; warning: string; onDelete: () => Promise<void> }> = ({ label, warning, onDelete }) => {
+
+/** The shared in-place confirmation, with this tab's confirm label. */
+const DeleteInPlace: React.FC<{ label: string; warning: string; onDelete: () => Promise<void> }> = props => {
     const { t } = useTranslation();
-    const [confirming, setConfirming] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    if (!confirming) {
-        return (
-            <Button size="sm" variant="ghost" aria-label={label} title={label} onClick={() => setConfirming(true)}>
-                <Trash2 size={14} aria-hidden="true" />
-            </Button>
-        );
-    }
-    return (
-        <div className="flex flex-wrap items-center justify-end gap-2 basis-full">
-            <p className="flex items-start gap-1.5 text-xs text-negative flex-1 min-w-0" role="alert">
-                <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                {warning}
-            </p>
-            <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirming(false)}>{t('common:buttons.cancel')}</Button>
-            <Button size="sm" variant="danger" isLoading={deleting} disabled={deleting}
-                onClick={() => { setDeleting(true); void onDelete().finally(() => { setDeleting(false); setConfirming(false); }); }}>
-                <Trash2 size={14} className="mr-1.5" aria-hidden="true" />
-                {t('settings:accounts.confirmDelete')}
-            </Button>
-        </div>
-    );
+    return <SharedDeleteInPlace {...props} confirmLabel={t('settings:accounts.confirmDelete')} />;
 };
 
 /**
@@ -106,7 +86,7 @@ export const AccountsTab: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className={`${cardStyle} animate-fade-in-up`}>
+            <div className={`${cardStyle}`}>
                 <div className="flex items-start gap-3">
                     <Building2 size={20} className="text-brand shrink-0 mt-1" aria-hidden="true" />
                     <div>
@@ -118,18 +98,17 @@ export const AccountsTab: React.FC = () => {
             </div>
 
             {institutions !== null && institutions.length === 0 && (
-                <div className={`${cardStyle} text-center animate-fade-in-up`}>
+                <div className={`${cardStyle} text-center`}>
                     <p className="text-sm text-secondary">{t('settings:accounts.empty')}</p>
                     <Link to="/import" className="text-sm text-brand mt-2 inline-block">{t('settings:accounts.emptyAction')}</Link>
                 </div>
             )}
 
-            {institutions?.map((institution, index) => {
+            {institutions?.map(institution => {
                 const synced = institution.accounts.some(account => account.syncedBy !== null);
                 const operations = institution.accounts.reduce((total, account) => total + account.operations, 0);
                 return (
-                    <section key={institution.id} aria-label={institution.name} className={`${cardStyle} space-y-4 animate-fade-in-up`}
-                        style={{ animationDelay: `${(index + 1) * STAGGER_DELAY_MS}ms`, animationFillMode: 'both' }}>
+                    <section key={institution.id} aria-label={institution.name} className={`${cardStyle} space-y-4`}>
                         <div className="flex flex-wrap items-center gap-3">
                             <Building2 size={18} className="text-brand shrink-0" aria-hidden="true" />
                             <div className="flex-1 min-w-0">
@@ -154,9 +133,22 @@ export const AccountsTab: React.FC = () => {
                                         <div className="flex-1 min-w-0">
                                             <RenamableName name={account.name} label={account.name} className="text-sm font-medium text-primary"
                                                 onRename={name => apply(() => accountManagementService.renameAccount(account.id, name), true)} />
-                                            <p className="text-xs text-secondary">
-                                                {t(`transactions:importWizard.context.accountKinds.${fieldsToAccountKind(account.type as AccountType, account.wrapperType as WrapperType | undefined)}`)}
-                                                {' · '}{account.currency}{' · '}{t('settings:accounts.operations', { count: account.operations })}
+                                            <p className="flex flex-wrap items-center gap-x-1 text-xs text-secondary">
+                                                {account.type === 'checking' || account.type === 'savings' ? (
+                                                    // A checking account takes bank operations, a savings account its operations or its balance
+                                                    <select
+                                                        value={account.type}
+                                                        aria-label={t('settings:accounts.cashKind', { name: account.name })}
+                                                        onChange={event => void apply(() => accountManagementService.setCashAccountKind(account.id, event.target.value as CashAccountKind), true)}
+                                                        className="h-7 pl-2 pr-7 rounded-lg bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-xs"
+                                                    >
+                                                        <option value="checking">{t('transactions:importWizard.context.accountKinds.CASH')}</option>
+                                                        <option value="savings">{t('transactions:importWizard.context.accountKinds.SAVINGS')}</option>
+                                                    </select>
+                                                ) : (
+                                                    <span>{t(`transactions:importWizard.context.accountKinds.${fieldsToAccountKind(account.type as AccountType, account.wrapperType as WrapperType | undefined)}`)}</span>
+                                                )}
+                                                <span>{' · '}{account.currency}{' · '}{t('settings:accounts.operations', { count: account.operations })}</span>
                                             </p>
                                         </div>
                                         {account.syncedBy ? (

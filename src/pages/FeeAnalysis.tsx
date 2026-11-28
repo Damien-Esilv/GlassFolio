@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import {
-   ArrowLeft,
    Coins,
    ExternalLink,
    Scale,
@@ -25,7 +23,6 @@ import { CHART_SERIES_PALETTE } from '../constants/themeTokens';
 
 const FeeAnalysis: React.FC = () => {
    const { t } = useTranslation();
-   const navigate = useNavigate();
    const { user } = useAuth();
    const { positions } = useData();
    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
@@ -185,19 +182,11 @@ const FeeAnalysis: React.FC = () => {
 
    return (
       <div className="space-y-8">
-         {/* Top Header & Back Button */}
+         {/* Top Header */}
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-subtle">
             <div className="flex items-center gap-4">
-               <button
-                  onClick={() => navigate('/analytics')}
-                  className="p-2.5 rounded-xl bg-subtle hover:bg-subtle/80 text-secondary hover:text-primary transition-colors"
-                  title={t('reports:backToReports')}
-               >
-                  <ArrowLeft size={20} />
-               </button>
                <div>
-                  <h1 className="text-3xl font-bold text-primary mb-1">{t('reports:feeAnalysis.title')}</h1>
-                  <p className="text-secondary text-sm">{t('reports:feeAnalysis.subtitle')}</p>
+                  <h1 className="text-3xl font-bold text-primary">{t('reports:feeAnalysis.title')}</h1>
                </div>
             </div>
          </div>

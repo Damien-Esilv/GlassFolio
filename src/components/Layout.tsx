@@ -6,7 +6,7 @@ import {
   LayoutDashboard, PieChart, ArrowRightLeft, Settings, Bell, Hexagon,
   LogOut, User as UserIcon, ChevronDown, ChevronRight, Trophy, Briefcase, Menu, X, RefreshCw, BarChart3,
   TrendingUp, Receipt, Coins, Scale, FileText, BookOpen, Lightbulb, Sparkles, Lock,
-  PanelLeftClose, PanelLeftOpen, Wallet, Waypoints, ChartPie, ListOrdered
+  PanelLeftClose, PanelLeftOpen, Wallet
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,7 @@ import { useResizablePane } from '../hooks/useResizablePane';
 import { McpBridgeHost } from './mcp/McpBridgeHost';
 import { DesktopUpdatePrompt } from './desktop/DesktopUpdatePrompt';
 import { ConnectionSyncHost } from './connections/ConnectionSyncHost';
+import { onAskAssistant } from '../services/ai/assistantRequests';
 import { ConsentBanner } from './ConsentBanner';
 import { NotificationBellDropdown } from './notifications/NotificationBellDropdown';
 import { NotificationToastContainer } from './notifications/NotificationToastContainer';
@@ -43,8 +44,11 @@ const NavItem: React.FC<{
   indent?: boolean;
   onClick?: () => void;
   collapsed?: boolean;
-}> = ({ path, icon: Icon, name, indent = false, onClick, collapsed = false }) => {
+  /** Active on the path and every page below it (a section whose parts are tabs) */
+  matchPrefix?: boolean;
+}> = ({ path, icon: Icon, name, indent = false, onClick, collapsed = false, matchPrefix = false }) => {
   const { pathname } = useLocation();
+  const active = pathname === path || (matchPrefix && pathname.startsWith(`${path}/`));
   return (
     <Link
       to={path}
@@ -54,7 +58,7 @@ const NavItem: React.FC<{
       className={`flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
         collapsed ? 'justify-center px-2' : `px-4 ${indent ? 'ml-6' : ''}`
       } ${
-        pathname === path
+        active
           ? 'bg-primary/10 text-primary font-semibold'
           : 'text-secondary hover:bg-subtle hover:text-primary'
       }`}
@@ -76,7 +80,6 @@ const SIDEBAR_COLLAPSED_WIDTH = 80;
 const SIDEBAR_COLLAPSE_THRESHOLD = 128;
 
 const AI_PANEL_DEFAULT_WIDTH = 420;
-const AI_PANEL_WIDE_WIDTH = 640;
 const AI_PANEL_MIN_WIDTH = 320;
 const AI_PANEL_MAX_WIDTH = 760;
 const MIN_MAIN_CONTENT_WIDTH = 360;
@@ -102,7 +105,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPortfolioExpanded, setIsPortfolioExpanded] = useState(true);
   const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
-  const [isCashflowExpanded, setIsCashflowExpanded] = useState(true);
   const [isFiscaliteExpanded, setIsFiscaliteExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useEscapeKey(() => setIsMobileMenuOpen(false), isMobileMenuOpen);
@@ -175,6 +177,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     });
   }, []);
 
+  // A page asking the assistant something opens the panel (the panel types the request in)
+  useEffect(() => onAskAssistant(() => setAIChatOpenPersisted(true)), [setAIChatOpenPersisted]);
+
   // Recharts measures container widths via window resize; trigger after panel slide transition
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -229,19 +234,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   });
 
   const isAnyResizing = leftResize.isResizing || rightResize.isResizing;
-  const isAiExpandedPreset = effectiveAiWidth >= AI_PANEL_WIDE_WIDTH - 24;
-  const toggleAiWidthPreset = useCallback(() => {
-    const target = isAiExpandedPreset ? AI_PANEL_DEFAULT_WIDTH : Math.min(AI_PANEL_WIDE_WIDTH, maxAllowedAiWidth);
-    setAiPanelWidth(target);
-    try {
-      appStorage.setItem(AI_PANEL_WIDTH_KEY, String(target));
-    } catch {
-      // ignore storage errors
-    }
-    setTimeout(() => {
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('resize'));
-    }, 220);
-  }, [isAiExpandedPreset, maxAllowedAiWidth]);
 
 
   /** Human-readable freshness label */
@@ -295,9 +287,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (location.pathname.startsWith('/analytics')) {
       setIsAnalyticsExpanded(true);
     }
-    if (location.pathname.startsWith('/cashflow')) {
-      setIsCashflowExpanded(true);
-    }
     if (location.pathname.startsWith('/tax')) {
       setIsFiscaliteExpanded(true);
     }
@@ -341,7 +330,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isPortfolioActive = ['/portfolio', '/portfolio/summary', '/positions', '/transactions'].includes(location.pathname);
   const isAnalyticsActive = location.pathname.startsWith('/analytics');
-  const isCashflowActive = location.pathname.startsWith('/cashflow');
   const isFiscaliteActive = location.pathname.startsWith('/tax');
 
   const handleLogout = () => {
@@ -499,71 +487,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       )}
 
-      {/* 3b. Cash flow Section (Epic E52) */}
-      {collapsed ? (
-        <NavItem
-          path="/cashflow"
-          icon={Wallet}
-          name={t('navigation:menu.cashflow')}
-          onClick={() => setIsMobileMenuOpen(false)}
-          collapsed
-        />
-      ) : (
-        <div>
-          <div
-            className={`flex items-center rounded-lg text-sm font-medium transition-all ${
-              isCashflowActive
-                ? 'bg-primary/10 text-primary font-semibold'
-                : 'text-secondary hover:bg-subtle hover:text-primary'
-            }`}
-          >
-            <Link
-              to="/cashflow"
-              onClick={() => {
-                setIsCashflowExpanded(true);
-                setIsMobileMenuOpen(false);
-              }}
-              className="flex items-center gap-3 flex-1 px-4 py-2.5"
-            >
-              <Wallet size={18} />
-              {t('navigation:menu.cashflow')}
-            </Link>
-            <button
-              onClick={() => setIsCashflowExpanded(!isCashflowExpanded)}
-              className="px-3 py-2.5 hover:text-primary"
-              aria-label={t('navigation:toggleMenu', { menu: t('navigation:menu.cashflow') })}
-            >
-              {isCashflowExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
-          </div>
-
-          {isCashflowExpanded && (
-            <div className="mt-1 space-y-0.5 animate-in slide-in-from-top-2">
-              <NavItem
-                path="/cashflow/flows"
-                icon={Waypoints}
-                name={t('navigation:menu.cashflowFlows')}
-                indent
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              <NavItem
-                path="/cashflow/categories"
-                icon={ChartPie}
-                name={t('navigation:menu.cashflowCategories')}
-                indent
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              <NavItem
-                path="/cashflow/operations"
-                icon={ListOrdered}
-                name={t('navigation:menu.cashflowOperations')}
-                indent
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      {/* 3b. Cash flow (Epic E52): one page, its sections in tabs */}
+      <NavItem
+        path="/cashflow"
+        icon={Wallet}
+        name={t('navigation:menu.cashflow')}
+        onClick={() => setIsMobileMenuOpen(false)}
+        collapsed={collapsed}
+        matchPrefix
+      />
 
       {/* 4. Fiscalité Section */}
       {collapsed ? (
@@ -930,8 +862,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         onClose={() => setAIChatOpenPersisted(false)}
         width={effectiveAiWidth}
         isResizing={rightResize.isResizing}
-        isExpandedPreset={isAiExpandedPreset}
-        onToggleWidthPreset={toggleAiWidthPreset}
         resizeHandleProps={rightResize.separatorProps}
       />
 

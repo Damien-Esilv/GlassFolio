@@ -249,11 +249,12 @@ const Progress: React.FC = () => {
     return (
         <div className="space-y-6 pb-12">
             {/* Header with Investor Rank & Level Tracker */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Title on the left, rank and level on the right */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-subtle">
+                <h1 className="text-3xl font-bold text-primary">
+                    {t('gamification:hub.title')}
+                </h1>
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-brand mb-1">
-                        {t('gamification:hub.title')}
-                    </h1>
                     <div className="flex flex-wrap items-center gap-3 text-secondary text-sm">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand/10 text-brand font-bold text-xs border border-brand/20">
                             <Award size={14} />
@@ -263,7 +264,8 @@ const Progress: React.FC = () => {
                             {t('gamification:level')} <AnimatedNumber value={user?.level || 1} locale={locale} /> • <AnimatedNumber value={user?.xp || 0} locale={locale} /> {t('gamification:xp')}
                         </span>
                         <span className="text-tertiary hidden md:inline">•</span>
-                        <span className="text-xs text-tertiary hidden md:inline">
+                        {/* Same size as the level and XP next to it */}
+                        <span className="text-tertiary hidden md:inline">
                             {t('gamification:xpToNext', { 
                                 xp: progress.levelRange - progress.xpInCurrentLevel, 
                                 nextLevel: (user?.level || 1) + 1 
@@ -273,27 +275,27 @@ const Progress: React.FC = () => {
                 </div>
             </div>
 
-            {/* Tab switcher: same size as the selectors of the other pages */}
-            <div className="flex flex-wrap items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle w-fit max-w-full">
+            {/* Tabs: the same underlined tabs as the cash flow pages (AI_CODING_STANDARDS.md §1.5) */}
+            <nav className="flex gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-subtle" role="tablist" aria-label={t('gamification:hub.title')}>
                 {PROGRESS_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
                     return (
-                        <button 
+                        <button
                             key={tab.id}
-                            onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }); }} 
-                            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                                isActive 
-                                    ? 'bg-card text-primary shadow-sm border border-subtle' 
-                                    : 'text-secondary hover:text-primary hover:bg-card/40'
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => { setActiveTab(tab.id); setSearchParams({ tab: tab.id }); }}
+                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                                isActive ? 'border-primary text-primary' : 'border-transparent text-secondary hover:text-primary'
                             }`}
                         >
-                            <Icon size={14} className={isActive ? 'text-brand' : 'text-secondary'} />
-                            <span className="truncate">{t(tab.labelKey)}</span>
+                            <Icon size={16} aria-hidden="true" /> {t(tab.labelKey)}
                         </button>
                     );
                 })}
-            </div>
+            </nav>
 
             {/* Featured Showcase (if any badges pinned) */}
             {pinnedAchievementsList.length > 0 && activeTab === 'achievements' && (

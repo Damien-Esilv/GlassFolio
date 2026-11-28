@@ -1,18 +1,22 @@
 /**
  * Cash flow settings: counted accounts, investment income, first day of the month, the user's
- * categories and rules (TGLA-249).
+ * categories and rules (TGLA-249). Deletions are confirmed in place (the app's pattern), rules are created here
+ * as well as from an operation. Opened from a category list, it scrolls to "My categories".
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Trash2, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { DeleteInPlace } from '../ui/DeleteInPlace';
+import { CategorySelect } from './ManualOperationDialog';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { cashflowService } from '../../services/cashflow/cashflowService';
 import { cashflowCategoryService, type CategoryOption } from '../../services/cashflow/cashflowCategoryService';
 import { TOP_LEVEL_CASHFLOW_CATEGORIES } from '../../constants/cashflowCategories';
-import type { CashflowSettings, CategorizationRule, CustomCashflowCategory } from '../../types/cashflow';
+import type { CashflowSettings, CategorizationRule, CustomCashflowCategory, RuleDirection } from '../../types/cashflow';
 import type { CashflowLabels } from './useCashflowLabels';
 import { CategoryBadge } from './CategoryBadge';
+import { CASHFLOW_DIALOG_BACKDROP, CASHFLOW_FIELD, CASHFLOW_PRIMARY_BUTTON } from './formStyles';
 
 interface CashAccount {
     id: string;
@@ -21,7 +25,7 @@ interface CashAccount {
     included: boolean;
 }
 
-const field = 'px-3 py-2 rounded-xl bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-sm';
+const field = CASHFLOW_FIELD;
 const sectionTitle = 'text-sm font-bold text-primary';
 
 export const CashflowSettingsDialog: React.FC<{
@@ -30,7 +34,9 @@ export const CashflowSettingsDialog: React.FC<{
     labels: CashflowLabels;
     onClose: () => void;
     onChanged: () => void;
-}> = ({ categories, customCategories, labels, onClose, onChanged }) => {
+    /** Section shown first */
+    focus?: 'categories';
+}> = ({ categories, customCategories, labels, onClose, onChanged, focus }) => {
     const { t } = useTranslation();
     useEscapeKey(onClose);
     const [settings, setSettings] = useState<CashflowSettings | null>(null);
@@ -39,6 +45,18 @@ export const CashflowSettingsDialog: React.FC<{
     const [parentId, setParentId] = useState<string>(TOP_LEVEL_CASHFLOW_CATEGORIES[4]?.id ?? 'housing');
     const [name, setName] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [ruleText, setRuleText] = useState('');
+    const [ruleDirection, setRuleDirection] = useState<RuleDirection>('out');
+    const [ruleCategory, setRuleCategory] = useState('');
+    const [ruleError, setRuleError] = useState<string | null>(null);
+    const categoriesRef = useRef<HTMLElement>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (focus !== 'categories') return;
+        categoriesRef.current?.scrollIntoView({ block: 'start' });
+        nameRef.current?.focus({ preventScroll: true });
+    }, [focus]);
 
     const reload = async () => {
         const [current, cash, list] = await Promise.all([
@@ -78,9 +96,24 @@ export const CashflowSettingsDialog: React.FC<{
     };
 
     const removeCategory = async (category: CategoryOption) => {
-        const parent = category.parentId ? labels.categoryName(category.parentId) : '';
-        if (!window.confirm(t('cashflow:settings.deleteCategoryConfirm', { name: category.name, parent }))) return;
         await cashflowCategoryService.deleteCategory(category.id);
+        onChanged();
+    };
+
+    const addRule = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setRuleError(null);
+        if (!ruleCategory) {
+            setRuleError('unknown_category');
+            return;
+        }
+        const result = await cashflowCategoryService.createRule({ labelContains: ruleText, direction: ruleDirection, categoryId: ruleCategory });
+        if (result.success === false) {
+            setRuleError(result.error);
+            return;
+        }
+        setRuleText('');
+        await reload();
         onChanged();
     };
 
@@ -95,14 +128,16 @@ export const CashflowSettingsDialog: React.FC<{
 
     if (typeof document === 'undefined') return null;
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div role="dialog" aria-modal="true" aria-label={t('cashflow:settings.title')} className="bg-card border border-subtle rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-6">
-                <div className="flex items-center justify-between border-b border-subtle pb-3">
+        <div className={CASHFLOW_DIALOG_BACKDROP}>
+            {/* The title stays put and only the content scrolls, inside the rounded corners */}
+            <div role="dialog" aria-modal="true" aria-label={t('cashflow:settings.title')} className="bg-card border border-subtle rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+                <div className="flex items-center justify-between border-b border-subtle px-6 py-4 shrink-0">
                     <h3 className="text-lg font-bold text-primary">{t('cashflow:settings.title')}</h3>
                     <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-subtle text-secondary" aria-label={t('cashflow:actions.close')}>
                         <X size={18} />
                     </button>
                 </div>
+                <div className="overflow-y-auto px-6 py-5 space-y-6 divide-y divide-subtle [&>*+*]:pt-6">
 
                 {settings && (
                     <section className="space-y-3">
@@ -135,6 +170,24 @@ export const CashflowSettingsDialog: React.FC<{
                             />
                             {t('cashflow:settings.investmentIncome')}
                         </label>
+                    </section>
+                )}
+
+                {settings && (
+                    <section className="space-y-3">
+                        <h4 className={sectionTitle}>{t('cashflow:settings.display')}</h4>
+                        <label className="flex items-start gap-3 px-2 py-2 text-sm text-primary cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={settings.merchantLogos !== false}
+                                onChange={e => void save({ merchantLogos: e.target.checked })}
+                                className="mt-0.5 rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary"
+                            />
+                            <span className="space-y-0.5">
+                                <span className="block">{t('cashflow:settings.merchantLogos')}</span>
+                                <span className="block text-xs text-tertiary">{t('cashflow:settings.merchantLogosHint')}</span>
+                            </span>
+                        </label>
                         <label className="flex flex-wrap items-center gap-3 px-2 text-sm text-primary">
                             <span>{t('cashflow:settings.monthStart')}</span>
                             <input
@@ -150,38 +203,44 @@ export const CashflowSettingsDialog: React.FC<{
                     </section>
                 )}
 
-                <section className="space-y-3">
+                <section ref={categoriesRef} className="space-y-3 scroll-mt-4">
                     <h4 className={sectionTitle}>{t('cashflow:settings.categories')}</h4>
                     <p className="text-xs text-tertiary">{t('cashflow:settings.categoriesHint')}</p>
                     {custom.length === 0 ? (
                         <p className="text-sm text-secondary">{t('cashflow:settings.noCategories')}</p>
                     ) : (
-                        <ul className="space-y-1">
+                        <ul className="space-y-2">
                             {custom.map(category => (
-                                <li key={category.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-subtle">
+                                <li key={category.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-subtle bg-subtle/40">
                                     <span className="flex items-center gap-2 min-w-0">
                                         <CategoryBadge categoryId={category.id} name={category.name ?? ''} customCategories={customCategories} />
                                         <span className="text-xs text-tertiary truncate">{category.parentId ? labels.categoryName(category.parentId) : ''}</span>
                                     </span>
-                                    <button type="button" onClick={() => void removeCategory(category)} className="p-1.5 rounded-lg text-tertiary hover:text-negative hover:bg-subtle" aria-label={`${t('cashflow:settings.delete')} ${category.name}`}>
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <DeleteInPlace
+                                        label={`${t('cashflow:settings.delete')} ${category.name}`}
+                                        warning={t('cashflow:settings.deleteCategoryConfirm', { name: category.name, parent: category.parentId ? labels.categoryName(category.parentId) : '' })}
+                                        confirmLabel={t('cashflow:settings.delete')}
+                                        onDelete={() => removeCategory(category)}
+                                    />
                                 </li>
                             ))}
                         </ul>
                     )}
-                    <form onSubmit={addCategory} className="flex flex-wrap items-end gap-2">
-                        <label className="space-y-1 text-xs font-semibold text-secondary">
-                            <span className="block">{t('cashflow:settings.parent')}</span>
-                            <select value={parentId} onChange={e => setParentId(e.target.value)} className={field}>
+                    <form onSubmit={addCategory} className="space-y-2 pt-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-tertiary">{t('cashflow:settings.newCategory')}</p>
+                        <div className="flex flex-wrap items-end gap-2">
+                        <label className="flex flex-col gap-1 text-xs font-semibold text-secondary w-full sm:w-56">
+                            <span>{t('cashflow:settings.parent')}</span>
+                            <select value={parentId} onChange={e => setParentId(e.target.value)} className={`${field} w-full`}>
                                 {parents.map(parent => <option key={parent.id} value={parent.id}>{labels.categoryName(parent.id)}</option>)}
                             </select>
                         </label>
-                        <label className="space-y-1 text-xs font-semibold text-secondary flex-1 min-w-[10rem]">
-                            <span className="block">{t('cashflow:settings.name')}</span>
-                            <input type="text" value={name} maxLength={40} onChange={e => setName(e.target.value)} className={`${field} w-full`} />
+                        <label className="flex flex-col gap-1 text-xs font-semibold text-secondary flex-1 min-w-[10rem]">
+                            <span>{t('cashflow:settings.name')}</span>
+                            <input ref={nameRef} type="text" value={name} maxLength={40} onChange={e => setName(e.target.value)} className={`${field} w-full`} />
                         </label>
-                        <button type="submit" className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90">{t('cashflow:settings.add')}</button>
+                        <button type="submit" className={CASHFLOW_PRIMARY_BUTTON}>{t('cashflow:settings.add')}</button>
+                        </div>
                     </form>
                     {error && <p className="text-sm text-negative" role="alert">{t(`cashflow:settings.errors.${error}`)}</p>}
                 </section>
@@ -192,23 +251,56 @@ export const CashflowSettingsDialog: React.FC<{
                     {rules.length === 0 ? (
                         <p className="text-sm text-secondary">{t('cashflow:settings.noRules')}</p>
                     ) : (
-                        <ul className="space-y-1">
+                        <ul className="space-y-2">
                             {rules.map(rule => (
-                                <li key={rule.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-subtle text-sm">
+                                <li key={rule.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-subtle bg-subtle/40 text-sm">
                                     <span className="flex flex-wrap items-center gap-2 min-w-0">
                                         <span className="font-semibold text-primary">{t('cashflow:settings.ruleContains', { text: rule.labelContains })}</span>
                                         <span className="text-xs text-tertiary">{t(`cashflow:settings.ruleDirection.${rule.direction}`)}</span>
                                         <CategoryBadge categoryId={rule.categoryId} name={labels.categoryName(rule.categoryId)} customCategories={customCategories} />
                                         <span className="text-xs text-tertiary">{t(`cashflow:settings.ruleBy.${rule.source}`)}</span>
                                     </span>
-                                    <button type="button" onClick={() => void removeRule(rule.id)} className="p-1.5 rounded-lg text-tertiary hover:text-negative hover:bg-subtle" aria-label={t('cashflow:settings.deleteRule')}>
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <DeleteInPlace
+                                        label={t('cashflow:settings.deleteRule')}
+                                        warning={t('cashflow:settings.deleteRuleConfirm', { text: rule.labelContains })}
+                                        confirmLabel={t('cashflow:settings.delete')}
+                                        onDelete={() => removeRule(rule.id)}
+                                    />
                                 </li>
                             ))}
                         </ul>
                     )}
+                    <form onSubmit={addRule} className="space-y-2 pt-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-tertiary">{t('cashflow:settings.newRule')}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_auto] items-end gap-2">
+                        <label className="flex flex-col gap-1 text-xs font-semibold text-secondary">
+                            <span>{t('cashflow:settings.ruleText')}</span>
+                            <input type="text" value={ruleText} maxLength={60} placeholder={t('cashflow:settings.ruleTextPlaceholder')} onChange={e => setRuleText(e.target.value)} className={`${field} w-full`} />
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs font-semibold text-secondary">
+                            <span>{t('cashflow:settings.ruleDirectionLabel')}</span>
+                            <select value={ruleDirection} onChange={e => setRuleDirection(e.target.value as RuleDirection)} className={`${field} w-full`}>
+                                {(['out', 'in', 'any'] as const).map(value => <option key={value} value={value}>{t(`cashflow:settings.ruleDirection.${value}`)}</option>)}
+                            </select>
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs font-semibold text-secondary" htmlFor="rule-category">
+                            <span>{t('cashflow:settings.ruleCategory')}</span>
+                            <CategorySelect
+                                id="rule-category"
+                                value={ruleCategory}
+                                onChange={setRuleCategory}
+                                categories={categories}
+                                labels={labels}
+                                direction={ruleDirection === 'in' ? 'in' : 'out'}
+                                emptyLabel={t('cashflow:settings.ruleCategoryPick')}
+                            />
+                        </label>
+                        <button type="submit" className={CASHFLOW_PRIMARY_BUTTON}>{t('cashflow:settings.add')}</button>
+                        </div>
+                    </form>
+                    {ruleError && <p className="text-sm text-negative" role="alert">{t(`cashflow:settings.errors.${ruleError}`)}</p>}
                 </section>
+                </div>
             </div>
         </div>,
         document.body,

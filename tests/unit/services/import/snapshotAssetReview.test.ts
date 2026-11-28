@@ -2,8 +2,6 @@
  * Snapshot import: same asset review and classification as a history import.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 
 vi.mock('../../../../src/services/db', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../../src/services/db')>();
@@ -21,8 +19,9 @@ import {
   type SnapshotFieldMappings,
 } from '../../../../src/services/import/snapshotService';
 import { updateStagedInstrument } from '../../../../src/services/import/instrumentDrafts';
+import { readTestData } from '../../../fixtures/testData';
 
-const CSV = fs.readFileSync(path.join(process.cwd(), 'test-data', 'bitget_snapshot.csv'), 'utf8');
+const CSV = readTestData('bitget_snapshot.csv');
 
 /** An account typed "securities" but held at a crypto exchange: the case that used to misclassify. */
 const seed = async (instituteType = 'exchange', accountType = 'investment'): Promise<void> => {

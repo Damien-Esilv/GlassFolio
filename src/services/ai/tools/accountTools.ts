@@ -4,7 +4,7 @@
  * exposes no account deletion to AI (tests/unit/services/ai/tools/legalTools.test.ts).
  */
 import { AIToolDefinition } from '../types';
-import { accountManagementService, type ManagedInstitution, type ManagementResult } from '../../accountManagementService';
+import { accountManagementService, type CashAccountKind, type ManagedInstitution, type ManagementResult } from '../../accountManagementService';
 
 export const listInstitutionsTool: AIToolDefinition<Record<string, never>, ManagedInstitution[]> = {
   name: 'list_institutions',
@@ -30,4 +30,23 @@ export const renameAccountTool: AIToolDefinition<{ kind: 'institution' | 'accoun
   },
   execute: async ({ kind, id, name }) =>
     kind === 'institution' ? accountManagementService.renameInstitution(id, name) : accountManagementService.renameAccount(id, name),
+};
+
+export const setCashAccountKindTool: AIToolDefinition<{ accountId: string; kind: string }, ManagementResult> = {
+  name: 'set_cash_account_kind',
+  description:
+    'Make a checking account a savings account (Livret…) or the other way round: a checking account takes bank operations, a savings account its operations or its balance. Only between these two types; investment accounts keep theirs. Requires explicit human confirmation. Use list_institutions to find the id.',
+  requiresConfirmation: true,
+  parameters: {
+    type: 'object',
+    properties: {
+      accountId: { type: 'string', description: 'Account id from list_institutions' },
+      kind: { type: 'string', description: 'The new type', enum: ['checking', 'savings'] },
+    },
+    required: ['accountId', 'kind'],
+  },
+  execute: async ({ accountId, kind }) => {
+    if (kind !== 'checking' && kind !== 'savings') return { success: false, error: 'not_cash_account' };
+    return accountManagementService.setCashAccountKind(accountId, kind as CashAccountKind);
+  },
 };

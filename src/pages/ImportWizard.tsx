@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import { ImportAssetsTable } from '../components/import/ImportAssetsTable';
 import { ACCOUNT_KINDS, AccountKind, accountKindToFields, fieldsToAccountKind } from '../constants/accountKinds';
@@ -37,7 +37,10 @@ import {
   Edit3,
   Check,
   Globe,
-  CheckCircle2
+  CheckCircle2,
+  Landmark,
+  PiggyBank,
+  TrendingUp
 } from 'lucide-react';
 import { useImportWizard, WizardStep } from '../hooks/importHooks';
 import { useAuth } from '../context/AuthContext';
@@ -59,17 +62,18 @@ const ImportWizard: React.FC = () => {
   const { user } = useAuth();
   const wizard = useImportWizard(user?.id || 'default-user');
   const { t } = useTranslation('transactions');
-  // "Import a statement" from the cash flow: bank operations, never balance statements (Epic E52)
-  const [params] = useSearchParams();
-  const bankImport = params.get('kind') === 'bank';
-  const [cashOperations, setCashOperations] = useState(bankImport);
-  const cashBalanceWizard = wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 && !cashOperations;
-  const cashAccountSelected = wizard.selectedAccount?.type === 'checking' || wizard.selectedAccount?.type === 'savings';
+  // What the chosen account takes (Epic E52): a checking account its bank operations; a savings account its
+  // operations or its current balance; any other account trades and holdings
+  const [cashChoice, setCashChoice] = useState<CashChoice>('operations');
+  const accountType = wizard.selectedAccount?.type;
+  const cashAccountSelected = isCashAccount(accountType);
+  const cashOperations = accountType === 'checking' || (accountType === 'savings' && cashChoice === 'operations');
+  const cashBalanceWizard = accountType === 'savings' && cashChoice === 'balance' && wizard.step >= 2;
   // Bank operations are a history import, never a snapshot of holdings
   const { importMode, setImportMode } = wizard;
   useEffect(() => {
-    if (cashOperations && cashAccountSelected && importMode !== 'history') setImportMode('history');
-  }, [cashOperations, cashAccountSelected, importMode, setImportMode]);
+    if (cashOperations && importMode !== 'history') setImportMode('history');
+  }, [cashOperations, importMode, setImportMode]);
 
   // For snapshot mode, show dedicated SnapshotWizard from step 3 onwards
   const showSnapshotWizard = wizard.importMode === 'snapshot' &&
@@ -80,7 +84,7 @@ const ImportWizard: React.FC = () => {
   return (
     <div className="py-8">
       {/* Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8 pb-4 border-b border-subtle">
         <div>
           <h1 className="text-3xl font-bold text-primary">{t('importWizard.title')}</h1>
           <p className="text-secondary mt-1">
@@ -96,9 +100,14 @@ const ImportWizard: React.FC = () => {
         {!showSnapshotWizard && <StepIndicator currentStep={wizard.step} />}
       </div>
 
-      {bankImport && wizard.step <= 2 && (
-        <div className="mb-6 p-4 rounded-xl bg-subtle border border-subtle text-sm text-secondary" role="note">
-          {t('importWizard.bankImportHint')}
+      {/* Bank statement: the lines become operations of a checking or savings account, never trades (Epic E52) */}
+      {cashAccountSelected && cashOperations && wizard.step >= 2 && wizard.step <= 4 && (
+        <div className="mb-6 flex items-start gap-3 p-4 rounded-xl bg-brand/10 border border-brand/30 text-sm" role="note">
+          <Landmark size={20} className="text-brand shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="space-y-1">
+            <p className="font-semibold text-primary">{t('importWizard.bankImport.title')}</p>
+            <p className="text-secondary">{t('importWizard.bankImport.body')}</p>
+          </div>
         </div>
       )}
 
@@ -135,7 +144,7 @@ const ImportWizard: React.FC = () => {
             defaultCurrency={wizard.selectedAccount.defaultCurrency}
             onBack={wizard.goBack}
             onComplete={wizard.reset}
-            onChooseOperations={() => setCashOperations(true)}
+            onChooseOperations={() => setCashChoice('operations')}
           />
         ) : showSnapshotWizard ? (
           <SnapshotWizard
@@ -152,7 +161,7 @@ const ImportWizard: React.FC = () => {
           />
         ) : (
           <>
-            {wizard.step === 1 && <Step1ContextSelection wizard={wizard} />}
+            {wizard.step === 1 && <Step1ContextSelection wizard={wizard} cashChoice={cashChoice} onCashChoice={setCashChoice} />}
             {wizard.step === 2 && <Step2FileUpload wizard={wizard} />}
             {wizard.step === 3 && wizard.importMode === 'history' && <Step3Mapping wizard={wizard} />}
             {wizard.step === 4 && <Step4StagingArea wizard={wizard} />}
@@ -240,7 +249,25 @@ const COUNTRY_OPTIONS = [
   { code: 'OTHER', flag: '🌍' },
 ] as const;
 
-const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = ({ wizard }) => {
+/** Accounts that hold bank operations (Epic E52). */
+const isCashAccount = (type: string | undefined): boolean => type === 'checking' || type === 'savings';
+
+/** What a savings account receives from a file: its operations, or its current balance. */
+type CashChoice = 'operations' | 'balance';
+
+/** What an account takes, shown on its card: bank operations, operations or balance, or trades and holdings. */
+const accountTakes = (type: string | undefined): 'checking' | 'savings' | 'investment' =>
+  type === 'checking' ? 'checking' : type === 'savings' ? 'savings' : 'investment';
+
+/**
+ * Step 1: where the file goes. Every account can be chosen; the screen then says what it takes: a checking account
+ * its bank operations, a savings account its operations or its balance, any other account trades and holdings.
+ */
+const Step1ContextSelection: React.FC<{
+  wizard: ReturnType<typeof useImportWizard>;
+  cashChoice: CashChoice;
+  onCashChoice: (choice: CashChoice) => void;
+}> = ({ wizard, cashChoice, onCashChoice }) => {
   const { t } = useTranslation('transactions');
   const [showNewInstitute, setShowNewInstitute] = useState(false);
   const [showNewAccount, setShowNewAccount] = useState(false);
@@ -249,6 +276,7 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
   const [newInstituteCountry, setNewInstituteCountry] = useState('FR');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountKind, setNewAccountKind] = useState<AccountKind>('CTO');
+  const takes = accountTakes(wizard.selectedAccount?.type);
   const [newAccountCurrency, setNewAccountCurrency] = useState('EUR');
 
   const handleCreateInstitute = async () => {
@@ -393,21 +421,28 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
                 <p className="text-secondary text-sm">{t('importWizard.context.noAccounts')}</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {wizard.accounts.map(acc => (
-                    <button
-                      key={acc.id}
-                      onClick={() => wizard.selectAccount(acc.id)}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedAccountId === acc.id
-                        ? 'border-success bg-success/10'
-                        : 'border-subtle bg-subtle hover:bg-card-hover'
-                        }`}
-                    >
-                      <span className="text-primary font-medium">{acc.name}</span>
-                      <span className="block text-xs text-secondary mt-1">
-                        {acc.defaultCurrency} · {t(`importWizard.context.accountKinds.${fieldsToAccountKind(acc.type, acc.wrapperType)}`)}
-                      </span>
-                    </button>
-                  ))}
+                  {wizard.accounts.map(acc => {
+                    const kind = accountTakes(acc.type);
+                    const KindIcon = kind === 'checking' ? Landmark : kind === 'savings' ? PiggyBank : TrendingUp;
+                    return (
+                      <button
+                        key={acc.id}
+                        onClick={() => wizard.selectAccount(acc.id)}
+                        className={`p-4 rounded-xl border-2 transition-all text-left ${wizard.selectedAccountId === acc.id
+                          ? 'border-success bg-success/10'
+                          : 'border-subtle bg-subtle hover:bg-card-hover'
+                          }`}
+                      >
+                        <span className="text-primary font-medium">{acc.name}</span>
+                        <span className="block text-xs text-secondary mt-1">
+                          {acc.defaultCurrency} · {t(`importWizard.context.accountKinds.${fieldsToAccountKind(acc.type, acc.wrapperType)}`)}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-tertiary mt-2">
+                          <KindIcon size={12} aria-hidden="true" /> {t(`importWizard.accountTakes.${kind}.short`)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
@@ -476,13 +511,41 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
         </div>
       )}
 
-      {/* Import Mode - Only for non-cash accounts (checking type skips this) */}
-      {wizard.selectedAccountId && wizard.selectedAccount?.type !== 'checking' && (
+      {/* What a checking or savings account takes (Epic E52) */}
+      {wizard.selectedAccountId && takes !== 'investment' && (
+        <div className="bg-card border border-subtle rounded-xl p-6 animate-fade-in shadow-sm space-y-4" aria-label={t('importWizard.accountTakes.title')} role="region">
+          <div className="flex items-center gap-3">
+            {takes === 'checking' ? <Landmark className="text-brand" size={24} /> : <PiggyBank className="text-brand" size={24} />}
+            <h2 className="text-lg font-bold text-primary">{t(`importWizard.accountTakes.${takes}.title`)}</h2>
+          </div>
+          <p className="text-sm text-secondary">{t(`importWizard.accountTakes.${takes}.body`)}</p>
+          {takes === 'savings' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(['operations', 'balance'] as const).map(choice => (
+                <button
+                  key={choice}
+                  type="button"
+                  aria-pressed={cashChoice === choice}
+                  onClick={() => onCashChoice(choice)}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${cashChoice === choice ? 'border-brand bg-brand/10' : 'border-subtle bg-subtle hover:bg-card-hover'}`}
+                >
+                  <span className="block font-semibold text-primary">{t(`importWizard.accountTakes.savings.${choice}`)}</span>
+                  <span className="block text-xs text-secondary mt-1">{t(`importWizard.accountTakes.savings.${choice}Hint`)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Import Mode - investment and other accounts: trades and holdings */}
+      {wizard.selectedAccountId && takes === 'investment' && (
         <div className="bg-card border border-subtle rounded-xl p-6 animate-fade-in shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-2">
             <FileText className="text-brand" size={24} />
             <h2 className="text-lg font-bold text-primary">{t('importWizard.mode.title')}</h2>
           </div>
+          <p className="text-sm text-secondary mb-4">{t('importWizard.accountTakes.investment.body')}</p>
 
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -570,12 +633,13 @@ const Step1ContextSelection: React.FC<{ wizard: ReturnType<typeof useImportWizar
       )}
 
       {/* Cash Accounts - Continue button directly under selection */}
-      {wizard.selectedAccountId && wizard.selectedAccount?.type === 'checking' && (
+      {wizard.selectedAccountId && takes !== 'investment' && (
         <div className="mt-6 flex justify-end">
           <Button
             size="lg"
             onClick={() => {
-              wizard.setImportMode('snapshot'); // default internally to snapshot
+              // Operations are a history; the balance of a savings account goes through the balances wizard
+              wizard.setImportMode(takes === 'savings' && cashChoice === 'balance' ? 'snapshot' : 'history');
               wizard.goToStep(2);
             }}
           >

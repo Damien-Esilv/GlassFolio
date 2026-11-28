@@ -161,6 +161,16 @@ describe('cash flow services on a real vault (TGLA-249)', () => {
         expect(db.getUnifiedTransactions().some(r => r.id === 'api')).toBe(false);
     });
 
+    it('gives a manual operation left on "Automatic" the category last chosen for the same merchant', async () => {
+        await cashflowService.recordManualOperation({ accountId: 'acc-checking', date: '2026-03-10', amount: -8, label: 'Boulangerie Paul', categoryId: 'dining' });
+        await cashflowService.recordManualOperation({ accountId: 'acc-checking', date: '2026-03-17', amount: -9, label: 'Boulangerie Paul' });
+        await cashflowService.recordManualOperation({ accountId: 'acc-checking', date: '2026-03-18', amount: 9, label: 'Boulangerie Paul' });
+        const ops = (await cashflowService.listOperations()).filter(o => o.label === 'Boulangerie Paul');
+        expect(ops.find(o => o.amount === -9)?.categoryId).toBe('dining');
+        // A refund is not a purchase: it keeps the automatic category
+        expect(ops.find(o => o.amount === 9)?.categoryId).not.toBe('dining');
+    });
+
     it('summarises a month', async () => {
         const summary = await cashflowService.getSummary({ preset: 'month', month: '2026-03', currency: 'EUR' });
         expect(summary.income).toBe(3250);
@@ -173,5 +183,69 @@ describe('cash flow services on a real vault (TGLA-249)', () => {
         const saved = await cashflowCategoryService.saveSettings({ monthStartDay: 40, includedAccountIds: ['acc-checking', 'ghost'] });
         expect(saved.monthStartDay).toBe(28);
         expect(saved.includedAccountIds).toEqual(['acc-checking']);
+    });
+});
+
+describe('recurring payments (TGLA-255)', () => {
+    const monthsBack = (months: number, day: number): string => {
+        const now = new Date();
+        return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, day)).toISOString();
+    };
+
+    beforeEach(() => {
+        // Netflix on the 1st for five months, the last one this month (never in the future)
+        db.saveUnifiedTransactions([0, 1, 2, 3, 4].map(back => bankRow(`n-${back}`, monthsBack(back, 1), '-13.49', 'PRLV SEPA NETFLIX')));
+    });
+
+    it('lists a series with its payment of the month, and its next one', async () => {
+        const { items, start } = await cashflowService.listRecurring({ currency: 'EUR' });
+        const netflix = items.find(item => item.label.toUpperCase().includes('NETFLIX'));
+        expect(netflix).toMatchObject({ direction: 'out', cadence: 'monthly', status: 'detected' });
+        expect(netflix?.payments[0]).toMatchObject({ amount: -13.49, expected: false });
+        expect(netflix?.payments[0].date >= start).toBe(true);
+    });
+
+    it('a series set aside leaves the recurring payments, then comes back', async () => {
+        const [series] = (await cashflowService.listRecurring({ currency: 'EUR' })).items;
+        expect((await cashflowService.setRecurringStatus(series.key, 'ignored')).success).toBe(true);
+        expect((await cashflowService.listRecurring({ currency: 'EUR' })).items[0].status).toBe('ignored');
+        expect(await cashflowService.getRecurringSeries('EUR')).toEqual([]);
+        await cashflowService.setRecurringStatus(series.key, 'detected');
+        expect(db.getCashflowRecurring()).toEqual([]);
+        expect(await cashflowService.getRecurringSeries('EUR')).toHaveLength(1);
+    });
+});
+
+describe('budgets and forecast (TGLA-256, TGLA-257)', () => {
+    const thisMonth = (day: number): string => {
+        const now = new Date();
+        return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), Math.min(day, now.getUTCDate()))).toISOString();
+    };
+
+    it('keeps one cap per top-level spending category, refuses others, and measures the month against it', async () => {
+        const { cashflowPlanningService } = await import('../../../../src/services/cashflow/cashflowPlanningService');
+        db.saveUnifiedTransactions([bankRow('opening', thisMonth(1), '2000.00', 'SOLDE'), bankRow('r', thisMonth(1), '-90.00', 'CARTE SUSHI SHOP RESTAURANT')]);
+        expect((await cashflowPlanningService.setBudget('dining', 80)).success).toBe(true);
+        expect((await cashflowPlanningService.setBudget('dining', 100)).success).toBe(true);
+        expect(db.getCashflowBudgets()).toEqual([expect.objectContaining({ categoryId: 'dining', monthlyLimit: 100 })]);
+        expect(await cashflowPlanningService.setBudget('salary', 100)).toEqual({ success: false, error: 'not_expense_category' });
+        expect(await cashflowPlanningService.setBudget('donations', 100)).toEqual({ success: false, error: 'not_expense_category' });
+        const { statuses } = await cashflowPlanningService.getBudgetStatus({ currency: 'EUR' });
+        expect(statuses).toEqual([expect.objectContaining({ categoryId: 'dining', spent: 90, state: 'near' })]);
+        await cashflowPlanningService.setBudget('dining', null);
+        expect(db.getCashflowBudgets()).toEqual([]);
+    });
+
+    it('forecasts the month end from today\'s balance of the counted accounts', async () => {
+        const { cashflowPlanningService } = await import('../../../../src/services/cashflow/cashflowPlanningService');
+        const { portfolioService } = await import('../../../../src/services/portfolioService');
+        const { instrumentService } = await import('../../../../src/services/instrumentService');
+        const eur = await instrumentService.findOrCreateInstrument({ symbol: 'EUR', currencyCode: 'EUR', type: 'cash', denominationCurrency: 'EUR' });
+        db.saveUnifiedTransactions([{ ...bankRow('opening', thisMonth(1), '1500.00', 'VIR SALAIRE'), instrumentId: eur.id }]);
+        await portfolioService.recalculatePositions();
+        const forecast = await cashflowPlanningService.getForecast({ currency: 'EUR' });
+        expect(forecast.balanceToday).toBe(1500);
+        expect(forecast.points.filter(point => !point.projected).at(-1)).toMatchObject({ date: forecast.today, balance: 1500 });
+        expect(forecast.projectedEnd).toBeLessThanOrEqual(1500);
     });
 });

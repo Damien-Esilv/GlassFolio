@@ -39,13 +39,20 @@ import {
   setCostBasisMethodTool,
 } from './importTools';
 import { listConnectionsTool, syncConnectionTool, addWatchOnlyWalletTool, getBankSyncStatusTool } from './connectionTools';
-import { listInstitutionsTool, renameAccountTool } from './accountTools';
+import { listInstitutionsTool, renameAccountTool, setCashAccountKindTool } from './accountTools';
 import {
   getCashflowSummaryTool,
   listCashflowTransactionsTool,
   listCashflowCategoriesTool,
   listCashflowRulesTool,
   listUpcomingOperationsTool,
+  listRecurringExpensesTool,
+  setRecurringStatusTool,
+  getBudgetStatusTool,
+  setBudgetTool,
+  getCashflowForecastTool,
+  getCashflowTaxItemsTool,
+  updateCashflowOperationTool,
   setTransactionCategoryTool,
   createCashflowCategoryTool,
   createCategorizationRuleTool,
@@ -100,12 +107,20 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(getBankSyncStatusTool);
   aiToolRegistry.registerTool(listInstitutionsTool);
   aiToolRegistry.registerTool(renameAccountTool);
+  aiToolRegistry.registerTool(setCashAccountKindTool);
   // Cash flow (Epic E52)
   aiToolRegistry.registerTool(getCashflowSummaryTool);
   aiToolRegistry.registerTool(listCashflowTransactionsTool);
   aiToolRegistry.registerTool(listCashflowCategoriesTool);
   aiToolRegistry.registerTool(listCashflowRulesTool);
   aiToolRegistry.registerTool(listUpcomingOperationsTool);
+  aiToolRegistry.registerTool(listRecurringExpensesTool);
+  aiToolRegistry.registerTool(setRecurringStatusTool);
+  aiToolRegistry.registerTool(getBudgetStatusTool);
+  aiToolRegistry.registerTool(setBudgetTool);
+  aiToolRegistry.registerTool(getCashflowForecastTool);
+  aiToolRegistry.registerTool(getCashflowTaxItemsTool);
+  aiToolRegistry.registerTool(updateCashflowOperationTool);
   aiToolRegistry.registerTool(setTransactionCategoryTool);
   aiToolRegistry.registerTool(createCashflowCategoryTool);
   aiToolRegistry.registerTool(createCategorizationRuleTool);
@@ -162,6 +177,13 @@ export {
   listCashflowCategoriesTool,
   listCashflowRulesTool,
   listUpcomingOperationsTool,
+  listRecurringExpensesTool,
+  setRecurringStatusTool,
+  getBudgetStatusTool,
+  setBudgetTool,
+  getCashflowForecastTool,
+  getCashflowTaxItemsTool,
+  updateCashflowOperationTool,
   setTransactionCategoryTool,
   createCashflowCategoryTool,
   createCategorizationRuleTool,

@@ -6,7 +6,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Sparkles } from 'lucide-react';
+import { Bot, Search, Sparkles } from 'lucide-react';
+import { askAssistant } from '../../services/ai/assistantRequests';
 import { cashflowService } from '../../services/cashflow/cashflowService';
 import { cashflowCategoryService } from '../../services/cashflow/cashflowCategoryService';
 import { resolvePeriod } from '../../services/cashflow/period';
@@ -15,10 +16,16 @@ import { MerchantAvatar } from '../../components/cashflow/CategoryBadge';
 import { CategoryPicker } from '../../components/cashflow/CategoryPicker';
 import { CategorySelect } from '../../components/cashflow/ManualOperationDialog';
 import { OperationDetailDialog } from '../../components/cashflow/OperationDetailDialog';
+import { ColorDot } from '../../components/cashflow/CategoryBadge';
+import { CountUpMoney, CountUpNumber } from '../../components/cashflow/CountUp';
+import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
 import { useCashflow } from './CashflowLayout';
 
 const card = 'rounded-2xl bg-card shadow-lg border border-border';
-const field = 'px-3 py-2 rounded-xl bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-sm';
+const field = 'h-10 px-3 rounded-xl bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-sm';
+/** Rows come in one after the other; past the first screen they all come at once */
+const ROW_STAGGER_MS = 30;
+const STAGGERED_ROWS = 20;
 
 interface PendingRule {
     operation: CashflowOperation;
@@ -27,7 +34,7 @@ interface PendingRule {
 
 const CashflowOperations: React.FC = () => {
     const { t } = useTranslation();
-    const { preset, month, accountIds, currency, version, refresh, labels, categories, customCategories, cashAccounts, monthStartDay } = useCashflow();
+    const { preset, month, accountIds, currency, version, refresh, labels, categories, customCategories, cashAccounts, monthStartDay, openCategorySettings } = useCashflow();
     const [params, setParams] = useSearchParams();
     const [operations, setOperations] = useState<CashflowOperation[]>([]);
     const [search, setSearch] = useState('');
@@ -68,6 +75,14 @@ const CashflowOperations: React.FC = () => {
             && (!needle || op.label.toLowerCase().includes(needle) || op.rawLabel.toLowerCase().includes(needle) || (op.note ?? '').toLowerCase().includes(needle)));
     }, [operations, search, direction, instituteId]);
 
+    // Money in and out as the other pages count them: income and spending, not transfers between own accounts or savings
+    const totals = useMemo(() => visible.reduce((sum, op) => {
+        if (op.excluded) return sum;
+        if (op.categoryKind === 'income') return { ...sum, in: sum.in + op.amount };
+        if (op.categoryKind === 'expense') return { ...sum, out: sum.out + op.amount };
+        return sum;
+    }, { in: 0, out: 0 }), [visible]);
+
     const setFilter = (key: 'category' | 'uncategorized', value: string) => {
         const next = new URLSearchParams(params);
         if (value) next.set(key, value);
@@ -94,7 +109,21 @@ const CashflowOperations: React.FC = () => {
 
     return (
         <section className={`${card} overflow-hidden`}>
-            <div className="p-4 sm:p-6 space-y-3 border-b border-subtle">
+            <div className="p-4 sm:p-6 space-y-4 border-b border-subtle">
+                <div className="grid grid-cols-3 gap-3">
+                    {([
+                        ['count', <CountUpNumber key="count" value={visible.length} labels={labels} />, null],
+                        ['in', <CountUpMoney key="in" value={totals.in} labels={labels} />, CASHFLOW_ROLE_TOKENS.income.cssVar],
+                        ['out', <CountUpMoney key="out" value={totals.out} labels={labels} />, CASHFLOW_ROLE_TOKENS.expense.cssVar],
+                    ] as const).map(([key, value, cssVar]) => (
+                        <div key={key} className="rounded-xl bg-subtle border border-subtle px-4 py-3">
+                            <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-tertiary">
+                                {cssVar && <ColorDot cssVar={cssVar} />}{t(`cashflow:operations.totals.${key}`)}
+                            </p>
+                            <p className="text-lg font-bold text-primary tabular-nums">{value}</p>
+                        </div>
+                    ))}
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <label className="relative flex-1 min-w-[12rem]">
                         <span className="sr-only">{t('cashflow:operations.search')}</span>
@@ -109,6 +138,7 @@ const CashflowOperations: React.FC = () => {
                         categories={categories}
                         labels={labels}
                         emptyLabel={t('cashflow:operations.allCategories')}
+                        className={`${field} w-full sm:w-56`}
                     />
                     <select value={direction} onChange={e => setDirection(e.target.value as 'all' | 'in' | 'out')} className={field} aria-label={t('cashflow:operations.direction.all')}>
                         {(['all', 'in', 'out'] as const).map(option => <option key={option} value={option}>{t(`cashflow:operations.direction.${option}`)}</option>)}
@@ -123,16 +153,35 @@ const CashflowOperations: React.FC = () => {
                         type="button"
                         aria-pressed={uncategorizedOnly}
                         onClick={() => setFilter('uncategorized', uncategorizedOnly ? '' : '1')}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border ${uncategorizedOnly ? 'bg-primary/10 text-brand border-brand' : 'bg-subtle text-secondary border-subtle'}`}
+                        className={`flex items-center gap-2 h-10 px-3 rounded-xl text-sm font-semibold border ${uncategorizedOnly ? 'bg-primary/10 text-brand border-brand' : 'bg-subtle text-secondary border-subtle'}`}
                     >
                         <Sparkles size={14} /> {t('cashflow:operations.uncategorizedOnly')}
                     </button>
                 </div>
+                {/* "To categorise" shows what is left to sort, with the assistant offered right there (one entry, no twin button) */}
+                {uncategorizedOnly && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-subtle border border-subtle px-4 py-3">
+                        <p className="flex items-center gap-2 text-sm text-primary font-semibold">
+                            <Sparkles size={16} className="text-brand" aria-hidden="true" />
+                            {visible.length > 0 ? t('cashflow:operations.toCategoriseCount', { count: visible.length }) : t('cashflow:operations.allCategorised')}
+                        </p>
+                        {visible.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => askAssistant(t('cashflow:ai.categorizePrompt'))}
+                                className="flex items-center gap-2 h-9 px-3 rounded-xl text-sm font-semibold bg-primary hover:bg-primary-hover text-white"
+                            >
+                                <Bot size={14} aria-hidden="true" /> {t('cashflow:actions.categorizeAi')}
+                            </button>
+                        )}
+                    </div>
+                )}
                 {notice && <p className="text-xs font-semibold text-positive" role="status">{notice}</p>}
             </div>
 
             {visible.length === 0 ? (
-                <p className="text-sm text-tertiary py-16 text-center">{operations.length === 0 ? t('cashflow:operations.empty') : t('cashflow:operations.noResults')}</p>
+                // With "To categorise" on, the bar above already says that nothing is left to sort
+                uncategorizedOnly ? null : <p className="text-sm text-tertiary py-16 text-center">{operations.length === 0 ? t('cashflow:operations.empty') : t('cashflow:operations.noResults')}</p>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -146,8 +195,12 @@ const CashflowOperations: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-subtle">
-                            {visible.map(op => (
-                                <tr key={op.id} className={`hover:bg-subtle/60 ${op.excluded ? 'opacity-60' : ''}`}>
+                            {visible.map((op, index) => (
+                                <tr
+                                    key={op.id}
+                                    className={`animate-row-in hover:bg-subtle/60 ${op.excluded ? 'opacity-60' : ''}`}
+                                    style={{ animationDelay: `${Math.min(index, STAGGERED_ROWS) * ROW_STAGGER_MS}ms` }}
+                                >
                                     <td className="px-4 py-3 text-secondary whitespace-nowrap">{dateFormat.format(new Date(op.date))}</td>
                                     <td className="px-4 py-3">
                                         <button type="button" onClick={() => setSelected(op)} className="flex items-center gap-3 text-left min-w-0">
@@ -168,6 +221,7 @@ const CashflowOperations: React.FC = () => {
                                             labels={labels}
                                             triggerLabel={t('cashflow:operations.changeCategory', { label: op.label })}
                                             onPick={categoryId => void changeCategory(op, categoryId)}
+                                            onAddCategory={openCategorySettings}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-secondary hidden lg:table-cell whitespace-nowrap">{op.instituteName ? `${op.instituteName} · ${op.accountName}` : op.accountName}</td>

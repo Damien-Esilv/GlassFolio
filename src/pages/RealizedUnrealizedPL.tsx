@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, PieChart, Pie } from 'recharts';
-import { ArrowLeft, TrendingUp, Receipt, CheckCircle2, Clock, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
+import { TrendingUp, Receipt, CheckCircle2, Clock, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +15,6 @@ import { ASSET_CLASSES_CONFIG, isAssetClassMatch } from '../constants/assetClass
 
 const RealizedUnrealizedPL: React.FC = () => {
    const { t } = useTranslation();
-   const navigate = useNavigate();
    const { user } = useAuth();
    const { positions, transactions } = useData();
    const locale = user?.preferences?.language === 'fr' ? 'fr-FR' : 'en-US';
@@ -168,19 +166,11 @@ const RealizedUnrealizedPL: React.FC = () => {
 
    return (
       <div className="space-y-8">
-         {/* Top Header, Back Button, P&L Mode Switch & Time Range Selector */}
+         {/* Top Header, P&L Mode Switch & Time Range Selector */}
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-subtle">
             <div className="flex items-center gap-4">
-               <button
-                  onClick={() => navigate('/analytics')}
-                  className="p-2.5 rounded-xl bg-subtle hover:bg-subtle/80 text-secondary hover:text-primary transition-colors"
-                  title={t('reports:backToReports')}
-               >
-                  <ArrowLeft size={20} />
-               </button>
                <div>
-                  <h1 className="text-3xl font-bold text-primary mb-1">{t('reports:pl.title')}</h1>
-                  <p className="text-secondary text-sm">{t('reports:pl.subtitle')}</p>
+                  <h1 className="text-3xl font-bold text-primary">{t('reports:pl.title')}</h1>
                </div>
             </div>
 

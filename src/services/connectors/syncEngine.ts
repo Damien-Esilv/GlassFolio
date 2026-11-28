@@ -47,7 +47,7 @@ import {
 } from '../import/snapshotService';
 import { instrumentService, type AssetHint } from '../instrumentService';
 import { isinResolver } from '../market/isinResolver';
-import { buildLedger, quantityDelta } from '../portfolio/positionLedger';
+import { buildLedger, overdraftRule, quantityDelta } from '../portfolio/positionLedger';
 import { userRepository } from '../repositories';
 import { portfolioService } from '../portfolioService';
 import { withBankHints } from '../cashflow/bankHints';
@@ -227,7 +227,7 @@ export function markAlreadyStored(staged: StagedTransaction[], accountId: string
 function journalQuantities(accountId: string): Map<string, number> {
     const instruments = new Map(db.getInstruments().map(instrument => [instrument.id, instrument]));
     const quantities = new Map<string, number>();
-    for (const entry of buildLedger(db.getUnifiedTransactionsByAccount(accountId)).values()) {
+    for (const entry of buildLedger(db.getUnifiedTransactionsByAccount(accountId), { allowsOverdraft: overdraftRule(db.getAccounts()) }).values()) {
         const instrument = entry.lastTx.instrumentId ? instruments.get(entry.lastTx.instrumentId) : undefined;
         const key = (instrument?.marketIdentifier.isin || instrument?.marketIdentifier.symbol
             || entry.lastTx.assetIsin || entry.lastTx.assetSymbol || '').toUpperCase();
@@ -363,7 +363,9 @@ async function syncHoldings(run: AccountRunContext, fetched: NormalizedHolding[]
     // An empty answer is never taken as "sell everything": a transient provider glitch must not close positions.
     // A confirmed zero balance closes the position; a zero for an asset never held is ignored.
     const journal = journalQuantities(accountId);
-    const holdings = mergeHoldings(fetched).filter(holding => Number(holding.quantity) > 0 || journal.has(assetKeyOf(holding)));
+    // An overdrawn balance is reconciled by the operations sync of the account, never as a snapshot line
+    const holdings = mergeHoldings(fetched).filter(holding => !(holding.instrumentType === 'cash' && Number(holding.quantity) < 0)
+        && (Number(holding.quantity) > 0 || journal.has(assetKeyOf(holding))));
     if (fetched.length === 0 || holdings.length === 0) return report;
     // A balance within half a cent of the bank's is the bank's: sums of many operations drift by a hair
     const sameCash = holdings.every(holding => holding.instrumentType === 'cash'
@@ -459,9 +461,8 @@ function saveUpcoming(run: AccountRunContext, read: CashOperationsRead, readAt: 
 /**
  * First full read of an account's operations: its balance until now came from the balance syncs (synthetic
  * adjustments). Those are removed, and an opening balance is written the day before the oldest operation: the bank's
- * balance minus what the operations since add up to, so they lead to it with no jump in the curve. The journal holds
- * no negative cash: an opening below zero is written as zero, and the balance reconciliation that follows settles the
- * rest.
+ * balance minus what the operations since add up to, so they lead to it with no jump in the curve (below zero for an
+ * account overdrawn then).
  */
 async function settleOpeningBalance(run: AccountRunContext, bankBalance: number, currency: string): Promise<boolean> {
     const { accountId, connection } = run;
@@ -513,19 +514,26 @@ async function settleOpeningBalance(run: AccountRunContext, bankBalance: number,
     const moved = db.getUnifiedTransactionsByAccount(accountId)
         .filter(row => row.instrumentId === instrument.id || row.assetSymbol?.toUpperCase() === symbol)
         .reduce((total, row) => total + quantityDelta(row), 0);
-    const amount = Math.max(Math.round((bankBalance - moved) * 100) / 100, 0).toFixed(2);
+    const amount = (Math.round((bankBalance - moved) * 100) / 100).toFixed(2);
     const statement = opening('statement', statementDate, {
         amountPrimary: amount, quantity: amount, label: `${amount} ${currency}`,
         rowHash: await computeRowHash(statementDate, amount, currency, 'BALANCE_ADJUSTMENT', '0'),
     });
-    const rowsToAdd: UnifiedTransaction[] = [statement];
+    await commitCashRows(run, [statement], batchId, created, `opening|${accountId}|${openingDay}|${amount}`);
+    return true;
+}
+
+/** Writes rows of a cash account in one batch of the connection (undone with it, removed with its history). */
+async function commitCashRows(run: AccountRunContext, rowsToAdd: UnifiedTransaction[], batchId: string, created: string[], seed: string): Promise<void> {
+    const { accountId, connection } = run;
+    const now = new Date().toISOString();
     const batch: ImportBatch = {
         id: batchId,
         ownerId: run.userId,
         accountId,
         importMode: 'snapshot',
         fileName: run.fileName,
-        fileHash: await computeFileHash(`opening|${accountId}|${openingDay}|${amount}`),
+        fileHash: await computeFileHash(seed),
         transactionCount: rowsToAdd.length,
         skippedCount: 0,
         importedAt: now,
@@ -543,9 +551,60 @@ async function settleOpeningBalance(run: AccountRunContext, bankBalance: number,
     } catch (error) {
         if (transactionManager.isBusy()) transactionManager.rollback();
         removeInstruments(created);
-        throw error instanceof ConnectorError ? error : new ConnectorError('unknown', 'Opening balance failed');
+        throw error instanceof ConnectorError ? error : new ConnectorError('unknown', 'Cash rows failed');
     }
-    return true;
+}
+
+/**
+ * Brings the journal balance of an account read with its operations to the bank's, overdraft included: what the
+ * operations do not explain (a fee booked late, a pending payment the bank counts) becomes an adjustment, never
+ * counted in the cash flow.
+ */
+async function reconcileCashBalance(run: AccountRunContext, bankBalance: number, currency: string): Promise<number> {
+    if (!Number.isFinite(bankBalance)) return 0;
+    const created: string[] = [];
+    const instrument = await resolveInstrument({ currency }, run.accountId, created);
+    const symbol = currency.toUpperCase();
+    const ledger = buildLedger(db.getUnifiedTransactionsByAccount(run.accountId), { allowsOverdraft: overdraftRule(db.getAccounts()) });
+    let journal = 0;
+    for (const entry of ledger.values()) {
+        const tx = entry.lastTx;
+        if (tx.instrumentId === instrument.id || (!tx.assetIsin && tx.assetSymbol?.toUpperCase() === symbol)) journal += entry.state.quantity;
+    }
+    const diff = Math.round((bankBalance - journal) * 100) / 100;
+    if (Math.abs(diff) < CASH_BALANCE_TOLERANCE) {
+        removeInstruments(created);
+        return 0;
+    }
+    const now = new Date().toISOString();
+    const amount = Math.abs(diff).toFixed(2);
+    const batchId = `batch-balance-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await commitCashRows(run, [{
+        id: `utx-balance-${run.accountId}-${Date.now()}`,
+        ownerId: run.userId,
+        batchId,
+        accountId: run.accountId,
+        instrumentId: instrument.id,
+        rowHash: await computeRowHash(now, diff.toFixed(2), currency, 'BALANCE_ADJUSTMENT', '0'),
+        sourceOrigin: 'API',
+        isSynthetic: true,
+        isFiscal: false,
+        sourceMode: 'snapshot',
+        transactionDate: now,
+        type: 'BALANCE_ADJUSTMENT',
+        rawType: 'Balance reconciliation',
+        label: 'Balance reconciliation',
+        rawLabel: 'Balance reconciliation',
+        amountPrimary: amount,
+        assetSymbol: instrument.marketIdentifier.symbol ?? currency,
+        priceUnit: '1',
+        quantity: amount,
+        createdAt: now,
+        updatedAt: now,
+        version: 1,
+        metadata: { reconciliationType: diff > 0 ? 'increase' : 'decrease', costDelta: diff },
+    }], batchId, created, `balance|${run.accountId}|${now}|${diff}`);
+    return 1;
 }
 
 /**
@@ -631,11 +690,9 @@ async function syncCashAccount(run: AccountRunContext, window: OperationsWindow)
     const cashLine = holdings.find(holding => holding.instrumentType === 'cash');
     const firstRead = !connection.cursor[externalAccountId]?.operationsFrom;
     if (firstRead && cashLine && await settleOpeningBalance(run, Number(cashLine.quantity), cashLine.currency)) changed = true;
-    const balance = await syncHoldings(run, holdings);
-    if (balance.imported > 0) changed = false; // the snapshot recalculated the positions
-    if (changed) await portfolioService.recalculatePositions();
-    report.imported += balance.imported;
-    report.batchId = report.batchId ?? balance.batchId;
+    const adjusted = cashLine ? await reconcileCashBalance(run, Number(cashLine.quantity), cashLine.currency) : 0;
+    if (changed || adjusted > 0) await portfolioService.recalculatePositions();
+    report.imported += adjusted;
 
     const previous = connection.cursor[externalAccountId];
     const lastDate = operations.reduce<string | undefined>((latest, activity) => (!latest || activity.date > latest ? activity.date : latest), previous?.lastActivityDate);
@@ -655,6 +712,8 @@ async function runSyncNow(connectionId: string, options: SyncOptions = {}): Prom
     if (!connection) {
         return { connectionId, status: 'error', errorCode: 'unknown', startedAt, finishedAt: startedAt, accounts: [] };
     }
+    // A fictitious demo source is never sent to a provider: a sync of it changes nothing
+    if (connection.publicParams.demo) return finish('ok', []);
     const adapter = sourceRegistry.get(connection.sourceId);
     if (!adapter) return finish('error', [], 'unknown');
     if (!(await waitForIdleImport())) return finish('error', [], 'busy');

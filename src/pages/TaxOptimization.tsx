@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Globe, CheckCircle, Info } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Globe, CheckCircle, Info } from 'lucide-react';
 import Button from '../components/Button';
 import { taxService, OptimizationSuggestion } from '../services/fiscal';
 import { getFiscalRules } from '../services/fiscal/taxRules';
 import { DEFAULT_FISCAL_YEAR } from '../constants/fiscalConstants';
 import { FiscalProfile, FiscalConfidence } from '../types/types.backend';
 import { ANIMATION_DURATION_MS, STAGGER_DELAY_MS, ANIMATION_EASING } from '../constants/animations';
+import { CashflowTaxCard } from '../components/tax/CashflowTaxCard';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const formatEur = (v: number) =>
@@ -240,12 +241,8 @@ const TaxOptimization: React.FC = () => {
     return (
         <div className="space-y-6 w-full">
             {/* Header */}
-            <div>
-                <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
-                    <ChevronLeft size={16} />{t('tax:optimization.backToHub')}
-                </button>
-                <h1 className="text-3xl font-bold text-primary mb-1">{t('tax:optimization.title')}</h1>
-                <p className="text-secondary text-sm">{t('tax:optimization.subtitle', { year: fiscalYear })}</p>
+            <div className="pb-4 border-b border-subtle">
+                <h1 className="text-3xl font-bold text-primary">{t('tax:optimization.title')}</h1>
             </div>
 
             {/* Disclaimer */}
@@ -309,6 +306,11 @@ const TaxOptimization: React.FC = () => {
                         ))}
                     </div>
                 )}
+            </div>
+
+            {/* Reductions and credits spotted in the cash flow (Epic E52) */}
+            <div className="animate-slide-in-left" style={{ animationDelay: `${(hasFiscalProfile ? 3 : 4) * STAGGER_DELAY_MS}ms` }}>
+                <CashflowTaxCard year={fiscalYear} profile={profile} currency={user?.preferences?.currency || 'EUR'} />
             </div>
 
             {/* Tax-Loss Harvesting info */}

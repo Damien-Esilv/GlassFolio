@@ -131,6 +131,8 @@ export interface ConnectionPublicParams {
     accountNames?: Record<string, string>;
     /** Bank (Woob): the Woob module of the bank (`boursorama`, `fortuneo`…), from src/config/woobBanks.ts. */
     module?: string;
+    /** Demo vault only: a fictitious source, shown as connected and never sent to a provider. */
+    demo?: boolean;
 }
 
 /** Incremental sync state, per external account. */

@@ -5,6 +5,7 @@
 import React from 'react';
 import { ResponsiveContainer, Sankey, Tooltip } from 'recharts';
 import type { LinkProps, NodeProps } from 'recharts/types/chart/Sankey';
+import { centredColumnOffsets } from '../../services/cashflow/sankeyLayout';
 import { useTranslation } from 'react-i18next';
 import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
 import { getCashflowCategoryTokens } from '../../constants/cashflowCategories';
@@ -37,8 +38,19 @@ const shorten = (text: string, max: number): string => (text.length > max ? `${t
 /** Text drawn over the ribbons keeps a halo of the card colour so it stays readable. */
 const HALO = { paintOrder: 'stroke' as const, stroke: 'var(--bg-card)', strokeWidth: 4, strokeLinejoin: 'round' as const };
 
-const SankeyNodeShape: React.FC<Partial<NodeProps> & ShapeExtras> = ({ x = 0, y = 0, width = 0, height = 0, payload, labels, custom }) => {
+/** Entrance: the columns appear from left to right, each ribbon drawn from its source once its column is there. */
+const COLUMN_DELAY_MS = 220;
+const NODE_PADDING = 18;
+const MARGIN = { top: 12, right: 200, bottom: 12, left: 190 };
+const columnOf = (node: unknown): number => {
+    const depth = (node as { depth?: unknown } | undefined)?.depth;
+    return typeof depth === 'number' ? depth : 0;
+};
+
+const SankeyNodeShape: React.FC<Partial<NodeProps> & ShapeExtras & { offsets: readonly number[] }> = ({ x = 0, y: rawY = 0, width = 0, height = 0, payload, labels, custom, offsets }) => {
     if (!payload) return null;
+    // Each column centred on the chart's middle
+    const y = rawY + (offsets[columnOf(payload)] ?? 0);
     const node = payload as unknown as SankeyPayload;
     const color = sankeyNodeColor(node, custom);
     const onLeft = node.kind === 'source';
@@ -48,7 +60,7 @@ const SankeyNodeShape: React.FC<Partial<NodeProps> & ShapeExtras> = ({ x = 0, y 
     const midY = y + height / 2;
     const tall = height >= 26;
     return (
-        <g>
+        <g className="animate-fade-in" style={{ animationDuration: '600ms', animationDelay: `${columnOf(payload) * COLUMN_DELAY_MS}ms` }}>
             <rect x={x} y={y} width={width} height={Math.max(height, 2)} rx={3} fill={color} />
             {tall ? (
                 <>
@@ -66,10 +78,12 @@ const SankeyNodeShape: React.FC<Partial<NodeProps> & ShapeExtras> = ({ x = 0, y 
 };
 
 /** Link: a ribbon with a source-to-target gradient. */
-const SankeyLinkShape: React.FC<Partial<LinkProps> & { custom: readonly CustomCashflowCategory[] }> = ({
-    sourceX = 0, targetX = 0, sourceY = 0, targetY = 0, sourceControlX = 0, targetControlX = 0, linkWidth = 0, index = 0, payload, custom,
+const SankeyLinkShape: React.FC<Partial<LinkProps> & { custom: readonly CustomCashflowCategory[]; offsets: readonly number[] }> = ({
+    sourceX = 0, targetX = 0, sourceY: rawSourceY = 0, targetY: rawTargetY = 0, sourceControlX = 0, targetControlX = 0, linkWidth = 0, index = 0, payload, custom, offsets,
 }) => {
     if (!payload) return null;
+    const sourceY = rawSourceY + (offsets[columnOf(payload.source)] ?? 0);
+    const targetY = rawTargetY + (offsets[columnOf(payload.target)] ?? 0);
     const from = sankeyNodeColor(payload.source as unknown as CashflowSankeyNode, custom);
     const to = sankeyNodeColor(payload.target as unknown as CashflowSankeyNode, custom);
     const id = `cashflow-link-${index}`;
@@ -86,7 +100,9 @@ const SankeyLinkShape: React.FC<Partial<LinkProps> & { custom: readonly CustomCa
                 fill="none"
                 stroke={`url(#${id})`}
                 strokeWidth={Math.max(linkWidth, 1)}
-                className="transition-opacity hover:opacity-80"
+                pathLength={1}
+                className="animate-flow-draw transition-opacity hover:opacity-80"
+                style={{ animationDelay: `${columnOf(payload.source) * COLUMN_DELAY_MS + 120}ms` }}
             />
         </g>
     );
@@ -118,19 +134,20 @@ export const CashflowSankeyChart: React.FC<{
         nodes: sankey.nodes.map(node => ({ ...node, name: labels.nodeName(node) })),
         links: sankey.links,
     };
+    const offsets = centredColumnOffsets(data, height - MARGIN.top - MARGIN.bottom, NODE_PADDING);
     return (
         <div style={{ height }} className="w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <Sankey
                     data={data}
                     nodeWidth={12}
-                    nodePadding={18}
+                    nodePadding={NODE_PADDING}
                     linkCurvature={0.5}
-                    iterations={64}
+                    verticalAlign="top"
                     sort={false}
-                    margin={{ top: 12, right: 200, bottom: 12, left: 190 }}
-                    node={<SankeyNodeShape labels={labels} custom={customCategories} />}
-                    link={<SankeyLinkShape custom={customCategories} />}
+                    margin={MARGIN}
+                    node={<SankeyNodeShape labels={labels} custom={customCategories} offsets={offsets} />}
+                    link={<SankeyLinkShape custom={customCategories} offsets={offsets} />}
                 >
                     <Tooltip content={({ payload }) => <SankeyTooltip payload={payload as ReadonlyArray<{ payload?: unknown }>} labels={labels} />} />
                 </Sankey>

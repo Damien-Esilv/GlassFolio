@@ -74,7 +74,8 @@ def test_cash_account_balance_and_negative_balance():
     held = normalize_holdings(account("cc", Account.TYPE_CHECKING, "CC", "100.5"), None)
     assert held["holdings"] == [{"kind": "cash", "name": "CC", "currency": "EUR", "quantity": "100.5", "marketValue": "100.5"}]
     overdrawn = normalize_holdings(account("cc", Account.TYPE_CHECKING, "CC", "-10"), None)
-    assert overdrawn["holdings"] == [] and overdrawn["warnings"] == ["negative_balance"]
+    assert overdrawn["holdings"] == [{"kind": "cash", "name": "CC", "currency": "EUR", "quantity": "-10", "marketValue": "-10"}]
+    assert overdrawn["warnings"] == ["negative_balance"]
 
 
 def test_investment_account_without_positions_writes_nothing():

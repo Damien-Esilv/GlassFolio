@@ -27,7 +27,7 @@ import {
     buildDemoCashflowOperations,
 } from './mockData.cashflow';
 
-export { buildDemoCashflowRules } from './mockData.cashflow';
+export { buildDemoCashflowRules, buildDemoCashflowBudgets } from './mockData.cashflow';
 
 // ============================================================================
 // BUILDERS FOR DYNAMIC DEMO DATA

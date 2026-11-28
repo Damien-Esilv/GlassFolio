@@ -15,6 +15,7 @@ import { summarizeCashflow, contribution, budgetMonthOf } from '../../services/c
 import type { CashflowCategoryTotal, CashflowOperation, CustomCashflowCategory } from '../../types/cashflow';
 import { CategoryBadge, MerchantAvatar } from '../../components/cashflow/CategoryBadge';
 import type { CashflowLabels } from '../../components/cashflow/useCashflowLabels';
+import { CountUpMoney } from '../../components/cashflow/CountUp';
 import { useCashflow } from './CashflowLayout';
 import { resolvePeriod } from '../../services/cashflow/period';
 
@@ -73,7 +74,7 @@ const CategoryRing: React.FC<{
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">{title}</span>
-                <span className="text-2xl font-bold text-primary tabular-nums">{labels.money(total)}</span>
+                <span className="text-2xl font-bold text-primary tabular-nums"><CountUpMoney value={total} labels={labels} /></span>
                 <span className="text-xs text-tertiary">{t('cashflow:categoriesPage.operations', { count })}</span>
             </div>
         </div>
@@ -113,7 +114,7 @@ const CategoryDetail: React.FC<{
     }, [operations, category.categoryId, custom]);
 
     return (
-        <section className={`${card} space-y-5`}>
+        <section className={`${card} space-y-5 h-full`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <CategoryBadge categoryId={category.categoryId} name={labels.categoryName(category.categoryId)} customCategories={custom} size="md" />
                 <Link to={`/cashflow/operations?category=${encodeURIComponent(category.categoryId)}`} className="text-xs font-semibold text-brand hover:underline">
@@ -197,7 +198,7 @@ const CashflowCategories: React.FC = () => {
     const current = items.find(c => c.categoryId === selected) ?? items[0];
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 xl:items-stretch">
             <section className={`${card} xl:col-span-3 space-y-5`}>
                 <div className="flex gap-1 bg-subtle p-1 rounded-xl w-fit" role="group">
                     {(['expense', 'income'] as const).map(option => (
@@ -253,6 +254,7 @@ const CashflowCategories: React.FC = () => {
                     </div>
                 )}
             </section>
+            {/* Same height as the list on its left */}
             <div className="xl:col-span-2">
                 {current && (
                     <CategoryDetail category={current} operations={operations} labels={labels} custom={customCategories} monthStartDay={monthStartDay} />

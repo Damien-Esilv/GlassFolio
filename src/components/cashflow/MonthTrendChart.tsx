@@ -1,12 +1,13 @@
 /**
  * Month after month (TGLA-250), after Finary's cash flow chart: for each month a thin bar of money
  * in, next to a stacked bar of money out (recurring, day-to-day, savings) topped by what stayed
- * available, and the savings rate as a filled line. The selected month is lit, the others dimmed;
- * a click on a month selects it.
+ * available, and the savings rate as a filled line. The months of the chosen period sit on a tinted band with
+ * their bars lit and their names bold; the months shown for context are dimmed. A new period redraws the chart,
+ * every bar growing from the axis together. A click on a month selects it.
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Area, Bar, CartesianGrid, Cell, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, Bar, CartesianGrid, Cell, ComposedChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
 import { ANIMATION_DURATION_MS, ANIMATION_EASING } from '../../constants/animations';
 import type { CashflowMonth } from '../../types/cashflow';
@@ -54,12 +55,40 @@ const TrendTooltip: React.FC<{ row?: TrendRow; labels: CashflowLabels }> = ({ ro
     );
 };
 
+/** Tinted band behind the chosen months. */
+const periodBand = (props: { x?: number; y?: number; width?: number; height?: number }): React.ReactElement<SVGElement> => (
+    <rect
+        x={props.x ?? 0}
+        y={props.y ?? 0}
+        width={Math.max(0, props.width ?? 0)}
+        height={Math.max(0, props.height ?? 0)}
+        rx={12}
+        fill={ROLES.available.cssVar}
+        fillOpacity={0.08}
+        stroke={ROLES.available.cssVar}
+        strokeOpacity={0.25}
+    />
+);
+
+/** Month name under the axis: bold and bright inside the chosen period, faded outside. */
+const MonthTick: React.FC<{ x?: number; y?: number; payload?: { value: string }; firstMonth: string; lastMonth: string; labels: CashflowLabels }> = ({ x = 0, y = 0, payload, firstMonth, lastMonth, labels }) => {
+    const month = payload?.value ?? '';
+    const chosen = month >= firstMonth && month <= lastMonth;
+    return (
+        <text x={x} y={y} dy={16} textAnchor="middle" fontSize={11} fontWeight={chosen ? 800 : 600} fill={chosen ? 'var(--text-primary)' : 'var(--text-tertiary)'} opacity={chosen ? 1 : 0.6}>
+            {labels.monthName(month, 'short')}
+        </text>
+    );
+};
+
 export const MonthTrendChart: React.FC<{
     months: CashflowMonth[];
-    selectedMonth: string;
+    /** Months of the chosen period (YYYY-MM, inclusive), lit */
+    firstMonth: string;
+    lastMonth: string;
     onSelect: (month: string) => void;
     labels: CashflowLabels;
-}> = ({ months, selectedMonth, onSelect, labels }) => {
+}> = ({ months, firstMonth, lastMonth, onSelect, labels }) => {
     const { t } = useTranslation();
     const rows: TrendRow[] = months.map(m => ({
         month: m.month,
@@ -72,7 +101,15 @@ export const MonthTrendChart: React.FC<{
         // The line stays readable: a month with almost no income would push it far off the chart
         savingsRate: Math.max(-100, Math.min(100, Math.round(m.savingsRate * 1000) / 10)),
     }));
-    const opacity = (row: TrendRow): number => (row.month === selectedMonth ? 1 : 0.35);
+    const opacity = (row: TrendRow): number => (row.month >= firstMonth && row.month <= lastMonth ? 1 : 0.25);
+    // The band covers the chosen months that the chart shows
+    const shown = rows.map(row => row.month);
+    const bandStart = shown.find(month => month >= firstMonth);
+    const bandEnd = [...shown].reverse().find(month => month <= lastMonth);
+    // The band frames a period shorter than the chart (a month, a quarter); when every bar is chosen it adds nothing
+    const framed = shown.filter(month => month >= firstMonth && month <= lastMonth).length < shown.length;
+    // Any new period redraws the chart, so every bar grows from the axis the same way, whatever the switch
+    const chartKey = `${firstMonth}-${lastMonth}-${shown[0] ?? ''}-${shown.length}`;
     const compact = new Intl.NumberFormat(labels.locale, { notation: 'compact', maximumFractionDigits: 1 });
 
     return (
@@ -80,6 +117,7 @@ export const MonthTrendChart: React.FC<{
             <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
+                        key={chartKey}
                         data={rows}
                         margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                         barGap={4}
@@ -95,8 +133,17 @@ export const MonthTrendChart: React.FC<{
                                 <stop offset="100%" stopColor={ROLES.savings.cssVar} stopOpacity={0.02} />
                             </linearGradient>
                         </defs>
+                        {framed && bandStart && bandEnd && bandStart <= bandEnd && (
+                            <ReferenceArea
+                                yAxisId="amount"
+                                x1={bandStart}
+                                x2={bandEnd}
+                                ifOverflow="visible"
+                                shape={periodBand}
+                            />
+                        )}
                         <CartesianGrid vertical={false} stroke="var(--border-subtle)" strokeDasharray="3 6" />
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 600 }} dy={8} />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} interval={0} tick={<MonthTick firstMonth={firstMonth} lastMonth={lastMonth} labels={labels} />} />
                         <YAxis yAxisId="amount" axisLine={false} tickLine={false} width={48} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={value => compact.format(Number(value))} />
                         <YAxis yAxisId="rate" orientation="right" hide domain={[-100, 100]} allowDataOverflow />
                         <Tooltip

@@ -177,6 +177,23 @@ export const SetTransactionCategoryArgsSchema = z.object({
   createRule: z.boolean().optional(),
 });
 
+export const SetBudgetArgsSchema = z.object({
+  categoryId: z.string().trim().min(1, 'Category id is required'),
+  monthlyLimit: z.number().min(0).max(1_000_000).nullable(),
+});
+
+export const UpdateCashflowOperationArgsSchema = z.object({
+  transactionId: z.string().trim().min(1, 'Operation id is required'),
+  note: z.string().max(500).nullable().optional(),
+  displayLabel: z.string().max(140).nullable().optional(),
+  excluded: z.boolean().optional(),
+}).refine(args => args.note !== undefined || args.displayLabel !== undefined || args.excluded !== undefined, 'Nothing to change');
+
+export const SetRecurringStatusArgsSchema = z.object({
+  key: z.string().trim().min(1, 'Series key is required').max(200),
+  status: z.enum(['confirmed', 'ignored', 'detected']),
+});
+
 export const CreateCashflowCategoryArgsSchema = z.object({
   parentId: z.string().trim().min(1, 'Parent category is required'),
   name: z.string().trim().min(1, 'Name is required').max(40),

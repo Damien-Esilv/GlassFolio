@@ -1,21 +1,13 @@
 {
     "title": "Cash flow",
     "subtitle": "Entrées, sorties et épargne, mois après mois",
-    "tabs": {
-        "label": "Sections du cash flow",
-        "overview": "Vue d'ensemble",
-        "flows": "Flux",
-        "categories": "Catégories",
-        "distribution": "Distribution",
-        "operations": "Opérations"
-    },
     "periods": {
         "label": "Période",
         "month": "Mois",
         "3m": "3 mois",
         "6m": "6 mois",
         "12m": "12 mois",
-        "ytd": "Depuis janvier"
+        "ytd": "Année"
     },
     "monthPicker": {
         "label": "Mois",
@@ -39,17 +31,17 @@
     },
     "kpi": {
         "availableIn": "Cash disponible en {{month}}",
-        "availablePeriod": "Cash disponible sur la période",
         "income": "Entrées",
         "expenses": "Sorties",
         "savingsRate": "Taux d'épargne",
         "savingsInvested": "Épargne investie",
         "passiveCoverage": "Dépenses couvertes par les revenus passifs",
-        "vsPrevious": "par rapport à la période précédente"
+        "vsPrevious": "par rapport à la période précédente",
+        "available": "Disponible"
     },
     "overview": {
         "trendTitle": "Mois après mois",
-        "trendHint": "Chaque mois : les entrées, puis les sorties (récurrentes, du quotidien, épargne) surmontées de ce qui reste disponible. La courbe est le taux d'épargne.",
+        "trendHint": "Chaque mois : les entrées, puis les sorties (récurrentes, du quotidien, épargne) surmontées de ce qui reste disponible. La courbe est le taux d'épargne. La période choisie est encadrée et ses mois ressortent.",
         "legend": {
             "income": "Entrées",
             "fixed": "Récurrent",
@@ -109,7 +101,7 @@
         "operations_one": "{{count}} paiement",
         "operations_other": "{{count}} paiements",
         "countAxis": "Paiements",
-        "weekdays": "Dépenses par jour de la semaine",
+        "weekdays": "Dépense moyenne par jour de la semaine",
         "bucketUnder": "< {{max}}",
         "bucketRange": "{{min}}–{{max}}",
         "bucketOver": "> {{min}}",
@@ -122,7 +114,8 @@
             "5": "Sam",
             "6": "Dim"
         },
-        "empty": "Aucune dépense sur cette période."
+        "empty": "Aucune dépense sur cette période.",
+        "weekdaysHint": "Ce que vous dépensez un lundi, un mardi… en moyenne sur la période."
     },
     "operations": {
         "search": "Rechercher une opération",
@@ -176,7 +169,16 @@
             "bank": "Catégorie donnée par la banque",
             "keyword": "Marchand reconnu",
             "fallback": "Pas encore catégorisée"
-        }
+        },
+        "totals": {
+            "count": "Opérations",
+            "in": "Entrées",
+            "out": "Sorties"
+        },
+        "toCategoriseCount_one": "{{count}} opération à catégoriser",
+        "toCategoriseCount_other": "{{count}} opérations à catégoriser",
+        "allCategorised": "Toutes les opérations de la période ont une catégorie.",
+        "addCategory": "Ajouter une catégorie"
     },
     "manual": {
         "title": "Ajouter une opération",
@@ -204,7 +206,8 @@
             "commit_failed": "L'opération n'a pas pu être enregistrée.",
             "synced_operation": "Une opération synchronisée suit la banque.",
             "not_found": "Cette opération n'existe plus."
-        }
+        },
+        "automaticHint": "Automatique : la catégorie que vous avez donnée la dernière fois à ce marchand, sinon vos règles et les marchands connus."
     },
     "settings": {
         "title": "Réglages du cash flow",
@@ -226,7 +229,7 @@
         "rules": "Mes règles",
         "rulesHint": "Une opération dont le libellé contient le texte va dans la catégorie.",
         "ruleContains": "Contient « {{text}} »",
-        "noRules": "Aucune règle : changez la catégorie d'une opération et choisissez « créer une règle ».",
+        "noRules": "Aucune règle : ajoutez-en une ci-dessous, ou changez la catégorie d’une opération et choisissez « créer une règle ».",
         "deleteRule": "Supprimer la règle",
         "ruleDirection": {
             "any": "Entrées et sorties",
@@ -241,8 +244,21 @@
             "empty_name": "Saisissez un nom.",
             "duplicate_name": "Ce nom existe déjà ici.",
             "invalid_parent": "Choisissez une catégorie.",
-            "not_found": "Introuvable."
-        }
+            "not_found": "Introuvable.",
+            "unknown_category": "Choisissez une catégorie.",
+            "rule_text_too_short": "Saisissez au moins 2 caractères."
+        },
+        "deleteRuleConfirm": "Supprimer la règle « {{text}} » ? Les opérations qu’elle classait reprennent leur catégorie automatique.",
+        "ruleText": "Si le libellé contient",
+        "ruleTextPlaceholder": "ex. NETFLIX",
+        "ruleDirectionLabel": "Pour",
+        "ruleCategory": "Ranger dans",
+        "ruleCategoryPick": "Choisir une catégorie",
+        "merchantLogos": "Afficher les logos des marchands",
+        "merchantLogosHint": "Logos des enseignes connues (Carrefour, Netflix, SNCF…), inclus dans l’application : rien n’est envoyé nulle part. Désactivé, chaque marchand affiche ses initiales.",
+        "newCategory": "Nouvelle catégorie",
+        "newRule": "Nouvelle règle",
+        "display": "Affichage et mois"
     },
     "empty": {
         "title": "Votre cash flow commence avec vos opérations bancaires",
@@ -292,5 +308,135 @@
         "load": "Le cash flow n'a pas pu être chargé.",
         "save": "La modification n'a pas pu être enregistrée."
     },
-    "loading": "Chargement du cash flow"
+    "loading": "Chargement du cash flow",
+    "pages": {
+        "overview": {
+            "title": "Vue d'ensemble"
+        },
+        "flows": {
+            "title": "Flux"
+        },
+        "categories": {
+            "title": "Catégories"
+        },
+        "distribution": {
+            "title": "Distribution"
+        },
+        "recurring": {
+            "title": "Récurrents"
+        },
+        "operations": {
+            "title": "Opérations"
+        },
+        "budgets": {
+            "title": "Budgets"
+        }
+    },
+    "noBank": {
+        "title": "Aucune banque connectée pour le moment",
+        "bodyLocal": "Votre cash flow vient des relevés que vous importez. Importez un relevé CSV ou OFX de votre compte courant, ou connectez votre banque pour le suivre automatiquement.",
+        "bodyOnline": "Votre cash flow vient des relevés que vous importez : téléchargez un relevé CSV ou OFX de votre compte courant depuis votre banque, puis importez-le. La synchro bancaire automatique fonctionne dans l'application de bureau et en Docker.",
+        "import": "Importer un relevé",
+        "connect": "Connecter ma banque"
+    },
+    "recurring": {
+        "total": "Récurrent",
+        "viewLabel": "Affichage",
+        "views": {
+            "calendar": "Vue calendrier",
+            "list": "Vue liste"
+        },
+        "showAll": "Voir tout le mois",
+        "calendarLabel": "Paiements récurrents du mois",
+        "onDay": "Paiements du {{day}}",
+        "listTitle": "Transactions récurrentes",
+        "listHint": "Détectées sur les 6 derniers mois : le même marchand à un rythme régulier, pour un montant stable.",
+        "none": "Aucun paiement récurrent détecté pour l'instant : il en faut trois à un rythme régulier.",
+        "noneOnDay": "Aucun paiement récurrent ce jour-là.",
+        "ignoredTitle_one": "Écartés ({{count}})",
+        "ignoredTitle_other": "Écartés ({{count}})",
+        "ignoredHint": "Pas des paiements récurrents : ils comptent comme des dépenses courantes.",
+        "confirm": "Confirmer",
+        "confirmed": "Confirmé",
+        "ignore": "Pas récurrent",
+        "restore": "Rétablir",
+        "next": "prochain le {{date}}",
+        "last": "dernier le {{date}}",
+        "cadence": {
+            "weekly": "Chaque semaine",
+            "biweekly": "Toutes les 2 semaines",
+            "monthly": "Chaque mois",
+            "quarterly": "Chaque trimestre",
+            "yearly": "Chaque année"
+        },
+        "rises": {
+            "title_one": "{{count}} hausse de prix",
+            "title_other": "{{count}} hausses de prix",
+            "hint": "Prélèvements récurrents dont le dernier paiement a augmenté. Un bon moment pour comparer les offres ou résilier ce qui ne sert plus.",
+            "since": "Nouveau prix depuis le {{date}}",
+            "acknowledge": "Vu",
+            "acknowledgeFor": "Marquer la hausse de prix de {{merchant}} comme vue"
+        }
+    },
+    "tabsLabel": "Sections du cash flow",
+    "budgets": {
+        "budgeted": "Budgété",
+        "spent": "Dépensé",
+        "over": "Budgets dépassés",
+        "title": "Budgets de {{month}}",
+        "hint": "Fixez un plafond mensuel par catégorie : la jauge passe à l’orange dès 80 % et au rouge au-delà.",
+        "state": {
+            "ok": "OK",
+            "near": "Proche",
+            "over": "Dépassé"
+        },
+        "capFor": "Plafond mensuel pour {{category}}",
+        "average": "Moyenne sur 12 mois : {{amount}}",
+        "remaining": "Reste {{amount}}",
+        "exceeded": "{{amount}} de dépassement"
+    },
+    "forecast": {
+        "title": "Prévision au {{date}}",
+        "hint": "Le solde du jour, les opérations annoncées par vos banques, les paiements récurrents attendus et vos dépenses courantes habituelles.",
+        "today": "Aujourd’hui",
+        "end": "Prévu en fin de mois",
+        "balance": "Solde",
+        "projectedBalance": "Solde prévu",
+        "parts": {
+            "upcoming": "Annoncé par la banque",
+            "recurring": "Récurrents attendus",
+            "variable": "Dépenses courantes"
+        }
+    },
+    "ai": {
+        "categorizePrompt": "Catégorise mes opérations du cash flow non catégorisées : liste-les avec list_cashflow_transactions (uncategorizedOnly), propose une catégorie pour chacune et une règle pour les marchands qui reviennent, puis applique ce que je confirme avec set_transaction_category."
+    },
+    "dashboard": {
+        "title": "Cash flow",
+        "available": "Cash disponible en {{month}}",
+        "availableSoFar": "Cash disponible à ce jour",
+        "income": "Entrées",
+        "expenses": "Sorties",
+        "savingsRate": "Taux d'épargne",
+        "open": "Tout voir",
+        "expectedEnd": "Solde prévu le {{date}}",
+        "balanceToday": "{{amount}} aujourd'hui",
+        "lastMonths_one": "Le dernier mois",
+        "lastMonths_other": "Les {{count}} derniers mois",
+        "outAndSaved": "Sorties et épargne",
+        "comingUp": "À venir",
+        "nothingComing": "Aucun prélèvement ni revenu récurrent attendu d'ici la fin du mois.",
+        "topSpending": "Où est passé l'argent",
+        "noSpending": "Aucune dépense ce mois-ci.",
+        "budgetsTitle": "Budgets du mois",
+        "overCount_one": "{{count}} dépassé",
+        "overCount_other": "{{count}} dépassés",
+        "noBudgets": "Aucun budget. Fixez un plafond mensuel par catégorie pour le suivre ici.",
+        "budgetLeft": "Reste {{amount}}",
+        "budgetOver": "{{amount}} au-delà du plafond",
+        "setBudgets": "Configurer",
+        "manageBudgets": "Gérer",
+        "moreBudgets_one": "+{{count}} autre",
+        "moreBudgets_other": "+{{count}} autres"
+    }
 }

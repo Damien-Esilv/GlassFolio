@@ -58,6 +58,16 @@ The system supports three distinct themes. Your code must support all three auto
     2.  **Dark**: Zinc-based standard dark mode.
     3.  **Midnight**: Deep slate/blue mode (`data-theme="night"`).
 *   **Component Rule:** Test your components against the "Midnight" theme to ensure proper contrast. If it looks good in Midnight, it usually works in Dark.
+*   **Accent vs logo blue:** buttons, links and highlights use `bg-primary` / `text-brand`, which follow the theme (cyan in Neon, green in Emerald). `brand-static` is the logo's fixed blue and is reserved for the logo (checked by `visualThemingAudit.test.ts`).
+
+### 1.5. Consistency With the Existing Page
+Before adding to or changing an existing page, read the page first and reuse what it already does, so the result looks as if it had always been there.
+*   **Look at the neighbours:** card shell (background, border, radius, padding, shadow), card titles, section links ("See all", "View badges"), buttons, spacing, grid columns, empty states, number formatting and animations already used on the page.
+*   **Copy before inventing:** a new card, link or button takes the classes and wording pattern of its closest existing equivalent on the same page. Example: on the dashboard, a link to another page is the white-grey uppercase "See all" style of the Financial Goals card, not a blue link with an arrow.
+*   **Shared components first:** use the page's existing components (`Button`, cards, badges) rather than a look-alike.
+*   **Page header:** every page of the app opens the same way: the title alone (`h1`, `text-3xl font-bold text-primary`, never coloured, no subtitle under it), its actions on the right, and the separator line under the header (`pb-4 border-b border-subtle`). No back button on a page reached from the menu.
+*   **Confirmations in the app:** a deletion is confirmed in place with `DeleteInPlace` (`src/components/ui/DeleteInPlace.tsx`: warning, Cancel, red confirm), never with the browser's `window.confirm`.
+*   **A deliberate difference is explained:** if the new element must look different, say why in a code comment or the PR description.
 
 ---
 

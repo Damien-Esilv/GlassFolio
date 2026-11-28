@@ -137,6 +137,8 @@ export interface CashflowSettings {
     includeInvestmentIncome: boolean;
     /** Day a budget month starts (1 = calendar month), 1–28 */
     monthStartDay: number;
+    /** Brand logos of known merchants (bundled, nothing fetched); unset = on */
+    merchantLogos?: boolean;
     updatedAt: string;
 }
 
@@ -225,6 +227,86 @@ export interface RecurringSeries {
     nextDate: string;
     occurrences: number;
     operationIds: string[];
+}
+
+/** A monthly spending cap on a top-level expense category (TGLA-256). */
+export interface CashflowBudget {
+    id: string;
+    ownerId: string;
+    categoryId: string;
+    /** Base currency, per budget month */
+    monthlyLimit: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** Where a budget stands in a month: under 80 % (ok), from 80 % (near), over its cap. */
+export type BudgetState = 'ok' | 'near' | 'over';
+
+export interface BudgetStatus {
+    categoryId: string;
+    limit: number;
+    spent: number;
+    /** spent / limit */
+    ratio: number;
+    remaining: number;
+    state: BudgetState;
+}
+
+/** One day of the end-of-month forecast: the balance of the counted accounts, known or projected (TGLA-257). */
+export interface ForecastPoint {
+    /** YYYY-MM-DD */
+    date: string;
+    balance: number;
+    projected: boolean;
+}
+
+export interface CashflowForecast {
+    month: string;
+    /** YYYY-MM-DD */
+    today: string;
+    /** Last day of the budget month */
+    monthEnd: string;
+    balanceToday: number;
+    projectedEnd: number;
+    lowestProjected: number;
+    /** Operations the banks announce as coming, until the month end */
+    upcomingTotal: number;
+    /** Recurring payments and income expected until the month end (not already announced) */
+    recurringTotal: number;
+    /** Day-to-day spending expected: the daily average of the last 3 months × the days left */
+    variableTotal: number;
+    variablePerDay: number;
+    points: ForecastPoint[];
+}
+
+/** What the user said of a detected series: nothing yet, a real recurring payment, or not one (TGLA-255). */
+export type RecurringStatus = 'detected' | 'confirmed' | 'ignored';
+
+/** The user's decision on one series, by its key (direction + merchant). */
+export interface CashflowRecurringDecision {
+    id: string;
+    ownerId: string;
+    key: string;
+    status: Exclude<RecurringStatus, 'detected'>;
+    updatedAt: string;
+}
+
+/** One payment of a series in the month shown: paid (an operation) or expected (projected from the rhythm). */
+export interface RecurringOccurrence {
+    /** YYYY-MM-DD */
+    date: string;
+    /** Signed, base currency */
+    amount: number;
+    expected: boolean;
+    operationId?: string;
+}
+
+/** A recurring series with the user's decision and its payments in the month shown (calendar). */
+export interface CashflowRecurringItem extends RecurringSeries {
+    status: RecurringStatus;
+    /** Its payments in the month shown, oldest first */
+    payments: RecurringOccurrence[];
 }
 
 export type SankeyNodeKind = 'source' | 'income' | 'group' | 'detail';

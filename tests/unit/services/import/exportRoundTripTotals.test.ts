@@ -6,8 +6,6 @@
  * hand-made mapping.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 
 vi.mock('../../../../src/services/db', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../../src/services/db')>();
@@ -34,6 +32,7 @@ import type { FieldMappings } from '../../../../src/services/import/importManage
 import { proposeColumnMapping, proposalsToMappings, HISTORY_COLUMN_SPECS } from '../../../../src/services/import/columnMatcher';
 import { buildTransactionsCSV } from '../../../../src/services/exportService';
 import { portfolioService } from '../../../../src/services/portfolioService';
+import { readTestData } from '../../../fixtures/testData';
 
 const seedAccounts = async (): Promise<void> => {
   localStorage.clear();
@@ -155,7 +154,7 @@ describe('an unknown broker layout', () => {
   beforeEach(seedAccounts);
 
   it('imports test-data/unknown_de_broker_2024.csv from the proposals alone', async () => {
-    const csv = fs.readFileSync(path.join(process.cwd(), 'test-data', 'unknown_de_broker_2024.csv'), 'utf8');
+    const csv = readTestData('unknown_de_broker_2024.csv');
     const { headers, rows } = parseCSVText(csv);
     const proposals = proposeColumnMapping(headers, rows, HISTORY_COLUMN_SPECS);
     expect(proposals.every(p => p.status === 'matched'), JSON.stringify(proposals.map(p => [p.header, p.field, p.status]))).toBe(true);

@@ -256,6 +256,26 @@
                 "risk": "Amende",
                 "cost": "Impôt"
             }
+        },
+        "cashflowCredits": {
+            "title": "Réductions et crédits repérés en {{year}}",
+            "subtitle": "À partir des opérations de votre cash flow : dons, emploi à domicile, garde d’enfants et versements PER.",
+            "total": "Avantage estimé",
+            "empty": "Aucun don, emploi à domicile, frais de garde ou versement PER repéré en {{year}}. Catégorisez vos opérations dans le cash flow pour les voir ici.",
+            "kinds": {
+                "donations_aid": "Dons aux organismes d’aide aux personnes en difficulté",
+                "donations": "Dons aux organismes d’intérêt général",
+                "home_services": "Emploi à domicile (salarié ou prestataire)",
+                "childcare": "Garde d’enfants hors du domicile (moins de 6 ans)",
+                "per": "Versements sur un plan d’épargne retraite (PER)"
+            },
+            "detail": "{{paid}} versés · {{rate}} de {{base}}",
+            "cap": "plafond {{cap}}",
+            "perDetail": "{{paid}} versés · impôt économisé à votre taux marginal de {{rate}}, dans votre plafond (au moins {{floor}} : voir votre avis d’impôt)",
+            "perNoRate": "{{paid}} versés · déductibles dans votre plafond (au moins {{floor}}) ; indiquez votre taux marginal dans votre profil fiscal pour voir l’économie",
+            "see_one": "Voir l’opération",
+            "see_other": "Voir les {{count}} opérations",
+            "disclaimer": "Une estimation à partir de vos opérations bancaires, pas un conseil fiscal : les reçus et attestations des organismes font foi, et les plafonds dépendent de votre foyer. Les taux sont ceux de l’année des revenus."
         }
     },
     "guide": {

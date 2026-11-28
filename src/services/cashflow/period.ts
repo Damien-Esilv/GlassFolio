@@ -8,7 +8,7 @@ export interface CashflowPeriod {
     start: string;
     /** Exclusive */
     end: string;
-    /** First day of the monthly trend shown with the period (12 budget months by default) */
+    /** First day of the monthly trend shown with the period: its own months, at least the last 6 */
     trendStart: string;
 }
 
@@ -47,7 +47,10 @@ export function budgetMonthBounds(month: string, monthStartDay: number = 1): { s
 
 export interface PeriodQuery {
     preset: CashflowPeriodPreset;
-    /** Budget month for the 'month' preset (YYYY-MM); the current one by default */
+    /**
+     * Anchor of the period (YYYY-MM), the current budget month by default: the month itself ('month'), the last month
+     * of a 3, 6 or 12-month window, or a month of the year ('ytd': that calendar year, up to today for this one).
+     */
     month?: string;
     /** Earliest operation date, for the 'all' preset */
     firstOperationDate?: string;
@@ -55,7 +58,10 @@ export interface PeriodQuery {
     today?: Date;
 }
 
-/** Resolves a preset to concrete bounds; the trend always covers the 12 budget months up to the period end. */
+/** Fewest months the month-after-month chart shows: a month or a quarter is read against the half-year before it. */
+export const MIN_TREND_MONTHS = 6;
+
+/** Resolves a preset to concrete bounds; the trend covers the period's months, at least the 6 up to its end. */
 export function resolvePeriod(query: PeriodQuery): CashflowPeriod {
     const today = query.today ?? new Date();
     const startDay = query.monthStartDay ?? 1;
@@ -77,18 +83,61 @@ export function resolvePeriod(query: PeriodQuery): CashflowPeriod {
         case '3m':
         case '6m':
         case '12m': {
-            const months = Number(query.preset.replace('m', ''));
-            start = budgetMonthBounds(shiftBudgetMonth(current, -(months - 1)), startDay).start;
+            const anchor = query.month && query.month < current ? query.month : current;
+            start = budgetMonthBounds(shiftBudgetMonth(anchor, -(presetSpan(query.preset) - 1)), startDay).start;
+            const anchorEnd = budgetMonthBounds(anchor, startDay).end;
+            end = anchorEnd < tomorrow ? anchorEnd : tomorrow;
+            lastMonth = anchor;
             break;
         }
-        case 'ytd':
-            start = `${today.getUTCFullYear()}-01-01`;
+        case 'ytd': {
+            const year = Math.min(Number((query.month ?? current).slice(0, 4)), today.getUTCFullYear());
+            start = `${year}-01-01`;
+            const nextYear = `${year + 1}-01-01`;
+            end = nextYear < tomorrow ? nextYear : tomorrow;
+            lastMonth = year === today.getUTCFullYear() ? current : `${year}-12`;
             break;
+        }
         case 'all':
         default:
             start = (query.firstOperationDate ?? `${today.getUTCFullYear()}-01-01`).slice(0, 10);
             break;
     }
-    const trendStart = budgetMonthBounds(shiftBudgetMonth(lastMonth, -11), startDay).start;
+    // The trend shows the months of the period, with at least the 6 months up to its end for context
+    const trendStart = budgetMonthBounds(shiftBudgetMonth(lastMonth, -(MIN_TREND_MONTHS - 1)), startDay).start;
     return { start, end, trendStart: trendStart < start ? trendStart : start };
+}
+
+/** Months one step of the period carousel covers: 1, 3, 6 or 12 (a calendar year for 'ytd'). */
+export function presetSpan(preset: CashflowPeriodPreset): number {
+    if (preset === '3m') return 3;
+    if (preset === '6m') return 6;
+    if (preset === '12m' || preset === 'ytd') return 12;
+    return 1;
+}
+
+/**
+ * The anchor one step back (-1) or forward (+1) in the period carousel: a month, a block of 3, 6 or 12 months, or a
+ * calendar year. Never past the current budget month.
+ */
+export function shiftPeriodAnchor(preset: CashflowPeriodPreset, anchor: string, step: -1 | 1, current: string): string {
+    const next = preset === 'ytd'
+        ? `${Number(anchor.slice(0, 4)) + step}-12`
+        : shiftBudgetMonth(anchor, step * presetSpan(preset));
+    return next > current ? current : next;
+}
+
+/** Whether the carousel can move forward from this anchor. */
+export function canMoveForward(preset: CashflowPeriodPreset, anchor: string, current: string): boolean {
+    return preset === 'ytd' ? anchor.slice(0, 4) < current.slice(0, 4) : anchor < current;
+}
+
+/** First and last month of the period the carousel shows for an anchor. */
+export function periodMonths(preset: CashflowPeriodPreset, anchor: string, current: string): { first: string; last: string } {
+    if (preset === 'ytd') {
+        const year = anchor.slice(0, 4);
+        return { first: `${year}-01`, last: year === current.slice(0, 4) ? current : `${year}-12` };
+    }
+    const last = anchor > current ? current : anchor;
+    return { first: shiftBudgetMonth(last, -(presetSpan(preset) - 1)), last };
 }

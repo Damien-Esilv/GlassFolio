@@ -101,7 +101,9 @@
     "categorySecurityDesc": "Vault backup reminders and synchronization warnings.",
     "dormantCashTitle": "Dormant Cash Alert Threshold",
     "dormantCashDesc": "Alert when uninvested cash exceeds this percentage of total portfolio.",
-    "manageRules": "Manage Custom Alert Rules"
+    "manageRules": "Manage Custom Alert Rules",
+    "categoryCashflow": "Cash flow",
+    "categoryCashflowDesc": "Budgets over their cap, new subscriptions, price rises"
   },
   "engine": {
     "cashRatioAbove": "Cash share ({{ratio, number(maximumFractionDigits: 1)}} %) is above your {{threshold, number(maximumFractionDigits: 1)}} % threshold.",
@@ -117,6 +119,12 @@
     "goalReachedTitle": "Goal reached: {{goal}}",
     "goalReached": "Congratulations! You reached your goal of {{target}} {{currency}}.",
     "questRewardTitle": "Quest reward available",
-    "questReward": "Your quest is complete: claim your +{{xp}} XP."
+    "questReward": "Your quest is complete: claim your +{{xp}} XP.",
+    "budgetOverTitle": "Budget exceeded",
+    "budgetOver": "{{category}}: {{spent}} {{currency}} spent this month, over the {{limit}} {{currency}} cap.",
+    "newSubscriptionTitle": "New subscription detected",
+    "newSubscription": "{{merchant}} comes back regularly: {{amount}} {{currency}} each time.",
+    "priceRiseTitle": "Price rise",
+    "priceRise": "{{merchant}} went up {{percent}}%: now {{amount}} {{currency}}."
   }
 }

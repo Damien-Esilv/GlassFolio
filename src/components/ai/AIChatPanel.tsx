@@ -12,8 +12,6 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
-  Maximize2,
-  Minimize2,
   Loader2,
   ShieldAlert,
 } from 'lucide-react';
@@ -31,14 +29,13 @@ import type { ResizableSeparatorProps } from '../../hooks/useResizablePane';
 import { AIActionApprovalCard } from './AIActionApprovalCard';
 import { AIMarkdownRenderer } from './AIMarkdownRenderer';
 import { AppThinkingOrb } from '../ui/AppThinkingOrb';
+import { onAskAssistant } from '../../services/ai/assistantRequests';
 
 export interface AIChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   width?: number;
   isResizing?: boolean;
-  isExpandedPreset?: boolean;
-  onToggleWidthPreset?: () => void;
   resizeHandleProps?: ResizableSeparatorProps;
 }
 
@@ -67,8 +64,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   onClose,
   width = 420,
   isResizing = false,
-  isExpandedPreset = false,
-  onToggleWidthPreset,
   resizeHandleProps,
 }) => {
   const panelRef = useRef<HTMLElement>(null);
@@ -78,6 +73,32 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // The input grows with its text, the placeholder included, up to max-h-28: a narrow panel shows the placeholder
+  // on two lines instead of cutting it. Browsers without `field-sizing: content` (Safari) measure the text, or the
+  // placeholder while empty, again whenever the panel width changes.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || (typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content'))) return;
+    const fit = (): void => {
+      const empty = el.value === '';
+      if (empty) el.value = el.placeholder;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+      if (empty) el.value = '';
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    let width = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      fit();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [inputValue]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOllamaColdStart, setIsOllamaColdStart] = useState(false);
   const [isLongLoading, setIsLongLoading] = useState(false);
@@ -237,6 +258,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     },
     [capabilities, settings, t]
   );
+
+  // A page asking something (Epic E52): the request is typed in, the user sends it
+  useEffect(() => onAskAssistant(prompt => setInputValue(prompt)), []);
 
   const handleSend = async (content: string) => {
     const text = content.trim();
@@ -519,17 +543,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {onToggleWidthPreset && (
-            <button
-              type="button"
-              onClick={onToggleWidthPreset}
-              className="hidden lg:inline-flex p-2 text-secondary hover:text-primary hover:bg-subtle rounded-lg transition-colors"
-              title={isExpandedPreset ? t('ai:panel.compact') : t('ai:panel.expand')}
-              aria-label={isExpandedPreset ? t('ai:panel.compact') : t('ai:panel.expand')}
-            >
-              {isExpandedPreset ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-          )}
           <Link
             to="/settings?tab=ai"
             className="p-2 text-secondary hover:text-primary hover:bg-subtle rounded-lg transition-colors"
@@ -847,7 +860,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             onPaste={handlePaste}
             placeholder={t('ai:chat.inputPlaceholder')}
             rows={1}
-            className="w-full resize-none bg-transparent px-2.5 py-2.5 text-xs text-primary placeholder:text-tertiary focus:outline-none max-h-28"
+            ref={inputRef}
+            className="w-full resize-none bg-transparent px-2.5 py-2.5 text-xs text-primary placeholder:text-tertiary focus:outline-none max-h-28 [field-sizing:content]"
           />
 
           <button
@@ -868,9 +882,24 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         </div>
 
         <div className="flex items-center justify-between gap-2 px-1 text-[10px] text-tertiary">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <AlertCircle size={11} className="shrink-0" />
-            <span className="truncate">{t('ai:chat.disclaimer')}</span>
+          {/* A short note that always fits; the full text on hover or focus of the "i" */}
+          <div className="relative group flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              className="shrink-0 rounded-full text-tertiary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label={t('ai:chat.disclaimer')}
+              aria-describedby="ai-chat-disclaimer"
+            >
+              <Info size={12} aria-hidden="true" />
+            </button>
+            <span className="truncate">{t('ai:chat.disclaimerShort')}</span>
+            <span
+              id="ai-chat-disclaimer"
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-0 mb-2 w-64 rounded-lg border border-border bg-card px-3 py-2 text-xs leading-snug text-secondary shadow-xl opacity-0 invisible transition-opacity duration-150 group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible z-20"
+            >
+              {t('ai:chat.disclaimer')}
+            </span>
           </div>
           <span className="shrink-0 hidden sm:inline">{t('ai:attachments.supportedFormats')}</span>
         </div>

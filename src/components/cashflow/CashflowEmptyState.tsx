@@ -2,27 +2,18 @@
  * First visit of the cash flow: no bank operation yet. Offers the three ways in: a statement file,
  * an operation typed by hand, and the bank sync (Woob) where it exists (desktop app, Docker).
  */
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Landmark, PenLine, Upload, Wallet } from 'lucide-react';
-import { woobClient } from '../../services/connectors/woobClient';
 
-export const CashflowEmptyState: React.FC<{ onCreate: () => void }> = ({ onCreate }) => {
+/** `woobAvailable`: this GlassFolio reaches banks (desktop app, Docker), read once by the section. */
+export const CashflowEmptyState: React.FC<{ onCreate: () => void; woobAvailable: boolean }> = ({ onCreate, woobAvailable }) => {
     const { t } = useTranslation();
-    const [woobAvailable, setWoobAvailable] = useState(false);
-
-    useEffect(() => {
-        let cancelled = false;
-        woobClient.status()
-            .then(status => { if (!cancelled) setWoobAvailable(status.available); })
-            .catch(() => { if (!cancelled) setWoobAvailable(false); });
-        return () => { cancelled = true; };
-    }, []);
 
     const action = 'flex items-center gap-3 p-4 rounded-2xl bg-subtle border border-subtle hover:border-primary text-left transition-colors';
     return (
-        <section className="rounded-2xl bg-card border border-border shadow-lg p-8 text-center space-y-6">
+        <section className="rounded-2xl bg-card border border-border shadow-lg p-8 text-center space-y-6 animate-fade-in-up">
             <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
                 <Wallet size={28} aria-hidden="true" />
             </div>
@@ -31,7 +22,7 @@ export const CashflowEmptyState: React.FC<{ onCreate: () => void }> = ({ onCreat
                 <p className="text-sm text-secondary">{t('cashflow:empty.body')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
-                <Link to="/import?kind=bank" className={action}>
+                <Link to="/import" className={action}>
                     <Upload size={20} className="text-primary shrink-0" />
                     <span className="text-sm font-semibold text-primary">{t('cashflow:empty.importFile')}</span>
                 </Link>

@@ -14,10 +14,11 @@ const Button: React.FC<ButtonProps> = ({
   isLoading,
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
-    primary: "bg-brand-static hover:bg-brand-static/90 text-white focus:ring-brand-static shadow-lg shadow-brand-static/20 hover:shadow-brand-static/30",
+    // The theme's accent (cyan in Neon, green in Emerald), never the logo's fixed blue
+    primary: "bg-primary hover:bg-primary-hover text-white focus:ring-primary shadow-lg shadow-primary/20 hover:shadow-primary/30",
     secondary: "bg-subtle hover:bg-card-hover text-primary border border-border focus:ring-border-strong",
     outline: "border border-border text-secondary hover:bg-subtle hover:text-primary hover:border-border-strong",
     danger: "bg-error hover:bg-error/90 text-white focus:ring-error",

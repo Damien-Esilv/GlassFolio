@@ -237,6 +237,48 @@
       }
     },
     {
+      "name": "get_budget_status",
+      "description": "The user's monthly budgets (a spending cap per category) against what each category spent in a budget month: limit, spent, ratio, remaining and state (ok under 80 %, near from 80 %, over above the cap). Amounts in the base currency.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Budget month YYYY-MM. Default: the current one."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code. Default: EUR."
+          }
+        }
+      },
+      "annotations": {
+        "title": "get_budget_status",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_cashflow_forecast",
+      "description": "End-of-month forecast of the checking and savings accounts counted in the cash flow: today's balance, the balance expected at the end of the budget month (lowest point too), and what makes it up (operations the banks announce as coming, recurring payments and income expected, day-to-day spending at the daily average of the last 3 months), with the daily curve.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code. Default: EUR."
+          }
+        }
+      },
+      "annotations": {
+        "title": "get_cashflow_forecast",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "get_cashflow_summary",
       "description": "Cash flow of the user's checking and savings accounts for a period: money in, money out, savings invested, cash left available, savings rate, passive income coverage, monthly trend (12 months), totals per category and per bank, top merchants and the count of operations not categorised yet. Amounts are in the base currency, spending as positive numbers.",
       "inputSchema": {
@@ -252,11 +294,11 @@
               "ytd",
               "all"
             ],
-            "description": "Period: month (one budget month, see month), 3m, 6m, 12m, ytd or all. Default: month."
+            "description": "Period: month (one budget month), 3m, 6m or 12m (the months up to month), ytd (the calendar year of month, up to today for this one) or all. Default: month."
           },
           "month": {
             "type": "string",
-            "description": "Budget month YYYY-MM for period=month. Default: the current month."
+            "description": "Budget month YYYY-MM anchoring the period: the month itself, the last month of 3m/6m/12m, a month of the year for ytd. Default: the current month."
           },
           "currency": {
             "type": "string",
@@ -266,6 +308,32 @@
       },
       "annotations": {
         "title": "get_cashflow_summary",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_cashflow_tax_items",
+      "description": "Tax reductions and credits spotted in the cash flow of an income year (France): donations (75 % for organisations helping people in need within its cap, else 66 % within 20 % of taxable income), home help and childcare (50 % credits within their caps), PER contributions (deductible within the cap on the tax notice; saving = contributions × marginal rate). Paid, base after caps, rate, estimated benefit and the operation ids. An estimate, not tax advice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "string",
+            "description": "Income year, e.g. 2025."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code. Default: EUR."
+          }
+        },
+        "required": [
+          "year"
+        ]
+      },
+      "annotations": {
+        "title": "get_cashflow_tax_items",
         "readOnlyHint": true,
         "destructiveHint": false,
         "openWorldHint": false
@@ -454,7 +522,7 @@
     },
     {
       "name": "import_transactions",
-      "description": "Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. Requires explicit human confirmation before execution. Always call preview_transaction_import first.",
+      "description": "Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. A bank statement goes to a checking or savings account and feeds the cash flow (see preview_transaction_import). Requires explicit human confirmation before execution. Always call preview_transaction_import first.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -798,6 +866,33 @@
       }
     },
     {
+      "name": "list_recurring_expenses",
+      "description": "Recurring payments and income detected over the last 6 months (subscriptions, rent, salary…): rhythm, average and last amount, price change (0.185 = +18.5 %), next expected date, the user's decision (detected, confirmed, ignored) and the payments of the month asked, made or expected. Amounts in the base currency; averageAmount and lastAmount are absolute, payments are signed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Budget month YYYY-MM for the payments of the month. Default: the current one."
+          },
+          "includeIgnored": {
+            "type": "boolean",
+            "description": "Also list the series the user set aside."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Base currency ISO code. Default: EUR."
+          }
+        }
+      },
+      "annotations": {
+        "title": "list_recurring_expenses",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "list_transactions",
       "description": "List recent financial transactions with optional filtering by asset ticker or operation type (Buy, Sell, Deposit, Withdrawal).",
       "inputSchema": {
@@ -972,7 +1067,7 @@
     },
     {
       "name": "preview_transaction_import",
-      "description": "Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved.",
+      "description": "Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV, or an OFX bank statement converted to CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved. A bank statement goes to a checking or savings account (type checking or savings in list_institutions), never to an investment account: there the sign of each amount says money in or out, Debit/Credit columns and the bank's category are read, and the rows feed the cash flow (not the positions nor the tax engine). For rows extracted from a bank statement, use type DEPOSIT (money in) or WITHDRAW (money out), symbol = the currency, a signed amount, the label and the category printed on the statement.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1280,6 +1375,64 @@
       }
     },
     {
+      "name": "set_budget",
+      "description": "Set the monthly spending cap of a top-level expense category (ids from list_cashflow_categories, kind expense, without parentId), or remove it with monthlyLimit null or 0. The user is notified when the category goes over its cap. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "description": "Top-level expense category id, e.g. dining."
+          },
+          "monthlyLimit": {
+            "type": "number",
+            "description": "Cap per budget month in the base currency; null or 0 removes the budget."
+          }
+        },
+        "required": [
+          "categoryId",
+          "monthlyLimit"
+        ]
+      },
+      "annotations": {
+        "title": "set_budget",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "set_cash_account_kind",
+      "description": "Make a checking account a savings account (Livret…) or the other way round: a checking account takes bank operations, a savings account its operations or its balance. Only between these two types; investment accounts keep theirs. Requires explicit human confirmation. Use list_institutions to find the id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Account id from list_institutions"
+          },
+          "kind": {
+            "type": "string",
+            "description": "The new type",
+            "enum": [
+              "checking",
+              "savings"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "kind"
+        ]
+      },
+      "annotations": {
+        "title": "set_cash_account_kind",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "set_cost_basis_method",
       "description": "Change the cost basis method of an account (WAC = weighted average cost / PRU, FIFO = first in first out) and recompute its positions and realized P&L. Requires explicit human confirmation before execution.",
       "inputSchema": {
@@ -1305,6 +1458,38 @@
       },
       "annotations": {
         "title": "set_cost_basis_method",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "set_recurring_status",
+      "description": "Confirm a detected recurring series (confirmed), set it aside because it is not a recurring payment (ignored: its operations then count as day-to-day spending), or forget the decision (detected). Keys come from list_recurring_expenses. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Series key from list_recurring_expenses."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "ignored",
+              "detected"
+            ],
+            "description": "The decision."
+          }
+        },
+        "required": [
+          "key",
+          "status"
+        ]
+      },
+      "annotations": {
+        "title": "set_recurring_status",
         "readOnlyHint": false,
         "destructiveHint": false,
         "openWorldHint": false
@@ -1410,6 +1595,40 @@
       },
       "annotations": {
         "title": "sync_connection",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "update_cashflow_operation",
+      "description": "Change how one cash flow operation shows (ids from list_cashflow_transactions): its note, its displayed label (null restores the bank's), or whether it is left out of the cash flow (excluded). The amount, date and account never change here. Requires explicit human confirmation before execution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Operation id."
+          },
+          "note": {
+            "type": "string",
+            "description": "Note (500 characters at most); empty or null removes it."
+          },
+          "displayLabel": {
+            "type": "string",
+            "description": "Label shown instead of the bank's (140 characters at most); null restores the bank's."
+          },
+          "excluded": {
+            "type": "boolean",
+            "description": "true leaves the operation out of the cash flow totals."
+          }
+        },
+        "required": [
+          "transactionId"
+        ]
+      },
+      "annotations": {
+        "title": "update_cashflow_operation",
         "readOnlyHint": false,
         "destructiveHint": false,
         "openWorldHint": false

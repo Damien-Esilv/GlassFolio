@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, ChevronDown, FileText, Globe, AlertTriangle, CheckCircle, HelpCircle, XCircle, Info } from 'lucide-react';
+import { ChevronDown, FileText, Globe, AlertTriangle, CheckCircle, HelpCircle, XCircle, Info } from 'lucide-react';
 import Button from '../components/Button';
 import { taxService } from '../services/fiscal';
 import { getFiscalRules } from '../services/fiscal/taxRules';
@@ -160,12 +160,8 @@ const DeclarationAssistant: React.FC = () => {
     return (
         <div className="space-y-6 w-full">
             {/* Header */}
-            <div>
-                <button onClick={() => navigate('/tax')} className="flex items-center gap-1 text-sm text-secondary hover:text-primary mb-4 transition-colors">
-                    <ChevronLeft size={16} />{t('tax:declaration.backToHub')}
-                </button>
-                <h1 className="text-3xl font-bold text-primary mb-1">{t('tax:declaration.title')}</h1>
-                <p className="text-secondary text-sm">{t('tax:declaration.subtitle', { year: fiscalYear })}</p>
+            <div className="pb-4 border-b border-subtle">
+                <h1 className="text-3xl font-bold text-primary">{t('tax:declaration.title')}</h1>
             </div>
 
             {/* Disclaimer */}

@@ -45,8 +45,7 @@ const Analytics: React.FC = () => {
       <div className="space-y-8">
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-subtle">
             <div>
-               <h1 className="text-3xl font-bold text-primary mb-1">{t('reports:title')}</h1>
-               <p className="text-secondary text-sm">{t('reports:subtitle')}</p>
+               <h1 className="text-3xl font-bold text-primary">{t('reports:title')}</h1>
             </div>
          </div>
 

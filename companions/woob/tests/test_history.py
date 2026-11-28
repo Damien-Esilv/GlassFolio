@@ -3,7 +3,7 @@ the start day honoured, the coming ones kept apart, and a refused history never 
 
 from __future__ import annotations
 
-from woob.capabilities.bank import Transaction
+from woob.capabilities.bank import Account, Transaction
 from woob.exceptions import BrowserUnavailable
 
 from glassfolio_woob.normalize import normalize_transaction, TRANSACTION_TYPES
@@ -82,3 +82,31 @@ def test_a_malformed_start_day_is_refused(make_service):
         assert getattr(error, "code", "") == "invalid_request"
     else:
         raise AssertionError("expected invalid_request")
+
+
+def test_deferred_card_payments_go_to_their_checking_account(make_service):
+    from .conftest import PEA_ACCOUNTS, account
+    card = account("card-1", Account.TYPE_CARD, "Visa différée")
+    card.parent = PEA_ACCOUNTS[1]
+    history = {
+        **HISTORY,
+        "card-1": [operation("2026-03-10", "-42.00", "CARTE 08/03 FNAC", type=Transaction.TYPE_DEFERRED_CARD, rday="2026-03-08"),
+                   operation("2026-03-10", "-9.90", "CARTE 09/03 CINEMA", type=Transaction.TYPE_DEFERRED_CARD, rday="2026-03-09")],
+    }
+    service, _ = make_service(history=history, accounts=[*PEA_ACCOUNTS, card])
+    by_id = {a["id"]: a for a in service.holdings(request(history={"since": "2025-06-01"}))["accounts"]}
+    assert "card-1" not in by_id
+    payments = by_id["cc-1"]["cardTransactions"]
+    assert [(p["date"], p["amount"], p["type"]) for p in payments] == [("2026-03-08", "-42", "deferred_card"), ("2026-03-09", "-9.9", "deferred_card")]
+    assert all(p["id"].startswith("card-card-1-") for p in payments)
+
+
+def test_a_card_that_cannot_be_read_only_warns(make_service):
+    from .conftest import PEA_ACCOUNTS, account
+    card = account("card-1", Account.TYPE_CARD, "Visa différée")
+    card.parent = PEA_ACCOUNTS[1]
+    service, _ = make_service(history={**HISTORY, "card-1": BrowserUnavailable("down")}, accounts=[*PEA_ACCOUNTS, card])
+    by_id = {a["id"]: a for a in service.holdings(request(history={"since": "2025-06-01"}))["accounts"]}
+    assert "cardTransactions" not in by_id["cc-1"]
+    assert by_id["cc-1"]["historyWarnings"] == ["card_history_failed"]
+    assert len(by_id["cc-1"]["transactions"]) == 4

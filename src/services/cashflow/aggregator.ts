@@ -333,7 +333,18 @@ export function buildSankey(
     return { nodes, links };
 }
 
-function distributionOf(ops: readonly CashflowOperation[]): { buckets: AmountBucket[]; weekdays: number[] } {
+/** How many Mondays … Sundays a period has (start inclusive, end exclusive). */
+function weekdayCounts(start: string, end: string): number[] {
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    const last = Date.parse(`${end}T00:00:00Z`);
+    for (let day = Date.parse(`${start}T00:00:00Z`); day < last; day += 86_400_000) {
+        counts[(new Date(day).getUTCDay() + 6) % 7] += 1;
+    }
+    return counts;
+}
+
+/** Spending by amount bucket, and the average spent on each day of the week over the period (Monday first). */
+function distributionOf(ops: readonly CashflowOperation[], start: string, end: string): { buckets: AmountBucket[]; weekdays: number[] } {
     const buckets: AmountBucket[] = DISTRIBUTION_BOUNDS.map((min, index) => ({
         min,
         max: index + 1 < DISTRIBUTION_BOUNDS.length ? DISTRIBUTION_BOUNDS[index + 1] : null,
@@ -353,9 +364,10 @@ function distributionOf(ops: readonly CashflowOperation[]): { buckets: AmountBuc
         const day = new Date(`${op.date.slice(0, 10)}T00:00:00Z`).getUTCDay();
         weekdays[(day + 6) % 7] += value;
     }
+    const dayCounts = weekdayCounts(start, end);
     return {
         buckets: buckets.map(b => ({ ...b, total: round2(b.total) })),
-        weekdays: weekdays.map(round2),
+        weekdays: weekdays.map((total, index) => round2(total / Math.max(1, dayCounts[index]))),
     };
 }
 
@@ -401,7 +413,7 @@ export function summarizeCashflow(operations: readonly CashflowOperation[], opti
     const totals = totalsOf(periodOps);
     const categories = categoriesOf(periodOps, operations, options);
     const investmentIncome = categories.find(c => c.categoryId === 'investment_income')?.amount ?? 0;
-    const { buckets, weekdays } = distributionOf(periodOps);
+    const { buckets, weekdays } = distributionOf(periodOps, options.periodStart, options.periodEnd);
     return {
         periodStart: options.periodStart,
         periodEnd: options.periodEnd,

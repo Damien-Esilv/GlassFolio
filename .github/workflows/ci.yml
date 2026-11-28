@@ -336,7 +336,15 @@ jobs:
             #               its texts load with the section, so the public site does not grow
             # 4928 -> 4960: bank operations through Woob (TGLA-254): the 45-day matching and opening balance run in
             #               the sync engine of the app shell (automatic syncs), plus its settings texts (~20 KB)
-            limit_kb: 4960
+            # 4960 -> 5000: cash flow hub, recurring calendar and count-ups (TGLA-255), ~31 KB, all in lazy cash flow
+            #               chunks (the main bundle grows ~1 KB); the new chunks add 4 KB rounding of their own
+            # 5000 -> 5056: dashboard cash flow and budgets row (TGLA-256), ~14 KB in lazy chunks (widget, planning
+            #               services, texts in the cashflow namespace); the main bundle shrinks ~1 KB
+            # 5056 -> 5088: shared in-place delete confirmation, rule form and "add a category" in the cash flow, the
+            #               trend's period band (TGLA-250, TGLA-251), ~4 KB in lazy cash flow chunks
+            # 5088 -> 5184: merchant logos (Simple Icons, CC0, ~70 brands, ~100 KB) in their own chunk, loaded only
+            #               when a cash flow list shows a merchant; no request leaves the device
+            limit_kb: 5184
             landing: absent
             smoke: false
           - label: cloud-app
@@ -355,7 +363,15 @@ jobs:
             #               its texts load with the section, so the public site does not grow
             # 4928 -> 4960: bank operations through Woob (TGLA-254): the 45-day matching and opening balance run in
             #               the sync engine of the app shell (automatic syncs), plus its settings texts (~20 KB)
-            limit_kb: 4960
+            # 4960 -> 5000: cash flow hub, recurring calendar and count-ups (TGLA-255), ~31 KB, all in lazy cash flow
+            #               chunks (the main bundle grows ~1 KB); the new chunks add 4 KB rounding of their own
+            # 5000 -> 5056: dashboard cash flow and budgets row (TGLA-256), ~14 KB in lazy chunks (widget, planning
+            #               services, texts in the cashflow namespace); the main bundle shrinks ~1 KB
+            # 5056 -> 5088: shared in-place delete confirmation, rule form and "add a category" in the cash flow, the
+            #               trend's period band (TGLA-250, TGLA-251), ~4 KB in lazy cash flow chunks
+            # 5088 -> 5184: merchant logos (Simple Icons, CC0, ~70 brands, ~100 KB) in their own chunk, loaded only
+            #               when a cash flow list shows a merchant; no request leaves the device
+            limit_kb: 5184
             landing: absent
             smoke: false
           - label: showcase
@@ -370,7 +386,9 @@ jobs:
             # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
             # 1760 -> 1792: cash flow (Epic E52, TGLA-247..252): the MCP docs list its 8 tools, the shared stylesheet
             #               carries its 34 colours x 5 themes, the demo seed of the data layer gains a checking account
-            limit_kb: 1792
+            # 1792 -> 1824: demo budgets in the data layer's seed, short AI disclaimer and theme-coloured Button
+            #               (TGLA-256, TGLA-258): a few hundred bytes that push one file over a 4 KB disk block
+            limit_kb: 1824
             landing: present
             smoke: false
           - label: vercel-parity
@@ -385,7 +403,9 @@ jobs:
             # 1728 -> 1760: automatic sync section, sync security block and two FAQ answers, EN and FR (TGLA-246)
             # 1760 -> 1792: cash flow (Epic E52, TGLA-247..252): the MCP docs list its 8 tools, the shared stylesheet
             #               carries its 34 colours x 5 themes, the demo seed of the data layer gains a checking account
-            limit_kb: 1792
+            # 1792 -> 1824: demo budgets in the data layer's seed, short AI disclaimer and theme-coloured Button
+            #               (TGLA-256, TGLA-258): a few hundred bytes that push one file over a 4 KB disk block
+            limit_kb: 1824
             landing: present
             smoke: true
     steps:

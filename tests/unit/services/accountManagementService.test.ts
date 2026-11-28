@@ -77,3 +77,15 @@ describe('accountManagementService', () => {
     expect(db.getAccounts().map(item => item.id)).toEqual(['acc-pea']);
   });
 });
+
+describe('checking and savings accounts (Epic E52)', () => {
+  it('a checking account becomes a savings account and back; an investment account keeps its type', async () => {
+    db.saveAccounts([...db.getAccounts(), { id: 'acc-cc', ownerId: 'u', instituteId: 'inst-bourso', name: 'Courant', type: 'checking', wrapperType: 'OTHER', defaultCurrency: 'EUR', isActive: true } as never]);
+    expect(await accountManagementService.setCashAccountKind('acc-cc', 'savings')).toEqual({ success: true });
+    expect(db.getAccountById('acc-cc')).toMatchObject({ type: 'savings', wrapperType: 'LIVRET' });
+    expect(await accountManagementService.setCashAccountKind('acc-cc', 'checking')).toEqual({ success: true });
+    expect(db.getAccountById('acc-cc')).toMatchObject({ type: 'checking', wrapperType: 'OTHER' });
+    expect(await accountManagementService.setCashAccountKind('acc-pea', 'savings')).toEqual({ success: false, error: 'not_cash_account' });
+    expect(db.getAccountById('acc-pea')).toMatchObject({ type: 'investment', wrapperType: 'PEA' });
+  });
+});

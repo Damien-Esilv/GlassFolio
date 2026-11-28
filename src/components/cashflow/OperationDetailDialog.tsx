@@ -5,15 +5,17 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
+import Button from '../Button';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { cashflowService } from '../../services/cashflow/cashflowService';
 import type { CategoryOption } from '../../services/cashflow/cashflowCategoryService';
 import type { CashflowOperation } from '../../types/cashflow';
 import type { CashflowLabels } from './useCashflowLabels';
 import { CategorySelect } from './ManualOperationDialog';
+import { CASHFLOW_DANGER_BUTTON, CASHFLOW_DIALOG_BACKDROP, CASHFLOW_FIELD, CASHFLOW_PRIMARY_BUTTON, CASHFLOW_TEXTAREA } from './formStyles';
 
-const field = 'w-full px-3 py-2 rounded-xl bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-sm';
+const field = `${CASHFLOW_FIELD} w-full`;
 
 export const OperationDetailDialog: React.FC<{
     operation: CashflowOperation;
@@ -57,8 +59,9 @@ export const OperationDetailDialog: React.FC<{
         onClose();
     };
 
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+
     const remove = async () => {
-        if (!window.confirm(t('cashflow:operations.detail.deleteConfirm'))) return;
         const result = await cashflowService.deleteOperation(operation.id);
         if (result.success === false) {
             setError(result.error);
@@ -70,7 +73,7 @@ export const OperationDetailDialog: React.FC<{
 
     if (typeof document === 'undefined') return null;
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className={CASHFLOW_DIALOG_BACKDROP}>
             <form role="dialog" aria-modal="true" aria-label={t('cashflow:operations.detail.title')} onSubmit={save} className="bg-card border border-subtle rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
                 <div className="flex items-start justify-between gap-3 border-b border-subtle pb-3">
                     <div className="min-w-0">
@@ -123,7 +126,7 @@ export const OperationDetailDialog: React.FC<{
 
                 <label className="block space-y-1 text-xs font-semibold text-secondary">
                     <span>{t('cashflow:operations.detail.note')}</span>
-                    <textarea value={note} maxLength={500} rows={2} onChange={e => setNote(e.target.value)} className={field} />
+                    <textarea value={note} maxLength={500} rows={2} onChange={e => setNote(e.target.value)} className={CASHFLOW_TEXTAREA} />
                 </label>
                 <label className="flex items-start gap-3 text-sm text-primary cursor-pointer">
                     <input type="checkbox" checked={excluded} onChange={e => setExcluded(e.target.checked)} className="mt-0.5 rounded border-subtle bg-subtle text-primary focus:ring-primary focus:border-primary" />
@@ -135,14 +138,29 @@ export const OperationDetailDialog: React.FC<{
 
                 {error && <p className="text-sm text-negative" role="alert">{t(`cashflow:manual.errors.${error}`)}</p>}
 
-                <div className="flex items-center justify-between gap-2 pt-2">
-                    <button type="button" onClick={() => void remove()} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-negative hover:bg-negative-subtle">
-                        <Trash2 size={16} /> {t('cashflow:operations.detail.delete')}
-                    </button>
-                    <button type="submit" className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90">
-                        {t('cashflow:operations.detail.save')}
-                    </button>
-                </div>
+                {confirmingDelete ? (
+                    // Confirmed in place, as everywhere in the app (never the browser's own dialog)
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                        <p className="flex items-start gap-1.5 text-xs text-negative flex-1 min-w-[12rem]" role="alert">
+                            <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+                            {t('cashflow:operations.detail.deleteConfirm')}
+                        </p>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>{t('common:buttons.cancel')}</Button>
+                        <Button size="sm" variant="danger" onClick={() => void remove()}>
+                            <Trash2 size={14} className="mr-1.5" aria-hidden="true" />
+                            {t('cashflow:operations.detail.delete')}
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between gap-2 pt-2">
+                        <button type="button" onClick={() => setConfirmingDelete(true)} className={CASHFLOW_DANGER_BUTTON}>
+                            <Trash2 size={16} /> {t('cashflow:operations.detail.delete')}
+                        </button>
+                        <button type="submit" className={CASHFLOW_PRIMARY_BUTTON}>
+                            {t('cashflow:operations.detail.save')}
+                        </button>
+                    </div>
+                )}
             </form>
         </div>,
         document.body,

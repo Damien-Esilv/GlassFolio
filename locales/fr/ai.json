@@ -66,7 +66,7 @@
     "recordBuyPrompt": "Aide-moi à enregistrer un ordre d'achat de 10 actions Apple à 175$."
   },
   "chat": {
-    "inputPlaceholder": "Posez une question financière ou demandez une action...",
+    "inputPlaceholder": "Posez une question ou demandez une action…",
     "send": "Envoyer",
     "thinking": "Analyse financière en cours...",
     "generatingResponse": "Rédaction de la réponse...",
@@ -78,7 +78,8 @@
     "disclaimer": "L'analyse financière fournie par l'IA est indicative. Vérifiez toujours avant toute décision réelle d'investissement.",
     "errorMessage": "Une erreur est survenue lors du traitement. Veuillez vérifier la configuration de l'assistant.",
     "toolExecuted": "Outil exécuté : {{toolName}}",
-    "toolExecuting": "Interrogation des données du portefeuille ({{toolName}})..."
+    "toolExecuting": "Interrogation des données du portefeuille ({{toolName}})...",
+    "disclaimerShort": "À titre indicatif"
   },
   "actionCard": {
     "title": "Validation Requise (Human-in-the-loop)",
@@ -97,7 +98,11 @@
       "set_transaction_category": "Catégoriser des opérations",
       "create_cashflow_category": "Créer une catégorie de cash flow",
       "create_categorization_rule": "Créer une règle de catégorisation",
-      "record_cash_operation": "Ajouter une opération bancaire"
+      "record_cash_operation": "Ajouter une opération bancaire",
+      "set_recurring_status": "Confirmer ou écarter un paiement récurrent",
+      "set_cash_account_kind": "Passer un compte en compte courant ou en livret",
+      "set_budget": "Fixer un budget mensuel",
+      "update_cashflow_operation": "Modifier la note ou le libellé d’une opération"
     },
     "importPreview": {
       "account": "Compte cible",

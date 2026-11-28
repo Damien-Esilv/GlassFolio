@@ -7,6 +7,7 @@ describe('account kinds', () => {
         expect(accountKindToFields('PEA')).toEqual({ type: 'investment', wrapperType: 'PEA' });
         expect(accountKindToFields('CRYPTO')).toEqual({ type: 'crypto_spot', wrapperType: 'OTHER' });
         expect(accountKindToFields('CASH')).toEqual({ type: 'checking', wrapperType: 'OTHER' });
+        expect(accountKindToFields('SAVINGS')).toEqual({ type: 'savings', wrapperType: 'LIVRET' });
         expect(accountKindToFields('OTHER')).toEqual({ type: 'other', wrapperType: 'OTHER' });
     });
 
@@ -24,7 +25,9 @@ describe('account kinds', () => {
     });
 
     it('places the other account types of demo and older data under the closest kind', () => {
-        expect(fieldsToAccountKind('savings', 'LIVRET')).toBe('CASH');
+        expect(fieldsToAccountKind('savings', 'LIVRET')).toBe('SAVINGS');
+        expect(fieldsToAccountKind('savings', 'OTHER')).toBe('SAVINGS');
+        expect(fieldsToAccountKind('checking', 'OTHER')).toBe('CASH');
         expect(fieldsToAccountKind('crypto_earn', 'OTHER')).toBe('CRYPTO');
         expect(fieldsToAccountKind('crypto_futures', undefined)).toBe('CRYPTO');
         expect(fieldsToAccountKind('investment', 'PEA_PME')).toBe('PEA');

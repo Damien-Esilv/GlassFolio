@@ -4,8 +4,6 @@
  * unknown costs, duplicates and oversells must all behave on any broker layout.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 
 vi.mock('../../../../src/services/db', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../../src/services/db')>();
@@ -20,6 +18,7 @@ import type { FieldMappings, ParseResult } from '../../../../src/services/import
 import { matchHistoryColumns } from '../../../../src/services/import/columnMatcher';
 import { parseSnapshotFile } from '../../../../src/services/import/snapshotService';
 import { computeRowHash } from '../../../../src/services/core/transactionManager';
+import { readTestData } from '../../../fixtures/testData';
 
 const ACCOUNT = 'acc-1';
 
@@ -31,7 +30,7 @@ const seed = async (): Promise<void> => {
   db.saveAccounts([{ id: ACCOUNT, ownerId: 'u', instituteId: 'inst-1', name: 'CTO', type: 'investment', defaultCurrency: 'EUR', isActive: true } as never]);
 };
 
-const sample = (name: string): string => fs.readFileSync(path.join(process.cwd(), 'test-data', name), 'utf8');
+const sample = (name: string): string => readTestData(name);
 
 /** Same mapping choice as the wizard: a known preset first, then the generic matcher. */
 const mappingsFor = (csv: string): FieldMappings => {

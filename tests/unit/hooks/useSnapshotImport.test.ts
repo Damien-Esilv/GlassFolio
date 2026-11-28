@@ -3,8 +3,6 @@
  */
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 
 vi.mock('../../../src/services/db', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../src/services/db')>();
@@ -18,8 +16,9 @@ import { useSnapshotImport } from '../../../src/hooks/useSnapshotImport';
 import { parseCSVText } from '../../../src/services/import/importManager';
 import { clearSnapshotInstruments } from '../../../src/services/import/snapshotService';
 import { InstrumentValidationError } from '../../../src/services/instrumentService';
+import { readTestData } from '../../fixtures/testData';
 
-const CSV = fs.readFileSync(path.join(process.cwd(), 'test-data', 'bitget_snapshot.csv'), 'utf8');
+const CSV = readTestData('bitget_snapshot.csv');
 const { headers, rows } = parseCSVText(CSV);
 
 describe('useSnapshotImport asset review', () => {
