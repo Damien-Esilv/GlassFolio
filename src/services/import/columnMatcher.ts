@@ -114,7 +114,14 @@ export const HISTORY_COLUMN_SPECS: ColumnSpec<HistoryField>[] = [
     { field: 'type', synonyms: ['type', 'transaction type', 'type operation', 'operation', 'side', 'sens', 'action', 'nature', 'typ', 'transaktionstyp', 'tipo', 'operazione'], exclude: ['actif', 'asset', 'instrument', 'account', 'compte'] },
     { field: 'quantity', synonyms: ['quantite', 'quantity', 'qty', 'qte', 'shares', 'parts', 'nombre de parts', 'nombre', 'units', 'filled', 'executed', 'volume', 'vol', 'stuck', 'anzahl', 'cantidad', 'quantita'], exclude: ['price', 'prix'] },
     { field: 'priceUnit', synonyms: ['prix unitaire', 'price per unit', 'unit price', 'cours', 'prix', 'price', 'rate', 'kurs', 'precio', 'prezzo'], exclude: ['total', 'avg', 'average', 'moyen', 'revient'] },
-    { field: 'amountPrimary', synonyms: ['montant', 'amount', 'montant net', 'net amount', 'subtotal', 'total', 'change', 'value', 'proceeds', 'cost', 'betrag', 'gesamtbetrag', 'importe', 'importo'], exclude: ['fee', 'frais', 'balance', 'solde', 'unit', 'price', 'prix', 'tax'] },
+    { field: 'amountPrimary', synonyms: ['montant', 'amount', 'montant net', 'net amount', 'subtotal', 'total', 'change', 'value', 'proceeds', 'cost', 'betrag', 'gesamtbetrag', 'importe', 'importo'], exclude: ['fee', 'frais', 'balance', 'solde', 'unit', 'price', 'prix', 'tax', 'debit', 'credit', 'sortie', 'entree'] },
+    // Bank statements with two amount columns (Epic E52)
+    { field: 'debitAmount', synonyms: ['debit', 'debits', 'montant debit', 'debit amount', 'sortie', 'sorties', 'paid out', 'money out', 'withdrawals', 'withdrawal', 'soll', 'ausgang'], exclude: ['date', 'carte', 'card'] },
+    { field: 'creditAmount', synonyms: ['credit', 'credits', 'montant credit', 'credit amount', 'entree', 'entrees', 'paid in', 'money in', 'deposits', 'deposit', 'haben', 'eingang'], exclude: ['date', 'carte', 'card'] },
+    { field: 'categoryParent', synonyms: ['categorie parent', 'category parent', 'categoryparent', 'parent category', 'categorie principale', 'main category'] },
+    { field: 'category', synonyms: ['categorie', 'category', 'categorie operation', 'sous categorie', 'subcategory', 'rubrique', 'kategorie', 'categoria'], exclude: ['parent', 'principale', 'main', 'asset', 'class'] },
+    { field: 'counterparty', synonyms: ['supplierfound', 'supplier', 'fournisseur', 'beneficiaire', 'beneficiary', 'payee', 'counterparty', 'merchant', 'marchand', 'tiers', 'empfanger'] },
+    { field: 'bankTxType', synonyms: ['ofx type', 'trntype', 'code operation', 'operation code'] },
     { field: 'feeAmount', synonyms: ['frais', 'fee', 'fees', 'commission', 'commissions', 'courtage', 'gebuhr', 'gebuhren', 'spesen', 'comision', 'commissione'], exclude: ['ccy', 'currency', 'devise', 'asset', 'coin'] },
     { field: 'feeAsset', synonyms: ['fee ccy', 'fee currency', 'fee asset', 'fee coin', 'devise frais'] },
     { field: 'taxAmount', synonyms: ['tax', 'taxe', 'taxes', 'impot', 'withholding', 'prelevement', 'steuer', 'impuesto', 'imposta'] },
@@ -202,7 +209,7 @@ function readContent(values: string[]): ColumnContent {
 }
 
 const NUMERIC_FIELDS: ReadonlySet<string> = new Set([
-    'quantity', 'priceUnit', 'amountPrimary', 'feeAmount', 'taxAmount', 'balanceAfter', 'avgPrice'
+    'quantity', 'priceUnit', 'amountPrimary', 'feeAmount', 'taxAmount', 'balanceAfter', 'avgPrice', 'debitAmount', 'creditAmount'
 ]);
 
 /** What the cells say about a field: a bonus when they look right, a penalty when they cannot be right. */

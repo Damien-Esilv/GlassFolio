@@ -35,7 +35,8 @@ describe('productFacts', () => {
   });
 
   it('every broker CSV preset belongs to an advertised broker, and every broker has a preset', () => {
-    const presetKeys = Object.keys(PRESET_PATTERNS).filter((key) => key !== 'GlassFolio');
+    // GlassFolio's own export and OFX bank statements are file formats, not brokers
+    const presetKeys = Object.keys(PRESET_PATTERNS).filter((key) => key !== 'GlassFolio' && key !== 'OFX');
     const brokerOf = (key: string): SupportedBroker | undefined =>
       SUPPORTED_BROKERS.find((broker) => key.toLowerCase().replace(/[^a-z]/g, '').startsWith(broker.presetPrefix));
     for (const key of presetKeys) {

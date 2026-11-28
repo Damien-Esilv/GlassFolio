@@ -9,8 +9,8 @@
  * 5. Completion
  */
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button';
 import { ImportAssetsTable } from '../components/import/ImportAssetsTable';
 import { ACCOUNT_KINDS, AccountKind, accountKindToFields, fieldsToAccountKind } from '../constants/accountKinds';
@@ -59,6 +59,17 @@ const ImportWizard: React.FC = () => {
   const { user } = useAuth();
   const wizard = useImportWizard(user?.id || 'default-user');
   const { t } = useTranslation('transactions');
+  // "Import a statement" from the cash flow: bank operations, never balance statements (Epic E52)
+  const [params] = useSearchParams();
+  const bankImport = params.get('kind') === 'bank';
+  const [cashOperations, setCashOperations] = useState(bankImport);
+  const cashBalanceWizard = wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 && !cashOperations;
+  const cashAccountSelected = wizard.selectedAccount?.type === 'checking' || wizard.selectedAccount?.type === 'savings';
+  // Bank operations are a history import, never a snapshot of holdings
+  const { importMode, setImportMode } = wizard;
+  useEffect(() => {
+    if (cashOperations && cashAccountSelected && importMode !== 'history') setImportMode('history');
+  }, [cashOperations, cashAccountSelected, importMode, setImportMode]);
 
   // For snapshot mode, show dedicated SnapshotWizard from step 3 onwards
   const showSnapshotWizard = wizard.importMode === 'snapshot' &&
@@ -85,6 +96,12 @@ const ImportWizard: React.FC = () => {
         {!showSnapshotWizard && <StepIndicator currentStep={wizard.step} />}
       </div>
 
+      {bankImport && wizard.step <= 2 && (
+        <div className="mb-6 p-4 rounded-xl bg-subtle border border-subtle text-sm text-secondary" role="note">
+          {t('importWizard.bankImportHint')}
+        </div>
+      )}
+
       {/* Error Banner */}
       {wizard.error && !showSnapshotWizard && (
         <div className="bg-error/10 border border-error/20 rounded-xl p-4 mb-6 flex items-center gap-3">
@@ -108,16 +125,17 @@ const ImportWizard: React.FC = () => {
 
       {/* Step Content */}
       {/* Keyed by step and flow: every step change plays the entrance, like the rest of the app */}
-      <div key={wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 ? 'cash' : showSnapshotWizard ? 'snapshot' : `step-${wizard.step}`}
+      <div key={cashBalanceWizard ? 'cash' : showSnapshotWizard ? 'snapshot' : `step-${wizard.step}`}
         className="min-h-[450px] animate-fade-in-up">
         {/* Route to Cash Import Wizard if Cash Account is selected */}
-        {wizard.selectedAccount?.type === 'checking' && wizard.step >= 2 ? (
+        {cashBalanceWizard ? (
           <CashImportWizard
             accountId={wizard.selectedAccountId!}
             accountName={wizard.selectedAccount.name}
             defaultCurrency={wizard.selectedAccount.defaultCurrency}
             onBack={wizard.goBack}
             onComplete={wizard.reset}
+            onChooseOperations={() => setCashOperations(true)}
           />
         ) : showSnapshotWizard ? (
           <SnapshotWizard
@@ -578,7 +596,7 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
+    if (file && /\.(csv|txt|ofx|qfx)$/i.test(file.name)) {
       wizard.handleFileUpload(file);
     }
   };
@@ -618,7 +636,7 @@ const Step2FileUpload: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> 
         <p className="text-secondary text-sm">{t('importWizard.upload.dropSubtitle')}</p>
         <input
           type="file"
-          accept=".csv,.txt"
+          accept=".csv,.txt,.ofx,.qfx"
           className="hidden"
           onChange={handleFileChange}
         />
@@ -677,6 +695,7 @@ const Step3Mapping: React.FC<{ wizard: ReturnType<typeof useImportWizard> }> = (
         pendingCount={wizard.pendingSuggestionCount}
         onChange={wizard.setColumnField}
         onAcceptAll={wizard.acceptAllProposals}
+        cashAccount={wizard.selectedAccount?.type === 'checking' || wizard.selectedAccount?.type === 'savings'}
       />
 
       <MappedPreview rows={wizard.mappedPreview} ready={wizard.isValidMappingForAnalysis} />

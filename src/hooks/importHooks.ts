@@ -130,6 +130,13 @@ export const MAPPABLE_FIELDS = [
     { key: 'valueDate', labelKey: 'importWizard.fields.valueDate', required: false },
     { key: 'balanceAfter', labelKey: 'importWizard.fields.balanceAfter', required: false },
     { key: 'externalId', labelKey: 'importWizard.fields.externalId', required: false },
+    // Bank statements (Epic E52)
+    { key: 'debitAmount', labelKey: 'importWizard.fields.debitAmount', required: false },
+    { key: 'creditAmount', labelKey: 'importWizard.fields.creditAmount', required: false },
+    { key: 'category', labelKey: 'importWizard.fields.category', required: false },
+    { key: 'categoryParent', labelKey: 'importWizard.fields.categoryParent', required: false },
+    { key: 'counterparty', labelKey: 'importWizard.fields.counterparty', required: false },
+    { key: 'bankTxType', labelKey: 'importWizard.fields.bankTxType', required: false },
 ] as const;
 
 export type MappableField = (typeof MAPPABLE_FIELDS)[number]['key'];
@@ -869,7 +876,8 @@ export const useImportWizard = (userId: string = 'default-user') => {
             mode: state.importMode,
             dateFormat: state.dateFormat === 'auto' ? undefined : state.dateFormat,
             delimiter: state.delimiter,
-            accountCurrency: selectedAccount?.defaultCurrency
+            accountCurrency: selectedAccount?.defaultCurrency,
+            accountType: selectedAccount?.type
         });
         return state.sampleRows.slice(0, MAPPED_PREVIEW_ROWS).map(row => {
             const { parsed } = normalizeRow(row, context);
@@ -883,12 +891,13 @@ export const useImportWizard = (userId: string = 'default-user') => {
 
     const isValidMappingForAnalysis = useMemo(() => {
         const m = state.mappings;
-        // A bank statement line is identified by its currency
-        const hasIdentifier = !!(m.assetSymbol || m.assetIsin || m.currency);
-        // Amount can be derived from quantity × unit price when the file has no amount column
-        const hasAmount = !!(m.amountPrimary || (m.quantity && m.priceUnit));
+        // A bank statement line is identified by its currency, or by the currency of a checking / savings account
+        const cashAccount = selectedAccount?.type === 'checking' || selectedAccount?.type === 'savings';
+        const hasIdentifier = !!(m.assetSymbol || m.assetIsin || m.currency) || cashAccount;
+        // Amount can be derived from quantity × unit price, or from Debit / Credit columns
+        const hasAmount = !!(m.amountPrimary || (m.quantity && m.priceUnit) || m.debitAmount || m.creditAmount);
         return !!(m.transactionDate && hasAmount && hasIdentifier);
-    }, [state.mappings]);
+    }, [state.mappings, selectedAccount]);
 
     const canProceedFromStep1 = useMemo(() =>
         !!state.selectedInstituteId && !!state.selectedAccountId,

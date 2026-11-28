@@ -207,7 +207,8 @@
                     "identifier": "Actif : symbole, code ISIN ou devise",
                     "found": "Trouvé dans « {{column}} »",
                     "foundDerived": "Calculé à partir de la quantité et du prix unitaire",
-                    "missing": "Pas encore associé"
+                    "missing": "Pas encore associé",
+                    "accountCurrency": "devise du compte"
                 },
                 "pagination": {
                     "range": "Colonnes {{from}}–{{to}} sur {{total}}",
@@ -232,7 +233,13 @@
             "balanceAfter": "Solde après",
             "externalId": "ID externe (pour dédoublonnage)",
             "assetName": "Nom de l'actif",
-            "currency": "Devise"
+            "currency": "Devise",
+            "debitAmount": "Débit (sortie)",
+            "creditAmount": "Crédit (entrée)",
+            "category": "Catégorie de la banque",
+            "categoryParent": "Catégorie parente de la banque",
+            "counterparty": "Marchand / tiers",
+            "bankTxType": "Type d'opération bancaire"
         },
         "staging": {
             "stats": {
@@ -344,7 +351,8 @@
             "apply": "Appliquer",
             "cancel": "Annuler",
             "existingNote": "Cet actif est déjà dans votre portefeuille : les modifications s’appliquent immédiatement, pas seulement à cet import."
-        }
+        },
+        "bankImportHint": "Relevé bancaire : choisissez (ou créez) votre compte courant ou livret, puis déposez le fichier CSV ou OFX de votre banque. Les colonnes Débit / Crédit et les catégories de la banque sont lues."
     },
     "cashWizard": {
         "title": "Mise à jour du solde Cash / Liquidités",
@@ -354,7 +362,9 @@
             "manualTitle": "Saisie manuelle",
             "manualDescription": "Saisir rapidement le solde actuel et la date du relevé",
             "csvTitle": "Import CSV",
-            "csvDescription": "Déposer un fichier CSV contenant l'historique des soldes pour tracer l'évolution dans le temps"
+            "csvDescription": "Déposer un fichier CSV contenant l'historique des soldes pour tracer l'évolution dans le temps",
+            "operationsTitle": "Opérations (relevé de compte)",
+            "operationsDescription": "Chaque ligne de votre relevé, entrées et sorties, pour le cash flow (CSV ou OFX)."
         },
         "manualForm": {
             "title": "Saisie manuelle du solde",

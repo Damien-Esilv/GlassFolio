@@ -324,6 +324,8 @@ export interface ExtractedTransactionRow {
   tax?: string | number;
   currency?: string;
   label?: string;
+  /** Category printed on the statement (kept as a bank hint for the cash flow) */
+  category?: string;
 }
 
 export interface TransactionImportInput {
@@ -377,6 +379,7 @@ const CANONICAL_ROW_HEADERS = [
   'tax',
   'currency',
   'label',
+  'category',
 ] as const;
 
 const CANONICAL_ROW_MAPPINGS: FieldMappings = {
@@ -393,6 +396,7 @@ const CANONICAL_ROW_MAPPINGS: FieldMappings = {
   taxAmount: 'tax',
   currency: 'currency',
   rawLabel: 'label',
+  category: 'category',
 };
 
 const escapeCsvField = (value: unknown): string => {
@@ -652,6 +656,7 @@ const EXTRACTED_ROW_SCHEMA = {
     tax: { type: 'string', description: 'Optional withholding tax amount' },
     currency: { type: 'string', description: 'Optional ISO 4217 currency code (EUR, USD, ...)' },
     label: { type: 'string', description: 'Optional raw description label' },
+    category: { type: 'string', description: 'Optional category printed on a bank statement (e.g. Alimentation), used by the cash flow' },
   },
   required: ['date', 'type', 'amount'],
 };

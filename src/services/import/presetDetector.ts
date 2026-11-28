@@ -31,6 +31,8 @@ export const PRESET_PATTERNS: Record<string, string[]> = {
     'Revolut': ['Date', 'Ticker', 'Type', 'Quantity', 'Price per share', 'Total Amount', 'Currency', 'FX Rate'],
     // Revolut crypto account statement: amounts carry their currency ("9,94 CHF"), no currency column
     'Revolut-Crypto': ['Symbol', 'Type', 'Quantity', 'Price', 'Value', 'Fees', 'Date'],
+    // OFX / QFX statement, converted to CSV by ofxParser (Epic E52)
+    'OFX': ['Date', 'Label', 'Amount', 'Reference', 'OFX type'],
     // GlassFolio's own transactions CSV export (kept last so broker formats win).
     'GlassFolio': ['instrument', 'symbol', 'amount', 'price', 'total', 'fees', 'status', 'currency', 'source']
 };
@@ -41,6 +43,7 @@ export const PRESET_PATTERNS: Record<string, string[]> = {
  * Fees/Date — claim any hand-made CSV with similar columns.
  */
 const PRESET_REQUIRED_HEADERS: Record<string, string[]> = {
+    'OFX': ['ofx type'],
     'Bitget-Spot': ['trading pair', 'direction'],
     'Bitpanda': ['in/out', 'amount fiat', 'amount asset'],
     'Revolut': ['ticker', 'price per share', 'total amount'],
@@ -103,7 +106,18 @@ const PRESET_OVERRIDES: Record<string, Partial<Record<keyof FieldMappings, strin
         label: ['comment'],
         amountPrimary: ['amount'],
         balanceAfter: ['accountBalance', 'accountbalance'],
-        assetSymbol: ['devise', 'currency']
+        assetSymbol: ['devise', 'currency'],
+        // The bank's own category and merchant feed the cash flow (Epic E52)
+        category: ['category'],
+        categoryParent: ['categoryParent', 'categoryparent'],
+        counterparty: ['supplierFound', 'supplierfound']
+    },
+    'OFX': {
+        transactionDate: ['Date'],
+        rawLabel: ['Label'],
+        amountPrimary: ['Amount'],
+        externalId: ['Reference'],
+        bankTxType: ['OFX type']
     },
     'BoursoBank-Alt': {
         transactionDate: ['Date opération'],
