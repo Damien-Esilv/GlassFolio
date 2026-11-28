@@ -4,7 +4,8 @@
  *
  * An account fed by an automatic sync (bank, broker keys, watch-only wallet) is deleted from its connection in
  * Settings → Connections, which removes what the sync imported: deleting it here would leave a connection that
- * recreates it, or a mapping that points nowhere.
+ * recreates it, or a mapping that points nowhere. Unless the sync of that one account is stopped first, in the same
+ * gesture (`stopSync`, TGLA-254): the other accounts of the connection keep syncing.
  */
 import { db, delay } from './db';
 import { accountService, instituteService } from './instituteService';
@@ -111,10 +112,17 @@ export const accountManagementService = {
         return { success: true };
     },
 
-    /** Deletes an account and every operation recorded in it, then recalculates the positions. */
-    async deleteAccount(id: string): Promise<ManagementResult> {
+    /**
+     * Deletes an account and every operation recorded in it, then recalculates the positions. An account a sync
+     * feeds is refused, unless `stopSync`: its connection stops syncing it first, nothing else of the connection.
+     */
+    async deleteAccount(id: string, options: { stopSync?: boolean } = {}): Promise<ManagementResult> {
         if (!(await accountService.getAccountById(id))) return { success: false, error: 'not_found' };
-        if ((await syncedAccounts()).has(id)) return { success: false, error: 'synced' };
+        if ((await syncedAccounts()).has(id)) {
+            if (!options.stopSync) return { success: false, error: 'synced' };
+            await connectionService.detachAccount(id);
+        }
+        db.saveCashflowUpcoming(db.getCashflowUpcoming().filter(item => item.accountId !== id));
         const operations = await dropAccountRows(id);
         await accountService.deleteAccount(id);
         await portfolioService.recalculatePositions();

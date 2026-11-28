@@ -6,10 +6,12 @@ the app does its own rounding. Nothing here talks to a bank; every function is p
 
 from __future__ import annotations
 
+import hashlib
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from woob.capabilities.bank import Account
+from woob.capabilities.bank import Account, Transaction
 from woob.capabilities.base import empty
 from woob.tools.capabilities.bank.investments import is_isin_valid
 
@@ -186,3 +188,51 @@ def normalize_holdings(account: Any, investments: list[Any] | None) -> dict[str,
             warnings.append("negative_balance")
 
     return {**listed, "holdings": holdings, "warnings": warnings}
+
+
+#: Woob operation type → a stable lower-case name ("card", "transfer", "withdrawal", "loan_payment"…), read from
+#: the TYPE_* constants so a new Woob type is named without a release.
+TRANSACTION_TYPES: dict[Any, str] = {
+    getattr(Transaction, name): name[len("TYPE_"):].lower() for name in dir(Transaction) if name.startswith("TYPE_")
+}
+
+
+def day_of(value: Any) -> str | None:
+    """A Woob date or datetime as YYYY-MM-DD, or None."""
+    if empty(value):
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return None
+
+
+def normalize_transaction(transaction: Any, seen: dict[str, int]) -> dict[str, Any] | None:
+    """One bank operation (TGLA-254). `seen` counts identical operations of the same read, so two coffees at the
+    same price on the same day keep two distinct ids. Woob ids are often empty: the id then comes from the
+    operation date, the amount and the raw label, stable from one read to the next."""
+    booked = day_of(transaction.date)
+    operated = day_of(transaction.rdate)
+    amount = dec(transaction.amount)
+    if not (operated or booked) or amount is None:
+        return None
+    raw = text(transaction.raw) or text(transaction.label) or ""
+    label = text(transaction.label) or raw
+    native = text(getattr(transaction, "id", None))
+    base = native or "h" + hashlib.sha256(f"{operated or booked}|{amount}|{raw}".encode()).hexdigest()[:20]
+    count = seen.get(base, 0)
+    seen[base] = count + 1
+    kind = transaction.type if not empty(transaction.type) else None
+    return {
+        "id": base if count == 0 else f"{base}-{count}",
+        # The day the operation was made (card payment day), else the booking day: matches a CSV "date opération"
+        "date": operated or booked,
+        "bookingDate": booked,
+        "valueDate": day_of(transaction.vdate),
+        "amount": amount,
+        "label": label,
+        "raw": raw,
+        "type": TRANSACTION_TYPES.get(kind, "unknown"),
+        "category": text(transaction.category),
+    }

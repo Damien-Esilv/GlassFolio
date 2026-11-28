@@ -358,7 +358,9 @@
             "limits": {
                 "balancesOnly": "Woob reads the balances of this bank, not the detail of its investments.",
                 "strongAuth": "Woob cannot complete this bank's strong authentication: the connection will probably be refused.",
-                "validationEachLogin": "This bank will ask for a validation (code) at each connection, automatic syncs included."
+                "validationEachLogin": "This bank will ask for a validation (code) at each connection, automatic syncs included.",
+                "history": "Reads the operations of your checking and savings accounts, for the cash flow.",
+                "noHistory": "Does not read the operations: for the cash flow, import a statement of your checking account."
             },
             "modules": {
                 "title": "Bank modules: where they come from and how they update",
@@ -381,7 +383,21 @@
                 "backToVerified": "Back to the verified modules",
                 "working": "Downloading and checking the bank modules… (up to a minute)",
                 "failed": "The bank modules could not be changed ({{detail}}). The modules in use did not change."
-            }
+            },
+            "cashHistory": {
+                "label": "Read the operations of my checking and savings accounts (cash flow)",
+                "help": "The first sync reads up to 12 months, as far back as the bank's website goes. The next ones read the last 45 days again, which the bank may still change. What was read stays in GlassFolio, editable, even once the bank no longer shows it."
+            },
+            "deleteWarning": "Removing this bank stops its sync. Keep what it recorded (its accounts, operations and balances, as if imported), or delete it all?",
+            "keepHistory": "Remove, keep the history",
+            "deleteAll": "Remove everything"
+        },
+        "operationsResult": "Bank operations: {{updated}} updated, {{removed}} cancelled by the bank, {{upcoming}} coming.",
+        "historyWarnings": {
+            "history_unavailable": "The bank's module does not read operations: the balance is synced, import a statement for the cash flow.",
+            "history_failed": "The bank did not give the operations this time; the balance is synced. If it lasts, use Reconnect.",
+            "history_truncated": "Only the most recent operations were read (5,000 per account).",
+            "coming_failed": "The coming operations could not be read this time."
         }
     },
     "accounts": {
@@ -412,6 +428,9 @@
             "synced": "A sync feeds this account: remove it in Connections.",
             "empty_name": "Enter a name."
         },
-        "importLink": "Manage institutions and accounts"
+        "importLink": "Manage institutions and accounts",
+        "deleteSyncedAccount": "Stop syncing and delete {{name}}",
+        "deleteSyncedAccountWarning_one": "Stops syncing this account from {{source}} (its other accounts keep syncing), then deletes it and its {{count}} operation. This cannot be undone.",
+        "deleteSyncedAccountWarning_other": "Stops syncing this account from {{source}} (its other accounts keep syncing), then deletes it and its {{count}} operations. This cannot be undone."
     }
 }

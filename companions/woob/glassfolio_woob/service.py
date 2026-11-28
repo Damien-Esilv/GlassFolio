@@ -29,13 +29,19 @@ from typing import Any, Callable
 from . import __version__
 from .catalog import candidate_bank_modules, describe_banks
 from .updates import ModuleSource, UpdateError
-from .normalize import normalize_account, normalize_holdings
+from .normalize import normalize_account, normalize_holdings, normalize_transaction
 
 
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 CHALLENGE_TTL_S = 10 * 60
 POSITIONS_TTL_S = 15 * 60
 DAILY_SESSIONS = 10
+#: Operations read per account and per sync, at most (a year of a busy account is a few thousand)
+HISTORY_MAX_OPERATIONS = 5000
+COMING_MAX_OPERATIONS = 300
+#: Banks usually list newest first; after this many operations older than the start day in a row, stop reading
+HISTORY_OLDER_STOP = 40
+ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MAX_FIELD_LENGTH = 256
 
 
@@ -65,6 +71,8 @@ class KeyState:
     day: str = ""
     sessions: int = 0
     positions: tuple[float, list[dict[str, Any]]] | None = None
+    #: First day of the operations kept with `positions` (None: positions read without history)
+    history_since: str | None = None
 
 
 #: Images a bank may show for its code (Crédit Mutuel and CIC's Digipass): small, and of a type a browser draws safely
@@ -486,12 +494,19 @@ class WoobService:
         wanted_ids = set(wanted) if isinstance(wanted, list) and wanted else None
         only_list = isinstance(wanted, list) and len(wanted) == 0
 
+        history = params.get("history")
+        since = history.get("since") if isinstance(history, dict) else None
+        if since is not None and not (isinstance(since, str) and ISO_DAY.match(since)):
+            raise WorkerError("invalid_request", "history.since")
+
         state = self._state(key)
         if not state.lock.acquire(blocking=False):
             raise WorkerError("busy")
         try:
             now = self._clock()
-            if state.positions and now - state.positions[0] < POSITIONS_TTL_S:
+            # A cached read serves a history request only when it already covers the days asked for
+            covers = since is None or (state.history_since is not None and state.history_since <= since)
+            if state.positions and now - state.positions[0] < POSITIONS_TTL_S and covers:
                 return {"accounts": self._select(state.positions[1], wanted_ids), "cached": True}
 
             self._count_session(state)
@@ -509,7 +524,10 @@ class WoobService:
                     reads_positions = not only_list and (wanted_ids is None or listed["id"] in wanted_ids)
                     if reads_positions and listed["kind"] == "investment" and isinstance(backend, CapBankWealth):
                         investments = list(backend.iter_investment(account))
-                    synced.append(normalize_holdings(account, investments if reads_positions else []))
+                    entry = normalize_holdings(account, investments if reads_positions else [])
+                    if since is not None and reads_positions and listed["kind"] == "cash":
+                        entry.update(self._operations(backend, account, since))
+                    synced.append(entry)
                 self._close(key, backend, save=True)
             except Exception as error:  # noqa: BLE001
                 if backend is not None:
@@ -518,9 +536,62 @@ class WoobService:
 
             if not only_list and wanted_ids is None:
                 state.positions = (now, synced)
+                state.history_since = since
             return {"accounts": self._select(synced, wanted_ids), "cached": False}
         finally:
             state.lock.release()
+
+    @staticmethod
+    def _operations(backend: Any, account: Any, since: str) -> dict[str, Any]:
+        """Operations since `since` and the coming ones of a checking or savings account (TGLA-254).
+
+        Read in the session of the balances (one bank session per sync). A bank that refuses the history (strong
+        authentication beyond 90 days, a broken page) only adds a warning: the balances still sync."""
+        warnings: list[str] = []
+        seen: dict[str, int] = {}
+        transactions: list[dict[str, Any]] = []
+        history_ok = True
+        try:
+            older = 0
+            for operation in backend.iter_history(account):
+                item = normalize_transaction(operation, seen)
+                if item is None:
+                    continue
+                if item["date"] < since:
+                    older += 1
+                    if older >= HISTORY_OLDER_STOP:
+                        break
+                    continue
+                older = 0
+                transactions.append(item)
+                if len(transactions) >= HISTORY_MAX_OPERATIONS:
+                    warnings.append("history_truncated")
+                    break
+        except NotImplementedError:
+            history_ok = False
+            warnings.append("history_unavailable")
+        except Exception:  # noqa: BLE001 — never let the history break the balances
+            history_ok = False
+            warnings.append("history_failed")
+
+        coming: list[dict[str, Any]] = []
+        try:
+            coming_seen: dict[str, int] = {}
+            for index, operation in enumerate(backend.iter_coming(account)):
+                if index >= COMING_MAX_OPERATIONS:
+                    break
+                item = normalize_transaction(operation, coming_seen)
+                if item is not None:
+                    coming.append(item)
+        except NotImplementedError:
+            pass
+        except Exception:  # noqa: BLE001
+            warnings.append("coming_failed")
+
+        result: dict[str, Any] = {"transactions": transactions if history_ok else None, "coming": coming}
+        if warnings:
+            result["historyWarnings"] = warnings
+        return result
 
     @staticmethod
     def _select(accounts: list[dict[str, Any]], wanted_ids: set[str] | None) -> list[dict[str, Any]]:

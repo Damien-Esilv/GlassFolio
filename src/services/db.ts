@@ -32,6 +32,7 @@ import {
     CategorizationRule,
     CashflowAnnotation,
     CashflowTombstone,
+    CashflowUpcoming,
     CashflowSettings
 } from '../types';
 import {
@@ -77,6 +78,7 @@ const STORAGE_KEYS = {
     CASHFLOW_RULES: 'glassfolio_cashflow_rules',
     CASHFLOW_ANNOTATIONS: 'glassfolio_cashflow_annotations',
     CASHFLOW_TOMBSTONES: 'glassfolio_cashflow_tombstones',
+    CASHFLOW_UPCOMING: 'glassfolio_cashflow_upcoming',
     CASHFLOW_SETTINGS: 'glassfolio_cashflow_settings'
 };
 
@@ -582,6 +584,15 @@ class MockDB {
         appStorage.setItem(STORAGE_KEYS.CASHFLOW_TOMBSTONES, JSON.stringify(data));
     }
 
+    /** Operations the banks announce as coming (TGLA-254), outside the journal. */
+    getCashflowUpcoming(): CashflowUpcoming[] {
+        return this.readList<CashflowUpcoming>(STORAGE_KEYS.CASHFLOW_UPCOMING, () => []);
+    }
+
+    saveCashflowUpcoming(data: CashflowUpcoming[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_UPCOMING, JSON.stringify(data));
+    }
+
     getCashflowSettings(): CashflowSettings {
         const fallback: CashflowSettings = { ...DEFAULT_CASHFLOW_SETTINGS, updatedAt: new Date(0).toISOString() };
         const stored = appStorage.getItem(STORAGE_KEYS.CASHFLOW_SETTINGS);
@@ -718,6 +729,7 @@ class MockDB {
             cashflowRules: pick(() => this.getCashflowRules(), STORAGE_KEYS.CASHFLOW_RULES),
             cashflowAnnotations: pick(() => this.getCashflowAnnotations(), STORAGE_KEYS.CASHFLOW_ANNOTATIONS),
             cashflowTombstones: pick(() => this.getCashflowTombstones(), STORAGE_KEYS.CASHFLOW_TOMBSTONES),
+            cashflowUpcoming: pick(() => this.getCashflowUpcoming(), STORAGE_KEYS.CASHFLOW_UPCOMING),
             cashflowSettings: persistedOnly
                 ? this.readPersistedList(STORAGE_KEYS.CASHFLOW_SETTINGS)
                 : [this.getCashflowSettings()],
@@ -768,6 +780,7 @@ class MockDB {
             STORAGE_KEYS.CASHFLOW_RULES,
             STORAGE_KEYS.CASHFLOW_ANNOTATIONS,
             STORAGE_KEYS.CASHFLOW_TOMBSTONES,
+            STORAGE_KEYS.CASHFLOW_UPCOMING,
         ];
         zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
         this.getBankOperationKeys().forEach(key => appStorage.removeItem(key));

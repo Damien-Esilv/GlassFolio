@@ -10,6 +10,7 @@ vi.mock('../../../../../src/services/cashflow/cashflowService', () => ({
     cashflowService: {
         getSummary: vi.fn(),
         listOperations: vi.fn(),
+        listUpcoming: vi.fn(),
         recordManualOperation: vi.fn(),
     },
 }));
@@ -28,6 +29,7 @@ import {
     listCashflowTransactionsTool,
     listCashflowCategoriesTool,
     listCashflowRulesTool,
+    listUpcomingOperationsTool,
     setTransactionCategoryTool,
     createCashflowCategoryTool,
     createCategorizationRuleTool,
@@ -41,7 +43,7 @@ import { cashflowCategoryService } from '../../../../../src/services/cashflow/ca
 const service = cashflowService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 const categories = cashflowCategoryService as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
-const READS = [getCashflowSummaryTool, listCashflowTransactionsTool, listCashflowCategoriesTool, listCashflowRulesTool];
+const READS = [getCashflowSummaryTool, listCashflowTransactionsTool, listCashflowCategoriesTool, listCashflowRulesTool, listUpcomingOperationsTool];
 const WRITES = [setTransactionCategoryTool, createCashflowCategoryTool, createCategorizationRuleTool, recordCashOperationTool];
 
 describe('cashflowTools (AI & MCP)', () => {
@@ -88,6 +90,17 @@ describe('cashflowTools (AI & MCP)', () => {
         categories.listRules.mockResolvedValue([{ id: 'r', labelContains: 'NETFLIX', categoryId: 'subscriptions', direction: 'out', source: 'user', ownerId: 'u', createdAt: '', updatedAt: '' }]);
         expect(await listCashflowCategoriesTool.execute({})).toHaveLength(1);
         expect(await listCashflowRulesTool.execute({})).toEqual([expect.objectContaining({ id: 'r', labelContains: 'NETFLIX' })]);
+    });
+
+    it('lists the operations the banks announce as coming', async () => {
+        service.listUpcoming.mockResolvedValue([{
+            id: 'cfu', ownerId: 'u', accountId: 'acc', connectionId: 'c', externalId: 'x', date: '2026-11-26T00:00:00.000Z', amount: '-42.00',
+            currency: 'EUR', label: 'SNCF', rawLabel: 'CARTE SNCF', bankHints: { category: 'Transports' }, readAt: '', accountName: 'Courant', instituteName: 'Bourso',
+        }]);
+        expect(await listUpcomingOperationsTool.execute({ accountId: 'acc' })).toEqual([
+            { date: '2026-11-26', label: 'SNCF', amount: -42, currency: 'EUR', account: 'Courant', bank: 'Bourso', bankCategory: 'Transports' },
+        ]);
+        expect(service.listUpcoming).toHaveBeenCalledWith('acc');
     });
 
     it('categorises operations and reports invalid arguments or service errors', async () => {

@@ -334,7 +334,9 @@ jobs:
             # 4672 -> 4928: cash flow section (Epic E52, TGLA-247..252): 5 lazy pages and their Sankey, the
             #               categorisation engine and 8 AI tools loaded with the assistant, 34 colours x 5 themes;
             #               its texts load with the section, so the public site does not grow
-            limit_kb: 4928
+            # 4928 -> 4960: bank operations through Woob (TGLA-254): the 45-day matching and opening balance run in
+            #               the sync engine of the app shell (automatic syncs), plus its settings texts (~20 KB)
+            limit_kb: 4960
             landing: absent
             smoke: false
           - label: cloud-app
@@ -351,7 +353,9 @@ jobs:
             # 4672 -> 4928: cash flow section (Epic E52, TGLA-247..252): 5 lazy pages and their Sankey, the
             #               categorisation engine and 8 AI tools loaded with the assistant, 34 colours x 5 themes;
             #               its texts load with the section, so the public site does not grow
-            limit_kb: 4928
+            # 4928 -> 4960: bank operations through Woob (TGLA-254): the 45-day matching and opening balance run in
+            #               the sync engine of the app shell (automatic syncs), plus its settings texts (~20 KB)
+            limit_kb: 4960
             landing: absent
             smoke: false
           - label: showcase

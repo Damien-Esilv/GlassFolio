@@ -10,8 +10,11 @@ import { ConnectorError } from './types';
 import type { ConnectionErrorCode } from '../../types/connections';
 
 const WOOB_BASE = '/api/woob';
-/** An app validation waits for the user's phone: the server allows the bank 3 minutes. */
-const REQUEST_TIMEOUT_MS = 200_000;
+/**
+ * An app validation waits for the user's phone (the server allows the bank 3 minutes), and a first read of a year
+ * of bank operations goes through many pages of the bank's website (5 minutes): a little more than the server.
+ */
+const REQUEST_TIMEOUT_MS = 320_000;
 
 /** One field of a bank's credential form, described by the bank's Woob module (TGLA-240). */
 export interface WoobBankField {
@@ -31,6 +34,10 @@ export interface WoobBankInfo {
     name: string;
     /** Whether Woob reads its positions (PEA, securities, life insurance) or only balances. */
     positions: boolean;
+    /** Whether its module reads the operations of checking and savings accounts (TGLA-254). Absent: an older worker. */
+    history?: boolean;
+    /** Whether its module reads the coming operations (card payments not booked yet, scheduled transfers). */
+    upcoming?: boolean;
     fields: WoobBankField[];
 }
 
@@ -77,9 +84,31 @@ export type WoobHolding =
     | { kind: 'cash'; name: string; currency: string; quantity: string; marketValue: string }
     | { kind: 'euro_fund'; code: string | null; name: string; currency: string; quantity: string; marketValue: string };
 
+/** One bank operation of a checking or savings account, as the worker reads it (TGLA-254). */
+export interface WoobOperation {
+    /** The bank's id, else a fingerprint of the day, the amount and the raw label: stable from one read to the next. */
+    id: string;
+    /** YYYY-MM-DD: the day the operation was made (card payment day), else the booking day. */
+    date: string;
+    bookingDate: string | null;
+    valueDate: string | null;
+    /** Signed decimal: negative for money out. */
+    amount: string;
+    label: string;
+    raw: string;
+    /** Woob's operation type in lower case: card, transfer, order, check, withdrawal, deferred_card, bank, loan_payment… */
+    type: string;
+    /** The bank's own category, when it gives one (BoursoBank does). */
+    category: string | null;
+}
+
 export interface WoobAccountHoldings extends WoobAccount {
     holdings: WoobHolding[];
     warnings: string[];
+    /** Checking and savings accounts read with a history: the operations since the day asked for, or null (refused). */
+    transactions?: WoobOperation[] | null;
+    coming?: WoobOperation[];
+    historyWarnings?: string[];
 }
 
 export type WoobLoginResult =
@@ -194,8 +223,12 @@ export const woobClient = {
         return (await call<{ accounts: WoobAccount[] }>('accounts', request)).accounts;
     },
 
-    async holdings(request: WoobSessionRequest): Promise<WoobAccountHoldings[]> {
-        return (await call<{ accounts: WoobAccountHoldings[] }>('holdings', request)).accounts;
+    /**
+     * Balances and positions of every account; with `history`, also the operations of the checking and savings
+     * accounts since `history.since` (YYYY-MM-DD) and their coming ones, in the same bank session (TGLA-254).
+     */
+    async holdings(request: WoobSessionRequest, history?: { since: string }): Promise<WoobAccountHoldings[]> {
+        return (await call<{ accounts: WoobAccountHoldings[] }>('holdings', history ? { ...request, history } : request)).accounts;
     },
 
     /** Verified modules, or Woob's latest ones (downloads and checks them first). Never offered to the AI. */

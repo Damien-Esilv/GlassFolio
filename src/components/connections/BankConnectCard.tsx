@@ -21,7 +21,7 @@ import {
     type WoobLoginResult,
     type WoobStatus,
 } from '../../services/connectors';
-import { LinkedAccounts, StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
+import { LinkedAccounts, StatusBadge, SyncControls, SyncResult, type RemoveOptions } from './ConnectionRow';
 import { WoobModulesPanel } from './WoobModulesPanel';
 import { AccountMappingEditor, NEW_ACCOUNT, SKIP, type AccountMapping, type MappableAccount } from './AccountMappingEditor';
 import type { AccountChoice } from './accountChoices';
@@ -46,7 +46,8 @@ interface Props {
     reports: Record<string, SyncReport>;
     syncing: string | null;
     onSync: (connection: SafeConnection) => Promise<void>;
-    onDelete: (connectionId: string) => Promise<void>;
+    /** Removes a bank: with what it recorded, or keeping its history (TGLA-254). */
+    onDelete: (connectionId: string, options?: RemoveOptions) => Promise<void>;
     /** A bank was linked, reconnected or its accounts changed: reload, then sync it. */
     onChanged: (connectionId: string) => Promise<void>;
 }
@@ -302,6 +303,8 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
 
     const [step, setStep] = useState<Step>({ name: 'credentials' });
     const [mappings, setMappings] = useState<Record<string, AccountMapping>>({});
+    // Read the operations of the checking and savings accounts (TGLA-254): on for a new bank
+    const [cashHistory, setCashHistory] = useState(true);
     const [working, setWorking] = useState(false);
     const [error, setError] = useState('');
 
@@ -334,6 +337,7 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
         setAcknowledged(false);
         setStep({ name: 'credentials' });
         setMappings({});
+        setCashHistory(true);
         setError('');
     };
 
@@ -407,6 +411,7 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
         setMappings(Object.fromEntries(accounts.map(account => [account.externalId, {
             target: connection.accountMap[account.externalId] ?? SKIP, startDate: '',
         }])));
+        setCashHistory(connection.cashHistory === true);
         setStep({ name: 'mapping', accounts });
     });
 
@@ -441,7 +446,7 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
         }
         const accountNames = Object.fromEntries(chosen.map(account => [account.externalId, account.name]));
         const saved = existing
-            ? await connectionService.updateConnection(existing.id, { accountMap, publicParams: { ...existing.publicParams, accountNames } })
+            ? await connectionService.updateConnection(existing.id, { accountMap, publicParams: { ...existing.publicParams, accountNames }, cashHistory })
             : await connectionService.createConnection({
                 id: pendingId,
                 sourceId: 'woob',
@@ -450,6 +455,7 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                 publicParams: { module: bank?.module ?? module, accountNames },
                 accountMap,
                 mode: 'holdings',
+                cashHistory,
             });
         reset();
         setPendingId('');
@@ -473,6 +479,16 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                     <AccountMappingEditor idPrefix="bank" accounts={accounts} mappings={mappings} accountChoices={accountChoices} showStartDate={false}
                         onChange={(externalId, patch) => setMappings(previous => ({ ...previous, [externalId]: { ...previous[externalId], ...patch } }))} />
                     <p className="text-xs text-tertiary">{t('settings:connections.banks.mappingHelp')}</p>
+                    {step.accounts.some(account => account.accountType === 'checking' || account.accountType === 'savings') && (
+                        <label className="flex items-start gap-2 text-xs text-secondary">
+                            <input type="checkbox" checked={cashHistory} onChange={event => setCashHistory(event.target.checked)}
+                                className="mt-0.5 rounded border-subtle text-primary focus:ring-primary" />
+                            <span>
+                                <span className="block text-primary font-medium">{t('settings:connections.banks.cashHistory.label')}</span>
+                                <span className="block text-tertiary">{t('settings:connections.banks.cashHistory.help')}</span>
+                            </span>
+                        </label>
+                    )}
                     <div className="flex flex-wrap gap-2">
                         <Button isLoading={working} disabled={working || accounts.length === 0} onClick={() => void saveMapping()}>
                             {t('settings:connections.snaptrade.save')}
@@ -570,7 +586,7 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                                 ) : (
                                     <>
                                         <SyncControls connection={connection} syncing={syncing === connection.id} disabled={syncing !== null || working}
-                                            onSync={() => void onSync(connection)} onDelete={() => void onDelete(connection.id)}>
+                                            keepHistoryChoice onSync={() => void onSync(connection)} onDelete={options => onDelete(connection.id, options)}>
                                             <Button size="sm" variant="ghost" disabled={working || syncing !== null}
                                                 onClick={() => { reset(); setActiveId(connection.id); void reconnect(connection, false); }}>
                                                 {t('settings:connections.banks.reconnect')}
@@ -615,6 +631,9 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                                     <ul className="text-xs text-tertiary space-y-1">
                                         {!isVerifiedWoobBank(bank.module) && <li>{t('settings:connections.banks.unverifiedHelp')}</li>}
                                         {!bank.positions && <li>{t('settings:connections.banks.limits.balancesOnly')}</li>}
+                                        {bank.history !== undefined && (
+                                            <li>{t(bank.history ? 'settings:connections.banks.limits.history' : 'settings:connections.banks.limits.noHistory')}</li>
+                                        )}
                                         {WOOB_BANK_LIMITS[bank.module] && <li className="text-warning">{t(`settings:connections.banks.limits.${WOOB_BANK_LIMITS[bank.module]}`)}</li>}
                                     </ul>
                                 )}

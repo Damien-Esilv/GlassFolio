@@ -35,4 +35,18 @@ describe('<SyncControls />', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Confirm removal' }));
         await waitFor(() => expect(onDelete).toHaveBeenCalledOnce());
     });
+
+    it('a bank offers to keep its history first, or to remove everything (TGLA-254)', async () => {
+        const onDelete = vi.fn(async () => undefined);
+        render(<SyncControls connection={connection} syncing={false} disabled={false} keepHistoryChoice onSync={vi.fn()} onDelete={onDelete} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove this source' }));
+        expect(screen.getByRole('alert').textContent).toContain('Keep what it recorded');
+        fireEvent.click(screen.getByRole('button', { name: 'Remove, keep the history' }));
+        await waitFor(() => expect(onDelete).toHaveBeenLastCalledWith({ keepHistory: true }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove this source' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Remove everything' }));
+        await waitFor(() => expect(onDelete).toHaveBeenLastCalledWith({ keepHistory: false }));
+    });
 });

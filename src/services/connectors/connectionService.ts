@@ -107,6 +107,8 @@ export interface ConnectionUpdate {
     mode?: Connection['mode'];
     syncIntervalHours?: number;
     historyStartDate?: string;
+    /** Bank (Woob): read the operations of the checking and savings accounts (TGLA-254). */
+    cashHistory?: boolean;
     /** Merged into the stored cursor (start date of a newly linked account). */
     cursor?: Record<string, ConnectionCursor>;
 }
@@ -163,6 +165,7 @@ export const connectionService = {
             mode: input.mode ?? (input.sourceId === 'snaptrade' ? 'history' : 'holdings'),
             syncIntervalHours: clampInterval(input.syncIntervalHours),
             historyStartDate: input.historyStartDate,
+            ...(input.cashHistory !== undefined ? { cashHistory: input.cashHistory } : {}),
             cursor: { ...(input.cursor ?? {}) },
             lastStatus: 'never_synced',
             createdAt: now,
@@ -192,6 +195,7 @@ export const connectionService = {
                 ? current.syncIntervalHours
                 : clampInterval(update.syncIntervalHours),
             historyStartDate: update.historyStartDate ?? current.historyStartDate,
+            cashHistory: update.cashHistory ?? current.cashHistory,
             cursor: update.cursor ? { ...current.cursor, ...update.cursor } : current.cursor,
             updatedAt: new Date().toISOString(),
         };

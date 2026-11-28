@@ -93,6 +93,18 @@ def describe_field(value: Any) -> dict[str, Any] | None:
     }
 
 
+def overrides(klass: Any, base: Any, method: str) -> bool:
+    """True when `klass` (or a parent other than `base`) defines `method` itself."""
+    return getattr(klass, method, None) is not getattr(base, method, None)
+
+
+def reads_history(klass: Any) -> bool:
+    """Recent Woob routes iter_history through iter_transactions: either one, written by the module, reads the history."""
+    from woob.capabilities.bank import CapBank
+
+    return overrides(klass, CapBank, "iter_history") or overrides(klass, CapBank, "iter_transactions")
+
+
 def describe_banks(loader: Any, module_names: list[str]) -> list[dict[str, Any]]:
     """Banks among `module_names` that load here, with their name and credential form."""
     from woob.capabilities.bank import CapBank
@@ -113,6 +125,9 @@ def describe_banks(loader: Any, module_names: list[str]) -> list[dict[str, Any]]
             "module": name,
             "name": str(loaded.description or name),
             "positions": issubclass(klass, CapBankWealth),
+            # The module reads the operations (and the coming ones) itself, rather than the base class refusing
+            "history": reads_history(klass),
+            "upcoming": overrides(klass, CapBank, "iter_coming"),
             "fields": fields,
         })
     return sorted(banks, key=lambda bank: bank["name"].lower())

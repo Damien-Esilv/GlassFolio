@@ -29,6 +29,9 @@ def test_ships_every_bank_module():
 def test_offers_the_banks_that_load(banks):
     assert len(banks) >= 80
     assert banks["boursorama"]["positions"] is True
+    # BoursoBank reads its operations and the coming ones itself (cash flow, TGLA-254)
+    assert banks["boursorama"]["history"] is True
+    assert banks["boursorama"]["upcoming"] is True
     # La Banque Postale imports Selenium and falls back to its classic login: offered. The modules pinned to
     # Selenium < 4.1.4 (urllib3 1.x) cannot load with the shipped packages: left out
     assert "bp" in banks

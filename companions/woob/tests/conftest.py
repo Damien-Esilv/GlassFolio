@@ -7,7 +7,8 @@ from decimal import Decimal
 from typing import Any, Callable
 
 import pytest
-from woob.capabilities.bank import Account
+from datetime import date
+from woob.capabilities.bank import Account, Transaction
 from woob.capabilities.bank.wealth import CapBankWealth, Investment
 from woob.capabilities.base import NotAvailable
 
@@ -51,13 +52,31 @@ def investment(code: str | None, label: str, quantity: str | None = None, unitpr
     return item
 
 
+def operation(day: str, amount: str, raw: str, type: Any = Transaction.TYPE_CARD, category: str | None = None,
+              rday: str | None = None, id: str | None = None) -> Transaction:
+    item = Transaction()
+    item.id = id or ""
+    item.date = date.fromisoformat(day)
+    item.rdate = date.fromisoformat(rday) if rday else NotAvailable
+    item.vdate = NotAvailable
+    item.amount = Decimal(amount)
+    item.raw = raw
+    item.label = raw.title()
+    item.type = type
+    item.category = category if category is not None else NotAvailable
+    return item
+
+
 class FakeBackend(CapBankWealth):
     """Scripted bank: ``login`` is a list of steps (exceptions to raise, then success)."""
 
-    def __init__(self, accounts: list[Account], investments: dict[str, list[Investment]], steps: list[BaseException] | None = None) -> None:
+    def __init__(self, accounts: list[Account], investments: dict[str, list[Investment]], steps: list[BaseException] | None = None,
+                 history: dict[str, Any] | None = None, coming: dict[str, Any] | None = None) -> None:
         self.config = {"request_information": FakeValue(), "code": FakeValue(), "resume": FakeValue()}
         self._accounts = accounts
         self._investments = investments
+        self._history = history or {}
+        self._coming = coming or {}
         self.steps = list(steps or [])
         self.calls: list[str] = []
         self.saved = False
@@ -71,6 +90,20 @@ class FakeBackend(CapBankWealth):
     def iter_investment(self, account):  # type: ignore[override]
         self.calls.append(f"iter_investment:{account.id}")
         return iter(self._investments.get(account.id, []))
+
+    def _scripted(self, table: dict[str, Any], account: Any) -> Any:
+        found = table.get(account.id, [])
+        if isinstance(found, BaseException):
+            raise found
+        return iter(found)
+
+    def iter_history(self, account):  # type: ignore[override]
+        self.calls.append(f"iter_history:{account.id}")
+        return self._scripted(self._history, account)
+
+    def iter_coming(self, account):  # type: ignore[override]
+        self.calls.append(f"iter_coming:{account.id}")
+        return self._scripted(self._coming, account)
 
     def deinit(self) -> None:
         self.saved = True
@@ -105,8 +138,9 @@ PEA_LINES = {
 
 @pytest.fixture
 def make_service(tmp_path) -> Callable[..., tuple[WoobService, FakeWoob]]:
-    def build(steps: list[BaseException] | None = None, clock: Callable[[], float] = lambda: 1000.0) -> tuple[WoobService, FakeWoob]:
-        fake = FakeWoob(lambda: FakeBackend(PEA_ACCOUNTS, PEA_LINES, steps))
+    def build(steps: list[BaseException] | None = None, clock: Callable[[], float] = lambda: 1000.0,
+              history: dict[str, Any] | None = None, coming: dict[str, Any] | None = None) -> tuple[WoobService, FakeWoob]:
+        fake = FakeWoob(lambda: FakeBackend(PEA_ACCOUNTS, PEA_LINES, steps, history, coming))
         service = WoobService(tmp_path / "modules", tmp_path / "data", woob_factory=lambda _path: fake, clock=clock,
                               banks_provider=lambda: FAKE_BANKS)
         return service, fake

@@ -1,7 +1,8 @@
 /**
- * Cash flow tools for the in-app assistant and MCP clients (Epic E52 — TGLA-252).
+ * Cash flow tools for the in-app assistant and MCP clients (Epic E52 — TGLA-252, TGLA-254).
  *
- * Reads: summary of a period, operations (with filters, the uncategorised ones), categories, rules.
+ * Reads: summary of a period, operations (with filters, the uncategorised ones), categories, rules, operations the
+ * banks announce as coming.
  * Changes (always confirmed by the user): put operations in a category (optionally with a rule),
  * create a sub-category, create a rule, record an operation typed by hand. Nothing is deleted by the AI.
  */
@@ -123,6 +124,30 @@ export const listCashflowRulesTool: AIToolDefinition<
         minAmount: rule.minAmount,
         maxAmount: rule.maxAmount,
         source: rule.source,
+    })),
+};
+
+export const listUpcomingOperationsTool: AIToolDefinition<
+    { accountId?: string },
+    Array<{ date: string; label: string; amount: number; currency: string; account: string; bank?: string; bankCategory?: string }>
+> = {
+    name: 'list_upcoming_operations',
+    description:
+        'Operations the user\'s banks announce as coming on checking and savings accounts (card payments not booked yet, scheduled transfers), as read by the last bank sync of the desktop app or Docker (online, the list is empty). They are not in the journal yet and change no balance. Soonest first; negative amount = money out.',
+    parameters: {
+        type: 'object',
+        properties: {
+            accountId: { type: 'string', description: 'Only this checking or savings account (ids from list_institutions).' },
+        },
+    },
+    execute: async params => (await cashflowService.listUpcoming(params.accountId)).map(item => ({
+        date: item.date.slice(0, 10),
+        label: item.label,
+        amount: Number(item.amount),
+        currency: item.currency,
+        account: item.accountName,
+        bank: item.instituteName,
+        bankCategory: item.bankHints?.category,
     })),
 };
 
