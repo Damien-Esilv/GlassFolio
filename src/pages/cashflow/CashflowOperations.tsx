@@ -34,7 +34,8 @@ interface PendingRule {
 
 const CashflowOperations: React.FC = () => {
     const { t } = useTranslation();
-    const { preset, month, accountIds, currency, version, refresh, labels, categories, customCategories, cashAccounts, monthStartDay, openCategorySettings } = useCashflow();
+    const { preset, month, accountIds, currency, version, refresh, labels, categories, customCategories, cashAccounts, monthStartDay, openCategorySettings, summary } = useCashflow();
+    const toSort = summary?.uncategorizedCount ?? 0;
     const [params, setParams] = useSearchParams();
     const [operations, setOperations] = useState<CashflowOperation[]>([]);
     const [search, setSearch] = useState('');
@@ -153,9 +154,16 @@ const CashflowOperations: React.FC = () => {
                         type="button"
                         aria-pressed={uncategorizedOnly}
                         onClick={() => setFilter('uncategorized', uncategorizedOnly ? '' : '1')}
-                        className={`flex items-center gap-2 h-10 px-3 rounded-xl text-sm font-semibold border ${uncategorizedOnly ? 'bg-primary/10 text-brand border-brand' : 'bg-subtle text-secondary border-subtle'}`}
+                        // Lit in the warning colour while operations of the period wait for a category: an action to take
+                        className={`flex items-center gap-2 h-10 px-3 rounded-xl text-sm font-semibold border ${
+                            uncategorizedOnly ? 'bg-primary/10 text-brand border-brand'
+                                : toSort > 0 ? 'bg-warning/15 text-warning border-warning' : 'bg-subtle text-secondary border-subtle'
+                        }`}
                     >
                         <Sparkles size={14} /> {t('cashflow:operations.uncategorizedOnly')}
+                        {toSort > 0 && !uncategorizedOnly && (
+                            <span className="min-w-5 h-5 px-1.5 rounded-full bg-warning text-white text-[11px] font-bold flex items-center justify-center tabular-nums">{toSort}</span>
+                        )}
                     </button>
                 </div>
                 {/* "To categorise" shows what is left to sort, with the assistant offered right there (one entry, no twin button) */}

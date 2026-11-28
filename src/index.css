@@ -700,6 +700,18 @@ textarea::selection {
 @tailwind utilities;
 
 @layer base {
+  /* Dropdowns keep the field's rounding in every browser: Safari draws native selects square unless their native
+     look is off. Our own chevron replaces the native one; selects that draw their own (appearance-none) are left as is. */
+  select:not(.appearance-none) {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.25rem !important;
+  }
+
   body {
     font-variant-numeric: tabular-nums;
     /* Ensures native OpenType tnum (tabular digits) and cv05 (l-tail) are active across all elements */

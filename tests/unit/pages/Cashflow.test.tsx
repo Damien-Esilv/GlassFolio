@@ -161,7 +161,8 @@ describe('Cash flow pages', () => {
         expect(screen.getAllByText('Money in').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Money out').length).toBeGreaterThan(0);
         expect(await screen.findByLabelText('35.4%')).toBeTruthy();
-        expect(screen.getByText('1 operation is not categorised yet')).toBeTruthy();
+        // Operations left to categorise are flagged on the Operations tab, not on the overview
+        expect(screen.queryByText('1 operation is not categorised yet')).toBeNull();
     });
 
     it('moves the period carousel by the period chosen', async () => {
