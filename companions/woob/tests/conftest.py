@@ -139,8 +139,9 @@ PEA_LINES = {
 @pytest.fixture
 def make_service(tmp_path) -> Callable[..., tuple[WoobService, FakeWoob]]:
     def build(steps: list[BaseException] | None = None, clock: Callable[[], float] = lambda: 1000.0,
-              history: dict[str, Any] | None = None, coming: dict[str, Any] | None = None) -> tuple[WoobService, FakeWoob]:
-        fake = FakeWoob(lambda: FakeBackend(PEA_ACCOUNTS, PEA_LINES, steps, history, coming))
+              history: dict[str, Any] | None = None, coming: dict[str, Any] | None = None,
+              accounts: list[Account] | None = None) -> tuple[WoobService, FakeWoob]:
+        fake = FakeWoob(lambda: FakeBackend(accounts or PEA_ACCOUNTS, PEA_LINES, steps, history, coming))
         service = WoobService(tmp_path / "modules", tmp_path / "data", woob_factory=lambda _path: fake, clock=clock,
                               banks_provider=lambda: FAKE_BANKS)
         return service, fake

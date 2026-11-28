@@ -702,3 +702,67 @@ export function getPEATaxRule(
     // Fallback to last rule (after 5 years)
     return rules.pea.taxByAge[rules.pea.taxByAge.length - 1];
 }
+
+// ============================================================================
+// Household reductions and credits spotted from the cash flow (Epic E52 — TGLA-259)
+// ============================================================================
+
+/**
+ * Rates and caps of the reductions and credits the cash flow can spot, by income year (France). Checked on
+ * 2026-11-26 against official sources:
+ * - Donations: economie.gouv.fr "Dons aux associations", BOFiP ACTU-2025-00070, impots.gouv.fr simulator 2026
+ *   (75 % cap: €1,000, raised to €2,000 for donations from 2025-10-14, the year's total counted).
+ * - Home help: impots.gouv.fr "Emploi à domicile" (50 %, €12,000 + €1,500 per dependant, at most €15,000).
+ * - Childcare outside the home: service-public.fr F8 (50 % of up to €3,500 per child under 6).
+ * - PER: impots.gouv.fr brochure IR 2026 (10 % of professional income, floor 10 % of the previous year's PASS:
+ *   €4,637 for 2025 payments, €4,710 for 2026 payments; ceiling 10 % of 8 PASS: €37,094 / €37,680).
+ */
+export interface HouseholdCreditRules {
+    year: string;
+    donations: {
+        /** Reduction on donations to organisations of general interest, within a share of taxable income */
+        rate: number;
+        incomeShareCap: number;
+        /** Higher rate for organisations helping people in need (meals, housing, care) */
+        aidRate: number;
+        /** Cap of the higher rate; `aidCapFrom` raises it for donations from that day */
+        aidCap: number;
+        aidCapFrom?: { date: string; cap: number };
+    };
+    homeServices: { rate: number; cap: number; perDependant: number; maxCap: number };
+    childcare: { rate: number; capPerChild: number };
+    per: { floor: number; ceiling: number };
+}
+
+const HOUSEHOLD_CREDIT_RULES: Record<string, HouseholdCreditRules> = {
+    '2024': {
+        year: '2024',
+        donations: { rate: 0.66, incomeShareCap: 0.2, aidRate: 0.75, aidCap: 1000 },
+        homeServices: { rate: 0.5, cap: 12000, perDependant: 1500, maxCap: 15000 },
+        childcare: { rate: 0.5, capPerChild: 3500 },
+        // 10 % of PASS 2023 (€43,992) and of 8 PASS 2023
+        per: { floor: 4399, ceiling: 35194 },
+    },
+    '2025': {
+        year: '2025',
+        donations: { rate: 0.66, incomeShareCap: 0.2, aidRate: 0.75, aidCap: 1000, aidCapFrom: { date: '2025-10-14', cap: 2000 } },
+        homeServices: { rate: 0.5, cap: 12000, perDependant: 1500, maxCap: 15000 },
+        childcare: { rate: 0.5, capPerChild: 3500 },
+        per: { floor: 4637, ceiling: 37094 },
+    },
+    '2026': {
+        year: '2026',
+        donations: { rate: 0.66, incomeShareCap: 0.2, aidRate: 0.75, aidCap: 2000 },
+        homeServices: { rate: 0.5, cap: 12000, perDependant: 1500, maxCap: 15000 },
+        childcare: { rate: 0.5, capPerChild: 3500 },
+        per: { floor: 4710, ceiling: 37680 },
+    },
+};
+
+/** The rules of an income year, or of the latest known year before it (never a later one). */
+export function getHouseholdCreditRules(year: string): HouseholdCreditRules | undefined {
+    const known = Object.keys(HOUSEHOLD_CREDIT_RULES).sort();
+    const usable = known.filter(candidate => candidate <= year);
+    const picked = usable[usable.length - 1];
+    return picked ? { ...HOUSEHOLD_CREDIT_RULES[picked], year } : undefined;
+}

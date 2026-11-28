@@ -56,7 +56,7 @@ describe('Design Standards Audit — Visual Theming & Semantic Tokens', () => {
   it('should not contain any raw Tailwind color palette classes (e.g. text-emerald-*, bg-rose-*)', () => {
     // Prohibited raw Tailwind color palette families with numeric steps (e.g., text-emerald-500, bg-amber-400)
     // Semantic tokens like text-positive, bg-negative, text-warning, text-accent-blue are required.
-    const rawTailwindColorRegex = /\b(?:text|bg|border|ring|fill|stroke)-(?:emerald|rose|amber|yellow|lime|green|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/g;
+    const rawTailwindColorRegex = /\b(?:text|bg|border|ring|ring-offset|fill|stroke|shadow|from|via|to|outline|divide|placeholder|caret|decoration)-(?:emerald|rose|amber|yellow|lime|green|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/g;
 
     const violations: { file: string; line: number; match: string; content: string }[] = [];
 
@@ -96,6 +96,24 @@ describe('Design Standards Audit — Visual Theming & Semantic Tokens', () => {
     }
 
     expect(violations.length).toBe(0);
+  });
+
+  it('keeps the fixed logo blue (brand-static) for the logo: buttons and accents follow the theme', () => {
+    // bg-primary / text-brand change with the theme (cyan in Neon, green in Emerald); brand-static never does
+    const logoFiles = new Set([
+      'src/components/Layout.tsx',
+      'src/components/ui/LoadingScreen.tsx',
+      'src/components/landing/LandingHeader.tsx',
+      'src/components/landing/LandingFooter.tsx',
+      'src/pages/Login.tsx',
+      'src/pages/Signup.tsx',
+    ]);
+    const violations = filesToScan
+      .filter((file) => !logoFiles.has(file))
+      .flatMap((file) => fs.readFileSync(file, 'utf-8').split('\n')
+        .map((line, index) => ({ file, line: index + 1, content: line.trim() }))
+        .filter((entry) => /\bbrand-static\b/.test(entry.content)));
+    expect(violations.map((v) => `${v.file}:${v.line} ${v.content}`)).toEqual([]);
   });
 
   it('should not contain any direct rgba/rgb function literals in UI components', () => {

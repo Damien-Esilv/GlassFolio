@@ -66,7 +66,7 @@
     "recordBuyPrompt": "Help me record a buy transaction of 10 shares of Apple at $175."
   },
   "chat": {
-    "inputPlaceholder": "Ask a financial question or request an action...",
+    "inputPlaceholder": "Ask a question or request an action…",
     "send": "Send",
     "thinking": "Analyzing financial data...",
     "generatingResponse": "Drafting response...",
@@ -78,7 +78,8 @@
     "disclaimer": "AI financial analysis is informative. Always double-check before making actual investment decisions.",
     "errorMessage": "An error occurred while processing your request. Please check your AI settings.",
     "toolExecuted": "Executed tool: {{toolName}}",
-    "toolExecuting": "Querying portfolio data ({{toolName}})..."
+    "toolExecuting": "Querying portfolio data ({{toolName}})...",
+    "disclaimerShort": "For information only"
   },
   "actionCard": {
     "title": "Action Confirmation Required",
@@ -97,7 +98,11 @@
       "set_transaction_category": "Categorise operations",
       "create_cashflow_category": "Create a cash flow category",
       "create_categorization_rule": "Create a categorisation rule",
-      "record_cash_operation": "Add a bank operation"
+      "record_cash_operation": "Add a bank operation",
+      "set_recurring_status": "Confirm or set aside a recurring payment",
+      "set_cash_account_kind": "Change an account between checking and savings",
+      "set_budget": "Set a monthly budget",
+      "update_cashflow_operation": "Change a bank operation's note or label"
     },
     "importPreview": {
       "account": "Target account",

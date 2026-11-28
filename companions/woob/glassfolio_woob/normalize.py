@@ -182,9 +182,10 @@ def normalize_holdings(account: Any, investments: list[Any] | None) -> dict[str,
             if warning:
                 warnings.append(warning)
     elif listed["balance"] is not None:
-        if Decimal(listed["balance"]) >= 0:
-            holdings.append({"kind": "cash", "name": listed["label"], "currency": currency, "quantity": listed["balance"], "marketValue": listed["balance"]})
-        else:
+        # An overdrawn checking account keeps its negative balance (the app reconciles it with the operations); the
+        # warning tells a sync without operations to leave it alone
+        holdings.append({"kind": "cash", "name": listed["label"], "currency": currency, "quantity": listed["balance"], "marketValue": listed["balance"]})
+        if Decimal(listed["balance"]) < 0:
             warnings.append("negative_balance")
 
     return {**listed, "holdings": holdings, "warnings": warnings}

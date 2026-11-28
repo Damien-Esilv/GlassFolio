@@ -19,14 +19,18 @@ import {
 import type {
     CashflowOperation,
     CashflowSummary,
+    CashflowRecurringItem,
     CashflowTombstone,
     CashflowUpcoming,
+    RecurringOccurrence,
     RecurringSeries,
+    RecurringStatus,
 } from '../../types/cashflow';
 import { buildCashflowOperations, includedAccountIds, CASH_ACCOUNT_TYPES } from './operations';
 import { summarizeCashflow } from './aggregator';
-import { detectRecurringSeries, recurringOperationIds } from './recurring';
-import { resolvePeriod, type CashflowPeriodPreset } from './period';
+import { merchantKey } from './text';
+import { addRecurringInterval, detectRecurringSeries, recurringOperationIds } from './recurring';
+import { budgetMonthBounds, currentBudgetMonth, resolvePeriod, type CashflowPeriodPreset } from './period';
 import { resolveCashflowCategory, topLevelCashflowCategoryId } from '../../constants/cashflowCategories';
 
 export interface CashflowQuery {
@@ -126,6 +130,31 @@ const restrict = (ops: CashflowOperation[], accountIds?: string[]): CashflowOper
 const sinceMonths = (months: number, today: Date = new Date()): string =>
     new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - months, today.getUTCDate())).toISOString().slice(0, 10);
 
+/** Series the user did not set aside: an ignored series counts as day-to-day spending everywhere. */
+const activeSeries = (series: RecurringSeries[]): RecurringSeries[] => {
+    const ignored = new Set(db.getCashflowRecurring().filter(decision => decision.status === 'ignored').map(decision => decision.key));
+    return series.filter(item => !ignored.has(item.key));
+};
+
+/** How many future payments of a series may land in one month (a weekly one: 5). */
+const MAX_PROJECTED = 6;
+
+/** The latest category set by hand on an operation of the same merchant and direction. */
+function rememberedCategory(label: string, direction: 'in' | 'out'): string | undefined {
+    const key = merchantKey(label);
+    if (!key) return undefined;
+    const rows = new Map(db.getUnifiedTransactions().map(tx => [tx.id, tx]));
+    let best: { categoryId: string; at: string } | undefined;
+    for (const annotation of db.getCashflowAnnotations()) {
+        if (!annotation.categoryId) continue;
+        const tx = rows.get(annotation.transactionId);
+        if (!tx || merchantKey(tx.rawLabel ?? tx.label) !== key) continue;
+        if ((Number(tx.amountPrimary) > 0 ? 'in' : 'out') !== direction) continue;
+        if (!best || annotation.updatedAt > best.at) best = { categoryId: annotation.categoryId, at: annotation.updatedAt };
+    }
+    return best?.categoryId;
+}
+
 export const cashflowService = {
     /** Totals, monthly trend, categories, Sankey and distribution of a period. */
     getSummary: async (query: CashflowQuery): Promise<CashflowSummary> => {
@@ -140,7 +169,7 @@ export const cashflowService = {
             firstOperationDate: oldest,
             monthStartDay: settings.monthStartDay,
         });
-        const series = detectRecurringSeries(all, { since: sinceMonths(18) });
+        const series = activeSeries(detectRecurringSeries(all, { since: sinceMonths(18) }));
         return summarizeCashflow(all, {
             periodStart: period.start,
             periodEnd: period.end,
@@ -181,7 +210,52 @@ export const cashflowService = {
     getRecurringSeries: async (currency: string = 'EUR', months: number = 6): Promise<RecurringSeries[]> => {
         await delay(150);
         const ops = await loadOperations(currency.toUpperCase());
-        return detectRecurringSeries(ops, { since: sinceMonths(months) });
+        return activeSeries(detectRecurringSeries(ops, { since: sinceMonths(months) }));
+    },
+
+    /**
+     * Recurring series detected over the last 6 months, with the user's decision and, for the budget month asked
+     * (the current one by default), their payments: the operations made, then the ones expected from today on.
+     */
+    listRecurring: async (query: { currency?: string; month?: string; accountIds?: string[] } = {}): Promise<{ month: string; start: string; end: string; items: CashflowRecurringItem[] }> => {
+        await delay(150);
+        const currency = (query.currency ?? 'EUR').toUpperCase();
+        const ops = restrict(await loadOperations(currency), query.accountIds);
+        const settings = db.getCashflowSettings();
+        const month = query.month ?? currentBudgetMonth(new Date(), settings.monthStartDay);
+        const { start, end } = budgetMonthBounds(month, settings.monthStartDay);
+        const today = new Date().toISOString().slice(0, 10);
+        const decisions = new Map(db.getCashflowRecurring().map(decision => [decision.key, decision.status]));
+        const byId = new Map(ops.map(op => [op.id, op]));
+        const items = detectRecurringSeries(ops, { since: sinceMonths(6) }).map(series => {
+            const sign = series.direction === 'out' ? -1 : 1;
+            const payments: RecurringOccurrence[] = series.operationIds
+                .map(id => byId.get(id))
+                .filter((op): op is CashflowOperation => op !== undefined && op.date.slice(0, 10) >= start && op.date.slice(0, 10) < end)
+                .map(op => ({ date: op.date.slice(0, 10), amount: op.amount, expected: false, operationId: op.id }));
+            let next = series.nextDate;
+            for (let step = 0; step < MAX_PROJECTED * 4 && next < end; step++) {
+                if (next >= start && next >= today) payments.push({ date: next, amount: sign * series.lastAmount, expected: true });
+                next = addRecurringInterval(next, series.cadence, series.intervalDays);
+            }
+            payments.sort((a, b) => a.date.localeCompare(b.date));
+            const status: RecurringStatus = decisions.get(series.key) ?? 'detected';
+            return { ...series, status, payments: payments.slice(0, MAX_PROJECTED) };
+        });
+        return { month, start, end, items };
+    },
+
+    /** Confirms a detected series, sets it aside (it then counts as day-to-day spending), or forgets the decision. */
+    setRecurringStatus: async (key: string, status: RecurringStatus): Promise<CashflowResult> => {
+        await delay(80);
+        if (!key.trim()) return { success: false, error: 'not_found' };
+        const others = db.getCashflowRecurring().filter(decision => decision.key !== key);
+        if (status === 'detected') {
+            db.saveCashflowRecurring(others);
+            return { success: true, value: undefined };
+        }
+        db.saveCashflowRecurring([...others, { id: `cfrec-${key}`, ownerId: ownerId(), key, status, updatedAt: new Date().toISOString() }]);
+        return { success: true, value: undefined };
     },
 
     /** Records an operation typed by hand (bouton « Créer »). */
@@ -257,8 +331,12 @@ export const cashflowService = {
             transactionManager.rollback();
             return { success: false, error: 'commit_failed' };
         }
-        if (input.categoryId || input.note) {
-            await cashflowService.updateOperation(id, { categoryId: input.categoryId, note: input.note });
+        // "Automatic": the category the user last chose by hand for this merchant (same direction), if any; otherwise
+        // the usual engine (rules, transfers, known merchants). Done once here, so imported operations never change
+        // behind the user's back.
+        const categoryId = input.categoryId || rememberedCategory(label, input.amount > 0 ? 'in' : 'out');
+        if (categoryId || input.note) {
+            await cashflowService.updateOperation(id, { categoryId, note: input.note });
         }
         await portfolioService.recalculatePositions();
         return { success: true, value: id };

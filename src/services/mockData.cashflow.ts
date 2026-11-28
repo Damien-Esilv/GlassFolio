@@ -5,7 +5,7 @@
  * Amounts come from a seeded generator, so the demo looks the same on every load.
  */
 import type { Account, ImportBatch, UnifiedTransaction } from '../types/types.backend';
-import type { BankHints, CategorizationRule } from '../types/cashflow';
+import type { BankHints, CashflowBudget, CategorizationRule } from '../types/cashflow';
 import { hoursAgoISO, monthsAgoISO } from '../utils/demoDates';
 
 export const DEMO_CHECKING_ACCOUNT_ID = 'acc-bourso-checking';
@@ -79,6 +79,23 @@ export function buildDemoCashflowRules(now: Date = new Date()): CategorizationRu
             updatedAt: at,
         },
     ];
+}
+
+/**
+ * Example budgets: three that hold (groceries, dining out, leisure) and one exceeded from the 2nd of each month
+ * (transport: the Navigo pass alone is above the cap). The other categories are left without a cap.
+ */
+export function buildDemoCashflowBudgets(now: Date = new Date()): CashflowBudget[] {
+    const at = monthsAgoISO(2, 1, 9, 0, now);
+    const caps: Array<[string, number]> = [['groceries', 600], ['dining', 200], ['leisure', 120], ['transport', 75]];
+    return caps.map(([categoryId, monthlyLimit]) => ({
+        id: `cfb-${categoryId}`,
+        ownerId: 'default-user',
+        categoryId,
+        monthlyLimit,
+        createdAt: at,
+        updatedAt: at,
+    }));
 }
 
 /** Small deterministic generator (mulberry32). */

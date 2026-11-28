@@ -37,5 +37,11 @@
     },
     "priceBankQuotes": "Bank prices (market data unavailable)",
     "priceRateLimited": "Market prices limited by Yahoo, retry in {{count}} min",
-    "priceUnavailable": "Market prices unavailable"
+    "priceUnavailable": "Market prices unavailable",
+    "weeklyGoal": {
+        "transactions": "Goal: {{goal}}",
+        "streak": "Goal: {{goal}} weeks",
+        "xp": "Goal: {{goal}} XP"
+    },
+    "weeklyGoalReached": "Goal reached"
 }

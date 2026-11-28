@@ -37,5 +37,11 @@
     },
     "priceBankQuotes": "Cours de la banque (marché indisponible)",
     "priceRateLimited": "Cours de marché limités par Yahoo, nouvel essai dans {{count}} min",
-    "priceUnavailable": "Cours de marché indisponibles"
+    "priceUnavailable": "Cours de marché indisponibles",
+    "weeklyGoal": {
+        "transactions": "Objectif : {{goal}}",
+        "streak": "Objectif : {{goal}} semaines",
+        "xp": "Objectif : {{goal}} XP"
+    },
+    "weeklyGoalReached": "Objectif atteint"
 }

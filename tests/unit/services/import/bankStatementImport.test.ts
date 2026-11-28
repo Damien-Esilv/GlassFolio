@@ -4,8 +4,6 @@
  * locally, and a whole statement parsed into a checking account.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
 vi.mock('../../../../src/services/db', async importOriginal => {
     const actual = await importOriginal<typeof import('../../../../src/services/db')>();
@@ -23,8 +21,9 @@ import { detectPreset } from '../../../../src/services/import/presetDetector';
 import { parseCSVText } from '../../../../src/services/import/csvParser';
 import { isOfx, ofxToCsv, parseOfx, OFX_CSV_HEADERS } from '../../../../src/services/import/ofxParser';
 import { readAndParseCsvFile } from '../../../../src/services/import/csvWorkerClient';
+import { readTestData } from '../../../fixtures/testData';
 
-const fixture = (name: string): string => readFileSync(join(__dirname, '../../../../test-data/presets', name), 'utf-8');
+const fixture = (name: string): string => readTestData(name);
 
 const normalize = (headers: string[], row: string[], mappings: Partial<FieldMappings>, accountType: string) => {
     const full = { transactionDate: '', amountPrimary: '', ...mappings } as FieldMappings;
@@ -86,7 +85,7 @@ describe('bank statement columns', () => {
 
 describe('OFX statements', () => {
     it('reads SGML statements: dates, signed amounts, labels with their memo, references and types', () => {
-        const text = fixture('generic_bank_statement_2025.ofx');
+        const text = fixture('generic_statement_2025.ofx');
         expect(isOfx(text)).toBe(true);
         expect(isOfx('Date;Libellé\n')).toBe(false);
         const rows = parseOfx(text);
@@ -105,11 +104,11 @@ describe('OFX statements', () => {
     });
 
     it('becomes a CSV the OFX preset maps, from a dropped file too', async () => {
-        const csv = ofxToCsv(fixture('generic_bank_statement_2025.ofx'));
+        const csv = ofxToCsv(fixture('generic_statement_2025.ofx'));
         const { headers } = parseCSVText(csv, ';');
         expect(headers).toEqual([...OFX_CSV_HEADERS]);
         expect(detectPreset(headers)).toMatchObject({ presetName: 'OFX', mappings: { transactionDate: 'Date', amountPrimary: 'Amount', rawLabel: 'Label', externalId: 'Reference', bankTxType: 'OFX type' } });
-        const read = await readAndParseCsvFile(new Blob([fixture('generic_bank_statement_2025.ofx')]));
+        const read = await readAndParseCsvFile(new Blob([fixture('generic_statement_2025.ofx')]));
         expect(read.parsed.rows).toHaveLength(5);
         expect(read.text.startsWith('Date;Label;Amount')).toBe(true);
     });
@@ -125,7 +124,7 @@ describe('a statement parsed into a checking account', () => {
     });
 
     it('stages signed bank movements with compact metadata', async () => {
-        const csv = fixture('generic_bank_statement_2025.csv');
+        const csv = fixture('generic_debit_credit_2025.csv');
         const { headers } = parseCSVText(csv, ';');
         const result = await parseFile(csv, {
             accountId: 'acc-checking',
@@ -144,7 +143,7 @@ describe('a statement parsed into a checking account', () => {
     });
 
     it('commits the bank movements outside the tax engine', async () => {
-        const csv = fixture('generic_bank_statement_2025.csv');
+        const csv = fixture('generic_debit_credit_2025.csv');
         const { headers } = parseCSVText(csv, ';');
         const result = await parseFile(csv, {
             accountId: 'acc-checking',

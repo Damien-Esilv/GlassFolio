@@ -210,6 +210,11 @@ const Portfolio: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            {/* Page title, like Positions and Transactions */}
+            <div className="pb-4 border-b border-subtle">
+                <h1 className="text-3xl font-bold text-primary">{t('navigation:menu.summary')}</h1>
+            </div>
+
             {/* Hero Section - Large Value Display (Finary Style) */}
             <div className="bg-card rounded-2xl border border-border p-6 md:p-8">
                 <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

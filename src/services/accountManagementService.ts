@@ -33,7 +33,10 @@ export interface ManagedInstitution {
     accounts: ManagedAccount[];
 }
 
-export type ManagementError = 'not_found' | 'synced' | 'empty_name';
+export type ManagementError = 'not_found' | 'synced' | 'empty_name' | 'not_cash_account';
+
+/** A checking account takes bank operations; a savings account (Livret…) its operations or its balance (Epic E52). */
+export type CashAccountKind = 'checking' | 'savings';
 
 export interface ManagementResult {
     success: boolean;
@@ -108,6 +111,21 @@ export const accountManagementService = {
         const clean = name.trim().slice(0, MAX_NAME_LENGTH);
         if (!clean) return { success: false, error: 'empty_name' };
         if (!(await accountService.updateAccount(id, { name: clean }))) return { success: false, error: 'not_found' };
+        await portfolioService.recalculatePositions();
+        return { success: true };
+    },
+
+    /**
+     * Makes a checking account a savings account or the other way round. Only between these two: an investment account
+     * keeps its type (its tax wrapper and positions depend on it). Its operations stay as they are.
+     */
+    async setCashAccountKind(id: string, kind: CashAccountKind): Promise<ManagementResult> {
+        const account = await accountService.getAccountById(id);
+        if (!account) return { success: false, error: 'not_found' };
+        if (account.type !== 'checking' && account.type !== 'savings') return { success: false, error: 'not_cash_account' };
+        if (account.type === kind) return { success: true };
+        const wrapperType = kind === 'savings' ? 'LIVRET' : account.wrapperType === 'LIVRET' ? 'OTHER' : account.wrapperType;
+        if (!(await accountService.updateAccount(id, { type: kind, wrapperType }))) return { success: false, error: 'not_found' };
         await portfolioService.recalculatePositions();
         return { success: true };
     },

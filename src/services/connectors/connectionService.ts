@@ -55,9 +55,41 @@ const DEMO_WALLETS: ReadonlyArray<Pick<Connection, 'id' | 'sourceId' | 'label'> 
     { id: 'conn-demo-sol', sourceId: 'wallet_sol', label: 'Solana docs example wallet', addresses: ['vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg'] },
 ];
 
+/**
+ * Demo vault: a French bank (Woob) and a broker account (SnapTrade), fictitious, so the demo shows every kind of
+ * source connected. They carry `publicParams.demo`: shown as synced a moment ago, never sent to a provider.
+ */
+const buildDemoAccountSources = (at: string): Connection[] => {
+    const syncedAt = new Date(Date.parse(at) - 2 * 60 * 60 * 1000).toISOString();
+    const base = { ownerId: 'default-user', credentials: {}, syncIntervalHours: 24, lastStatus: 'ok' as const, lastSyncAt: syncedAt, createdAt: at, updatedAt: at };
+    return [
+        {
+            ...base,
+            id: 'conn-demo-bank',
+            sourceId: 'woob',
+            label: 'BoursoBank',
+            accountMap: { 'demo-bourso-cc': 'acc-bourso-checking', 'demo-bourso-livret': 'acc-bourso-livret', 'demo-bourso-pea': 'acc-bourso-pea' },
+            publicParams: { module: 'boursorama', demo: true, accountNames: { 'demo-bourso-cc': 'Compte courant', 'demo-bourso-livret': 'Livret A', 'demo-bourso-pea': 'PEA' } },
+            mode: 'holdings',
+            cashHistory: true,
+            cursor: {},
+        },
+        {
+            ...base,
+            id: 'conn-demo-snaptrade',
+            sourceId: 'snaptrade',
+            label: 'SnapTrade',
+            accountMap: { 'demo-ibkr': 'acc-ibkr-cto', 'demo-traderepublic': 'acc-traderepublic' },
+            publicParams: { demo: true, accountNames: { 'demo-ibkr': 'Interactive Brokers — Individual', 'demo-traderepublic': 'Trade Republic' } },
+            mode: 'history',
+            cursor: {},
+        },
+    ];
+};
+
 const buildDemoConnections = (): Connection[] => {
     const at = new Date().toISOString();
-    return DEMO_WALLETS.map(({ addresses, ...wallet }) => ({
+    return [...buildDemoAccountSources(at), ...DEMO_WALLETS.map(({ addresses, ...wallet }): Connection => ({
         ...wallet,
         ownerId: 'default-user',
         accountMap: { wallet: 'acc-ledger-cold' },
@@ -66,10 +98,10 @@ const buildDemoConnections = (): Connection[] => {
         mode: 'holdings',
         syncIntervalHours: 24,
         cursor: {},
-        lastStatus: 'never_synced',
+        lastStatus: 'never_synced' as const,
         createdAt: at,
         updatedAt: at,
-    }));
+    }))];
 };
 
 const readAll = (): Connection[] => {

@@ -78,7 +78,7 @@ describe('<AIChatPanel /> (E37 + E50)', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     // Focus inside panel -> Escape closes
-    const textarea = screen.getByPlaceholderText('Ask a financial question or request an action...');
+    const textarea = screen.getByPlaceholderText('Ask a question or request an action…');
     textarea.focus();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);

@@ -6,16 +6,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Bot, Sparkles } from 'lucide-react';
+import { askAssistant } from '../../services/ai/assistantRequests';
 import { TrendBadge } from '../../components/ui/TrendBadge';
 import { TrendValue } from '../../components/ui/TrendValue';
 import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
 import { getCashflowCategoryTokens } from '../../constants/cashflowCategories';
 import { cashflowService } from '../../services/cashflow/cashflowService';
+import { budgetMonthOf } from '../../services/cashflow/aggregator';
+import { shiftIsoDay } from '../../services/cashflow/planning';
 import type { CashflowCategoryTotal, CashflowMonth, RecurringSeries } from '../../types/cashflow';
 import { MonthTrendChart } from '../../components/cashflow/MonthTrendChart';
 import { CategoryBadge, ColorDot, MerchantAvatar } from '../../components/cashflow/CategoryBadge';
 import type { CashflowLabels } from '../../components/cashflow/useCashflowLabels';
+import { CountUpMoney, CountUpPercent } from '../../components/cashflow/CountUp';
+import { ForecastCard } from '../../components/cashflow/ForecastCard';
 import { useCashflow } from './CashflowLayout';
 
 const card = 'rounded-2xl bg-card p-6 shadow-lg border border-border';
@@ -29,10 +34,14 @@ export function formatSavingsRate(income: number, rate: number, labels: Cashflow
     return labels.percent(rate, 1);
 }
 
+/** The savings rate, counting up when it is a plain percentage. */
+const SavingsRate: React.FC<{ income: number; rate: number; labels: CashflowLabels }> = ({ income, rate, labels }) =>
+    income > 0 && rate >= -1 ? <CountUpPercent ratio={rate} labels={labels} decimals={1} /> : <>{formatSavingsRate(income, rate, labels)}</>;
+
 const relativeChange = (current: number, previous: number | undefined): number | null =>
     previous && previous !== 0 ? ((current - previous) / Math.abs(previous)) * 100 : null;
 
-const HeroChip: React.FC<{ label: string; value: string; cssVar: string; change?: number | null; goodDirection?: 'up' | 'down' }> = ({ label, value, cssVar, change, goodDirection = 'up' }) => (
+const HeroChip: React.FC<{ label: string; value: React.ReactNode; cssVar: string; change?: number | null; goodDirection?: 'up' | 'down' }> = ({ label, value, cssVar, change, goodDirection = 'up' }) => (
     <div className="flex-1 min-w-[9rem] rounded-xl bg-subtle border border-subtle px-4 py-3 space-y-1">
         <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-tertiary"><ColorDot cssVar={cssVar} />{label}</p>
         <p className="text-lg font-bold text-primary tabular-nums">{value}</p>
@@ -70,7 +79,7 @@ const CategoryList: React.FC<{
 
 const CashflowOverview: React.FC = () => {
     const { t } = useTranslation();
-    const { summary, month, setMonth, preset, labels, customCategories, currency, version } = useCashflow();
+    const { summary, month, setMonth, preset, labels, customCategories, currency, version, periodLabel, accountIds, monthStartDay } = useCashflow();
     const [tab, setTab] = useState<OverviewTab>('expenses');
     const [recurring, setRecurring] = useState<RecurringSeries[]>([]);
 
@@ -92,9 +101,7 @@ const CashflowOverview: React.FC = () => {
     const expenses = summary.categories.filter(c => c.kind === 'expense' && c.amount > 0).slice(0, 8);
     const recurringOut = recurring.filter(s => s.direction === 'out');
     const recurringTotal = recurringOut.reduce((sum, s) => sum + s.lastAmount, 0);
-    const heroLabel = preset === 'month'
-        ? t('cashflow:kpi.availableIn', { month: labels.monthName(month) })
-        : t('cashflow:kpi.availablePeriod');
+    const heroLabel = t('cashflow:kpi.availableIn', { month: periodLabel });
 
     return (
         <div className="space-y-6">
@@ -104,25 +111,25 @@ const CashflowOverview: React.FC = () => {
                         <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-tertiary">
                             <ColorDot cssVar={CASHFLOW_ROLE_TOKENS.available.cssVar} />{heroLabel}
                         </p>
-                        <TrendValue value={summary.available} currency={currency} locale={labels.locale} decimals={0} className="text-4xl sm:text-5xl font-bold" />
+                        <TrendValue value={summary.available} currency={currency} locale={labels.locale} decimals={0} animated className="text-4xl sm:text-5xl font-bold" />
                     </div>
                     <div className="flex flex-wrap gap-3 lg:max-w-2xl w-full">
                         <HeroChip
                             label={t('cashflow:kpi.income')}
-                            value={labels.money(summary.income)}
+                            value={<CountUpMoney value={summary.income} labels={labels} />}
                             cssVar={CASHFLOW_ROLE_TOKENS.income.cssVar}
                             change={relativeChange(summary.income, previous?.income)}
                         />
                         <HeroChip
                             label={t('cashflow:kpi.expenses')}
-                            value={labels.money(-summary.expenses)}
+                            value={<CountUpMoney value={-summary.expenses} labels={labels} />}
                             cssVar={CASHFLOW_ROLE_TOKENS.expense.cssVar}
                             change={relativeChange(summary.expenses, previous?.expenses)}
                             goodDirection="down"
                         />
                         <HeroChip
                             label={t('cashflow:kpi.savingsRate')}
-                            value={formatSavingsRate(summary.income, summary.savingsRate, labels)}
+                            value={<SavingsRate income={summary.income} rate={summary.savingsRate} labels={labels} />}
                             cssVar={CASHFLOW_ROLE_TOKENS.savings.cssVar}
                         />
                     </div>
@@ -131,27 +138,33 @@ const CashflowOverview: React.FC = () => {
                     <h2 className="text-sm font-bold text-primary">{t('cashflow:overview.trendTitle')}</h2>
                     <p className="text-xs text-tertiary">{t('cashflow:overview.trendHint')}</p>
                 </div>
-                <MonthTrendChart months={summary.months} selectedMonth={month} onSelect={setMonth} labels={labels} />
+                <MonthTrendChart months={summary.months} firstMonth={budgetMonthOf(summary.periodStart, monthStartDay)} lastMonth={budgetMonthOf(shiftIsoDay(summary.periodEnd, -1), monthStartDay)} onSelect={setMonth} labels={labels} />
             </section>
 
+            <ForecastCard currency={currency} accountIds={accountIds} version={version} labels={labels} />
+
             {summary.uncategorizedCount > 0 && (
-                <Link
-                    to="/cashflow/operations?uncategorized=1"
-                    className="flex items-center justify-between gap-3 p-4 rounded-xl bg-subtle border border-subtle hover:border-primary text-sm"
-                >
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-subtle border border-subtle text-sm">
                     <span className="flex items-center gap-3 text-primary font-semibold">
                         <Sparkles size={18} className="text-brand" />
                         {t('cashflow:overview.uncategorized', { count: summary.uncategorizedCount })}
                     </span>
-                    <span className="flex items-center gap-1 text-brand font-semibold">{t('cashflow:overview.review')}<ArrowRight size={14} /></span>
-                </Link>
+                    <span className="flex items-center gap-4">
+                        <button type="button" onClick={() => askAssistant(t('cashflow:ai.categorizePrompt'))} className="flex items-center gap-1.5 text-brand font-semibold hover:underline">
+                            <Bot size={14} /> {t('cashflow:actions.categorizeAi')}
+                        </button>
+                        <Link to="/cashflow/operations?uncategorized=1" className="flex items-center gap-1 text-brand font-semibold hover:underline">
+                            {t('cashflow:overview.review')}<ArrowRight size={14} />
+                        </Link>
+                    </span>
+                </div>
             )}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <section className={`${card} xl:col-span-2 space-y-4`}>
                     <div className="flex items-center justify-between gap-3">
                         <h2 className="text-sm font-bold text-primary">{t('cashflow:overview.topCategories')}</h2>
-                        <Link to="/cashflow/categories" className="text-xs font-semibold text-brand hover:underline">{t('cashflow:overview.seeAll')}</Link>
+                        <Link to={tab === 'recurring' ? '/cashflow/recurring' : '/cashflow/categories'} className="text-xs font-semibold text-brand hover:underline">{t('cashflow:overview.seeAll')}</Link>
                     </div>
                     <div className="grid grid-cols-3 gap-1 bg-subtle p-1 rounded-xl" role="tablist" aria-label={t('cashflow:overview.tabsTitle')}>
                         {([
@@ -168,7 +181,7 @@ const CashflowOverview: React.FC = () => {
                                 className={`px-3 py-2 rounded-lg text-center transition-all ${tab === key ? 'bg-card shadow-sm border border-subtle' : ''}`}
                             >
                                 <span className="block text-[11px] font-semibold text-tertiary">{label}</span>
-                                <span className={`block text-sm sm:text-base font-bold tabular-nums ${tab === key ? 'text-brand' : 'text-primary'}`}>{labels.money(value)}</span>
+                                <span className={`block text-sm sm:text-base font-bold tabular-nums ${tab === key ? 'text-brand' : 'text-primary'}`}><CountUpMoney value={value} labels={labels} /></span>
                             </button>
                         ))}
                     </div>
@@ -196,11 +209,11 @@ const CashflowOverview: React.FC = () => {
                 <div className="space-y-6">
                     <section className={`${card} space-y-2`}>
                         <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-tertiary"><ColorDot cssVar={CASHFLOW_ROLE_TOKENS.savings.cssVar} />{t('cashflow:kpi.savingsInvested')}</p>
-                        <p className="text-2xl font-bold text-primary tabular-nums">{labels.money(summary.savingsInvested)}</p>
+                        <p className="text-2xl font-bold text-primary tabular-nums"><CountUpMoney value={summary.savingsInvested} labels={labels} /></p>
                     </section>
                     <section className={`${card} space-y-3`}>
                         <p className="text-[11px] font-bold uppercase tracking-wider text-tertiary">{t('cashflow:kpi.passiveCoverage')}</p>
-                        <p className="text-2xl font-bold text-primary tabular-nums">{labels.percent(summary.passiveCoverage, 1)}</p>
+                        <p className="text-2xl font-bold text-primary tabular-nums"><CountUpPercent ratio={summary.passiveCoverage} labels={labels} decimals={1} /></p>
                         <div className="h-2 rounded-full bg-subtle overflow-hidden" aria-hidden="true">
                             <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round(summary.passiveCoverage * 100))}%`, backgroundColor: getCashflowCategoryTokens('investment_income').cssVar }} />
                         </div>

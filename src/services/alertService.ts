@@ -1,6 +1,7 @@
 import { Alert, AlertRule, AlertRuleMetric, NotificationCategory, UserPreferences, Position, FinancialGoal, GamificationQuest } from '../types/domain';
 import { db, delay } from './db';
 import { getEffectiveCalendar, getUserFiscalDeadline } from './fiscal/taxCalendarService';
+import { cashflowAlertCandidates } from './cashflow/cashflowAlerts';
 
 function generateId(prefix: string = 'alrt'): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -190,6 +191,7 @@ export const alertService = {
       fiscal: notifPrefs?.categories?.fiscal ?? true,
       goals: notifPrefs?.categories?.goals ?? true,
       security: notifPrefs?.categories?.security ?? true,
+      cashflow: notifPrefs?.categories?.cashflow ?? true,
     };
 
     const dormantCashThreshold = notifPrefs?.dormantCashThresholdPercent ?? 25;
@@ -336,6 +338,15 @@ export const alertService = {
           actionUrl: '/tax/declaration',
           actionLabelKey: 'tax:deadlines.prepare',
         });
+      }
+    }
+
+    // Cash flow: budgets over their cap, new subscriptions, price rises (Epic E52)
+    if (categoryFlags.cashflow) {
+      try {
+        generatedCandidates.push(...await cashflowAlertCandidates(baseCurrency, nowIso));
+      } catch {
+        // The cash flow alerts never block the others
       }
     }
 

@@ -667,7 +667,7 @@ export const previewTransactionImportTool: AIToolDefinition<
 > = {
   name: 'preview_transaction_import',
   description:
-    'Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved.',
+    'Read-only. Validate and preview a transaction history import into an account from raw CSV text (or XLSX-converted CSV, or an OFX bank statement converted to CSV) OR structured rows extracted from a PDF/screenshot. Reports valid, warning, duplicate and error counts plus sample rows. Nothing is saved. A bank statement goes to a checking or savings account (type checking or savings in list_institutions), never to an investment account: there the sign of each amount says money in or out, Debit/Credit columns and the bank\'s category are read, and the rows feed the cash flow (not the positions nor the tax engine). For rows extracted from a bank statement, use type DEPOSIT (money in) or WITHDRAW (money out), symbol = the currency, a signed amount, the label and the category printed on the statement.',
   parameters: {
     type: 'object',
     properties: {
@@ -723,7 +723,7 @@ export const importTransactionsTool: AIToolDefinition<
 > = {
   name: 'import_transactions',
   description:
-    'Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. Requires explicit human confirmation before execution. Always call preview_transaction_import first.',
+    'Import a transaction history batch into an account from CSV text or structured rows (extracted from an image or PDF). Deduplicates by row hash, creates an undoable import batch, and recalculates positions. A bank statement goes to a checking or savings account and feeds the cash flow (see preview_transaction_import). Requires explicit human confirmation before execution. Always call preview_transaction_import first.',
   requiresConfirmation: true,
   parameters: {
     type: 'object',

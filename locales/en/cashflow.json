@@ -1,21 +1,13 @@
 {
     "title": "Cash flow",
     "subtitle": "Money in, money out and savings, month after month",
-    "tabs": {
-        "label": "Cash flow sections",
-        "overview": "Overview",
-        "flows": "Flows",
-        "categories": "Categories",
-        "distribution": "Distribution",
-        "operations": "Operations"
-    },
     "periods": {
         "label": "Period",
         "month": "Month",
         "3m": "3 months",
         "6m": "6 months",
         "12m": "12 months",
-        "ytd": "Year to date"
+        "ytd": "Year"
     },
     "monthPicker": {
         "label": "Month",
@@ -39,17 +31,17 @@
     },
     "kpi": {
         "availableIn": "Cash available in {{month}}",
-        "availablePeriod": "Cash available over the period",
         "income": "Money in",
         "expenses": "Money out",
         "savingsRate": "Savings rate",
         "savingsInvested": "Savings invested",
         "passiveCoverage": "Spending covered by passive income",
-        "vsPrevious": "vs previous period"
+        "vsPrevious": "vs previous period",
+        "available": "Available"
     },
     "overview": {
         "trendTitle": "Month after month",
-        "trendHint": "Each month: money in, then money out (recurring, day-to-day, savings) topped by what stayed available. The line is the savings rate.",
+        "trendHint": "Each month: money in, then money out (recurring, day-to-day, savings) topped by what stayed available. The line is the savings rate. The chosen period is framed and its months stand out.",
         "legend": {
             "income": "Money in",
             "fixed": "Recurring",
@@ -109,7 +101,7 @@
         "operations_one": "{{count}} payment",
         "operations_other": "{{count}} payments",
         "countAxis": "Payments",
-        "weekdays": "Spending by day of the week",
+        "weekdays": "Average spending by day of the week",
         "bucketUnder": "< {{max}}",
         "bucketRange": "{{min}}–{{max}}",
         "bucketOver": "> {{min}}",
@@ -122,7 +114,8 @@
             "5": "Sat",
             "6": "Sun"
         },
-        "empty": "No spending in this period."
+        "empty": "No spending in this period.",
+        "weekdaysHint": "What you spend on an average Monday, Tuesday… over the period."
     },
     "operations": {
         "search": "Search an operation",
@@ -176,7 +169,16 @@
             "bank": "Category given by the bank",
             "keyword": "Recognised merchant",
             "fallback": "Not categorised yet"
-        }
+        },
+        "totals": {
+            "count": "Operations",
+            "in": "Money in",
+            "out": "Money out"
+        },
+        "toCategoriseCount_one": "{{count}} operation to categorise",
+        "toCategoriseCount_other": "{{count}} operations to categorise",
+        "allCategorised": "Every operation of the period has a category.",
+        "addCategory": "Add a category"
     },
     "manual": {
         "title": "Add an operation",
@@ -204,7 +206,8 @@
             "commit_failed": "The operation could not be saved.",
             "synced_operation": "A synced operation follows the bank.",
             "not_found": "This operation no longer exists."
-        }
+        },
+        "automaticHint": "Automatic: the category you last gave this merchant, otherwise your rules and the known merchants."
     },
     "settings": {
         "title": "Cash flow settings",
@@ -226,7 +229,7 @@
         "rules": "My rules",
         "rulesHint": "An operation whose label contains the text goes to the category.",
         "ruleContains": "Contains “{{text}}”",
-        "noRules": "No rule yet: change the category of an operation and choose “create a rule”.",
+        "noRules": "No rule yet: add one below, or change the category of an operation and choose “create a rule”.",
         "deleteRule": "Delete the rule",
         "ruleDirection": {
             "any": "In and out",
@@ -241,8 +244,21 @@
             "empty_name": "Enter a name.",
             "duplicate_name": "This name already exists here.",
             "invalid_parent": "Choose a category.",
-            "not_found": "Not found."
-        }
+            "not_found": "Not found.",
+            "unknown_category": "Choose a category.",
+            "rule_text_too_short": "Enter at least 2 characters."
+        },
+        "deleteRuleConfirm": "Delete the rule “{{text}}”? Operations it sorted go back to their automatic category.",
+        "ruleText": "If the label contains",
+        "ruleTextPlaceholder": "e.g. NETFLIX",
+        "ruleDirectionLabel": "For",
+        "ruleCategory": "Put in",
+        "ruleCategoryPick": "Choose a category",
+        "merchantLogos": "Show merchant logos",
+        "merchantLogosHint": "Brand logos of well-known merchants (Carrefour, Netflix, SNCF…), included in the app: nothing is sent anywhere. Off, every merchant shows its initials.",
+        "newCategory": "New category",
+        "newRule": "New rule",
+        "display": "Display and month"
     },
     "empty": {
         "title": "Your cash flow starts with your bank operations",
@@ -292,5 +308,135 @@
         "load": "The cash flow could not be loaded.",
         "save": "The change could not be saved."
     },
-    "loading": "Loading the cash flow"
+    "loading": "Loading the cash flow",
+    "pages": {
+        "overview": {
+            "title": "Overview"
+        },
+        "flows": {
+            "title": "Flows"
+        },
+        "categories": {
+            "title": "Categories"
+        },
+        "distribution": {
+            "title": "Distribution"
+        },
+        "recurring": {
+            "title": "Recurring"
+        },
+        "operations": {
+            "title": "Operations"
+        },
+        "budgets": {
+            "title": "Budgets"
+        }
+    },
+    "noBank": {
+        "title": "No bank connected yet",
+        "bodyLocal": "Your cash flow comes from the statements you import. Import a CSV or OFX statement of your checking account, or connect your bank to follow it automatically.",
+        "bodyOnline": "Your cash flow comes from the statements you import: download a CSV or OFX statement of your checking account from your bank and import it. Automatic bank sync works in the desktop app and in Docker.",
+        "import": "Import a statement",
+        "connect": "Connect my bank"
+    },
+    "recurring": {
+        "total": "Recurring",
+        "viewLabel": "View",
+        "views": {
+            "calendar": "Calendar view",
+            "list": "List view"
+        },
+        "showAll": "Show the whole month",
+        "calendarLabel": "Recurring payments of the month",
+        "onDay": "Payments on {{day}}",
+        "listTitle": "Recurring transactions",
+        "listHint": "Detected over the last 6 months: the same merchant at a regular rhythm with a steady amount.",
+        "none": "No recurring payment detected yet: it takes three payments at a regular rhythm.",
+        "noneOnDay": "No recurring payment on this day.",
+        "ignoredTitle_one": "Set aside ({{count}})",
+        "ignoredTitle_other": "Set aside ({{count}})",
+        "ignoredHint": "Not recurring payments: they count as day-to-day spending.",
+        "confirm": "Confirm",
+        "confirmed": "Confirmed",
+        "ignore": "Not recurring",
+        "restore": "Restore",
+        "next": "next on {{date}}",
+        "last": "last on {{date}}",
+        "cadence": {
+            "weekly": "Weekly",
+            "biweekly": "Every 2 weeks",
+            "monthly": "Monthly",
+            "quarterly": "Quarterly",
+            "yearly": "Yearly"
+        },
+        "rises": {
+            "title_one": "{{count}} price rise",
+            "title_other": "{{count}} price rises",
+            "hint": "Recurring payments that went up on their latest payment. A good moment to compare offers or cancel what you no longer use.",
+            "since": "New price since {{date}}",
+            "acknowledge": "Got it",
+            "acknowledgeFor": "Mark the price rise of {{merchant}} as seen"
+        }
+    },
+    "tabsLabel": "Cash flow sections",
+    "budgets": {
+        "budgeted": "Budgeted",
+        "spent": "Spent",
+        "over": "Over budget",
+        "title": "Budgets of {{month}}",
+        "hint": "Set a monthly cap per category: the gauge turns orange from 80 % and red over the cap.",
+        "state": {
+            "ok": "OK",
+            "near": "Near",
+            "over": "Over"
+        },
+        "capFor": "Monthly cap for {{category}}",
+        "average": "12-month average: {{amount}}",
+        "remaining": "{{amount}} left",
+        "exceeded": "{{amount}} over"
+    },
+    "forecast": {
+        "title": "Forecast for {{date}}",
+        "hint": "Today's balance, the operations announced by your banks, the recurring payments expected and your usual day-to-day spending.",
+        "today": "Today",
+        "end": "Expected at month end",
+        "balance": "Balance",
+        "projectedBalance": "Expected balance",
+        "parts": {
+            "upcoming": "Announced by the bank",
+            "recurring": "Recurring expected",
+            "variable": "Day-to-day spending"
+        }
+    },
+    "ai": {
+        "categorizePrompt": "Categorise my uncategorised cash flow operations: list them with list_cashflow_transactions (uncategorizedOnly), propose a category for each and a rule for the merchants that come back, then apply what I confirm with set_transaction_category."
+    },
+    "dashboard": {
+        "title": "Cash flow",
+        "available": "Cash available in {{month}}",
+        "availableSoFar": "Cash available so far",
+        "income": "Money in",
+        "expenses": "Money out",
+        "savingsRate": "Savings rate",
+        "open": "See all",
+        "expectedEnd": "Balance expected on {{date}}",
+        "balanceToday": "{{amount}} today",
+        "lastMonths_one": "Last month",
+        "lastMonths_other": "Last {{count}} months",
+        "outAndSaved": "Out and saved",
+        "comingUp": "Coming up",
+        "nothingComing": "No recurring payment or income expected by the end of the month.",
+        "topSpending": "Where the money went",
+        "noSpending": "No spending yet this month.",
+        "budgetsTitle": "Budgets this month",
+        "overCount_one": "{{count}} over",
+        "overCount_other": "{{count}} over",
+        "noBudgets": "No budget yet. Set a monthly cap per category to follow it here.",
+        "budgetLeft": "{{amount}} left",
+        "budgetOver": "{{amount}} over the cap",
+        "setBudgets": "Set up",
+        "manageBudgets": "Manage",
+        "moreBudgets_one": "+{{count}} more",
+        "moreBudgets_other": "+{{count}} more"
+    }
 }

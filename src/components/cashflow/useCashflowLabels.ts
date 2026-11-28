@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getBuiltinCashflowCategory } from '../../constants/cashflowCategories';
 import { formatCurrency } from '../../utils/currency';
 import type { CashflowSankeyNode, CustomCashflowCategory } from '../../types/cashflow';
+import type { CashflowPeriodPreset } from '../../services/cashflow/period';
 
 /** Sankey nodes that are not categories: translated under `cashflow:sankey.<id>`. */
 const SANKEY_SPECIAL_IDS = new Set(['income_total', 'group_taxes', 'group_savings', 'group_expenses', 'from_savings', 'available', 'others']);
@@ -19,6 +20,8 @@ export interface CashflowLabels {
     nodeName: (node: Pick<CashflowSankeyNode, 'categoryId' | 'label'>) => string;
     /** "octobre 2026" (long) or "OCT." (short) */
     monthName: (month: string, style?: 'long' | 'short') => string;
+    /** A period of the carousel: "October 2026", "Aug – Oct 2026", "Nov 2025 – Oct 2026" or "2026". */
+    periodName: (preset: CashflowPeriodPreset, first: string, last: string) => string;
     money: (value: number, decimals?: number) => string;
     percent: (ratio: number, decimals?: number) => string;
 }
@@ -51,6 +54,15 @@ export function useCashflowLabels(customCategories: readonly CustomCashflowCateg
             : new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' }).format(date).toUpperCase();
     }, [locale]);
 
+    const periodName = useCallback((preset: CashflowPeriodPreset, first: string, last: string): string => {
+        if (preset === 'month') return monthName(last);
+        if (preset === 'ytd') return last.slice(0, 4);
+        const short = (month: string): string => new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' })
+            .format(new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 15)));
+        const [fromYear, toYear] = [first.slice(0, 4), last.slice(0, 4)];
+        return fromYear === toYear ? `${short(first)} – ${short(last)} ${toYear}` : `${short(first)} ${fromYear} – ${short(last)} ${toYear}`;
+    }, [locale, monthName]);
+
     const money = useCallback((value: number, decimals: number = 0): string => {
         // Never "-0 €": a total that rounds to zero is zero
         const rounded = Math.abs(value) < 0.5 * 10 ** -decimals ? 0 : value;
@@ -60,5 +72,5 @@ export function useCashflowLabels(customCategories: readonly CustomCashflowCateg
     const percent = useCallback((ratio: number, decimals: number = 0): string =>
         new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(ratio), [locale]);
 
-    return { locale, currency, categoryName, nodeName, monthName, money, percent };
+    return { locale, currency, categoryName, nodeName, monthName, periodName, money, percent };
 }

@@ -8,7 +8,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import ImportBatchList from '../components/ImportBatchList';
-import { History, AlertTriangle, ChevronRight, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ImportHistory: React.FC = () => {
@@ -18,7 +18,7 @@ const ImportHistory: React.FC = () => {
     return (
         <div className="py-8">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-subtle">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
@@ -27,13 +27,7 @@ const ImportHistory: React.FC = () => {
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <div>
-                        <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-                            <History className="text-brand" />
-                            {t('transactions:importHistory.title')}
-                        </h1>
-                        <p className="text-secondary mt-1">{t('transactions:importHistory.subtitle')}</p>
-                    </div>
+                    <h1 className="text-3xl font-bold text-primary">{t('transactions:importHistory.title')}</h1>
                 </div>
                 <Link to="/import">
                     <Button>

@@ -587,14 +587,19 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                                     <>
                                         <SyncControls connection={connection} syncing={syncing === connection.id} disabled={syncing !== null || working}
                                             keepHistoryChoice onSync={() => void onSync(connection)} onDelete={options => onDelete(connection.id, options)}>
-                                            <Button size="sm" variant="ghost" disabled={working || syncing !== null}
-                                                onClick={() => { reset(); setActiveId(connection.id); void reconnect(connection, false); }}>
-                                                {t('settings:connections.banks.reconnect')}
-                                            </Button>
-                                            <Button size="sm" variant="ghost" disabled={working || syncing !== null} onClick={() => void manage(connection)}>
-                                                <Settings2 size={14} className="mr-1.5" aria-hidden="true" />
-                                                {t('settings:connections.snaptrade.manage')}
-                                            </Button>
+                                            {/* A fictitious demo bank has no session to reconnect nor accounts to list */}
+                                            {!connection.publicParams.demo && (
+                                                <>
+                                                    <Button size="sm" variant="ghost" disabled={working || syncing !== null}
+                                                        onClick={() => { reset(); setActiveId(connection.id); void reconnect(connection, false); }}>
+                                                        {t('settings:connections.banks.reconnect')}
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" disabled={working || syncing !== null} onClick={() => void manage(connection)}>
+                                                        <Settings2 size={14} className="mr-1.5" aria-hidden="true" />
+                                                        {t('settings:connections.snaptrade.manage')}
+                                                    </Button>
+                                                </>
+                                            )}
                                         </SyncControls>
                                         <SyncResult report={reports[connection.id]} />
                                     </>
@@ -605,7 +610,8 @@ export const BankConnectCard: React.FC<Props> = ({ connections, accountChoices, 
                 </ul>
             )}
 
-            {status?.available === false && connections.length > 0 && (
+            {/* A fictitious demo bank needs no worker */}
+            {status?.available === false && connections.some(connection => !connection.publicParams.demo) && (
                 <p className="text-xs text-warning mt-3">{t(local ? 'settings:connections.banks.unavailable.local' : 'settings:connections.banks.unavailable.cloud')}</p>
             )}
 

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { CASHFLOW_ROLE_TOKENS } from '../../constants/cashflowPalette';
 import { CashflowSankeyChart } from '../../components/cashflow/CashflowSankeyChart';
 import { ColorDot } from '../../components/cashflow/CategoryBadge';
+import { CountUpMoney } from '../../components/cashflow/CountUp';
 import { useCashflow } from './CashflowLayout';
 
 const card = 'rounded-2xl bg-card p-6 shadow-lg border border-border';
@@ -33,7 +34,7 @@ const CashflowFlows: React.FC = () => {
                     {totals.map(total => (
                         <div key={total.key}>
                             <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-tertiary"><ColorDot cssVar={total.cssVar} />{t(`cashflow:kpi.${total.key}`)}</p>
-                            <p className="text-lg font-bold text-primary tabular-nums">{labels.money(total.value)}</p>
+                            <p className="text-lg font-bold text-primary tabular-nums"><CountUpMoney value={total.value} labels={labels} /></p>
                         </div>
                     ))}
                 </div>
@@ -43,7 +44,8 @@ const CashflowFlows: React.FC = () => {
             ) : (
                 <div className="overflow-x-auto">
                     <div className="min-w-[880px]">
-                        <CashflowSankeyChart sankey={summary.sankey} labels={labels} customCategories={customCategories} />
+                        {/* Keyed by the totals: a new period draws its flows again */}
+                        <CashflowSankeyChart key={`${summary.periodStart}-${summary.periodEnd}-${summary.income}-${summary.expenses}`} sankey={summary.sankey} labels={labels} customCategories={customCategories} />
                     </div>
                 </div>
             )}

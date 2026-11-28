@@ -236,7 +236,7 @@ npm install
 npm run dev        # http://localhost:3780 (local mode)
 ```
 
-To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLIO_DEMO=1 npm run docker:up`): the app opens on the demo account. A normal launch offers no demo. Sample broker CSV files are in [`test-data/`](test-data).
+To try it without entering data, start it with `npm run dev:demo` (or `GLASSFOLIO_DEMO=1 npm run docker:up`): the app opens on the demo account. A normal launch offers no demo. Sample broker and bank statement files are in [`test-data/`](test-data/README.md).
 
 | Script | Purpose |
 |---|---|

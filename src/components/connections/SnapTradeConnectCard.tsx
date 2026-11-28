@@ -199,10 +199,12 @@ export const SnapTradeConnectCard: React.FC<Props> = ({
                         <div className="mt-4">
                             <SyncControls connection={connection} syncing={syncing} disabled={busy || working}
                                 onSync={() => void onSync(connection)} onDelete={() => void onDelete(connection.id)}>
-                                <Button size="sm" variant="ghost" isLoading={working} disabled={busy || working} onClick={() => void manage()}>
-                                    <Settings2 size={14} className="mr-1.5" aria-hidden="true" />
-                                    {t('settings:connections.snaptrade.manage')}
-                                </Button>
+                                {!connection.publicParams.demo && (
+                                    <Button size="sm" variant="ghost" isLoading={working} disabled={busy || working} onClick={() => void manage()}>
+                                        <Settings2 size={14} className="mr-1.5" aria-hidden="true" />
+                                        {t('settings:connections.snaptrade.manage')}
+                                    </Button>
+                                )}
                             </SyncControls>
                         </div>
                         <SyncResult report={report} />

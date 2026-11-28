@@ -55,8 +55,11 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
  * A bank operation as a journal activity: money in or out by its sign (a transfer keeps its direction as sub-type),
  * dated at midnight UTC of its day like a statement imported from a file, so the same operation imported both
  * ways is recognised. The bank's category and operation type go to the bank hints of the cash flow.
+ *
+ * A deferred-debit card payment (`card`) is spending (or a refund) that does not move the account's balance: the bank
+ * debits the card's monthly total, which the cash flow then counts as an internal transfer.
  */
-export function toCashActivity(operation: WoobOperation, externalAccountId: string, currency: string): NormalizedActivity | null {
+export function toCashActivity(operation: WoobOperation, externalAccountId: string, currency: string, card = false): NormalizedActivity | null {
     const amount = Number(operation.amount);
     if (!ISO_DAY.test(operation.date) || !Number.isFinite(amount) || amount === 0 || !operation.id) return null;
     const incoming = amount > 0;
@@ -65,8 +68,8 @@ export function toCashActivity(operation: WoobOperation, externalAccountId: stri
         externalAccountId,
         externalId: operation.id,
         date: `${operation.date}T00:00:00.000Z`,
-        type: incoming ? 'DEPOSIT' : 'WITHDRAW',
-        subType: operation.type === 'transfer' ? (incoming ? 'TRANSFER_IN' : 'TRANSFER_OUT') : undefined,
+        type: card ? (incoming ? 'INCOME' : 'EXPENSE') : incoming ? 'DEPOSIT' : 'WITHDRAW',
+        subType: !card && operation.type === 'transfer' ? (incoming ? 'TRANSFER_IN' : 'TRANSFER_OUT') : undefined,
         rawType: operation.type || 'unknown',
         label: label || undefined,
         rawLabel: (operation.raw || label).trim() || undefined,
@@ -78,9 +81,9 @@ export function toCashActivity(operation: WoobOperation, externalAccountId: stri
     };
 }
 
-const toActivities = (operations: WoobOperation[] | undefined, externalAccountId: string, currency: string): NormalizedActivity[] =>
+const toActivities = (operations: WoobOperation[] | undefined, externalAccountId: string, currency: string, card = false): NormalizedActivity[] =>
     (operations ?? [])
-        .map(operation => toCashActivity(operation, externalAccountId, currency))
+        .map(operation => toCashActivity(operation, externalAccountId, currency, card))
         .filter((activity): activity is NormalizedActivity => activity !== null);
 
 /** Ticker-like name of a euro fund (it has no market price: valued at 1 per unit, its quantity is its value). */
@@ -192,7 +195,9 @@ export const woobSource: SourceAdapter = {
         // An older worker reads no history at all: say so instead of reading it as "no operation"
         if (account.transactions === undefined && warnings.length === 0) warnings.push('history_unavailable');
         return {
-            operations: Array.isArray(account.transactions) ? toActivities(account.transactions, externalAccountId, account.currency) : null,
+            operations: Array.isArray(account.transactions)
+                ? [...toActivities(account.transactions, externalAccountId, account.currency), ...toActivities(account.cardTransactions, externalAccountId, account.currency, true)]
+                : null,
             upcoming: toActivities(account.coming, externalAccountId, account.currency),
             warnings,
         };

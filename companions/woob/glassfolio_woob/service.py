@@ -514,11 +514,16 @@ class WoobService:
             try:
                 backend = self._build(key, bank, credentials, interactive=False)
                 synced: list[dict[str, Any]] = []
+                from woob.capabilities.bank import Account
                 from woob.capabilities.bank.wealth import CapBankWealth
 
+                cards: list[Any] = []
                 for account in self._accounts(backend):
                     listed = normalize_account(account)
                     if listed is None:
+                        # A deferred-debit card is not synced itself: its payments go to its checking account
+                        if since is not None and not only_list and getattr(account, "type", None) == Account.TYPE_CARD:
+                            cards.append(account)
                         continue
                     investments = None
                     reads_positions = not only_list and (wanted_ids is None or listed["id"] in wanted_ids)
@@ -528,6 +533,8 @@ class WoobService:
                     if since is not None and reads_positions and listed["kind"] == "cash":
                         entry.update(self._operations(backend, account, since))
                     synced.append(entry)
+                if cards:
+                    self._card_operations(backend, cards, synced, since)
                 self._close(key, backend, save=True)
             except Exception as error:  # noqa: BLE001
                 if backend is not None:
@@ -592,6 +599,41 @@ class WoobService:
         if warnings:
             result["historyWarnings"] = warnings
         return result
+
+    @staticmethod
+    def _card_operations(backend: Any, cards: list[Any], synced: list[dict[str, Any]], since: str) -> None:
+        """The payments of deferred-debit cards, added to their checking account (TGLA-254): the checking account
+        only shows their monthly total. A card whose payments cannot be read only adds a warning."""
+        accounts = {entry["id"]: entry for entry in synced if entry.get("kind") == "cash" and isinstance(entry.get("transactions"), list)}
+        for card in cards:
+            parent = getattr(card, "parent", None)
+            parent_id = str(getattr(parent, "id", "") or "") if parent is not None else ""
+            entry = accounts.get(parent_id)
+            if entry is None:
+                continue
+            seen: dict[str, int] = {}
+            payments: list[dict[str, Any]] = []
+            try:
+                older = 0
+                for operation in backend.iter_history(card):
+                    item = normalize_transaction(operation, seen)
+                    if item is None:
+                        continue
+                    if item["date"] < since:
+                        older += 1
+                        if older >= HISTORY_OLDER_STOP:
+                            break
+                        continue
+                    older = 0
+                    item["id"] = f"card-{card.id}-{item['id']}"
+                    item["type"] = "deferred_card"
+                    payments.append(item)
+                    if len(payments) >= HISTORY_MAX_OPERATIONS:
+                        break
+            except Exception:  # noqa: BLE001 — never let a card break the balances
+                entry.setdefault("historyWarnings", []).append("card_history_failed")
+                continue
+            entry.setdefault("cardTransactions", []).extend(payments)
 
     @staticmethod
     def _select(accounts: list[dict[str, Any]], wanted_ids: set[str] | None) -> list[dict[str, Any]]:

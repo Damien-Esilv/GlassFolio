@@ -4,8 +4,6 @@
  * and a column the engine is not sure about is never presented as a confident match.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 import {
   proposeColumnMapping,
   proposalsToMappings,
@@ -15,6 +13,7 @@ import {
 } from '../../../../src/services/import/columnMatcher';
 import type { ColumnSpec } from '../../../../src/services/import/columnMatcher';
 import { parseCSVText } from '../../../../src/services/import/csvParser';
+import { readTestData } from '../../../fixtures/testData';
 
 const parse = (csv: string) => parseCSVText(csv);
 const propose = (csv: string) => {
@@ -127,7 +126,7 @@ describe('proposeColumnMapping — ambiguity', () => {
 
 describe('proposeColumnMapping — known broker headers keep their mapping', () => {
   const headersOf = (file: string): string[] =>
-    parseCSVText(readFileSync(resolve(__dirname, '../../../../test-data', file), 'utf-8')).headers;
+    parseCSVText(readTestData(file)).headers;
 
   it.each([
     'traderepublic_transactions_2024.csv',

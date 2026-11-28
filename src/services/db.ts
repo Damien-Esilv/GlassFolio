@@ -33,6 +33,8 @@ import {
     CashflowAnnotation,
     CashflowTombstone,
     CashflowUpcoming,
+    CashflowRecurringDecision,
+    CashflowBudget,
     CashflowSettings
 } from '../types';
 import {
@@ -47,7 +49,8 @@ import {
     buildDemoImportBatches,
     buildDemoUnifiedTransactions,
     buildDemoInstruments,
-    buildDemoCashflowRules
+    buildDemoCashflowRules,
+    buildDemoCashflowBudgets
 } from './mockData.backend';
 import { appStorage } from './storage/appStorage';
 import { getDeploymentMode } from '../config/deployment';
@@ -79,6 +82,8 @@ const STORAGE_KEYS = {
     CASHFLOW_ANNOTATIONS: 'glassfolio_cashflow_annotations',
     CASHFLOW_TOMBSTONES: 'glassfolio_cashflow_tombstones',
     CASHFLOW_UPCOMING: 'glassfolio_cashflow_upcoming',
+    CASHFLOW_RECURRING: 'glassfolio_cashflow_recurring',
+    CASHFLOW_BUDGETS: 'glassfolio_cashflow_budgets',
     CASHFLOW_SETTINGS: 'glassfolio_cashflow_settings'
 };
 
@@ -125,6 +130,7 @@ export const DEFAULT_CASHFLOW_SETTINGS: Omit<CashflowSettings, 'updatedAt'> = {
     includedAccountIds: null,
     includeInvestmentIncome: true,
     monthStartDay: 1,
+    merchantLogos: true,
 };
 
 /**
@@ -593,6 +599,24 @@ class MockDB {
         appStorage.setItem(STORAGE_KEYS.CASHFLOW_UPCOMING, JSON.stringify(data));
     }
 
+    /** The user's decisions on detected recurring series (TGLA-255). */
+    getCashflowRecurring(): CashflowRecurringDecision[] {
+        return this.readList<CashflowRecurringDecision>(STORAGE_KEYS.CASHFLOW_RECURRING, () => []);
+    }
+
+    saveCashflowRecurring(data: CashflowRecurringDecision[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_RECURRING, JSON.stringify(data));
+    }
+
+    /** Monthly caps per category (TGLA-256). */
+    getCashflowBudgets(): CashflowBudget[] {
+        return this.readList<CashflowBudget>(STORAGE_KEYS.CASHFLOW_BUDGETS, buildDemoCashflowBudgets);
+    }
+
+    saveCashflowBudgets(data: CashflowBudget[]) {
+        appStorage.setItem(STORAGE_KEYS.CASHFLOW_BUDGETS, JSON.stringify(data));
+    }
+
     getCashflowSettings(): CashflowSettings {
         const fallback: CashflowSettings = { ...DEFAULT_CASHFLOW_SETTINGS, updatedAt: new Date(0).toISOString() };
         const stored = appStorage.getItem(STORAGE_KEYS.CASHFLOW_SETTINGS);
@@ -730,6 +754,8 @@ class MockDB {
             cashflowAnnotations: pick(() => this.getCashflowAnnotations(), STORAGE_KEYS.CASHFLOW_ANNOTATIONS),
             cashflowTombstones: pick(() => this.getCashflowTombstones(), STORAGE_KEYS.CASHFLOW_TOMBSTONES),
             cashflowUpcoming: pick(() => this.getCashflowUpcoming(), STORAGE_KEYS.CASHFLOW_UPCOMING),
+            cashflowRecurring: pick(() => this.getCashflowRecurring(), STORAGE_KEYS.CASHFLOW_RECURRING),
+            cashflowBudgets: pick(() => this.getCashflowBudgets(), STORAGE_KEYS.CASHFLOW_BUDGETS),
             cashflowSettings: persistedOnly
                 ? this.readPersistedList(STORAGE_KEYS.CASHFLOW_SETTINGS)
                 : [this.getCashflowSettings()],
@@ -781,6 +807,8 @@ class MockDB {
             STORAGE_KEYS.CASHFLOW_ANNOTATIONS,
             STORAGE_KEYS.CASHFLOW_TOMBSTONES,
             STORAGE_KEYS.CASHFLOW_UPCOMING,
+            STORAGE_KEYS.CASHFLOW_RECURRING,
+            STORAGE_KEYS.CASHFLOW_BUDGETS,
         ];
         zeroKeys.forEach(key => appStorage.setItem(key, '[]'));
         this.getBankOperationKeys().forEach(key => appStorage.removeItem(key));

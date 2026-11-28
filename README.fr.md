@@ -223,7 +223,7 @@ npm install
 npm run dev        # http://localhost:3780 (mode local)
 ```
 
-Pour essayer sans saisir de données, démarrez avec `npm run dev:demo` (ou `GLASSFOLIO_DEMO=1 npm run docker:up`) : l'application s'ouvre sur le compte de démonstration. Un lancement normal ne propose pas de démo. Des exemples de CSV de courtiers se trouvent dans [`test-data/`](test-data).
+Pour essayer sans saisir de données, démarrez avec `npm run dev:demo` (ou `GLASSFOLIO_DEMO=1 npm run docker:up`) : l'application s'ouvre sur le compte de démonstration. Un lancement normal ne propose pas de démo. Des exemples de fichiers de courtiers et de relevés bancaires se trouvent dans [`test-data/`](test-data/README.md).
 
 | Script | Rôle |
 |---|---|

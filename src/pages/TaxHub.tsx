@@ -98,8 +98,7 @@ const TaxHub: React.FC = () => {
             {/* Header with fiscal year selector */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-subtle">
                 <div>
-                    <h1 className="text-3xl font-bold text-primary mb-1">{t('tax:hub.title')}</h1>
-                    <p className="text-secondary text-sm">{t('tax:hub.subtitle')}</p>
+                    <h1 className="text-3xl font-bold text-primary">{t('tax:hub.title')}</h1>
                 </div>
                 <div className="relative">
                     <select

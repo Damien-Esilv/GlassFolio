@@ -18,6 +18,7 @@ import {
   Info,
   Clock,
   Sparkles,
+  Wallet,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { Alert, AlertRule, AlertRuleMetric, NotificationCategory } from '../types';
@@ -36,6 +37,8 @@ function getCategoryIcon(category?: NotificationCategory, type?: string) {
       return <Trophy size={16} className="text-warning" />;
     case 'security':
       return <ShieldAlert size={16} className={type === 'warning' ? 'text-warning' : 'text-negative'} />;
+    case 'cashflow':
+      return <Wallet size={16} className={type === 'warning' ? 'text-warning' : 'text-brand'} />;
     default:
       return <Info size={16} className="text-secondary" />;
   }
@@ -125,14 +128,8 @@ export const Notifications: React.FC = () => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary flex items-center gap-3">
-            <Bell size={28} className="text-primary" />
-            <span>{t('notifications:title')}</span>
-          </h1>
-          <p className="text-sm text-secondary mt-1">{t('notifications:subtitle')}</p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-subtle">
+        <h1 className="text-3xl font-bold text-primary">{t('notifications:title')}</h1>
 
         {/* Tab Switcher */}
         <div className="flex items-center gap-1 p-1 bg-subtle border border-subtle rounded-xl self-start sm:self-auto">

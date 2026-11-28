@@ -426,11 +426,13 @@
         "errors": {
             "not_found": "This item no longer exists.",
             "synced": "A sync feeds this account: remove it in Connections.",
-            "empty_name": "Enter a name."
+            "empty_name": "Enter a name.",
+            "not_cash_account": "Only a checking or savings account changes type."
         },
         "importLink": "Manage institutions and accounts",
         "deleteSyncedAccount": "Stop syncing and delete {{name}}",
         "deleteSyncedAccountWarning_one": "Stops syncing this account from {{source}} (its other accounts keep syncing), then deletes it and its {{count}} operation. This cannot be undone.",
-        "deleteSyncedAccountWarning_other": "Stops syncing this account from {{source}} (its other accounts keep syncing), then deletes it and its {{count}} operations. This cannot be undone."
+        "deleteSyncedAccountWarning_other": "Stops syncing this account from {{source}} (its other accounts keep syncing), then deletes it and its {{count}} operations. This cannot be undone.",
+        "cashKind": "Type of {{name}}"
     }
 }

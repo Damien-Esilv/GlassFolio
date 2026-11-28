@@ -10,6 +10,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { cashflowService } from '../../services/cashflow/cashflowService';
 import type { CategoryOption } from '../../services/cashflow/cashflowCategoryService';
 import type { CashflowLabels } from './useCashflowLabels';
+import { CASHFLOW_DIALOG_BACKDROP, CASHFLOW_FIELD, CASHFLOW_GHOST_BUTTON, CASHFLOW_PRIMARY_BUTTON, CASHFLOW_TEXTAREA } from './formStyles';
 
 interface AccountOption {
     id: string;
@@ -18,7 +19,7 @@ interface AccountOption {
     currency: string;
 }
 
-const field = 'w-full px-3 py-2 rounded-xl bg-subtle text-primary border border-subtle focus:ring-primary focus:border-primary text-sm';
+const field = `${CASHFLOW_FIELD} w-full`;
 
 /** Category picker grouped by kind (shared with the operation detail). */
 export const CategorySelect: React.FC<{
@@ -29,11 +30,13 @@ export const CategorySelect: React.FC<{
     labels: CashflowLabels;
     direction?: 'in' | 'out';
     emptyLabel?: string;
-}> = ({ id, value, onChange, categories, labels, direction, emptyLabel }) => {
+    /** Field classes: the full width of a form by default. */
+    className?: string;
+}> = ({ id, value, onChange, categories, labels, direction, emptyLabel, className = field }) => {
     const { t } = useTranslation();
     const kinds = direction === 'in' ? ['income', 'transfer', 'savings', 'expense'] : ['expense', 'savings', 'transfer', 'income'];
     return (
-        <select id={id} value={value} onChange={e => onChange(e.target.value)} className={field}>
+        <select id={id} value={value} onChange={e => onChange(e.target.value)} className={className}>
             {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
             {kinds.map(kind => (
                 <optgroup key={kind} label={t(`cashflow:kinds.${kind}`)}>
@@ -88,7 +91,7 @@ export const ManualOperationDialog: React.FC<{
 
     if (typeof document === 'undefined') return null;
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className={CASHFLOW_DIALOG_BACKDROP}>
             <form
                 role="dialog"
                 aria-modal="true"
@@ -113,7 +116,7 @@ export const ManualOperationDialog: React.FC<{
                                     type="button"
                                     aria-pressed={direction === option}
                                     onClick={() => setDirection(option)}
-                                    className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-bold ${direction === option ? 'bg-card text-brand shadow-sm border border-subtle' : 'text-secondary'}`}
+                                    className={`flex-1 h-9 px-3 rounded-lg text-sm font-bold ${direction === option ? 'bg-card text-brand shadow-sm border border-subtle' : 'text-secondary'}`}
                                 >
                                     {t(`cashflow:manual.direction.${option}`)}
                                 </button>
@@ -154,20 +157,21 @@ export const ManualOperationDialog: React.FC<{
                                 direction={direction}
                                 emptyLabel={t('cashflow:manual.automatic')}
                             />
+                            {!categoryId && <span className="block font-normal text-tertiary">{t('cashflow:manual.automaticHint')}</span>}
                         </label>
                         <label className="block space-y-1 text-xs font-semibold text-secondary">
                             <span>{t('cashflow:manual.note')}</span>
-                            <textarea value={note} maxLength={500} rows={2} onChange={e => setNote(e.target.value)} className={field} />
+                            <textarea value={note} maxLength={500} rows={2} onChange={e => setNote(e.target.value)} className={CASHFLOW_TEXTAREA} />
                         </label>
                         {error && <p className="text-sm text-negative" role="alert">{t(`cashflow:manual.errors.${error}`)}</p>}
                     </>
                 )}
                 <div className="flex justify-end gap-2 pt-2">
-                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-secondary hover:bg-subtle">
+                    <button type="button" onClick={onClose} className={CASHFLOW_GHOST_BUTTON}>
                         {t('cashflow:manual.cancel')}
                     </button>
                     {accounts.length > 0 && (
-                        <button type="submit" disabled={saving} className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-50">
+                        <button type="submit" disabled={saving} className={CASHFLOW_PRIMARY_BUTTON}>
                             {t('cashflow:manual.save')}
                         </button>
                     )}

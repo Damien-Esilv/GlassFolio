@@ -22,6 +22,7 @@ import { computeRowHash } from '../../../../src/services/core/transactionManager
 import { cashflowService } from '../../../../src/services/cashflow/cashflowService';
 import { accountManagementService } from '../../../../src/services/accountManagementService';
 import { portfolioService } from '../../../../src/services/portfolioService';
+import { instrumentService } from '../../../../src/services/instrumentService';
 import type { WoobOperation } from '../../../../src/services/connectors/woobClient';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -81,7 +82,7 @@ const connect = (cashHistory = true) => connectionService.createConnection({
 const rows = () => db.getUnifiedTransactionsByAccount('acc-courant');
 const balance = async (): Promise<number> => {
     await portfolioService.recalculatePositions();
-    return db.getPositions().find(position => position.accountId === 'acc-courant' && position.symbol === 'EUR')?.quantity ?? 0;
+    return db.getPositions().filter(position => position.accountId === 'acc-courant' && position.symbol === 'EUR').reduce((sum, position) => sum + position.quantity, 0);
 };
 
 describe('Woob bank operations (TGLA-254)', () => {
@@ -168,8 +169,9 @@ describe('Woob bank operations (TGLA-254)', () => {
 
     it('the same operation imported from a statement first is not doubled', async () => {
         const date = `${day(-20)}T00:00:00.000Z`;
+        const eur = await instrumentService.findOrCreateInstrument({ symbol: 'EUR', currencyCode: 'EUR', type: 'cash', denominationCurrency: 'EUR' });
         db.saveUnifiedTransactions([{
-            id: 'utx-file', ownerId: 'u', accountId: 'acc-courant', instrumentId: 'instr-eur', batchId: 'batch-file',
+            id: 'utx-file', ownerId: 'u', accountId: 'acc-courant', instrumentId: eur.id, batchId: 'batch-file',
             rowHash: await computeRowHash(date, '-120.50', '', 'WITHDRAW'), sourceOrigin: 'FILE', isSynthetic: false, isFiscal: false,
             sourceMode: 'history', transactionDate: date, type: 'WITHDRAW', rawType: 'Debit', label: 'Carrefour City',
             rawLabel: 'CARTE 05/11 CARREFOUR CITY', amountPrimary: '-120.50', assetSymbol: 'EUR', quantity: '120.50', priceUnit: '1',
@@ -204,6 +206,35 @@ describe('Woob bank operations (TGLA-254)', () => {
         expect(rows().find(row => row.metadata?.openingBalance === true)?.amountPrimary).toBe('300.00');
         expect(await balance()).toBeCloseTo(100, 2);
         expect((await cashflowService.listOperations({ currency: 'EUR' })).map(item => item.amount).sort()).toEqual([-500, 300]);
+    });
+
+    it('an account overdrawn at the bank shows its negative balance, the opening below zero too', async () => {
+        vi.stubGlobal('fetch', bank([], () => [checking('-200.00', [GROCERIES]), PEA]));
+        const connection = await connect();
+        await syncEngine.runSync(connection.id, { deepHistory: true });
+        expect(rows().find(row => row.metadata?.openingBalance === true)?.amountPrimary).toBe('-79.50');
+        expect(await balance()).toBeCloseTo(-200, 2);
+        expect(rows().filter(row => row.type === 'BALANCE_ADJUSTMENT')).toHaveLength(1);
+        expect((await cashflowService.listOperations({ currency: 'EUR' })).map(item => item.amount)).toEqual([-120.5]);
+    });
+
+    it('a deferred-debit card shows each payment, its monthly total is a transfer, the balance stays the bank\'s', async () => {
+        const SUMMARY = op('h-card-total', -5, '-51.90', 'RELEVE CARTE DIFFEREE', { type: 'card_summary' });
+        const cardPayments = [
+            op('card-1-a', -25, '-42.00', 'CARTE 01/11 FNAC', { type: 'deferred_card' }),
+            op('card-1-b', -24, '-9.90', 'CARTE 02/11 CINEMA', { type: 'deferred_card' }),
+        ];
+        // Bank balance: 3000 − 950 − 51.90 (the card total is what the bank debits)
+        vi.stubGlobal('fetch', bank([], () => [{ ...checking('1998.10', [SALARY, RENT, SUMMARY]), cardTransactions: cardPayments }, PEA]));
+        const connection = await connect();
+        await syncEngine.runSync(connection.id, { deepHistory: true });
+        const card = rows().filter(row => row.externalId?.startsWith('card-1-'));
+        expect(card.map(row => row.type)).toEqual(['EXPENSE', 'EXPENSE']);
+        expect(await balance()).toBeCloseTo(1998.10, 2);
+        expect(rows().filter(row => row.type === 'BALANCE_ADJUSTMENT')).toHaveLength(1);
+        const flow = await cashflowService.listOperations({ currency: 'EUR' });
+        expect(flow.find(item => item.rawLabel === 'RELEVE CARTE DIFFEREE')?.categoryId).toBe('internal_transfer');
+        expect(flow.filter(item => item.rawLabel.startsWith('CARTE 0')).map(item => item.amount).sort()).toEqual([-42, -9.9]);
     });
 
     it('a connection made before keeps reading balances only', async () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, PieChart, Pie, Cell, XAxis } from 'recharts';
 import { ArrowUpRight, AlertTriangle, PlusCircle, PieChart as PieChartIcon } from 'lucide-react';
 import { useData } from '../context/DataContext';
@@ -27,6 +27,9 @@ import { computeWeeklyStats } from '../services/progressStatsService';
 import { gamificationService } from '../services/gamificationService';
 import WeeklyProgressCard from '../components/progress/WeeklyProgressCard';
 import { alertText } from '../utils/alertText';
+
+/** Cash flow and budgets row (Epic E52): its code, services and texts load apart from the main bundle */
+const CashflowWidget = lazy(() => import('../components/dashboard/CashflowWidget'));
 
 /** Longest the loading screen waits for the performer charts' data before showing the page anyway. */
 const HISTORY_WAIT_MAX_MS = 4000;
@@ -371,6 +374,11 @@ const Dashboard: React.FC = () => {
           locale={locale}
         />
       </div>
+
+      {/* Cash flow of the month and budgets (Epic E52), when bank operations exist */}
+      <Suspense fallback={null}>
+        <CashflowWidget currency={currency} locale={locale} />
+      </Suspense>
 
       {/* 3. Row 3: Financial Goals (Full Width) */}
       <div className={`${cardStyle}`}>

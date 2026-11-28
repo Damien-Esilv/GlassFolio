@@ -426,11 +426,13 @@
         "errors": {
             "not_found": "Cet élément n’existe plus.",
             "synced": "Une synchro alimente ce compte : supprimez-la dans Connexions.",
-            "empty_name": "Saisissez un nom."
+            "empty_name": "Saisissez un nom.",
+            "not_cash_account": "Seul un compte courant ou un livret change de type."
         },
         "importLink": "Gérer les établissements et comptes",
         "deleteSyncedAccount": "Arrêter la synchro et supprimer {{name}}",
         "deleteSyncedAccountWarning_one": "Arrête la synchro de ce compte depuis {{source}} (ses autres comptes restent synchronisés), puis le supprime avec {{count}} opération. Action irréversible.",
-        "deleteSyncedAccountWarning_other": "Arrête la synchro de ce compte depuis {{source}} (ses autres comptes restent synchronisés), puis le supprime avec ses {{count}} opérations. Action irréversible."
+        "deleteSyncedAccountWarning_other": "Arrête la synchro de ce compte depuis {{source}} (ses autres comptes restent synchronisés), puis le supprime avec ses {{count}} opérations. Action irréversible.",
+        "cashKind": "Type de {{name}}"
     }
 }

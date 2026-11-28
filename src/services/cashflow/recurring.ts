@@ -29,7 +29,8 @@ const median = (values: readonly number[]): number => {
 
 const dayOf = (iso: string): number => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
 
-const addInterval = (isoDate: string, cadence: RecurringCadence, intervalDays: number): string => {
+/** The date one period after `isoDate` (same day of the month for monthly, quarterly and yearly series). */
+export const addRecurringInterval = (isoDate: string, cadence: RecurringCadence, intervalDays: number): string => {
     const base = new Date(dayOf(isoDate));
     if (cadence === 'monthly' || cadence === 'quarterly' || cadence === 'yearly') {
         const months = cadence === 'monthly' ? 1 : cadence === 'quarterly' ? 3 : 12;
@@ -124,7 +125,7 @@ export function detectRecurringSeries(
             priceChange: change,
             firstDate: similar[0].date.slice(0, 10),
             lastDate: last.date.slice(0, 10),
-            nextDate: addInterval(last.date, cadence.cadence, usual),
+            nextDate: addRecurringInterval(last.date, cadence.cadence, usual),
             occurrences: similar.length,
             operationIds: similar.map(op => op.id),
         });

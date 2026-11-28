@@ -46,6 +46,8 @@ const ImportHistory = React.lazy(() => import('./pages/ImportHistory'));
 // Cash flow (Epic E52): charts stay out of the main bundle
 const CashflowLayout = React.lazy(() => import('./pages/cashflow/CashflowLayout'));
 const CashflowOverview = React.lazy(() => import('./pages/cashflow/CashflowOverview'));
+const CashflowRecurring = React.lazy(() => import('./pages/cashflow/CashflowRecurring'));
+const CashflowBudgets = React.lazy(() => import('./pages/cashflow/CashflowBudgets'));
 const CashflowFlows = React.lazy(() => import('./pages/cashflow/CashflowFlows'));
 const CashflowCategories = React.lazy(() => import('./pages/cashflow/CashflowCategories'));
 const CashflowDistribution = React.lazy(() => import('./pages/cashflow/CashflowDistribution'));
@@ -205,9 +207,12 @@ const App: React.FC = () => {
               <Route path="/analytics/fees" element={<ProtectedRoute><FeeAnalysis /></ProtectedRoute>} />
               <Route path="/cashflow" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><CashflowLayout /></React.Suspense></ProtectedRoute>}>
                 <Route index element={<CashflowOverview />} />
+                <Route path="overview" element={<Navigate to="/cashflow" replace />} />
                 <Route path="flows" element={<CashflowFlows />} />
                 <Route path="categories" element={<CashflowCategories />} />
                 <Route path="distribution" element={<CashflowDistribution />} />
+                <Route path="recurring" element={<CashflowRecurring />} />
+                <Route path="budgets" element={<CashflowBudgets />} />
                 <Route path="operations" element={<CashflowOperations />} />
               </Route>
               {/* /analytics/tax → redirect to the new fiscal module */}

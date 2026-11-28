@@ -120,7 +120,8 @@
                 "CTO": "Compte-titres (CTO)",
                 "PEA": "Plan d’épargne en actions (PEA)",
                 "CRYPTO": "Crypto",
-                "CASH": "Cash / épargne",
+                "CASH": "Compte courant",
+                "SAVINGS": "Livret d’épargne",
                 "OTHER": "Autre (prix saisi à la main)"
             },
             "countries": {
@@ -352,7 +353,31 @@
             "cancel": "Annuler",
             "existingNote": "Cet actif est déjà dans votre portefeuille : les modifications s’appliquent immédiatement, pas seulement à cet import."
         },
-        "bankImportHint": "Relevé bancaire : choisissez (ou créez) votre compte courant ou livret, puis déposez le fichier CSV ou OFX de votre banque. Les colonnes Débit / Crédit et les catégories de la banque sont lues."
+        "bankImport": {
+            "title": "Des opérations bancaires, pas des investissements",
+            "body": "Chaque ligne du relevé devient une opération de votre compte courant ou livret : un achat, un revenu, un virement. Elle alimente votre cash flow et ne change jamais vos positions : ni actions, ni ETF."
+        },
+        "accountTakes": {
+            "title": "Ce que ce compte reçoit",
+            "checking": {
+                "short": "Opérations bancaires",
+                "title": "Compte courant : des opérations bancaires",
+                "body": "Chaque ligne du fichier devient une opération du compte : un achat, un revenu, un virement. Elle alimente votre cash flow et ne change jamais vos positions : ni actions, ni ETF."
+            },
+            "savings": {
+                "short": "Opérations ou solde",
+                "title": "Livret d’épargne : opérations ou solde",
+                "body": "Importez les opérations du livret (versements, retraits, intérêts), ou seulement son solde actuel.",
+                "operations": "Ses opérations",
+                "operationsHint": "Un relevé (CSV, OFX) : chaque ligne devient une opération du cash flow.",
+                "balance": "Son solde actuel",
+                "balanceHint": "Un solde, ou des soldes à plusieurs dates : pas d’opérations."
+            },
+            "investment": {
+                "short": "Ordres et positions",
+                "body": "Compte d’investissement : ordres, dividendes et positions (actions, ETF, crypto). Un relevé de compte courant va dans un compte courant."
+            }
+        }
     },
     "cashWizard": {
         "title": "Mise à jour du solde Cash / Liquidités",

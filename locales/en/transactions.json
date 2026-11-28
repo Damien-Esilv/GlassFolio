@@ -120,7 +120,8 @@
                 "CTO": "Securities account (CTO)",
                 "PEA": "Equity savings plan (PEA)",
                 "CRYPTO": "Crypto",
-                "CASH": "Cash / savings",
+                "CASH": "Checking account",
+                "SAVINGS": "Savings account (Livret…)",
                 "OTHER": "Other (priced by hand)"
             },
             "countries": {
@@ -352,7 +353,31 @@
             "cancel": "Cancel",
             "existingNote": "This asset is already in your portfolio: changes apply immediately, not only to this import."
         },
-        "bankImportHint": "Bank statement: choose (or create) your checking or savings account, then drop the CSV or OFX file from your bank. Debit / Credit columns and bank categories are read."
+        "bankImport": {
+            "title": "Bank operations, not investments",
+            "body": "Each line of the statement becomes an operation of your checking or savings account: a purchase, an income, a transfer. It feeds your cash flow and never changes your positions: no shares, no ETF."
+        },
+        "accountTakes": {
+            "title": "What this account takes",
+            "checking": {
+                "short": "Bank operations",
+                "title": "Checking account: bank operations",
+                "body": "Each line of the file becomes an operation of the account: a purchase, an income, a transfer. It feeds your cash flow and never changes your positions: no shares, no ETF."
+            },
+            "savings": {
+                "short": "Operations or balance",
+                "title": "Savings account: operations or balance",
+                "body": "Import the operations of the account (deposits, withdrawals, interest), or only its current balance.",
+                "operations": "Its operations",
+                "operationsHint": "A statement (CSV, OFX): each line becomes an operation of the cash flow.",
+                "balance": "Its current balance",
+                "balanceHint": "One balance, or balances at several dates: no operations."
+            },
+            "investment": {
+                "short": "Trades and holdings",
+                "body": "Investment account: trades, dividends and holdings (shares, ETF, crypto). A statement of a checking account goes to a checking account."
+            }
+        }
     },
     "cashWizard": {
         "title": "Cash / Savings Balance Update",

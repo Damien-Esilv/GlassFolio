@@ -8,7 +8,7 @@ import { roundCurrency } from '../utils/currency';
 import { ASSET_CLASSES, isAssetClassMatch } from '../constants/assetClasses';
 import { portfolioRepository, transactionRepository } from './repositories';
 import { instrumentTypeToPositionType } from './portfolio/assetTypeMapping';
-import { buildLedger, buildRealizedEvents, applyTransaction, defaultLedgerKey, emptyLedgerState, rowSymbol, sortChronologically, LedgerState } from './portfolio/positionLedger';
+import { buildLedger, buildRealizedEvents, applyTransaction, defaultLedgerKey, emptyLedgerState, overdraftRule, rowSymbol, sortChronologically, LedgerState } from './portfolio/positionLedger';
 
 /** Asset class shown for a position, from its instrument (no instrument: equity) */
 const positionTypeOf = (instrument: Instrument | undefined): Position['type'] => instrumentTypeToPositionType(instrument?.type);
@@ -106,7 +106,9 @@ export const portfolioService = {
 
         // Replay the journal through the shared ledger (WAC or FIFO per account)
         const ledger = buildLedger(unifiedTxs, {
-            methodFor: accountId => accountMap.get(accountId)?.costBasisMethod ?? 'WAC'
+            methodFor: accountId => accountMap.get(accountId)?.costBasisMethod ?? 'WAC',
+            // A checking or savings account may be overdrawn (Epic E52)
+            allowsOverdraft: overdraftRule(accounts),
         });
 
         const positionMap = new Map<string, Position>();
@@ -128,7 +130,7 @@ export const portfolioService = {
                 // A bank's last quote is kept by ISIN: without it on the position, the price fallback cannot find it
                 isin: instrument?.marketIdentifier.isin || firstTx.assetIsin || undefined,
                 quantity: state.quantity,
-                avgCost: state.quantity > 0 ? state.costBasis / state.quantity : 0,
+                avgCost: state.quantity > 0 ? state.costBasis / state.quantity : isCash ? 1 : 0,
                 lastPrice,
                 marketValue: 0,
                 unrealizedPL: 0,
@@ -143,9 +145,9 @@ export const portfolioService = {
             });
         }
 
-        // Filter out zero positions
+        // Filter out zero positions; an overdrawn currency line stays (negative)
         const positions = Array.from(positionMap.values())
-            .filter(p => p.quantity > 0.000001);
+            .filter(p => p.quantity > 0.000001 || (p.type === 'Cash' && p.quantity < -0.000001));
 
         // Calculate PL
         positions.forEach(p => {

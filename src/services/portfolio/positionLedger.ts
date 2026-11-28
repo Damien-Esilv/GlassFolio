@@ -201,7 +201,8 @@ function normalize(state: LedgerState): LedgerState {
 /**
  * Apply one transaction to a position state (returns a new state).
  */
-export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, method: CostBasisMethod = 'WAC'): LedgerState {
+export function applyTransaction(previous: LedgerState, tx: UnifiedTransaction, method: CostBasisMethod = 'WAC', overdraft = false): LedgerState {
+    if (overdraft) return applyCashMovement(previous, tx);
     const state: LedgerState = {
         ...previous,
         lots: previous.lots.map(lot => ({ ...lot }))
@@ -301,6 +302,29 @@ export interface BuildLedgerOptions {
     keyOf?: (tx: UnifiedTransaction) => string | null;
     /** Cost basis method per account (default WAC) */
     methodFor?: (accountId: string) => CostBasisMethod;
+    /** Rows whose balance may go below zero (the currency of a checking or savings account: an overdraft) */
+    allowsOverdraft?: (tx: UnifiedTransaction) => boolean;
+}
+
+/**
+ * The currency of a checking or savings account may go below zero (an overdraft, Epic E52); everything else (shares,
+ * crypto, the cash of an investment account) never does.
+ */
+export function overdraftRule(accounts: ReadonlyArray<{ id: string; type: string }>): (tx: UnifiedTransaction) => boolean {
+    const cashAccounts = new Set(accounts.filter(account => account.type === 'checking' || account.type === 'savings').map(account => account.id));
+    return tx => cashAccounts.has(tx.accountId) && !tx.assetIsin && isCashLikeAsset(tx.assetSymbol ?? '') && !STABLECOINS.has((tx.assetSymbol ?? '').toUpperCase());
+}
+
+/** A currency line that may be overdrawn: its quantity is its balance, its cost the balance when positive. */
+function applyCashMovement(previous: LedgerState, tx: UnifiedTransaction): LedgerState {
+    let quantity = previous.quantity;
+    if (isBalanceStatement(tx)) quantity = toNumber(tx.amountPrimary) ?? 0;
+    else if (INCREASE_TYPES.has(tx.type)) quantity += resolveQuantity(tx);
+    else if (DECREASE_TYPES.has(tx.type)) quantity -= resolveQuantity(tx);
+    else quantity += quantityDelta(tx);
+    if (Math.abs(quantity) <= QTY_EPSILON) quantity = 0;
+    const held = Math.max(quantity, 0);
+    return { quantity, costBasis: held, realizedPL: previous.realizedPL, lots: held > 0 ? [{ quantity: held, unitCost: 1, date: tx.transactionDate }] : [] };
 }
 
 /** Placeholder symbol written by older imports when a row had no usable identity */
@@ -338,6 +362,7 @@ type ReplayStep = (tx: UnifiedTransaction, key: string, before: LedgerState, aft
 function replayJournal(transactions: UnifiedTransaction[], options: BuildLedgerOptions, onStep?: ReplayStep): Map<string, LedgerEntry> {
     const keyOf = options.keyOf ?? defaultLedgerKey;
     const methodFor = options.methodFor ?? (() => 'WAC' as CostBasisMethod);
+    const allowsOverdraft = options.allowsOverdraft ?? (() => false);
     const entries = new Map<string, LedgerEntry>();
 
     for (const tx of sortChronologically(transactions)) {
@@ -345,7 +370,7 @@ function replayJournal(transactions: UnifiedTransaction[], options: BuildLedgerO
         if (!key) continue;
         const current = entries.get(key);
         const before = current?.state ?? emptyLedgerState();
-        const nextState = applyTransaction(before, tx, methodFor(tx.accountId));
+        const nextState = applyTransaction(before, tx, methodFor(tx.accountId), allowsOverdraft(tx));
         entries.set(key, {
             key,
             state: nextState,

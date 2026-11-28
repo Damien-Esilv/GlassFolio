@@ -256,6 +256,26 @@
                 "risk": "Fine",
                 "cost": "Tax"
             }
+        },
+        "cashflowCredits": {
+            "title": "Reductions and credits spotted in {{year}}",
+            "subtitle": "From the operations of your cash flow: donations, home help, childcare and PER contributions.",
+            "total": "Estimated benefit",
+            "empty": "No donation, home help, childcare or PER payment spotted in {{year}}. Categorise your operations in the cash flow so they appear here.",
+            "kinds": {
+                "donations_aid": "Donations to organisations helping people in need",
+                "donations": "Donations to organisations of general interest",
+                "home_services": "Home help (employee or service provider)",
+                "childcare": "Childcare outside the home (child under 6)",
+                "per": "Retirement savings plan (PER) contributions"
+            },
+            "detail": "{{paid}} paid · {{rate}} of {{base}}",
+            "cap": "cap {{cap}}",
+            "perDetail": "{{paid}} paid · tax saved at your marginal rate of {{rate}}, within your cap (at least {{floor}}: see your tax notice)",
+            "perNoRate": "{{paid}} paid · deductible within your cap (at least {{floor}}); set your marginal rate in your tax profile to see the saving",
+            "see_one": "See the operation",
+            "see_other": "See the {{count}} operations",
+            "disclaimer": "An estimate from your bank operations, not tax advice: the receipts and certificates of the organisations decide, and caps depend on your household. The rates are those of the income year."
         }
     },
     "guide": {
