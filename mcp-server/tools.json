@@ -831,6 +831,25 @@
       }
     },
     {
+      "name": "list_upcoming_operations",
+      "description": "Operations the user's banks announce as coming on checking and savings accounts (card payments not booked yet, scheduled transfers), as read by the last bank sync of the desktop app or Docker (online, the list is empty). They are not in the journal yet and change no balance. Soonest first; negative amount = money out.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Only this checking or savings account (ids from list_institutions)."
+          }
+        }
+      },
+      "annotations": {
+        "title": "list_upcoming_operations",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "list_vault_secrets",
       "description": "List all configured external API providers in the encrypted secrets vault (masked values only).",
       "inputSchema": {

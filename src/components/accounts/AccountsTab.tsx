@@ -160,11 +160,19 @@ export const AccountsTab: React.FC = () => {
                                             </p>
                                         </div>
                                         {account.syncedBy ? (
-                                            <Link to="/settings?tab=connections" title={t('settings:accounts.syncedHelp')}
-                                                className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-positive-subtle text-positive">
-                                                <Link2 size={12} aria-hidden="true" />
-                                                {t('settings:accounts.syncedBy', { source: account.syncedBy.label })}
-                                            </Link>
+                                            <>
+                                                <Link to="/settings?tab=connections" title={t('settings:accounts.syncedHelp')}
+                                                    className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-positive-subtle text-positive">
+                                                    <Link2 size={12} aria-hidden="true" />
+                                                    {t('settings:accounts.syncedBy', { source: account.syncedBy.label })}
+                                                </Link>
+                                                {/* One account of a bank can stop syncing and go, its other accounts keep syncing (TGLA-254) */}
+                                                {account.syncedBy.sourceId === 'woob' && (
+                                                    <DeleteInPlace label={t('settings:accounts.deleteSyncedAccount', { name: account.name })}
+                                                        warning={t('settings:accounts.deleteSyncedAccountWarning', { count: account.operations, source: account.syncedBy.label })}
+                                                        onDelete={async () => { await apply(() => accountManagementService.deleteAccount(account.id, { stopSync: true }), true); }} />
+                                                )}
+                                            </>
                                         ) : (
                                             <>
                                                 <span className="text-xs px-2 py-1 rounded-full bg-subtle text-secondary">{t('settings:accounts.manual')}</span>

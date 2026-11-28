@@ -29,26 +29,33 @@ export const StatusBadge: React.FC<{ status: ConnectionStatus }> = ({ status }) 
     );
 };
 
+/** How a connection is removed: with everything it recorded (default), or keeping its history (a bank, TGLA-254). */
+export interface RemoveOptions {
+    keepHistory?: boolean;
+}
+
 /**
  * Last sync, error, "Sync now" and remove of one connection. Removing asks once more in place: the bin becomes
- * "Confirm removal" where it stood, the other actions give way to what the removal deletes.
+ * "Confirm removal" where it stood, the other actions give way to what the removal deletes. A bank (`keepHistoryChoice`)
+ * offers to keep what it recorded, first.
  */
 export const SyncControls: React.FC<{
     connection: SafeConnection;
     syncing: boolean;
     disabled: boolean;
     onSync: () => void;
-    onDelete: () => void | Promise<void>;
+    onDelete: (options?: RemoveOptions) => void | Promise<void>;
+    keepHistoryChoice?: boolean;
     children?: React.ReactNode;
-}> = ({ connection, syncing, disabled, onSync, onDelete, children }) => {
+}> = ({ connection, syncing, disabled, onSync, onDelete, keepHistoryChoice = false, children }) => {
     const { t } = useTranslation();
     const formatDate = useSyncDate();
     const [confirming, setConfirming] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const remove = async (): Promise<void> => {
+    const remove = async (options?: RemoveOptions): Promise<void> => {
         setDeleting(true);
         try {
-            await onDelete();
+            await onDelete(options);
         } finally {
             setDeleting(false);
             setConfirming(false);
@@ -59,7 +66,7 @@ export const SyncControls: React.FC<{
             {confirming ? (
                 <p className="flex items-start gap-1.5 text-xs text-negative min-w-0 flex-1" role="alert">
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-                    {t('settings:connections.deleteWarning')}
+                    {t(keepHistoryChoice ? 'settings:connections.banks.deleteWarning' : 'settings:connections.deleteWarning')}
                 </p>
             ) : (
                 <p className="text-xs text-secondary">
@@ -68,7 +75,18 @@ export const SyncControls: React.FC<{
                 </p>
             )}
             <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
-                {confirming ? (
+                {confirming && keepHistoryChoice ? (
+                    <>
+                        <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirming(false)}>{t('common:buttons.cancel')}</Button>
+                        <Button size="sm" variant="secondary" isLoading={deleting} disabled={deleting} onClick={() => void remove({ keepHistory: true })}>
+                            {t('settings:connections.banks.keepHistory')}
+                        </Button>
+                        <Button size="sm" variant="danger" disabled={deleting} onClick={() => void remove({ keepHistory: false })}>
+                            <Trash2 size={14} className="mr-1.5" aria-hidden="true" />
+                            {t('settings:connections.banks.deleteAll')}
+                        </Button>
+                    </>
+                ) : confirming ? (
                     <>
                         <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirming(false)}>{t('common:buttons.cancel')}</Button>
                         <Button size="sm" variant="danger" isLoading={deleting} disabled={deleting} onClick={() => void remove()}>
@@ -119,15 +137,32 @@ export const LinkedAccounts: React.FC<{
     );
 };
 
-/** What the last manual sync did: changes recorded and quantities that differ from the journal. */
+/**
+ * What the last manual sync did: changes recorded, quantities that differ from the journal and, for bank operations,
+ * what the bank changed, cancelled and announced, and why some could not be read.
+ */
 export const SyncResult: React.FC<{ report?: SyncReport }> = ({ report }) => {
     const { t } = useTranslation();
     if (!report) return null;
     const drift = report.accounts.flatMap(account => account.drift);
     const imported = report.accounts.reduce((total, account) => total + account.imported, 0);
+    const banking = report.accounts.filter(account => account.upcoming !== undefined);
+    const sum = (key: 'updated' | 'removed' | 'upcoming'): number => banking.reduce((total, account) => total + (account[key] ?? 0), 0);
+    const warnings = [...new Set(report.accounts.flatMap(account => account.historyWarnings ?? []))];
     return (
         <>
             <p className="text-xs text-secondary mt-2" role="status">{t('settings:connections.result', { count: imported })}</p>
+            {banking.length > 0 && (
+                <p className="text-xs text-secondary mt-1">
+                    {t('settings:connections.operationsResult', { updated: sum('updated'), removed: sum('removed'), upcoming: sum('upcoming') })}
+                </p>
+            )}
+            {warnings.map(code => (
+                <p key={code} className="flex items-start gap-1.5 text-xs text-warning mt-1">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
+                    {t(`settings:connections.historyWarnings.${code}`, { defaultValue: t('settings:connections.historyWarnings.history_failed') })}
+                </p>
+            ))}
             {drift.length > 0 && (
                 <div className="flex items-start gap-2 text-xs text-primary bg-warning-subtle rounded-lg p-2 mt-2">
                     <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" aria-hidden="true" />

@@ -20,6 +20,7 @@ import type {
     CashflowOperation,
     CashflowSummary,
     CashflowTombstone,
+    CashflowUpcoming,
     RecurringSeries,
 } from '../../types/cashflow';
 import { buildCashflowOperations, includedAccountIds, CASH_ACCOUNT_TYPES } from './operations';
@@ -337,6 +338,20 @@ export const cashflowService = {
         db.saveCashflowAnnotations(db.getCashflowAnnotations().filter(a => a.transactionId !== id));
         await portfolioService.recalculatePositions();
         return { success: true, value: undefined };
+    },
+
+    /** Operations the banks announce as coming (TGLA-254), soonest first, with their account and bank. */
+    listUpcoming: async (accountId?: string): Promise<Array<CashflowUpcoming & { accountName: string; instituteName?: string }>> => {
+        await delay(60);
+        const accounts = new Map(db.getAccounts().map(account => [account.id, account]));
+        const institutes = new Map(db.getInstitutes().map(institute => [institute.id, institute.name]));
+        return db.getCashflowUpcoming()
+            .filter(item => accounts.has(item.accountId) && (!accountId || item.accountId === accountId))
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map(item => {
+                const account = accounts.get(item.accountId);
+                return { ...item, accountName: account?.name ?? item.accountId, instituteName: account ? institutes.get(account.instituteId) : undefined };
+            });
     },
 
     /** Accounts that can hold cash flow operations (checking and savings), with whether they are counted. */

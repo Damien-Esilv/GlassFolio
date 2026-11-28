@@ -21,6 +21,8 @@ interface ConnectionSummary {
   lastError: ConnectionErrorCode | null;
   accounts: string[];
   watchedAddresses: number;
+  /** A French bank that also reads the operations of its checking and savings accounts, for the cash flow. */
+  readsBankOperations: boolean;
 }
 
 export const listConnectionsTool: AIToolDefinition<Record<string, never>, ConnectionSummary[]> = {
@@ -41,6 +43,7 @@ export const listConnectionsTool: AIToolDefinition<Record<string, never>, Connec
       lastError: connection.lastErrorCode ?? null,
       accounts: Object.values(connection.accountMap).map(id => names.get(id) ?? id),
       watchedAddresses: connection.publicParams.addresses?.length ?? 0,
+      readsBankOperations: connection.cashHistory === true,
     }));
   },
 };
@@ -51,6 +54,8 @@ interface SyncSummary {
   imported: number;
   skippedDuplicates: number;
   assetsWithDifferences: string[];
+  /** Bank operations of the last 45 days the bank changed or cancelled, and those it announces as coming. */
+  bankOperations?: { updated: number; cancelled: number; upcoming: number; warnings: string[] };
   message: string;
 }
 
@@ -78,6 +83,14 @@ export const syncConnectionTool: AIToolDefinition<{ connectionId: string }, Sync
       imported,
       skippedDuplicates: report.accounts.reduce((total, account) => total + account.skippedDuplicates, 0),
       assetsWithDifferences: report.accounts.flatMap(account => account.drift.map(item => item.asset)),
+      ...(report.accounts.some(account => account.upcoming !== undefined) ? {
+        bankOperations: {
+          updated: report.accounts.reduce((total, account) => total + (account.updated ?? 0), 0),
+          cancelled: report.accounts.reduce((total, account) => total + (account.removed ?? 0), 0),
+          upcoming: report.accounts.reduce((total, account) => total + (account.upcoming ?? 0), 0),
+          warnings: [...new Set(report.accounts.flatMap(account => account.historyWarnings ?? []))],
+        },
+      } : {}),
       message: report.status === 'ok'
         ? `Sync complete: ${imported} change(s) recorded.`
         : `Sync did not complete (${report.errorCode ?? report.status}).`,
@@ -147,10 +160,10 @@ export const addWatchOnlyWalletTool: AIToolDefinition<
 interface BankSyncStatus {
   available: boolean;
   reason: 'ok' | 'online_app' | 'module_missing';
-  supportedBanks: Array<{ module: string; name: string; verified: boolean; positions: boolean }>;
+  supportedBanks: Array<{ module: string; name: string; verified: boolean; positions: boolean; operations: boolean }>;
   /** Bank modules in use: verified by GlassFolio, or Woob's latest (a choice only the user makes, in the settings). */
   modules: { active: 'verified' | 'latest'; commit: string | null };
-  connectedBanks: Array<{ connectionId: string; bank: string; status: ConnectionStatus; lastSyncAt: string | null; needsReconnect: boolean }>;
+  connectedBanks: Array<{ connectionId: string; bank: string; status: ConnectionStatus; lastSyncAt: string | null; needsReconnect: boolean; readsOperations: boolean }>;
 }
 
 export const getBankSyncStatusTool: AIToolDefinition<Record<string, never>, BankSyncStatus> = {
@@ -168,7 +181,9 @@ export const getBankSyncStatusTool: AIToolDefinition<Record<string, never>, Bank
         ? { active: 'latest', commit: status.modules.commit ?? null }
         : { active: 'verified', commit: status.commit ?? null },
       // Every bank module of the Woob version shipped that loads on this machine (TGLA-240)
-      supportedBanks: (status.banks ?? []).map(bank => ({ module: bank.module, name: woobBankName(bank), verified: isVerifiedWoobBank(bank.module), positions: bank.positions })),
+      supportedBanks: (status.banks ?? []).map(bank => ({
+        module: bank.module, name: woobBankName(bank), verified: isVerifiedWoobBank(bank.module), positions: bank.positions, operations: bank.history === true,
+      })),
       connectedBanks: connections
         .filter(connection => connection.sourceId === 'woob')
         .map(connection => ({
@@ -180,6 +195,7 @@ export const getBankSyncStatusTool: AIToolDefinition<Record<string, never>, Bank
           status: connection.lastStatus,
           lastSyncAt: connection.lastSyncAt ?? null,
           needsReconnect: connection.lastStatus === 'reauth_required' || connection.lastStatus === 'auth_failed',
+          readsOperations: connection.cashHistory === true,
         })),
     };
   },

@@ -107,6 +107,28 @@ export interface CashflowTombstone {
     deletedAt: string;
 }
 
+/**
+ * An operation the bank announces as coming (card payment not booked yet, scheduled transfer), read by the bank sync
+ * (TGLA-254). Kept apart from the journal: it never changes a balance, and each sync replaces the account's list.
+ */
+export interface CashflowUpcoming {
+    id: string;
+    ownerId: string;
+    accountId: string;
+    connectionId: string;
+    externalId: string;
+    /** ISO 8601 date of the operation. */
+    date: string;
+    /** Signed decimal: negative for money out. */
+    amount: string;
+    currency: string;
+    label: string;
+    rawLabel: string;
+    bankHints?: BankHints;
+    /** When the bank last listed it. */
+    readAt: string;
+}
+
 export interface CashflowSettings {
     ownerId: string;
     /** Accounts counted in the cash flow; `null` = every checking and savings account */

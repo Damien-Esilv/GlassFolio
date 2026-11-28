@@ -5,11 +5,11 @@ import Button from '../Button';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { accountService, instituteService } from '../../services/instituteService';
-import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID } from '../../services/connectors';
+import { connectionService, isBitcoinWalletEntry, isEvmAddress, isSolanaAddress, syncEngine, WALLET_ACCOUNT_ID, type SyncOptions } from '../../services/connectors';
 import { notifySyncOutcome } from '../../services/connectors/syncNotifications';
 import { SnapTradeConnectCard } from './SnapTradeConnectCard';
 import { BankConnectCard } from './BankConnectCard';
-import { StatusBadge, SyncControls, SyncResult } from './ConnectionRow';
+import { StatusBadge, SyncControls, SyncResult, type RemoveOptions } from './ConnectionRow';
 import { accountLabel, toAccountChoices } from './accountChoices';
 import type { Account, Institute } from '../../types';
 import type { SafeConnection, SourceId, SyncReport } from '../../types/connections';
@@ -100,10 +100,10 @@ export const ConnectionsTab: React.FC = () => {
     const banks = connections.filter(connection => connection.sourceId === 'woob');
     const wallets = connections.filter(connection => connection.sourceId !== 'snaptrade' && connection.sourceId !== 'woob');
 
-    const runSync = async (connection: SafeConnection): Promise<void> => {
+    const runSync = async (connection: SafeConnection, options: SyncOptions = {}): Promise<void> => {
         setSyncing(connection.id);
         try {
-            const report = await syncEngine.runSync(connection.id);
+            const report = await syncEngine.runSync(connection.id, options);
             notifySyncOutcome(connection, report);
             setReports(previous => ({ ...previous, [connection.id]: report }));
             if (report.accounts.some(account => account.imported > 0)) await refreshData();
@@ -113,16 +113,19 @@ export const ConnectionsTab: React.FC = () => {
         }
     };
 
-    /** A source just added or changed: show it, then sync it at once. */
+    /**
+     * A source just added or changed: show it, then sync it at once. A bank just connected or reconnected also reads
+     * the deep history of its checking and savings accounts: its session is fresh (TGLA-254).
+     */
     const syncChanged = async (connectionId: string): Promise<void> => {
         await load();
         const changed = await connectionService.getConnection(connectionId);
-        if (changed) await runSync(changed);
+        if (changed) await runSync(changed, { deepHistory: true });
     };
 
-    /** Removes a source with everything it imported (its operations, and its accounts left empty). */
-    const remove = async (id: string): Promise<void> => {
-        await syncEngine.removeConnection(id);
+    /** Removes a source with everything it imported (its operations, and its accounts left empty), or only the source. */
+    const remove = async (id: string, options: RemoveOptions = {}): Promise<void> => {
+        await syncEngine.removeConnection(id, options);
         await load();
         await refreshData();
     };

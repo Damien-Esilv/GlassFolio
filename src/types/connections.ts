@@ -7,6 +7,7 @@
  * same normalized shapes below, so the sync engine never knows which provider it talks to.
  */
 import type { AccountType, InstrumentType, TransactionSubType, TransactionType, WrapperType } from './types.backend';
+import type { BankHints } from './cashflow';
 
 /** Source adapters known to the sync engine. */
 export type SourceId = 'snaptrade' | 'wallet_btc' | 'wallet_evm' | 'wallet_sol' | 'woob';
@@ -98,6 +99,8 @@ export interface NormalizedActivity {
     /** Provider label kept for the audit trail (e.g. "BUY", "DIVIDEND"). */
     rawType: string;
     label?: string;
+    /** The provider's raw label, when it also gives a cleaned one (bank operations). */
+    rawLabel?: string;
     isin?: string;
     symbol?: string;
     name?: string;
@@ -114,6 +117,8 @@ export interface NormalizedActivity {
     tax?: string;
     currency: string;
     fxRate?: string;
+    /** What the bank says about a checking or savings operation (its category, its operation type), for the cash flow (TGLA-254). */
+    bankHints?: BankHints;
 }
 
 /** Public, non-secret parameters (wallet addresses, chains). Safe to show in the UI. */
@@ -132,6 +137,11 @@ export interface ConnectionPublicParams {
 export interface ConnectionCursor {
     /** ISO date of the most recent activity already committed. */
     lastActivityDate?: string;
+    /**
+     * Checking or savings account (TGLA-254): first day (YYYY-MM-DD) of the bank operations read so far. Absent until
+     * the first full read; the later syncs only read the last 45 days again.
+     */
+    operationsFrom?: string;
 }
 
 export interface Connection {
@@ -149,6 +159,11 @@ export interface Connection {
     syncIntervalHours: number;
     /** Activities older than this ISO date are ignored (avoids duplicating earlier CSV imports). */
     historyStartDate?: string;
+    /**
+     * Bank (Woob): read the operations of the checking and savings accounts for the cash flow (TGLA-254). On for the
+     * bank connections made since; absent (off) for the earlier ones until the user turns it on.
+     */
+    cashHistory?: boolean;
     cursor: Record<string, ConnectionCursor>;
     lastSyncAt?: string;
     lastStatus: ConnectionStatus;
@@ -176,6 +191,8 @@ export interface NewConnectionInput {
     mode?: ConnectionMode;
     syncIntervalHours?: number;
     historyStartDate?: string;
+    /** Bank (Woob): read the operations of the checking and savings accounts (TGLA-254). */
+    cashHistory?: boolean;
     /** Where each provider account starts (e.g. after the last row already imported from a file). */
     cursor?: Record<string, ConnectionCursor>;
 }
@@ -189,6 +206,14 @@ export interface SyncAccountReport {
     batchId?: string;
     /** Assets whose provider quantity differs from the journal after the sync. */
     drift: Array<{ asset: string; providerQuantity: string; journalQuantity: string }>;
+    /** Bank operations of the last 45 days that the bank changed (pending → booked, amount or date fixed). */
+    updated?: number;
+    /** Bank operations of the last 45 days that the bank no longer lists (cancelled). */
+    removed?: number;
+    /** Operations the bank announces as coming, kept apart from the journal. */
+    upcoming?: number;
+    /** Why the operations of a checking or savings account were not (all) read: history_unavailable, history_failed… */
+    historyWarnings?: string[];
 }
 
 export interface SyncReport {

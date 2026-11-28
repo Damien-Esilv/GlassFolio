@@ -19,6 +19,7 @@ export { sourceRegistry } from './sourceRegistry';
 export { connectionService, newConnectionId } from './connectionService';
 export { reconnectBank } from './bankLink';
 export { syncEngine } from './syncEngine';
+export type { SyncOptions } from './syncEngine';
 export { ConnectorError } from './types';
 export type { SourceAdapter, AdapterContext } from './types';
 export { isBitcoinAddress, isBitcoinWalletEntry, isExtendedPublicKey, WALLET_ACCOUNT_ID } from './sources/bitcoinWallet';

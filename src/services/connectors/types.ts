@@ -17,6 +17,21 @@ export interface AdapterContext {
     /** Decrypted credentials of the connection, held in memory for the duration of the call. */
     credentials: Record<string, string>;
     publicParams: ConnectionPublicParams;
+    /**
+     * Earliest day (YYYY-MM-DD) of the bank operations this run needs, for all the checking and savings accounts of
+     * the connection (TGLA-254): a bank read once per run serves every account. Absent: no operations read.
+     */
+    operationsSince?: string;
+}
+
+/** Bank operations of one checking or savings account, as a sync run reads them (TGLA-254). */
+export interface CashOperationsRead {
+    /** Operations on or after the day asked for, or null when the bank refused to give them. */
+    operations: NormalizedActivity[] | null;
+    /** Operations the bank announces as coming (card payments not booked yet, scheduled transfers). */
+    upcoming: NormalizedActivity[];
+    /** history_unavailable, history_failed, history_truncated, coming_failed. */
+    warnings: string[];
 }
 
 export interface SourceAdapter {
@@ -25,6 +40,8 @@ export interface SourceAdapter {
     capabilities: {
         holdings: boolean;
         history: boolean;
+        /** Reads the operations of checking and savings accounts (French banks, TGLA-254), next to their balance. */
+        cashHistory?: boolean;
     };
     /** Names of the credential fields the adapter needs (translated under `settings:connections.fields.<name>`). */
     credentialFields: string[];
@@ -38,6 +55,10 @@ export interface SourceAdapter {
     fetchHoldings(ctx: AdapterContext, externalAccountId: string): Promise<NormalizedHolding[]>;
     /** Activities on or after `since` (ISO date) when given, oldest first. */
     fetchActivities?(ctx: AdapterContext, externalAccountId: string, since?: string): Promise<NormalizedActivity[]>;
+    /** Operations of a checking or savings account since `ctx.operationsSince`, and its coming ones (TGLA-254). */
+    fetchCashOperations?(ctx: AdapterContext, externalAccountId: string): Promise<CashOperationsRead>;
+    /** A sync run is over: forget what it kept in memory (bank answers shared by its accounts). */
+    endRun?(connectionId: string): void;
 }
 
 /** Failure an adapter can explain. Its message is for logs only; the UI shows `code`. */

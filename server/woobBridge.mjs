@@ -24,7 +24,8 @@ const ROUTES = {
   'login': { command: 'login', timeoutMs: 180_000 },
   'login/answer': { command: 'answer', timeoutMs: 180_000 },
   'accounts': { command: 'accounts', timeoutMs: 180_000 },
-  'holdings': { command: 'holdings', timeoutMs: 180_000 },
+  // A first read of a year of bank operations goes through many pages of the bank's website (TGLA-254)
+  'holdings': { command: 'holdings', timeoutMs: 300_000 },
   'forget': { command: 'forget', timeoutMs: 15_000 },
   // Source of the bank modules (TGLA-241): download and check of Woob's latest modules take a while
   'modules': { command: 'modules', timeoutMs: 15_000 },

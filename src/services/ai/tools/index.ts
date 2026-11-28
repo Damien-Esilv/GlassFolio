@@ -45,6 +45,7 @@ import {
   listCashflowTransactionsTool,
   listCashflowCategoriesTool,
   listCashflowRulesTool,
+  listUpcomingOperationsTool,
   setTransactionCategoryTool,
   createCashflowCategoryTool,
   createCategorizationRuleTool,
@@ -104,6 +105,7 @@ export function registerAllStandardTools(): void {
   aiToolRegistry.registerTool(listCashflowTransactionsTool);
   aiToolRegistry.registerTool(listCashflowCategoriesTool);
   aiToolRegistry.registerTool(listCashflowRulesTool);
+  aiToolRegistry.registerTool(listUpcomingOperationsTool);
   aiToolRegistry.registerTool(setTransactionCategoryTool);
   aiToolRegistry.registerTool(createCashflowCategoryTool);
   aiToolRegistry.registerTool(createCategorizationRuleTool);
@@ -159,6 +161,7 @@ export {
   listCashflowTransactionsTool,
   listCashflowCategoriesTool,
   listCashflowRulesTool,
+  listUpcomingOperationsTool,
   setTransactionCategoryTool,
   createCashflowCategoryTool,
   createCategorizationRuleTool,

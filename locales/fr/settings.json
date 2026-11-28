@@ -358,7 +358,9 @@
             "limits": {
                 "balancesOnly": "Woob lit les soldes de cette banque, pas le détail de ses placements.",
                 "strongAuth": "Woob ne sait pas réaliser l’authentification forte de cette banque : la connexion sera probablement refusée.",
-                "validationEachLogin": "Cette banque demandera une validation (code) à chaque connexion, synchros automatiques comprises."
+                "validationEachLogin": "Cette banque demandera une validation (code) à chaque connexion, synchros automatiques comprises.",
+                "history": "Lit les opérations de vos comptes courants et livrets, pour le cash flow.",
+                "noHistory": "Ne lit pas les opérations : pour le cash flow, importez un relevé de votre compte courant."
             },
             "modules": {
                 "title": "Modules bancaires : leur provenance et leurs mises à jour",
@@ -381,7 +383,21 @@
                 "backToVerified": "Revenir aux modules vérifiés",
                 "working": "Téléchargement et vérification des modules bancaires… (jusqu’à une minute)",
                 "failed": "Les modules bancaires n’ont pas pu être changés ({{detail}}). Les modules utilisés n’ont pas changé."
-            }
+            },
+            "cashHistory": {
+                "label": "Lire les opérations de mes comptes courants et livrets (cash flow)",
+                "help": "La première synchro lit jusqu'à 12 mois, aussi loin que le site de la banque le permet. Les suivantes relisent les 45 derniers jours, que la banque peut encore modifier. Ce qui a été lu reste dans GlassFolio, modifiable, même quand la banque ne l'affiche plus."
+            },
+            "deleteWarning": "Supprimer cette banque arrête sa synchro. Garder ce qu'elle a enregistré (ses comptes, opérations et soldes, comme s'ils étaient importés) ou tout supprimer ?",
+            "keepHistory": "Supprimer, garder l'historique",
+            "deleteAll": "Tout supprimer"
+        },
+        "operationsResult": "Opérations bancaires : {{updated}} mises à jour, {{removed}} annulées par la banque, {{upcoming}} à venir.",
+        "historyWarnings": {
+            "history_unavailable": "Le module de la banque ne lit pas les opérations : le solde est synchronisé, importez un relevé pour le cash flow.",
+            "history_failed": "La banque n'a pas donné les opérations cette fois-ci ; le solde est synchronisé. Si cela dure, utilisez Se reconnecter.",
+            "history_truncated": "Seules les opérations les plus récentes ont été lues (5 000 par compte).",
+            "coming_failed": "Les opérations à venir n'ont pas pu être lues cette fois-ci."
         }
     },
     "accounts": {
@@ -412,6 +428,9 @@
             "synced": "Une synchro alimente ce compte : supprimez-la dans Connexions.",
             "empty_name": "Saisissez un nom."
         },
-        "importLink": "Gérer les établissements et comptes"
+        "importLink": "Gérer les établissements et comptes",
+        "deleteSyncedAccount": "Arrêter la synchro et supprimer {{name}}",
+        "deleteSyncedAccountWarning_one": "Arrête la synchro de ce compte depuis {{source}} (ses autres comptes restent synchronisés), puis le supprime avec {{count}} opération. Action irréversible.",
+        "deleteSyncedAccountWarning_other": "Arrête la synchro de ce compte depuis {{source}} (ses autres comptes restent synchronisés), puis le supprime avec ses {{count}} opérations. Action irréversible."
     }
 }
